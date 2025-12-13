@@ -1,0 +1,37 @@
+[gd_scene load_steps=7 format=3 uid="uid://bqxcvw5hn6p2c"]
+
+[ext_resource type="Script" uid="uid://bo33tukfkooxo" path="res://scripts/Main.gd" id="1_0k8vg"]
+[ext_resource type="Script" uid="uid://x7wo6a12nwdq" path="res://scripts/Background.gd" id="2_1a2bc"]
+[ext_resource type="Script" uid="uid://bglltvo88l5f5" path="res://scripts/Player.gd" id="3_3h4xr"]
+[ext_resource type="Script" uid="uid://cnpbkqhwkypqc" path="res://scripts/GameManager.gd" id="4_8j2kl"]
+[ext_resource type="Script" uid="uid://c6p5ekstxcyv7" path="res://scripts/WeaponDeck.gd" id="5_9m3nl"]
+[ext_resource type="Script" uid="uid://b3ecxjn0a3e12" path="res://scripts/UIManager.gd" id="6_p6q0o"]
+
+[node name="Main" type="Node2D"]
+script = ExtResource("1_0k8vg")
+
+[node name="Background" type="CanvasLayer" parent="."]
+script = ExtResource("2_1a2bc")
+
+[node name="Player" type="CharacterBody2D" parent="."]
+script = ExtResource("3_3h4xr")
+max_health = null
+base_damage = null
+base_speed = null
+
+[node name="GameManager" type="Node" parent="."]
+script = ExtResource("4_8j2kl")
+
+[node name="WeaponDeck" type="Node" parent="."]
+script = ExtResource("5_9m3nl")
+
+[node name="UILayer" type="CanvasLayer" parent="."]
+
+[node name="UIManager" type="Control" parent="UILayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("6_p6q0o")
