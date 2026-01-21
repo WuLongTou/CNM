@@ -17,26 +17,26 @@ enum GameState {
 	GAME_OVER          ## 游戏结束
 }
 
-# ===== 平衡常量 =====
-# 僵尸数量
-@export var zombies_per_round_base: int = 4  # 减少初始数量
-@export var zombies_increase_per_round: int = 2  # 每回合增加
-@export var zombies_max_per_round: int = 50  # 单回合上限
+# ===== 优化的平衡常量 =====
+# 僵尸数量 - 更平滑的增长曲线
+@export var zombies_per_round_base: int = 3  # 更友好的初始数量
+@export var zombies_increase_per_round: int = 1  # 更平缓的增长
+@export var zombies_max_per_round: int = 40  # 降低单回合上限
 
-# 生成间隔
-@export var spawn_interval: float = 2.5  # 初始间隔更长
-@export var spawn_interval_min: float = 0.6
-@export var spawn_interval_decay: float = 0.08  # 减缓衰减
+# 生成间隔 - 更好的节奏控制
+@export var spawn_interval: float = 2.0  # 稍短的初始间隔
+@export var spawn_interval_min: float = 0.8  # 提高最小间隔，避免刷怪过快
+@export var spawn_interval_decay: float = 0.06  # 更平滑的衰减
 
-# 难度缩放
-@export var round_multiplier_base: float = 0.05  # 略微降低
-@export var elite_chance_base: float = 0.03
-@export var elite_chance_per_round: float = 0.012
-@export var elite_chance_max: float = 0.30
+# 难度缩放 - 更平衡的成长
+@export var round_multiplier_base: float = 0.04  # 适中的强度增长
+@export var elite_chance_base: float = 0.02  # 降低精英初始概率
+@export var elite_chance_per_round: float = 0.010  # 更平滑的精英增长
+@export var elite_chance_max: float = 0.25  # 降低精英上限
 
-# 回合间恢复
+# 回合间恢复 - 更好的游戏体验
 @export var heal_between_rounds: bool = true
-@export var heal_percent: float = 0.15  # 回合结束恢复15%生命
+@export var heal_percent: float = 0.20  # 增加到20%恢复
 
 var current_state: GameState = GameState.WEAPON_SELECTION
 var current_round: int = 0

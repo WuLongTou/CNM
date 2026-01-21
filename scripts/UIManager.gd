@@ -93,7 +93,7 @@ func _create_ui_elements():
 func _create_hud_panel():
 	hud_panel = Panel.new()
 	hud_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	hud_panel.size.y = 110  # 增加高度以容纳效果栏
+	hud_panel.size.y = 140  # 增加高度以容纳效果栏和确保所有元素正确显示
 	
 	# HUD 样式 - 现代深色主题
 	var hud_style = StyleBoxFlat.new()
@@ -109,10 +109,10 @@ func _create_hud_panel():
 	
 	var margin = MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
-	margin.add_theme_constant_override("margin_top", 10)
-	margin.add_theme_constant_override("margin_bottom", 10)
+	margin.add_theme_constant_override("margin_left", 15)
+	margin.add_theme_constant_override("margin_right", 15)
+	margin.add_theme_constant_override("margin_top", 8)
+	margin.add_theme_constant_override("margin_bottom", 8)
 	hud_panel.add_child(margin)
 	
 	var main_vbox = VBoxContainer.new()
@@ -205,26 +205,27 @@ func _create_hud_panel():
 
 	# 第二行：激活的效果/Buff/装备图标
 	var effects_row = HBoxContainer.new()
-	effects_row.add_theme_constant_override("separation", 6)
+	effects_row.add_theme_constant_override("separation", 4)
 	main_vbox.add_child(effects_row)
 	
 	var effects_title = Label.new()
 	effects_title.text = "效果: "
-	effects_title.add_theme_font_size_override("font_size", 11)
+	effects_title.add_theme_font_size_override("font_size", 10)
 	effects_title.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
 	effects_row.add_child(effects_title)
 	
 	effects_container = HBoxContainer.new()
-	effects_container.add_theme_constant_override("separation", 4)
+	effects_container.add_theme_constant_override("separation", 3)
 	effects_row.add_child(effects_container)
 	
 	# 第三行：属性和武器栏
 	var bottom_row = HBoxContainer.new()
+	bottom_row.add_theme_constant_override("separation", 8)
 	main_vbox.add_child(bottom_row)
 	
 	# 左侧属性
 	var stats_hbox = HBoxContainer.new()
-	stats_hbox.add_theme_constant_override("separation", 15)
+	stats_hbox.add_theme_constant_override("separation", 12)
 	bottom_row.add_child(stats_hbox)
 	
 	damage_label = Label.new()
@@ -508,10 +509,7 @@ func _create_tooltip_panel():
 	tooltip_hide_timer = Timer.new()
 	tooltip_hide_timer.one_shot = true
 	tooltip_hide_timer.wait_time = 0.2
-	tooltip_hide_timer.timeout.connect(func(): 
-		if tooltip_panel:
-			tooltip_panel.visible = false
-	)
+	tooltip_hide_timer.timeout.connect(_hide_tooltip_panel)
 	add_child(tooltip_hide_timer)
 
 func _create_pause_panel():
@@ -1324,6 +1322,14 @@ func _get_rarity_color(rarity: int) -> String:
 		4: return "#ffcc00"  # 传说 - 金色
 		_: return "#ffffff"
 
+func _hide_tooltip_panel():
+	if tooltip_panel:
+		tooltip_panel.visible = false
+
+func _hide_round_banner(banner: Control):
+	if banner:
+		banner.visible = false
+
 func _on_weapon_selection_started():
 	show_weapon_selection()
 
@@ -1355,7 +1361,7 @@ func show_round_banner(text: String):
 	# 退场动画
 	tween.parallel().tween_property(round_banner, "modulate:a", 0.0, 0.4)
 	tween.parallel().tween_property(round_banner, "scale", Vector2(1.15, 1.15), 0.4)
-	tween.tween_callback(func(): round_banner.visible = false)
+	tween.tween_callback(_hide_round_banner.bind(round_banner))
 
 func update_score_display(new_score: int):
 	if score_label:

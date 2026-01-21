@@ -202,72 +202,179 @@ func _update_status_labels():
 
 func _create_zombie_sprite():
 	var base_color = Color.GREEN
-	var size = 30
+	var size = 36  # 增大基础尺寸
 	
 	match zombie_type:
 		ZombieType.BASIC:
-			base_color = Color(0.4, 0.7, 0.3)  # 绿色
-			size = 30
+			base_color = Color(0.4, 0.7, 0.3)  # 腐烂绿色
+			size = 36
 		ZombieType.FAST:
-			base_color = Color(0.9, 0.9, 0.3)  # 黄色
-			size = 25
-		ZombieType.TANK:
-			base_color = Color(0.7, 0.3, 0.3)  # 红色
-			size = 40
-		ZombieType.EXPLODER:
-			base_color = Color(0.7, 0.3, 0.7)  # 紫色
-			size = 28
-		ZombieType.INVISIBLE:
-			base_color = Color(0.5, 0.8, 0.8)  # 青色
+			base_color = Color(0.9, 0.7, 0.2)  # 暗黄色
 			size = 30
+		ZombieType.TANK:
+			base_color = Color(0.8, 0.2, 0.2)  # 血红色
+			size = 48
+		ZombieType.EXPLODER:
+			base_color = Color(0.8, 0.2, 0.8)  # 紫红色
+			size = 34
+		ZombieType.INVISIBLE:
+			base_color = Color(0.3, 0.6, 0.7)  # 鬼魂青色
+			size = 36
 		ZombieType.SPITTER:
-			base_color = Color(0.3, 0.7, 0.3)  # 深绿色
-			size = 32
+			base_color = Color(0.2, 0.8, 0.2)  # 剧毒绿色
+			size = 40
 		ZombieType.HEALER:
-			base_color = Color(0.4, 0.9, 0.6)  # 亮绿色（治疗）
-			size = 28
+			base_color = Color(0.2, 0.9, 0.4)  # 荧光绿色
+			size = 38
 	
 	var image = Image.create(size, size, false, Image.FORMAT_RGBA8)
 	
-	# 绘制僵尸角色
+	# 绘制增强版僵尸角色
 	for y in range(size):
 		for x in range(size):
 			var color = Color.TRANSPARENT
 			var center_x = size / 2.0
 			var center_y = size / 2.0
 			
-			# 头部 (圆形)
-			if _is_zombie_in_circle(x, y, center_x, center_y * 0.6, size * 0.25):
+			# 头部 (不规则圆形，表示腐烂)
+			var head_dist = Vector2(x - center_x, y - center_y * 0.55).length()
+			var head_radius = size * 0.22
+			if head_dist <= head_radius:
+				# 头部主体
 				color = base_color
+				# 添加腐烂痕迹
+				if head_dist > head_radius * 0.6:
+					if randf() < 0.3:  # 随机腐烂点
+						color = base_color.darkened(0.4)
+				
+				# 眼睛位置
+				var left_eye = Vector2(center_x - size * 0.08, center_y * 0.5)
+				var right_eye = Vector2(center_x + size * 0.08, center_y * 0.5)
+				if Vector2(x - left_eye.x, y - left_eye.y).length() <= size * 0.04:
+					# 邪恶的红眼睛
+					color = Color.RED
+					if Vector2(x - left_eye.x, y - left_eye.y).length() <= size * 0.02:
+						color = Color(1.0, 0.2, 0.2)  # 眼睛中心
+				elif Vector2(x - right_eye.x, y - right_eye.y).length() <= size * 0.04:
+					color = Color.RED
+					if Vector2(x - right_eye.x, y - right_eye.y).length() <= size * 0.02:
+						color = Color(1.0, 0.2, 0.2)
+				
+				# 嘴巴 (邪恶的笑容)
+				if y >= center_y * 0.65 and y <= center_y * 0.75:
+					var mouth_width = size * 0.15
+					if x >= center_x - mouth_width and x <= center_x + mouth_width:
+						if y == int(center_y * 0.7):
+							color = Color.BLACK
+						elif abs(x - center_x) <= mouth_width * 0.6:
+							color = Color(0.1, 0, 0)  # 深红口腔
 			
-			# 身体 (椭圆)
-			elif _is_zombie_in_ellipse(x, y, center_x, center_y * 1.2, size * 0.2, size * 0.3):
-				color = base_color.darkened(0.2)
+			# 身体 (瘦长，怪异姿态)
+			elif y >= center_y * 0.8 and y <= center_y * 1.4:
+				var body_width = size * 0.18 - abs(y - center_y * 1.1) * 0.02
+				if x >= center_x - body_width and x <= center_x + body_width:
+					color = base_color.darkened(0.15)
+					# 添加肋骨效果
+					if y >= center_y * 0.9 and y <= center_y * 1.2:
+						if abs(x - center_x) <= body_width * 0.8 and int(y) % 3 == 0:
+							color = base_color.darkened(0.35)
 			
-			# 手臂 (简化)
-			elif (x >= center_x - size * 0.4 and x <= center_x - size * 0.3 and y >= center_y * 0.8 and y <= center_y * 1.4) or \
-				 (x >= center_x + size * 0.3 and x <= center_x + size * 0.4 and y >= center_y * 0.8 and y <= center_y * 1.4):
-				color = base_color.darkened(0.1)
+			# 手臂 (骨瘦如柴，不规则)
+			elif (y >= center_y * 0.9 and y <= center_y * 1.5):
+				# 左臂
+				var left_arm_x = center_x - size * 0.35 + sin(y * 0.3) * 2
+				if abs(x - left_arm_x) <= size * 0.06:
+					color = base_color.darkened(0.25)
+					# 骨节突出
+					if int(y) % 4 == 0:
+						color = base_color.darkened(0.4)
+				
+				# 右臂
+				var right_arm_x = center_x + size * 0.32 + sin(y * 0.3 + PI) * 2
+				if abs(x - right_arm_x) <= size * 0.06:
+					color = base_color.darkened(0.25)
+					if int(y) % 4 == 0:
+						color = base_color.darkened(0.4)
 			
-			# 腿部
-			elif (x >= center_x - size * 0.15 and x <= center_x - size * 0.05 and y >= center_y * 1.5 and y <= size - 2) or \
-				 (x >= center_x + size * 0.05 and x <= center_x + size * 0.15 and y >= center_y * 1.5 and y <= size - 2):
-				color = base_color.darkened(0.3)
+			# 腿部 (扭曲变形)
+			elif y >= center_y * 1.4:
+				# 左腿 (倾斜)
+				var left_leg_x = center_x - size * 0.12 + (y - center_y * 1.4) * 0.08
+				if abs(x - left_leg_x) <= size * 0.08:
+					color = base_color.darkened(0.3)
+					# 膝盖骨节
+					if y >= center_y * 1.65 and y <= center_y * 1.7:
+						color = base_color.darkened(0.5)
+				
+				# 右腿 (反向倾斜)
+				var right_leg_x = center_x + size * 0.1 - (y - center_y * 1.4) * 0.06
+				if abs(x - right_leg_x) <= size * 0.08:
+					color = base_color.darkened(0.3)
+					if y >= center_y * 1.65 and y <= center_y * 1.7:
+						color = base_color.darkened(0.5)
 			
-			# 眼睛 (红色)
-			elif (x == int(center_x - size * 0.1) or x == int(center_x + size * 0.1)) and y == int(center_y * 0.5):
-				color = Color.RED
-			
-			# 嘴巴 (黑色)
-			elif x >= center_x - size * 0.08 and x <= center_x + size * 0.08 and y == int(center_y * 0.7):
-				color = Color.BLACK
-			
-			# 特殊效果
-			if zombie_type == ZombieType.EXPLODER and _is_zombie_in_circle(x, y, center_x, center_y, size * 0.1):
-				color = Color.ORANGE  # 爆炸核心
-			elif zombie_type == ZombieType.TANK and (x == 0 or x == size-1 or y == 0 or y == size-1):
-				if color != Color.TRANSPARENT:
-					color = Color.GRAY  # 装甲边缘
+			# 特殊类型效果
+			match zombie_type:
+				ZombieType.EXPLODER:
+					# 爆炸核心 (发光)
+					var core_dist = Vector2(x - center_x, y - center_y * 1.2).length()
+					if core_dist <= size * 0.08:
+						var pulse = sin(Time.get_ticks_msec() * 0.01) * 0.3 + 0.7
+						color = Color.ORANGE * pulse
+					elif core_dist <= size * 0.12:
+						color = base_color.lightened(0.3)
+				
+				ZombieType.TANK:
+					# 重装甲板
+					if y <= size * 0.15 or y >= size * 0.85 or x <= size * 0.1 or x >= size * 0.9:
+						if color != Color.TRANSPARENT:
+							color = Color.GRAY.darkened(0.2)
+					# 金属铆钉
+					if ((x <= size * 0.15 or x >= size * 0.85) and int(y) % 6 == 3) or \
+					   ((y <= size * 0.15 or y >= size * 0.85) and int(x) % 6 == 3):
+						color = Color.DARK_GRAY
+				
+				ZombieType.FAST:
+					# 流线型身体
+					if color != Color.TRANSPARENT:
+						var speed_factor = 1.0 + sin(Time.get_ticks_msec() * 0.02) * 0.2
+						color = color.lightened(speed_factor * 0.2)
+					# 速度线条
+					if x <= size * 0.05 or x >= size * 0.95:
+						if y % 3 == 0:
+							color = Color.YELLOW.lightened(0.3)
+				
+				ZombieType.INVISIBLE:
+					# 半透明鬼魂效果
+					if color != Color.TRANSPARENT:
+						var ghost_alpha = 0.6 + sin(Time.get_ticks_msec() * 0.005) * 0.2
+						color.a *= ghost_alpha
+					# 鬼魂光环
+					var aura_dist = Vector2(x - center_x, y - center_y).length()
+					if aura_dist >= size * 0.4 and aura_dist <= size * 0.45:
+						color = Color.CYAN * 0.3
+				
+				ZombieType.SPITTER:
+					# 毒液袋 (绿色脓包)
+					var sac_dist = Vector2(x - center_x, y - center_y * 1.3).length()
+					if sac_dist <= size * 0.06:
+						color = Color(0.2, 1.0, 0.2)
+					# 毒液管道
+					elif abs(x - center_x) <= size * 0.02 and y >= center_y * 1.2 and y <= center_y * 1.4:
+						color = Color(0.1, 0.8, 0.1)
+				
+				ZombieType.HEALER:
+					# 治疗光环
+					var heal_dist = Vector2(x - center_x, y - center_y).length()
+					if heal_dist <= size * 0.5:
+						var heal_pulse = sin(Time.get_ticks_msec() * 0.008) * 0.2 + 0.8
+						if color != Color.TRANSPARENT:
+							color = color.lightened(heal_pulse * 0.3)
+					# 十字标记
+					if abs(x - center_x) <= size * 0.02 and y >= center_y * 0.2 and y <= center_y * 0.4:
+						color = Color.WHITE
+					elif abs(y - center_y * 0.3) <= size * 0.02 and x >= center_x * 0.8 and x <= center_x:
+						color = Color.WHITE
 			
 			image.set_pixel(x, y, color)
 	
@@ -275,8 +382,49 @@ func _create_zombie_sprite():
 	texture.set_image(image)
 	sprite.texture = texture
 	
+	# 添加僵尸类型特有的动画
+	_add_zombie_animation()
+	
 	if is_elite:
-		_create_elite_ring(size * 0.65, base_color.lightened(0.4))
+		_create_elite_ring(size * 0.7, base_color.lightened(0.4))
+
+func _add_zombie_animation():
+	# 根据僵尸类型添加特定动画
+	match zombie_type:
+		ZombieType.EXPLODER:
+			# 爆炸僵尸的脉动效果
+			var pulse_tween = create_tween()
+			pulse_tween.set_loops()
+			pulse_tween.tween_property(sprite, "scale", Vector2(1.1, 1.1), 1.5).set_trans(Tween.TRANS_SINE)
+			pulse_tween.tween_property(sprite, "scale", Vector2(0.9, 0.9), 1.5).set_trans(Tween.TRANS_SINE)
+		
+		ZombieType.FAST:
+			# 快速僵尸的抖动效果
+			var shake_tween = create_tween()
+			shake_tween.set_loops()
+			shake_tween.tween_property(sprite, "position:x", 2, 0.1)
+			shake_tween.tween_property(sprite, "position:x", -2, 0.1)
+			shake_tween.tween_property(sprite, "position:x", 0, 0.1)
+		
+		ZombieType.TANK:
+			# 坦克僵尸的重压效果
+			var weight_tween = create_tween()
+			weight_tween.set_loops()
+			weight_tween.tween_property(sprite, "position:y", 2, 2.0).set_trans(Tween.TRANS_SINE)
+			weight_tween.tween_property(sprite, "position:y", 0, 2.0).set_trans(Tween.TRANS_SINE)
+		
+		ZombieType.HEALER:
+			# 治疗僵尸的旋转光环
+			var heal_tween = create_tween()
+			heal_tween.set_loops()
+			heal_tween.tween_property(sprite, "rotation", PI * 2, 4.0)
+		
+		_:  # BASIC, INVISIBLE, SPITTER
+			# 基础僵尸的摇摆效果
+			var sway_tween = create_tween()
+			sway_tween.set_loops()
+			sway_tween.tween_property(sprite, "rotation", deg_to_rad(5), 3.0).set_trans(Tween.TRANS_SINE)
+			sway_tween.tween_property(sprite, "rotation", deg_to_rad(-5), 3.0).set_trans(Tween.TRANS_SINE)
 
 func _create_elite_ring(radius: float, color: Color):
 	elite_ring = Line2D.new()
@@ -404,11 +552,7 @@ func _spitt_poison(target):
 	var _direction = (target.global_position - global_position).normalized()
 	var move_tween = create_tween()
 	move_tween.tween_property(poison_projectile, "global_position", target.global_position, 0.5)
-	move_tween.tween_callback(func():
-		if is_instance_valid(target):
-			target.apply_poison(5.0, 3.0)
-		poison_projectile.queue_free()
-	)
+	move_tween.tween_callback(_complete_poison_spit.bind(target, poison_projectile))
 
 func _handle_healer_zombie(delta):
 	healer_cooldown -= delta
@@ -668,3 +812,9 @@ func set_player_target(target_player: Player):
 
 func set_elite(enabled: bool):
 	is_elite = enabled
+
+func _complete_poison_spit(target: Node, projectile: Node):
+	if is_instance_valid(target):
+		target.apply_poison(5.0, 3.0)
+	if is_instance_valid(projectile):
+		projectile.queue_free()

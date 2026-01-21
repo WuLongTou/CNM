@@ -6,14 +6,14 @@ signal died
 signal effect_applied(effect_name: String)  # 新增：特效应用信号
 
 # ===== 常量定义 =====
-const DEFAULT_MAX_HEALTH: int = 100
-const DEFAULT_BASE_DAMAGE: float = 10.0
-const DEFAULT_BASE_SPEED: float = 200.0
-const DASH_SPEED_MULTIPLIER: float = 3.0
-const DASH_DURATION: float = 0.2
-const DASH_COOLDOWN: float = 1.0
-const INVINCIBLE_DURATION: float = 0.4
-const CRIT_MULTIPLIER: float = 2.0
+const DEFAULT_MAX_HEALTH: int = 120  # 增加初始血量，提高容错率
+const DEFAULT_BASE_DAMAGE: float = 12.0  # 略微提高基础伤害
+const DEFAULT_BASE_SPEED: float = 220.0  # 提高移速，增加操作感
+const DASH_SPEED_MULTIPLIER: float = 3.5  # 提高冲刺倍率，增加躲避能力
+const DASH_DURATION: float = 0.25  # 略微延长冲刺时间
+const DASH_COOLDOWN: float = 0.8  # 减少冲刺冷却，提高使用频率
+const INVINCIBLE_DURATION: float = 0.5  # 延长无敌帧，提高生存能力
+const CRIT_MULTIPLIER: float = 2.5  # 提高暴击倍率，增加爆发潜力
 const AURA_TICK_INTERVAL: float = 0.5
 const AURA_ORB_COUNT: int = 3
 
@@ -95,9 +95,9 @@ var collision: CollisionShape2D
 var attack_area: Area2D
 var attack_timer: Timer
 var can_attack: bool = true
-var base_attack_cooldown: float = 0.5
+var base_attack_cooldown: float = 0.45  # 略微缩短攻击间隔
 var attack_cooldown: float = 0.5
-var base_attack_range: float = 60.0
+var base_attack_range: float = 70.0  # 增加攻击范围
 var bounds_padding: float = 22.0
 var top_ui_margin: float = 110.0
 var attack_speed_multiplier: float = 1.0
@@ -266,8 +266,10 @@ func _create_hit_effect(pos: Vector2, color: Color = Color.CYAN, intensity: floa
 	timer.wait_time = 0.5
 	timer.one_shot = true
 	timer.timeout.connect(particle.queue_free)
-	particle.add_child(timer)
 	timer.start()
+	
+	get_parent().add_child(timer)
+	get_parent().add_child(particle)
 
 func _create_impact_ring(pos: Vector2, radius: float, color: Color) -> Node2D:
 	var ring = Node2D.new()
@@ -549,40 +551,92 @@ func _show_attack_effect(target_pos: Vector2):
 			_show_magic_effect(target_pos)
 
 func _show_melee_effect(target_pos: Vector2):
-	# 近战攻击 - 扇形斩击效果
+	# 增强版近战攻击 - 华丽斩击效果
 	var slash_effect = Node2D.new()
 	slash_effect.global_position = global_position
 	get_parent().add_child(slash_effect)
 	
-	# 创建多条斩击线
-	for i in range(5):
-		var angle_offset = (i - 2) * 0.2  # 扇形展开
-		var direction = (target_pos - global_position).normalized()
-		var rotated_dir = direction.rotated(angle_offset)
-		var end_pos = global_position + rotated_dir * 80
+	# 创建多层斩击轨迹
+	for arc in range(3):  # 三层斩击弧
+		var arc_container = Node2D.new()
+		slash_effect.add_child(arc_container)
 		
-		var line = Line2D.new()
-		line.add_point(Vector2.ZERO)
-		line.add_point(end_pos - global_position)
-		line.width = 6.0 - i * 0.5  # 中间粗，两边细
-		line.default_color = Color(1.0, 0.8, 0.0, 0.8 - i * 0.1)  # 金色渐变
-		slash_effect.add_child(line)
+		var arc_points = []
+		var segments = 20
+		var arc_radius = 60 + arc * 15
+		var arc_angle = PI / 3  # 60度斩击范围
+		
+		var base_direction = (target_pos - global_position).normalized()
+		var start_angle = base_direction.angle() - arc_angle / 2
+		
+		for i in range(segments + 1):
+			var angle = start_angle + (float(i) / segments) * arc_angle
+			var radius = arc_radius * (1.0 + sin(float(i) / segments * PI) * 0.2)  # 波浪形
+			var point = Vector2(cos(angle), sin(angle)) * radius
+			arc_points.append(point)
+		
+		var slash_line = Line2D.new()
+		slash_line.points = arc_points
+		slash_line.width = 8.0 - arc * 2.0
+		slash_line.default_color = Color(1.0, 0.8 - arc * 0.1, 0.2 - arc * 0.05, 0.9 - arc * 0.2)
+		slash_line.joint_mode = Line2D.LINE_JOINT_ROUND
+		slash_line.begin_cap_mode = Line2D.LINE_CAP_ROUND
+		slash_line.end_cap_mode = Line2D.LINE_CAP_ROUND
+		arc_container.add_child(slash_line)
+		
+		# 添加能量粒子
+		for i in range(8 + arc * 3):
+			var particle_color = Color.GOLD if arc == 0 else (Color.ORANGE if arc == 1 else Color.YELLOW)
+			var particle = _create_energy_particle(global_position + base_direction.rotated(randf() - 0.5) * arc_radius, particle_color, 0.5 + arc * 0.1)
+			get_parent().add_child(particle)
 	
-	# 添加冲击波圆圈
-	var circle_effect = _create_impact_circle(target_pos, 40.0, Color.ORANGE)
-	get_parent().add_child(circle_effect)
+	# 剑光轨迹
+	var sword_trail = _create_sword_trail(global_position, target_pos)
+	get_parent().add_child(sword_trail)
 	
-	# 动画效果
-	var tween = create_tween()
-	tween.parallel().tween_property(slash_effect, "modulate:a", 0.0, 0.3)
-	tween.parallel().tween_property(circle_effect, "modulate:a", 0.0, 0.4)
-	tween.tween_callback(slash_effect.queue_free)
-	tween.tween_callback(circle_effect.queue_free)
+	# 多重冲击波
+	for i in range(3):
+		var delay = i * 0.1
+		var circle_effect = _create_expanding_circle(target_pos, 30.0 + i * 15, 
+			Color.ORANGE.lightened(i * 0.2))
+		circle_effect.modulate.a = 0.0
+		get_parent().add_child(circle_effect)
+		
+		_animate_circle_effect(circle_effect, delay)
+	
+	# 屏幕震动
+	get_tree().call_group("ui_manager", "shake_screen", 3.0)
+	
+	# 斩击音效增强
+	if SoundManager.instance:
+		SoundManager.play_melee_attack()
+	
+	# 动画清理
+	var cleanup_tween = create_tween()
+	cleanup_tween.tween_interval(1.0)
+	cleanup_tween.tween_callback(slash_effect.queue_free)
+	cleanup_tween.tween_callback(sword_trail.queue_free)
 
 func _show_ranged_effect(_target_pos: Vector2):
-	# 远程攻击已经有子弹轨迹，这里添加射击光效
-	var muzzle_flash = _create_muzzle_flash_enhanced()
+	# 增强版远程攻击 - 华丽射击效果
+	var muzzle_flash = _create_enhanced_muzzle_flash()
 	get_parent().add_child(muzzle_flash)
+	
+	# 创建弹道轨迹
+	var bullet_trail = _create_bullet_trail(global_position, _target_pos)
+	get_parent().add_child(bullet_trail)
+	
+	# 命中爆炸效果
+	var impact = _create_bullet_impact(_target_pos)
+	get_parent().add_child(impact)
+	
+	# 清理定时器
+	var cleanup_timer = Timer.new()
+	cleanup_timer.wait_time = 1.0
+	cleanup_timer.one_shot = true
+	cleanup_timer.timeout.connect(_cleanup_effects.bind([muzzle_flash, bullet_trail, impact, cleanup_timer]))
+	get_parent().add_child(cleanup_timer)
+	cleanup_timer.start()
 
 func _show_area_effect():
 	# 范围攻击 - 爆炸冲击波
@@ -595,7 +649,7 @@ func _show_area_effect():
 		# 延迟出现每个环
 		var delay_tween = create_tween()
 		delay_tween.tween_interval(i * 0.1)
-		delay_tween.tween_callback(func(): _animate_explosion_ring(ring))
+		delay_tween.tween_callback(_animate_explosion_ring.bind(ring))
 
 func _show_magic_effect(target_pos: Vector2):
 	# 魔法攻击 - 魔法阵效果
@@ -636,6 +690,232 @@ func _create_impact_circle(pos: Vector2, radius: float, color: Color) -> Node2D:
 	circle.add_child(line)
 	
 	return circle
+
+# 新增特效函数
+func _create_energy_particle(pos: Vector2, color: Color, lifetime: float = 0.6) -> GPUParticles2D:
+	var particle = GPUParticles2D.new()
+	particle.emitting = true
+	particle.amount = 10
+	particle.lifetime = lifetime
+	particle.one_shot = true
+	particle.modulate = color
+	
+	var mat = ParticleProcessMaterial.new()
+	mat.direction = Vector3(0, -1, 0)
+	mat.initial_velocity_min = 20.0
+	mat.initial_velocity_max = 80.0
+	mat.gravity = Vector3(0, 50, 0)
+	mat.scale_min = 1.0
+	mat.scale_max = 3.0
+	particle.process_material = mat
+	
+	return particle
+
+func _create_sword_trail(start_pos: Vector2, end_pos: Vector2) -> Node2D:
+	var trail = Node2D.new()
+	trail.global_position = start_pos
+	
+	# 创建多层剑光轨迹
+	for i in range(5):
+		var trail_line = Line2D.new()
+		trail_line.add_point(Vector2.ZERO)
+		trail_line.add_point(end_pos - start_pos)
+		trail_line.width = 12.0 - i * 2.0
+		trail_line.default_color = Color(1.0, 0.9 - i * 0.1, 0.3 - i * 0.05, 0.8 - i * 0.15)
+		trail_line.joint_mode = Line2D.LINE_JOINT_ROUND
+		trail_line.end_cap_mode = Line2D.LINE_CAP_ROUND
+		trail.add_child(trail_line)
+		
+		# 轨迹淡出动画
+		var fade_tween = trail.create_tween()
+		fade_tween.tween_interval(i * 0.02)
+		fade_tween.tween_property(trail_line, "modulate:a", 0.0, 0.3 - i * 0.05)
+	
+	# 添加光晕
+	var glow = Line2D.new()
+	glow.add_point(Vector2.ZERO)
+	glow.add_point(end_pos - start_pos)
+	glow.width = 20.0
+	glow.default_color = Color(1.0, 0.8, 0.2, 0.3)
+	glow.joint_mode = Line2D.LINE_JOINT_ROUND
+	trail.add_child(glow)
+	
+	return trail
+
+func _create_enhanced_muzzle_flash() -> Node2D:
+	var flash = Node2D.new()
+	flash.global_position = global_position
+	
+	# 多层闪光效果
+	for i in range(8):
+		var ray_length = randf_range(30, 60)
+		var angle = i * PI / 4
+		var direction = Vector2(cos(angle), sin(angle))
+		
+		var ray = Line2D.new()
+		ray.add_point(Vector2.ZERO)
+		ray.add_point(direction * ray_length)
+		ray.width = randf_range(2, 6)
+		ray.default_color = Color(1.0, 0.9, 0.5, randf_range(0.7, 1.0))
+		ray.joint_mode = Line2D.LINE_JOINT_ROUND
+		ray.end_cap_mode = Line2D.LINE_CAP_ROUND
+		flash.add_child(ray)
+		
+		# 射线消失动画
+		var ray_tween = flash.create_tween()
+		ray_tween.tween_property(ray, "modulate:a", 0.0, 0.15)
+	
+	# 中心光环
+	var center_glow = GPUParticles2D.new()
+	center_glow.emitting = true
+	center_glow.amount = 20
+	center_glow.lifetime = 0.3
+	center_glow.one_shot = true
+	center_glow.modulate = Color.YELLOW
+	
+	var glow_mat = ParticleProcessMaterial.new()
+	glow_mat.direction = Vector3(0, 0, 1)
+	glow_mat.initial_velocity_min = 10.0
+	glow_mat.initial_velocity_max = 30.0
+	glow_mat.scale_min = 2.0
+	glow_mat.scale_max = 5.0
+	center_glow.process_material = glow_mat
+	
+	flash.add_child(center_glow)
+	
+	# 自动清理
+	var timer = Timer.new()
+	timer.wait_time = 0.5
+	timer.one_shot = true
+	timer.timeout.connect(flash.queue_free)
+	flash.add_child(timer)
+	timer.start()
+	
+	return flash
+
+func _create_bullet_trail(start_pos: Vector2, end_pos: Vector2) -> Node2D:
+	var trail = Node2D.new()
+	
+	# 子弹轨迹主线
+	var main_trail = Line2D.new()
+	main_trail.add_point(Vector2.ZERO)
+	main_trail.add_point(end_pos - start_pos)
+	main_trail.width = 3.0
+	main_trail.default_color = Color.CYAN
+	main_trail.joint_mode = Line2D.LINE_JOINT_ROUND
+	trail.add_child(main_trail)
+	
+	# 能量光晕
+	var energy_glow = Line2D.new()
+	energy_glow.add_point(Vector2.ZERO)
+	energy_glow.add_point(end_pos - start_pos)
+	energy_glow.width = 8.0
+	energy_glow.default_color = Color(0.3, 0.8, 1.0, 0.5)
+	energy_glow.joint_mode = Line2D.LINE_JOINT_ROUND
+	trail.add_child(energy_glow)
+	
+	# 轨迹粒子
+	var trail_particles = GPUParticles2D.new()
+	trail_particles.emitting = true
+	trail_particles.amount = 30
+	trail_particles.lifetime = 0.8
+	trail_particles.one_shot = true
+	trail_particles.modulate = Color.CYAN
+	
+	var trail_mat = ParticleProcessMaterial.new()
+	trail_mat.direction = Vector3(0, -1, 0)
+	trail_mat.initial_velocity_min = 20.0
+	trail_mat.initial_velocity_max = 60.0
+	trail_mat.scale_min = 0.5
+	trail_mat.scale_max = 2.0
+	trail_particles.process_material = trail_mat
+	
+	trail.add_child(trail_particles)
+	
+	return trail
+
+func _create_bullet_impact(pos: Vector2) -> Node2D:
+	var impact = Node2D.new()
+	impact.global_position = pos
+	
+	# 爆炸粒子
+	var explosion = GPUParticles2D.new()
+	explosion.emitting = true
+	explosion.amount = 25
+	explosion.lifetime = 0.6
+	explosion.one_shot = true
+	explosion.modulate = Color.CYAN
+	
+	var explosion_mat = ParticleProcessMaterial.new()
+	explosion_mat.direction = Vector3(0, 1, 0)
+	explosion_mat.initial_velocity_min = 50.0
+	explosion_mat.initial_velocity_max = 150.0
+	explosion_mat.gravity = Vector3(0, -100, 0)
+	explosion_mat.scale_min = 1.0
+	explosion_mat.scale_max = 4.0
+	explosion.process_material = explosion_mat
+	
+	impact.add_child(explosion)
+	
+	# 扩散光环
+	for i in range(3):
+		var ring = _create_expanding_circle(Vector2.ZERO, 10.0 + i * 8, Color.CYAN.lightened(i * 0.2))
+		impact.add_child(ring)
+		
+		var ring_tween = impact.create_tween()
+		ring_tween.tween_interval(i * 0.05)
+		ring_tween.tween_property(ring, "scale", Vector2(3, 3), 0.4)
+		ring_tween.parallel().tween_property(ring, "modulate:a", 0.0, 0.4)
+	
+	return impact
+
+func _create_expanding_circle(pos: Vector2, radius: float, color: Color) -> Node2D:
+	var circle = Node2D.new()
+	circle.position = pos
+	
+	var line = Line2D.new()
+	var points = 24
+	for i in range(points + 1):
+		var angle = i * 2.0 * PI / points
+		var point = Vector2(cos(angle), sin(angle)) * radius
+		line.add_point(point)
+	line.width = 2.0
+	line.default_color = color
+	line.joint_mode = Line2D.LINE_JOINT_ROUND
+	circle.add_child(line)
+	
+	return circle
+
+func _cleanup_effects(effects: Array):
+	for effect in effects:
+		if is_instance_valid(effect):
+			effect.queue_free()
+
+func _animate_circle_effect(circle: Node2D, delay: float):
+	await get_tree().create_timer(delay).timeout
+	
+	if not is_instance_valid(circle):
+		return
+	
+	# 淡入动画
+	var fade_in_tween = circle.create_tween()
+	fade_in_tween.tween_property(circle, "modulate:a", 0.8, 0.1)
+	
+	# 等待淡入完成
+	await fade_in_tween.finished
+	
+	if not is_instance_valid(circle):
+		return
+	
+	# 淡出动画
+	var fade_out_tween = circle.create_tween()
+	fade_out_tween.tween_property(circle, "modulate:a", 0.0, 0.3)
+	
+	# 等待淡出完成，然后删除
+	await fade_out_tween.finished
+	
+	if is_instance_valid(circle):
+		circle.queue_free()
 
 func _create_muzzle_flash_enhanced() -> Node2D:
 	var flash = Node2D.new()
@@ -920,45 +1200,126 @@ func _create_muzzle_flash(direction: Vector2):
 	timer.start()
 
 func _create_player_sprite():
-	# 创建更美观的玩家角色
-	var image = Image.create(40, 40, false, Image.FORMAT_RGBA8)
+	# 创建更精美详细的玩家角色
+	var image = Image.create(48, 56, false, Image.FORMAT_RGBA8)
 	
-	# 绘制玩家角色 - 一个战士的简化版本
-	for y in range(40):
-		for x in range(40):
+	# 绘制玩家角色 - 精致的战士版本
+	for y in range(56):
+		for x in range(48):
 			var color = Color.TRANSPARENT
+			var center_x = 24
+			var center_y = 28
 			
-			# 头部 (圆形)
-			if _is_in_circle(x, y, 20, 12, 8):
-				color = Color(1.0, 0.8, 0.6)  # 肤色
+			# 头部盔甲 (圆形，更精致)
+			if _is_in_circle(x, y, center_x, center_y - 12, 10):
+				# 金属反光效果
+				var dist = Vector2(x - center_x, y - (center_y - 12)).length()
+				if dist < 6:
+					color = Color(0.7, 0.8, 0.9)  # 银色高光
+				else:
+					color = Color(0.4, 0.5, 0.6)  # 钢色盔甲
 			
-			# 身体 (矩形)
-			elif x >= 15 and x <= 25 and y >= 20 and y <= 35:
-				color = Color(0.2, 0.4, 0.8)  # 蓝色盔甲
+			# 头盔面罩
+			elif y >= center_y - 8 and y <= center_y - 2 and x >= center_x - 8 and x <= center_x + 8:
+				if y >= center_y - 6 and y <= center_y - 4 and (x == center_x - 6 or x == center_x + 6):
+					color = Color.CYAN  # 眼镜光效
+				else:
+					color = Color(0.3, 0.4, 0.5)  # 面罩
 			
-			# 手臂
-			elif (x >= 10 and x <= 14 and y >= 22 and y <= 30) or (x >= 26 and x <= 30 and y >= 22 and y <= 30):
-				color = Color(1.0, 0.8, 0.6)  # 肤色
+			# 身体盔甲 (六边形设计)
+			elif y >= center_y and y <= center_y + 18:
+				var body_width = 14 - abs(y - center_y - 9) * 0.3
+				if x >= center_x - body_width and x <= center_x + body_width:
+					# 盔甲主体
+					if y >= center_y + 2 and y <= center_y + 14:
+						# 中心徽章
+						if y >= center_y + 6 and y <= center_y + 10 and x >= center_x - 4 and x <= center_x + 4:
+							if y >= center_y + 7 and y <= center_y + 9 and x >= center_x - 2 and x <= center_x + 2:
+								color = Color.GOLD  # 徽章核心
+							else:
+								color = Color(0.8, 0.6, 0.2)  # 徽章边框
+						else:
+							# 盔甲反光条纹
+							var stripe_pos = (x - center_x + body_width) / (body_width * 2)
+							if stripe_pos > 0.3 and stripe_pos < 0.4:
+								color = Color(0.6, 0.7, 0.8)  # 反光
+							else:
+								color = Color(0.2, 0.4, 0.7)  # 蓝色盔甲
+					else:
+						color = Color(0.25, 0.35, 0.6)  # 护肩
 			
-			# 腿部
-			elif (x >= 16 and x <= 19 and y >= 35 and y <= 39) or (x >= 21 and x <= 24 and y >= 35 and y <= 39):
-				color = Color(0.3, 0.2, 0.1)  # 棕色裤子
+			# 手臂 (动态姿态)
+			elif (x >= center_x - 18 and x <= center_x - 10 and y >= center_y + 4 and y <= center_y + 20):
+				# 左臂举盾
+				if y >= center_y + 4 and y <= center_y + 12:
+					if x >= center_x - 16 and x <= center_x - 12:
+						color = Color(0.6, 0.3, 0.8)  # 能量盾
+					elif x >= center_x - 18 and x <= center_x - 16:
+						color = Color(0.4, 0.2, 0.6)  # 盾边
+				else:
+					color = Color(0.3, 0.4, 0.5)  # 手臂盔甲
+			elif (x >= center_x + 10 and x <= center_x + 16 and y >= center_y + 2 and y <= center_y + 18):
+				# 右臂持武器
+				color = Color(0.3, 0.4, 0.5)  # 手臂盔甲
 			
-			# 武器 (剑)
-			elif x >= 31 and x <= 33 and y >= 15 and y <= 25:
-				color = Color.GRAY  # 剑身
-			elif x >= 30 and x <= 34 and y >= 14 and y <= 16:
-				color = Color(0.6, 0.4, 0.2)  # 剑柄
+			# 武器 (能量剑)
+			elif x >= center_x + 16 and x <= center_x + 20:
+				if y >= center_y - 8 and y <= center_y + 14:
+					# 剑身光效
+					if x >= center_x + 17 and x <= center_x + 19:
+						var blade_pos = (y - (center_y - 8)) / 22.0
+						if blade_pos > 0.3 and blade_pos < 0.7:
+							color = Color.CYAN  # 剑身光
+						else:
+							color = Color(0.2, 0.8, 1.0)  # 青色剑身
+					else:
+						color = Color(0.1, 0.6, 0.8)  # 剑边
+			# 剑柄
+			elif x >= center_x + 15 and x <= center_x + 21 and y >= center_y + 14 and y <= center_y + 18:
+				if y >= center_y + 15 and y <= center_y + 17:
+					color = Color(0.7, 0.4, 0.2)  # 柄身
+				else:
+					color = Color(0.5, 0.3, 0.1)  # 柄端
 			
-			# 眼睛
-			elif (x == 18 or x == 22) and y == 10:
-				color = Color.BLACK
+			# 腿部 (装甲裤)
+			elif y >= center_y + 18:
+				# 左腿
+				if x >= center_x - 8 and x <= center_x - 4 and y <= center_y + 28:
+					# 膝盖护甲
+					if y >= center_y + 22 and y <= center_y + 24:
+						color = Color(0.5, 0.5, 0.6)  # 护膝
+					else:
+						color = Color(0.2, 0.3, 0.5)  # 腿甲
+				# 右腿
+				elif x >= center_x + 4 and x <= center_x + 8 and y <= center_y + 28:
+					# 膝盖护甲
+					if y >= center_y + 22 and y <= center_y + 24:
+						color = Color(0.5, 0.5, 0.6)  # 护膝
+					else:
+						color = Color(0.2, 0.3, 0.5)  # 腿甲
+				
+				# 靴子
+				elif ((x >= center_x - 9 and x <= center_x - 3) or (x >= center_x + 3 and x <= center_x + 9)) and y >= center_y + 26:
+					color = Color(0.15, 0.15, 0.25)  # 深色靴子
+			
+			# 斗篷/披风
+			elif y >= center_y - 4 and y <= center_y + 24:
+				if (x >= center_x - 22 and x <= center_x - 18) or (x >= center_x + 18 and x <= center_x + 22):
+					# 披风渐变
+					var cape_alpha = 1.0 - abs(y - center_y - 10) / 14.0
+					if x >= center_x + 18:
+						color = Color(0.3, 0.1, 0.1, cape_alpha * 0.8)  # 红色披风
+					else:
+						color = Color(0.1, 0.1, 0.2, cape_alpha * 0.8)  # 深色内衬
 			
 			image.set_pixel(x, y, color)
 	
 	var texture = ImageTexture.new()
 	texture.set_image(image)
 	sprite.texture = texture
+	
+	# 添加呼吸动画
+	_create_breathing_animation()
 
 func _create_shadow_texture(width: int, height: int, color: Color) -> Texture2D:
 	var image = Image.create(width, height, false, Image.FORMAT_RGBA8)
@@ -978,6 +1339,25 @@ func _is_in_circle(x: int, y: int, center_x: int, center_y: int, radius: int) ->
 	var dx = x - center_x
 	var dy = y - center_y
 	return dx * dx + dy * dy <= radius * radius
+
+func _create_breathing_animation():
+	# 创建呼吸动画效果
+	var tween = create_tween()
+	tween.set_loops()
+	tween.tween_property(sprite, "scale", Vector2(1.05, 1.05), 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "scale", Vector2(0.95, 0.95), 2.0).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+func _create_walking_animation():
+	# 创建行走动画（当移动时）
+	if not sprite:
+		return
+		
+	# 简单的左右摇摆动画
+	var sway_tween = create_tween()
+	sway_tween.set_loops()
+	sway_tween.tween_property(sprite, "rotation", deg_to_rad(3), 0.3).set_trans(Tween.TRANS_SINE)
+	sway_tween.tween_property(sprite, "rotation", deg_to_rad(-3), 0.6).set_trans(Tween.TRANS_SINE)
+	sway_tween.tween_property(sprite, "rotation", 0.0, 0.3).set_trans(Tween.TRANS_SINE)
 
 func handle_movement():
 	var input_vector = Vector2.ZERO
