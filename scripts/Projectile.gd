@@ -4,13 +4,20 @@ extends Area2D
 var velocity: Vector2
 var damage: float
 var lifetime: float = 3.0
+var trajectory_damage_ratio: float = 0.0
 var piercing_count: int = 0
+var is_returning: bool = false
+var shooter: Node
+var bounces_left: int = 0
+var bounds_padding: float = 8.0
+var top_ui_margin: float = 110.0
+
+var damaged_enemies: Array = []
 
 func _ready():
-	# 连接碰撞信号
 	body_entered.connect(_on_body_entered)
+	area_entered.connect(_on_area_entered)
 	
-	# 设置生命周期
 	var timer = Timer.new()
 	timer.wait_time = lifetime
 	timer.one_shot = true
@@ -21,26 +28,104 @@ func _ready():
 func _physics_process(delta):
 	global_position += velocity * delta
 	
-	# 根据速度旋转子弹
 	if velocity.length() > 0:
 		rotation = velocity.angle()
+	
+	_handle_bounds_bounce()
+	
+	# 路径伤害检测
+	if trajectory_damage_ratio > 0:
+		_check_trajectory_collision()
+
+func _check_trajectory_collision():
+	var zombies = get_tree().get_nodes_in_group("zombies")
+	for zombie in zombies:
+		if zombie is Zombie and not damaged_enemies.has(zombie):
+			var distance = global_position.distance_to(zombie.global_position)
+			if distance < 30:
+				var trajectory_damage = int(damage * trajectory_damage_ratio)
+				if trajectory_damage > 0:
+					zombie.take_damage(trajectory_damage)
+					get_tree().call_group("ui_manager", "show_damage_number", zombie.global_position, trajectory_damage, false)
 
 func _on_body_entered(body):
-	if body is Zombie:
-		# 对僵尸造成伤害
+	if body is Zombie and not damaged_enemies.has(body):
 		body.take_damage(int(damage))
-		
-		# 创建击中特效
+		_apply_shooter_effects(body)
+		damaged_enemies.append(body)
 		_create_hit_effect()
 		
-		# 检查穿透
 		if piercing_count > 0:
 			piercing_count -= 1
 		else:
-			queue_free()
+			if is_returning:
+				_bounce_from_target(body)
+			else:
+				queue_free()
+
+func _on_area_entered(area):
+	if area.has_method("take_damage"):
+		if not damaged_enemies.has(area):
+			area.take_damage(int(damage))
+			_apply_shooter_effects(area)
+			damaged_enemies.append(area)
+			_create_hit_effect()
+			
+			if piercing_count <= 0:
+				if is_returning:
+					_bounce_from_target(area)
+				else:
+					queue_free()
+
+func _destroy_or_return():
+	if is_returning:
+		_bounce_from_target(null)
+	else:
+		queue_free()
+
+func _bounce_from_target(target):
+	if bounces_left <= 0:
+		queue_free()
+		return
+	
+	var normal = Vector2.RIGHT
+	if target and target is Node2D:
+		normal = (global_position - target.global_position).normalized()
+	
+	velocity = velocity.bounce(normal)
+	bounces_left -= 1
+	damaged_enemies.clear()
+
+func _handle_bounds_bounce():
+	if not is_returning:
+		return
+	var screen_size = get_viewport().get_visible_rect().size
+	var min_pos = Vector2(bounds_padding, top_ui_margin + bounds_padding)
+	var max_pos = Vector2(screen_size.x - bounds_padding, screen_size.y - bounds_padding)
+	var bounced = false
+	
+	if global_position.x <= min_pos.x or global_position.x >= max_pos.x:
+		velocity.x = -velocity.x
+		bounced = true
+	if global_position.y <= min_pos.y or global_position.y >= max_pos.y:
+		velocity.y = -velocity.y
+		bounced = true
+	
+	if bounced:
+		global_position = global_position.clamp(min_pos, max_pos)
+		_bounce_from_target(null)
+
+func _apply_shooter_effects(target):
+	if shooter and shooter is Player:
+		var player = shooter as Player
+		if target is Zombie:
+			if player.freeze_duration > 0 and randf() < (player.freeze_duration / 100.0):
+				target.apply_freeze(0.8)
+			if player.poison_damage > 0 and randf() < (player.poison_damage / 100.0):
+				var dps = 3.0 + player.poison_damage * 0.2
+				target.apply_poison(dps, 3.0)
 
 func _create_hit_effect():
-	# 击中特效
 	var hit_particles = GPUParticles2D.new()
 	hit_particles.global_position = global_position
 	hit_particles.emitting = true
@@ -58,7 +143,6 @@ func _create_hit_effect():
 	
 	get_parent().add_child(hit_particles)
 	
-	# 0.6秒后删除
 	var timer = Timer.new()
 	timer.wait_time = 0.6
 	timer.one_shot = true

@@ -4,11 +4,15 @@ extends CanvasLayer
 var background_rect: ColorRect
 var grid_container: Control
 var grid_lines: Array[Line2D] = []
+var grid_size: int = 60
+var grid_scroll_speed: Vector2 = Vector2(12, 6)
+var grid_offset: Vector2 = Vector2.ZERO
 
 func _ready():
 	layer = -10  # 确保背景在最底层
 	_create_background()
 	_create_grid()
+	set_process(true)
 
 func _create_background():
 	# 创建渐变背景
@@ -68,14 +72,15 @@ func _create_gradient_overlay():
 	background_rect.add_child(gradient_overlay)
 
 func _create_stars():
-	# 创建星空效果
+	var screen_size = get_viewport().get_visible_rect().size
+	
 	for i in range(100):
 		var star = ColorRect.new()
 		star.size = Vector2(2, 2)
 		star.color = Color(1, 1, 1, randf_range(0.3, 0.8))
 		star.position = Vector2(
-			randf_range(0, 1280),
-			randf_range(0, 720)
+			randf_range(0, screen_size.x),
+			randf_range(0, screen_size.y)
 		)
 		background_rect.add_child(star)
 		
@@ -89,29 +94,43 @@ func _create_grid():
 	grid_container = Control.new()
 	grid_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(grid_container)
+
+	_rebuild_grid()
+
+func _rebuild_grid():
+	for line in grid_lines:
+		if is_instance_valid(line):
+			line.queue_free()
+	grid_lines.clear()
 	
-	var screen_size = Vector2(1280, 720)
-	var grid_size = 60
+	var screen_size = get_viewport().get_visible_rect().size
 	
 	# 创建垂直线
-	for x in range(0, int(screen_size.x), grid_size):
+	for x in range(0, int(screen_size.x + grid_size), grid_size):
 		var line = Line2D.new()
 		line.add_point(Vector2(x, 0))
-		line.add_point(Vector2(x, screen_size.y))
+		line.add_point(Vector2(x, screen_size.y + grid_size))
 		line.width = 1.0
 		line.default_color = Color(0.3, 0.4, 0.6, 0.2)
 		grid_container.add_child(line)
 		grid_lines.append(line)
 	
 	# 创建水平线
-	for y in range(0, int(screen_size.y), grid_size):
+	for y in range(0, int(screen_size.y + grid_size), grid_size):
 		var line = Line2D.new()
 		line.add_point(Vector2(0, y))
-		line.add_point(Vector2(screen_size.x, y))
+		line.add_point(Vector2(screen_size.x + grid_size, y))
 		line.width = 1.0
 		line.default_color = Color(0.3, 0.4, 0.6, 0.2)
 		grid_container.add_child(line)
 		grid_lines.append(line)
+
+func _process(delta):
+	if grid_container:
+		grid_offset += grid_scroll_speed * delta
+		grid_offset.x = fmod(grid_offset.x, grid_size)
+		grid_offset.y = fmod(grid_offset.y, grid_size)
+		grid_container.position = Vector2(-grid_offset.x, -grid_offset.y)
 
 func update_background_size():
 	# 当窗口大小改变时更新背景
@@ -119,3 +138,4 @@ func update_background_size():
 		background_rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	if grid_container:
 		grid_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_rebuild_grid()
