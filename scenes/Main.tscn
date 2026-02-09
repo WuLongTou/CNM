@@ -1,11 +1,11 @@
 [gd_scene load_steps=7 format=3 uid="uid://bqxcvw5hn6p2c"]
 
-[ext_resource type="Script" uid="uid://bo33tukfkooxo" path="res://scripts/Main.gd" id="1_0k8vg"]
-[ext_resource type="Script" uid="uid://x7wo6a12nwdq" path="res://scripts/Background.gd" id="2_1a2bc"]
-[ext_resource type="Script" uid="uid://bglltvo88l5f5" path="res://scripts/Player.gd" id="3_3h4xr"]
-[ext_resource type="Script" uid="uid://cnpbkqhwkypqc" path="res://scripts/GameManager.gd" id="4_8j2kl"]
-[ext_resource type="Script" uid="uid://c6p5ekstxcyv7" path="res://scripts/WeaponDeck.gd" id="5_9m3nl"]
-[ext_resource type="Script" uid="uid://b3ecxjn0a3e12" path="res://scripts/UIManager.gd" id="6_p6q0o"]
+[ext_resource type="Script" uid="uid://bo33tukfkooxo" path="res://scripts/core/Main.gd" id="1_0k8vg"]
+[ext_resource type="Script" uid="uid://x7wo6a12nwdq" path="res://scripts/world/Background.gd" id="2_1a2bc"]
+[ext_resource type="Script" uid="uid://bglltvo88l5f5" path="res://scripts/player/Player.gd" id="3_3h4xr"]
+[ext_resource type="Script" uid="uid://cnpbkqhwkypqc" path="res://scripts/core/GameManager.gd" id="4_8j2kl"]
+[ext_resource type="Script" uid="uid://c6p5ekstxcyv7" path="res://scripts/weapons/WeaponDeck.gd" id="5_9m3nl"]
+[ext_resource type="Script" uid="uid://b3ecxjn0a3e12" path="res://scripts/ui/UIManager.gd" id="6_p6q0o"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0k8vg")

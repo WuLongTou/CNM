@@ -12,10 +12,14 @@ func _ready():
 	sound_manager_node.name = "SoundManager"
 	add_child(sound_manager_node)
 	sound_manager = sound_manager_node
-	
+
 	var save_manager_node = SaveManager.new()
 	save_manager_node.name = "SaveManager"
 	add_child(save_manager_node)
+
+	var vfx_manager_node = VFXManager.new()
+	vfx_manager_node.name = "VFXManager"
+	add_child(vfx_manager_node)
 	
 	game_manager.ui_manager = ui_manager
 	

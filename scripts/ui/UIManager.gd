@@ -7,6 +7,11 @@ extends Control
 signal weapon_card_selected(weapon: WeaponCard)
 signal upgrade_skipped
 
+# ═══ 组件引用 ═══
+var screen_fx: ScreenEffects
+var game_over_ui: GameOverUI
+
+# ═══ HUD ═══
 var weapon_selection_panel: Panel
 var weapon_buttons: Array[Button] = []
 var hud_panel: Panel
@@ -25,20 +30,20 @@ var controls_panel: Panel
 var controls_visible: bool = false
 var welcome_panel: Panel
 var welcome_visible: bool = true
-
 var score_label: Label
-
 var health_bar: ProgressBar
 
+# ═══ 武器选择 ═══
 var current_weapon_options: Array[WeaponCard] = []
 var game_manager: GameManager
 var weapon_deck: WeaponDeck
 
+# ═══ Tooltip ═══
 var tooltip_panel: Panel
 var tooltip_label: RichTextLabel
 var tooltip_hide_timer: Timer
-var tooltip_max_width: float = 360.0
-var tooltip_offset: Vector2 = Vector2(15, 15)
+var tooltip_max_width: float = GameConfig.TOOLTIP_MAX_WIDTH
+var tooltip_offset: Vector2 = GameConfig.TOOLTIP_OFFSET
 var pause_panel: Panel
 var pause_label: Label
 var pause_locked_by_upgrade: bool = false
@@ -46,27 +51,25 @@ var user_paused: bool = false
 var current_weapon_label: Label
 
 var round_banner: Label
-var damage_flash: ColorRect
 var low_health_tween: Tween
 
-# 效果/Buff显示系统
+# ═══ 效果/Buff 显示 ═══
 var effects_container: HBoxContainer
-var effect_icons: Dictionary = {}  # 存储效果图标按钮
-
-# 屏幕震动系统
-var shake_intensity: float = 0.0
-var shake_decay: float = 8.0
-var original_position: Vector2 = Vector2.ZERO
-
-# 连击显示
-var combo_label: Label
-var combo_count: int = 0
-var combo_timer: float = 0.0
-var combo_decay_time: float = 2.0
+var effect_icons: Dictionary = {}
 
 func _ready():
 	add_to_group("ui_manager")
 	process_mode = Node.PROCESS_MODE_ALWAYS
+
+	# 初始化子组件
+	screen_fx = ScreenEffects.new()
+	screen_fx.name = "ScreenEffects"
+	add_child(screen_fx)
+
+	game_over_ui = GameOverUI.new()
+	game_over_ui.name = "GameOverUI"
+	add_child(game_over_ui)
+
 	_create_ui_elements()
 	_setup_connections()
 	_create_tooltip_panel()
@@ -86,211 +89,160 @@ func _create_ui_elements():
 	# 创建欢迎界面
 	_create_welcome_panel()
 	
-	# 创建回合提示与受伤闪屏
+	# 创建回合提示
 	_create_round_banner()
-	_create_damage_flash()
 
 func _create_hud_panel():
 	hud_panel = Panel.new()
 	hud_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	hud_panel.size.y = 140  # 增加高度以容纳效果栏和确保所有元素正确显示
-	
-	# HUD 样式 - 现代深色主题
+	hud_panel.custom_minimum_size.y = 52
+	hud_panel.offset_bottom = 52
+
 	var hud_style = StyleBoxFlat.new()
-	hud_style.bg_color = Color(0.08, 0.08, 0.12, 0.92)
-	hud_style.border_width_bottom = 3
-	hud_style.border_color = Color(0.25, 0.35, 0.55, 0.8)
-	hud_style.shadow_size = 8
-	hud_style.shadow_color = Color(0, 0, 0, 0.6)
-	hud_style.corner_radius_bottom_left = 8
-	hud_style.corner_radius_bottom_right = 8
+	hud_style.bg_color = Color(0.04, 0.04, 0.06, 0.90)
+	hud_style.border_width_bottom = 1
+	hud_style.border_color = Color(0.25, 0.18, 0.12, 0.4)
 	hud_panel.add_theme_stylebox_override("panel", hud_style)
 	add_child(hud_panel)
-	
+
 	var margin = MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 15)
-	margin.add_theme_constant_override("margin_right", 15)
-	margin.add_theme_constant_override("margin_top", 8)
-	margin.add_theme_constant_override("margin_bottom", 8)
+	margin.add_theme_constant_override("margin_left", 10)
+	margin.add_theme_constant_override("margin_right", 10)
+	margin.add_theme_constant_override("margin_top", 4)
+	margin.add_theme_constant_override("margin_bottom", 4)
 	hud_panel.add_child(margin)
-	
+
 	var main_vbox = VBoxContainer.new()
+	main_vbox.add_theme_constant_override("separation", 3)
 	margin.add_child(main_vbox)
-	
-	# 第一行：状态栏 (血量和弹药)
-	var status_row = HBoxContainer.new()
-	main_vbox.add_child(status_row)
-	
-	# 血量区域
-	var health_container = VBoxContainer.new()
-	health_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	status_row.add_child(health_container)
-	
-	var health_title = Label.new()
-	health_title.text = "生命值"
-	health_title.add_theme_font_size_override("font_size", 12)
-	health_title.add_theme_color_override("font_color", Color.LIGHT_CORAL)
-	health_container.add_child(health_title)
-	
+
+	# ═══ 第一行：血条(左) | 回合(中) | 得分(右) ═══
+	var row1 = HBoxContainer.new()
+	row1.add_theme_constant_override("separation", 12)
+	main_vbox.add_child(row1)
+
+	# --- 左：血条区域（固定宽度，不扩展） ---
+	var hp_wrapper = HBoxContainer.new()
+	hp_wrapper.add_theme_constant_override("separation", 6)
+	hp_wrapper.custom_minimum_size.x = 240
+	hp_wrapper.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	row1.add_child(hp_wrapper)
+
 	health_bar = ProgressBar.new()
-	health_bar.custom_minimum_size.y = 18
-	health_bar.show_percentage = true
-	health_bar.tooltip_text = "生命值：归零会结束游戏"
+	health_bar.custom_minimum_size = Vector2(180, 14)
+	health_bar.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	health_bar.show_percentage = false
 	var hp_bg = StyleBoxFlat.new()
-	hp_bg.bg_color = Color(0.2, 0.0, 0.0)
-	hp_bg.corner_radius_top_left = 4
-	hp_bg.corner_radius_bottom_left = 4
-	hp_bg.corner_radius_top_right = 4
-	hp_bg.corner_radius_bottom_right = 4
+	hp_bg.bg_color = Color(0.12, 0.03, 0.03)
+	hp_bg.corner_radius_top_left = 2
+	hp_bg.corner_radius_bottom_left = 2
+	hp_bg.corner_radius_top_right = 2
+	hp_bg.corner_radius_bottom_right = 2
+	hp_bg.border_width_top = 1
+	hp_bg.border_width_bottom = 1
+	hp_bg.border_width_left = 1
+	hp_bg.border_width_right = 1
+	hp_bg.border_color = Color(0.30, 0.10, 0.08, 0.4)
 	var hp_fill = StyleBoxFlat.new()
-	hp_fill.bg_color = Color(0.8, 0.2, 0.2)
-	hp_fill.corner_radius_top_left = 4
-	hp_fill.corner_radius_bottom_left = 4
-	hp_fill.corner_radius_top_right = 4
-	hp_fill.corner_radius_bottom_right = 4
+	hp_fill.bg_color = Color(0.65, 0.18, 0.14)
+	hp_fill.corner_radius_top_left = 2
+	hp_fill.corner_radius_bottom_left = 2
+	hp_fill.corner_radius_top_right = 2
+	hp_fill.corner_radius_bottom_right = 2
 	health_bar.add_theme_stylebox_override("background", hp_bg)
 	health_bar.add_theme_stylebox_override("fill", hp_fill)
-	health_container.add_child(health_bar)
-	
-	# 中间间隔
-	var spacer1 = Control.new()
-	spacer1.custom_minimum_size.x = 40
-	status_row.add_child(spacer1)
-	
-	# 顶部中间信息 (回合数 & 僵尸数)
-	var info_vbox = VBoxContainer.new()
-	info_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	status_row.add_child(info_vbox)
-	
-	round_label = Label.new()
-	round_label.text = "回合 1"
-	round_label.tooltip_text = "当前回合数"
-	round_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	round_label.add_theme_font_size_override("font_size", 18)
-	round_label.add_theme_color_override("font_color", Color.GOLD)
-	info_vbox.add_child(round_label)
-	
-	zombies_label = Label.new()
-	zombies_label.text = "剩余僵尸: 0"
-	zombies_label.tooltip_text = "当前回合剩余的僵尸数量"
-	zombies_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	zombies_label.add_theme_font_size_override("font_size", 12)
-	zombies_label.add_theme_color_override("font_color", Color.LIGHT_GRAY)
-	info_vbox.add_child(zombies_label)
-	
-	# 中间间隔
-	var spacer2 = Control.new()
-	spacer2.custom_minimum_size.x = 40
-	status_row.add_child(spacer2)
-	
-	# 攻击间隔区域
-	var interval_container = VBoxContainer.new()
-	interval_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	status_row.add_child(interval_container)
-	
-	var interval_title = Label.new()
-	interval_title.text = "攻击间隔"
-	interval_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	interval_title.add_theme_font_size_override("font_size", 12)
-	interval_title.add_theme_color_override("font_color", Color.KHAKI)
-	interval_container.add_child(interval_title)
-	
-	attack_interval_label = Label.new()
-	attack_interval_label.text = "⏱ 0.50s"
-	attack_interval_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	attack_interval_label.add_theme_font_size_override("font_size", 14)
-	attack_interval_label.add_theme_color_override("font_color", Color(0.9, 0.9, 0.6))
-	interval_container.add_child(attack_interval_label)
+	hp_wrapper.add_child(health_bar)
 
-	# 第二行：激活的效果/Buff/装备图标
-	var effects_row = HBoxContainer.new()
-	effects_row.add_theme_constant_override("separation", 4)
-	main_vbox.add_child(effects_row)
-	
-	var effects_title = Label.new()
-	effects_title.text = "效果: "
-	effects_title.add_theme_font_size_override("font_size", 10)
-	effects_title.add_theme_color_override("font_color", Color(0.6, 0.7, 0.8))
-	effects_row.add_child(effects_title)
-	
+	health_label = Label.new()
+	health_label.text = "120/120"
+	health_label.add_theme_font_size_override("font_size", 11)
+	health_label.add_theme_color_override("font_color", Color(0.9, 0.85, 0.8))
+	health_label.add_theme_constant_override("outline_size", 2)
+	health_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
+	health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hp_wrapper.add_child(health_label)
+
+	# --- 中：回合+僵尸（占据中间空间） ---
+	var center_box = HBoxContainer.new()
+	center_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center_box.alignment = BoxContainer.ALIGNMENT_CENTER
+	center_box.add_theme_constant_override("separation", 16)
+	row1.add_child(center_box)
+
+	round_label = Label.new()
+	round_label.text = "第 1 波"
+	round_label.add_theme_font_size_override("font_size", 14)
+	round_label.add_theme_color_override("font_color", Color(0.90, 0.78, 0.35))
+	round_label.add_theme_constant_override("outline_size", 2)
+	round_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	center_box.add_child(round_label)
+
+	zombies_label = Label.new()
+	zombies_label.text = "剩余 0"
+	zombies_label.add_theme_font_size_override("font_size", 12)
+	zombies_label.add_theme_color_override("font_color", Color(0.75, 0.75, 0.75))
+	center_box.add_child(zombies_label)
+
+	# --- 右：得分 ---
+	score_label = Label.new()
+	score_label.text = "0"
+	score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	score_label.custom_minimum_size.x = 80
+	score_label.size_flags_horizontal = Control.SIZE_SHRINK_END
+	score_label.add_theme_font_size_override("font_size", 14)
+	score_label.add_theme_color_override("font_color", Color(1.0, 0.85, 0.25))
+	score_label.add_theme_constant_override("outline_size", 2)
+	score_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	row1.add_child(score_label)
+
+	# ═══ 第二行：属性 + 效果图标 ═══
+	var row2 = HBoxContainer.new()
+	row2.add_theme_constant_override("separation", 10)
+	main_vbox.add_child(row2)
+
+	damage_label = _make_stat_label("ATK 10", Color(1.0, 0.65, 0.25))
+	row2.add_child(damage_label)
+	attack_interval_label = _make_stat_label("0.50s", Color(0.8, 0.8, 0.45))
+	row2.add_child(attack_interval_label)
+	crit_label = _make_stat_label("CRT 0%", Color(0.85, 0.65, 1.0))
+	row2.add_child(crit_label)
+	lifesteal_label = _make_stat_label("LS 0%", Color(0.85, 0.40, 0.40))
+	row2.add_child(lifesteal_label)
+	attack_type_label = _make_stat_label("近战", Color(0.50, 0.85, 0.85))
+	row2.add_child(attack_type_label)
+	target_priority_label = _make_stat_label("最近", Color(0.55, 0.75, 0.75))
+	row2.add_child(target_priority_label)
+	dash_cooldown_label = _make_stat_label("闪避 OK", Color(0.55, 0.85, 0.55))
+	row2.add_child(dash_cooldown_label)
+
+	# 效果图标容器
 	effects_container = HBoxContainer.new()
 	effects_container.add_theme_constant_override("separation", 3)
-	effects_row.add_child(effects_container)
-	
-	# 第三行：属性和武器栏
-	var bottom_row = HBoxContainer.new()
-	bottom_row.add_theme_constant_override("separation", 8)
-	main_vbox.add_child(bottom_row)
-	
-	# 左侧属性
-	var stats_hbox = HBoxContainer.new()
-	stats_hbox.add_theme_constant_override("separation", 12)
-	bottom_row.add_child(stats_hbox)
-	
-	damage_label = Label.new()
-	damage_label.text = "⚔️ 10"
-	damage_label.tooltip_text = "当前攻击力"
-	damage_label.add_theme_color_override("font_color", Color.ORANGE)
-	stats_hbox.add_child(damage_label)
+	effects_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row2.add_child(effects_container)
 
-	crit_label = Label.new()
-	crit_label.text = "✨ 0%"
-	crit_label.tooltip_text = "暴击概率"
-	crit_label.add_theme_color_override("font_color", Color(0.9, 0.7, 1.0))
-	stats_hbox.add_child(crit_label)
-
-	lifesteal_label = Label.new()
-	lifesteal_label.text = "🩸 0%"
-	lifesteal_label.tooltip_text = "吸血比例"
-	lifesteal_label.add_theme_color_override("font_color", Color(0.9, 0.4, 0.4))
-	stats_hbox.add_child(lifesteal_label)
-	
-	score_label = Label.new()
-	score_label.text = "🏆 0"
-	score_label.tooltip_text = "当前得分"
-	score_label.add_theme_color_override("font_color", Color.GOLD)
-	stats_hbox.add_child(score_label)
-	
-	attack_type_label = Label.new()
-	attack_type_label.text = "普通攻击"
-	attack_type_label.tooltip_text = "当前攻击类型"
-	attack_type_label.add_theme_color_override("font_color", Color.CYAN)
-	stats_hbox.add_child(attack_type_label)
-	
-	target_priority_label = Label.new()
-	target_priority_label.text = "锁定: 最近"
-	target_priority_label.tooltip_text = "目标优先级：按 Tab 切换"
-	target_priority_label.add_theme_color_override("font_color", Color(0.6, 0.9, 0.9))
-	stats_hbox.add_child(target_priority_label)
-
-	dash_cooldown_label = Label.new()
-	dash_cooldown_label.text = "闪避: 就绪"
-	dash_cooldown_label.tooltip_text = "闪避冷却"
-	dash_cooldown_label.add_theme_color_override("font_color", Color(0.7, 0.9, 0.7))
-	stats_hbox.add_child(dash_cooldown_label)
-
-	
-	# 占位撑开
-	var spacer3 = Control.new()
-	spacer3.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	bottom_row.add_child(spacer3)
-	
-	# 右侧武器列表
 	owned_weapons_label = Label.new()
 	owned_weapons_label.text = ""
-	owned_weapons_label.tooltip_text = "已获得的武器与装备"
-	owned_weapons_label.add_theme_font_size_override("font_size", 12)
-	owned_weapons_label.add_theme_color_override("font_color", Color(0.7, 0.7, 0.8))
-	bottom_row.add_child(owned_weapons_label)
-	
-	# 帮助按钮
+	owned_weapons_label.add_theme_font_size_override("font_size", 10)
+	owned_weapons_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.60))
+	row2.add_child(owned_weapons_label)
+
 	var help_btn = Button.new()
 	help_btn.text = "?"
-	help_btn.custom_minimum_size = Vector2(30, 30)
+	help_btn.custom_minimum_size = Vector2(20, 20)
 	help_btn.focus_mode = Control.FOCUS_NONE
 	help_btn.pressed.connect(_toggle_controls_panel)
-	bottom_row.add_child(help_btn)
+	row2.add_child(help_btn)
+
+func _make_stat_label(text: String, color: Color) -> Label:
+	var lbl = Label.new()
+	lbl.text = text
+	lbl.add_theme_font_size_override("font_size", 10)
+	lbl.add_theme_color_override("font_color", color)
+	lbl.add_theme_constant_override("outline_size", 1)
+	lbl.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.5))
+	return lbl
 
 func _create_weapon_selection_panel():
 	weapon_selection_panel = Panel.new()
@@ -549,14 +501,6 @@ func _create_round_banner():
 	round_banner.add_theme_color_override("font_outline_color", Color.BLACK)
 	add_child(round_banner)
 
-func _create_damage_flash():
-	damage_flash = ColorRect.new()
-	damage_flash.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	damage_flash.color = Color(0.8, 0.1, 0.1, 0.0)
-	damage_flash.visible = true
-	damage_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	damage_flash.z_index = 40
-	add_child(damage_flash)
 
 func _create_controls_panel():
 	controls_panel = Panel.new()
@@ -772,25 +716,8 @@ func _process(delta):
 	if game_manager and game_manager.player:
 		_update_dash_display(game_manager.player)
 		_update_attack_interval_display(game_manager.player)
-	
-	# 屏幕震动处理
-	if shake_intensity > 0:
-		shake_intensity = max(0, shake_intensity - shake_decay * delta)
-		var shake_offset = Vector2(
-			randf_range(-shake_intensity, shake_intensity),
-			randf_range(-shake_intensity, shake_intensity)
-		)
-		position = original_position + shake_offset
-	elif position != original_position:
-		position = original_position
-	
-	# 连击计时器
-	if combo_count > 0:
-		combo_timer -= delta
-		if combo_timer <= 0:
-			combo_count = 0
-			if combo_label:
-				combo_label.visible = false
+	if screen_fx:
+		screen_fx.process_effects(delta)
 
 func _update_dash_display(player: Player):
 	if not dash_cooldown_label:
@@ -808,8 +735,8 @@ func _update_attack_interval_display(player: Player):
 		return
 	var interval_text = str(snapped(player.attack_cooldown, 0.01)) + "s"
 	var remaining = 0.0
-	if player.attack_timer and not player.can_attack:
-		remaining = player.attack_timer.time_left
+	if player.combat and player.combat.attack_timer and not player.combat.can_attack:
+		remaining = player.combat.attack_timer.time_left
 	var cooldown_text = "就绪" if remaining <= 0.01 else str(snapped(remaining, 0.1)) + "s"
 	attack_interval_label.text = "间隔 " + interval_text + " | 冷却 " + cooldown_text
 	attack_interval_label.tooltip_text = "攻击间隔: " + interval_text + "\n下次可攻击: " + cooldown_text
@@ -1255,7 +1182,7 @@ func _get_weapon_tooltip_text(weapon: WeaponCard) -> String:
 	
 	# 护盾领域
 	if weapon.grants_aura:
-		if player and player.aura_active:
+		if player and player.aura.active:
 			bb += "  [color=#aaddff]● 护盾领域: 升级 (伤害+5, 范围+20)[/color]\n"
 		else:
 			bb += "  [color=#aaddff]● 护盾领域: 启用[/color]\n"
@@ -1365,8 +1292,7 @@ func show_round_banner(text: String):
 
 func update_score_display(new_score: int):
 	if score_label:
-		score_label.text = "🏆 " + str(new_score)
-		score_label.tooltip_text = "当前得分: " + str(new_score)
+		score_label.text = str(new_score)
 
 func update_health_display(current_health: int, max_health: int):
 	if health_bar:
@@ -1377,55 +1303,54 @@ func update_health_display(current_health: int, max_health: int):
 		if fill_style:
 			fill_style = fill_style.duplicate()
 			if health_percent > 0.6:
-				fill_style.bg_color = Color(0.2, 0.8, 0.2)
+				fill_style.bg_color = Color(0.22, 0.55, 0.22)  # 暗绿
 			elif health_percent > 0.3:
-				fill_style.bg_color = Color(0.8, 0.8, 0.2)
+				fill_style.bg_color = Color(0.65, 0.60, 0.15)  # 暗黄
 			else:
-				fill_style.bg_color = Color(0.8, 0.2, 0.2)
+				fill_style.bg_color = Color(0.70, 0.15, 0.12)  # 暗红
 			health_bar.add_theme_stylebox_override("fill", fill_style)
-		
-		health_bar.tooltip_text = "生命值: " + str(current_health) + "/" + str(max_health) + " (" + str(int(health_percent * 100)) + "%)"
-		
+
+		# 更新血量数值标签
+		if health_label:
+			health_label.text = str(current_health) + "/" + str(max_health)
+
+		# 低血量暗角效果
+		update_low_hp_vignette(health_percent)
+
 		if health_percent <= 0.3:
 			if not low_health_tween or not low_health_tween.is_running():
 				low_health_tween = create_tween()
 				low_health_tween.set_loops()
-				low_health_tween.tween_property(health_bar, "modulate:a", 0.6, 0.4)
-				low_health_tween.tween_property(health_bar, "modulate:a", 1.0, 0.4)
+				low_health_tween.tween_property(health_bar, "modulate:a", 0.6, 0.35)
+				low_health_tween.tween_property(health_bar, "modulate:a", 1.0, 0.35)
 		else:
 			if low_health_tween and low_health_tween.is_running():
 				low_health_tween.kill()
 			health_bar.modulate.a = 1.0
 
 func update_zombies_display(zombies_remaining: int, total_zombies: int):
-	zombies_label.text = "🧟 剩余 " + str(zombies_remaining)
-	zombies_label.tooltip_text = "本关总数: " + str(total_zombies) + "\n剩余: " + str(zombies_remaining)
+	if zombies_label:
+		zombies_label.text = "剩余: " + str(zombies_remaining) + "/" + str(total_zombies)
 
 func update_player_status(player: Player):
-	# 更新攻击力
 	if damage_label:
-		damage_label.text = "⚔️ " + str(int(player.current_damage))
-
+		damage_label.text = "ATK " + str(int(player.current_damage))
 	if crit_label:
-		crit_label.text = "✨ " + str(int(player.critical_chance)) + "%"
-
+		crit_label.text = "CRT " + str(int(player.critical_chance)) + "%"
 	if lifesteal_label:
-		lifesteal_label.text = "🩸 " + str(int(player.life_steal_percent)) + "%"
-	
-	# 更新攻击间隔
+		lifesteal_label.text = "LS " + str(int(player.life_steal_percent)) + "%"
 	if attack_interval_label:
-		attack_interval_label.text = "⏱ " + str(snapped(player.attack_cooldown, 0.01)) + "s"
-	# 更新攻击类型
+		attack_interval_label.text = str(snapped(player.attack_cooldown, 0.01)) + "s"
 	if attack_type_label:
 		match player.current_attack_type:
 			Player.AttackType.MELEE:
-				attack_type_label.text = "🗡️ 近战"
+				attack_type_label.text = "近战"
 			Player.AttackType.RANGED:
-				attack_type_label.text = "🏹 远程"
+				attack_type_label.text = "远程"
 			Player.AttackType.AREA:
-				attack_type_label.text = "💥 范围"
+				attack_type_label.text = "范围"
 			Player.AttackType.MAGIC:
-				attack_type_label.text = "✨ 魔法"
+				attack_type_label.text = "魔法"
 	
 	if target_priority_label:
 		match player.target_priority:
@@ -1529,7 +1454,7 @@ func _build_attack_effects_tooltip(player: Player) -> String:
 		effect_lines.append("• 冰冻几率 +" + str(int(player.freeze_duration)) + "%")
 	if player.poison_damage > 0:
 		effect_lines.append("• 中毒几率 +" + str(int(player.poison_damage)) + "%")
-	if player.aura_active:
+	if player.aura.active:
 		effect_lines.append("• 护盾领域: 启用")
 
 	if effect_lines.is_empty():
@@ -1574,7 +1499,7 @@ func _update_effects_display(player: Player):
 			})
 	
 	# 3. 护盾 (如果激活)
-	if player.aura_active:
+	if player.aura.active:
 		active_items.append({
 			"icon": "❄️",
 			"name": "冰霜护盾",
@@ -1770,211 +1695,37 @@ func set_game_manager(manager: GameManager):
 func set_weapon_deck(deck: WeaponDeck):
 	weapon_deck = deck
 
+# ═══════════════════════════════════════════════
+# 委托方法 — 保持 call_group("ui_manager", ...) 兼容
+# ═══════════════════════════════════════════════
+
 func show_game_over():
-	var game_over_panel = Panel.new()
-	game_over_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	game_over_panel.visible = true
-	add_child(game_over_panel)
-	
-	var bg_style = StyleBoxFlat.new()
-	bg_style.bg_color = Color(0, 0, 0, 0.85)
-	game_over_panel.add_theme_stylebox_override("panel", bg_style)
-	
-	var center_container = CenterContainer.new()
-	center_container.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	game_over_panel.add_child(center_container)
-	
-	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 20)
-	center_container.add_child(vbox)
-	
-	var game_over_title = Label.new()
-	game_over_title.text = "💀 游戏结束 💀"
-	game_over_title.add_theme_font_size_override("font_size", 42)
-	game_over_title.add_theme_color_override("font_color", Color.RED)
-	game_over_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(game_over_title)
-	
-	var round_info_label = Label.new()
-	if game_manager:
-		round_info_label.text = "坚持了 " + str(game_manager.get_current_round()) + " 回合"
-	else:
-		round_info_label.text = "坚持了 0 回合"
-	round_info_label.add_theme_font_size_override("font_size", 24)
-	round_info_label.add_theme_color_override("font_color", Color.WHITE)
-	round_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(round_info_label)
-	
-	var score_info_label = Label.new()
-	if game_manager:
-		score_info_label.text = "总得分: " + str(game_manager.score)
-	else:
-		score_info_label.text = "总得分: 0"
-	score_info_label.add_theme_font_size_override("font_size", 20)
-	score_info_label.add_theme_color_override("font_color", Color.GOLD)
-	score_info_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(score_info_label)
-	
-	var stats_label = Label.new()
-	stats_label.text = "消灭僵尸数量: " + str(game_manager.zombies_spawned)
-	stats_label.add_theme_font_size_override("font_size", 16)
-	stats_label.add_theme_color_override("font_color", Color.LIGHT_GRAY)
-	stats_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(stats_label)
-	
-	var high_score_label = Label.new()
-	var high_score = 0
-	if SaveManager and SaveManager.instance:
-		high_score = SaveManager.get_high_score()
-	high_score_label.text = "最高分: " + str(high_score)
-	high_score_label.add_theme_font_size_override("font_size", 16)
-	high_score_label.add_theme_color_override("font_color", Color(1.0, 0.8, 0.2))
-	high_score_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	vbox.add_child(high_score_label)
-	
-	var spacer = Control.new()
-	spacer.custom_minimum_size.y = 30
-	vbox.add_child(spacer)
-	
-	var button_container = HBoxContainer.new()
-	button_container.add_theme_constant_override("separation", 20)
-	button_container.alignment = BoxContainer.ALIGNMENT_CENTER
-	vbox.add_child(button_container)
-	
-	var restart_button = Button.new()
-	restart_button.text = "🔄 重新开始"
-	restart_button.add_theme_font_size_override("font_size", 18)
-	restart_button.custom_minimum_size = Vector2(160, 45)
-	restart_button.pressed.connect(_on_restart_pressed)
-	button_container.add_child(restart_button)
-	
-	var quit_button = Button.new()
-	quit_button.text = "🚪 退出游戏"
-	quit_button.add_theme_font_size_override("font_size", 18)
-	quit_button.custom_minimum_size = Vector2(160, 45)
-	quit_button.pressed.connect(_on_quit_pressed)
-	button_container.add_child(quit_button)
-	
-	if SoundManager.instance:
-		SoundManager.play_game_over()
-
-func _on_restart_pressed():
-	get_tree().reload_current_scene()
-
-func _on_quit_pressed():
-	get_tree().quit()
+	game_over_ui.setup(game_manager)
+	game_over_ui.show_game_over(hud_panel)
 
 func show_damage_number(pos: Vector2, amount: int, is_critical: bool = false):
-	var label = Label.new()
-	label.global_position = pos + Vector2(randf_range(-15, 15), randf_range(-25, -15))
-	label.z_index = 20
-	
-	# 根据伤害类型设置样式
-	var font_size: int
-	var color: Color
-	var prefix = ""
-	
-	if amount < 0:  # 治疗
-		color = Color(0.3, 1.0, 0.4)
-		font_size = 18
-		prefix = "+"
-		label.text = prefix + str(abs(amount))
-	elif is_critical:  # 暴击
-		color = Color(1.0, 0.8, 0.2)
-		font_size = 26
-		label.text = str(amount) + "!"
-	else:  # 普通伤害
-		color = Color(1.0, 1.0, 1.0)
-		font_size = 16
-		label.text = str(amount)
-	
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	label.add_theme_constant_override("outline_size", 3)
-	label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.8))
-	
-	add_child(label)
-	
-	# 增强动画效果
-	var tween = create_tween()
-	if is_critical:
-		# 暴击有弹跳效果
-		tween.parallel().tween_property(label, "scale", Vector2(1.3, 1.3), 0.1)
-		tween.parallel().tween_property(label, "position:y", label.position.y - 20, 0.1)
-		tween.tween_property(label, "scale", Vector2(1.0, 1.0), 0.1)
-		tween.tween_property(label, "position:y", label.position.y - 60, 0.6).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tween.parallel().tween_property(label, "modulate:a", 0.0, 0.6).set_delay(0.2)
-	else:
-		tween.parallel().tween_property(label, "position:y", label.position.y - 45, 0.7).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tween.parallel().tween_property(label, "modulate:a", 0.0, 0.7).set_delay(0.15)
-	
-	tween.tween_callback(label.queue_free)
+	if screen_fx: screen_fx.show_damage_number(pos, amount, is_critical)
 
 func flash_damage():
-	if not damage_flash:
-		return
-	var tween = create_tween()
-	damage_flash.color = Color(0.8, 0.1, 0.1, 0.25)
-	tween.tween_property(damage_flash, "color:a", 0.0, 0.5)
+	if screen_fx: screen_fx.flash_damage()
 
 func shake_screen(intensity: float):
-	shake_intensity = intensity
+	if screen_fx: screen_fx.shake_screen(intensity)
+
+func flash_attack_color(attack_color: Color):
+	if screen_fx: screen_fx.flash_attack_color(attack_color)
 
 func add_combo():
-	combo_count += 1
-	combo_timer = combo_decay_time
-	_update_combo_display()
-
-func _update_combo_display():
-	if not combo_label:
-		combo_label = Label.new()
-		combo_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		combo_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		combo_label.add_theme_font_size_override("font_size", 32)
-		combo_label.add_theme_constant_override("outline_size", 4)
-		combo_label.add_theme_color_override("font_outline_color", Color.BLACK)
-		combo_label.z_index = 60
-		add_child(combo_label)
-	
-	if combo_count >= 3:  # 3连击以上才显示
-		combo_label.visible = true
-		combo_label.text = str(combo_count) + " 连击!"
-		
-		# 颜色根据连击数变化
-		var combo_color = Color.WHITE
-		if combo_count >= 10:
-			combo_color = Color.GOLD
-		elif combo_count >= 7:
-			combo_color = Color(1.0, 0.5, 0.0)  # 橙色
-		elif combo_count >= 5:
-			combo_color = Color(0.8, 0.4, 1.0)  # 紫色
-		
-		combo_label.add_theme_color_override("font_color", combo_color)
-		
-		# 位置在屏幕右上角
-		var screen_size = get_viewport().get_visible_rect().size
-		combo_label.position = Vector2(screen_size.x - 200, 120)
-		
-		# 弹跳动画
-		var tween = create_tween()
-		tween.tween_property(combo_label, "scale", Vector2(1.3, 1.3), 0.1)
-		tween.tween_property(combo_label, "scale", Vector2(1.0, 1.0), 0.1)
-	else:
-		combo_label.visible = false
+	if screen_fx: screen_fx.add_combo()
 
 func show_kill_effect(pos: Vector2, points: int):
-	# 显示击杀得分效果
-	var kill_label = Label.new()
-	kill_label.text = "+" + str(points)
-	kill_label.global_position = pos + Vector2(randf_range(-15, 15), -30)
-	kill_label.add_theme_font_size_override("font_size", 18)
-	kill_label.add_theme_color_override("font_color", Color.GOLD)
-	kill_label.add_theme_constant_override("outline_size", 3)
-	kill_label.add_theme_color_override("font_outline_color", Color.BLACK)
-	kill_label.z_index = 25
-	add_child(kill_label)
-	
-	var tween = create_tween()
-	tween.parallel().tween_property(kill_label, "position:y", kill_label.position.y - 60, 1.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.parallel().tween_property(kill_label, "modulate:a", 0.0, 1.0).set_delay(0.3)
-	tween.tween_callback(kill_label.queue_free)
+	if screen_fx: screen_fx.show_kill_effect(pos, points)
+
+func update_low_hp_vignette(health_percent: float):
+	if screen_fx: screen_fx.update_low_hp_vignette(health_percent)
+
+func show_offscreen_indicator(direction: Vector2, danger_level: float):
+	if screen_fx: screen_fx.show_offscreen_indicator(direction, danger_level)
+
+func trigger_boss_atmosphere():
+	if screen_fx: screen_fx.trigger_boss_atmosphere()

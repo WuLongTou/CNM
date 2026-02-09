@@ -126,25 +126,47 @@ func _apply_shooter_effects(target):
 				target.apply_poison(dps, 3.0)
 
 func _create_hit_effect():
+	# 命中粒子爆发
 	var hit_particles = GPUParticles2D.new()
 	hit_particles.global_position = global_position
 	hit_particles.emitting = true
-	hit_particles.amount = 15
-	hit_particles.lifetime = 0.5
-	
+	hit_particles.amount = 20
+	hit_particles.lifetime = 0.4
+	hit_particles.one_shot = true
+
 	var particle_material = ParticleProcessMaterial.new()
 	particle_material.direction = Vector3(0, 0, 0)
-	particle_material.initial_velocity_min = 30.0
-	particle_material.initial_velocity_max = 80.0
-	particle_material.gravity = Vector3(0, 50, 0)
-	particle_material.scale_min = 0.3
-	particle_material.scale_max = 0.8
+	particle_material.initial_velocity_min = 40.0
+	particle_material.initial_velocity_max = 100.0
+	particle_material.gravity = Vector3(0, 60, 0)
+	particle_material.scale_min = 0.5
+	particle_material.scale_max = 1.2
+	particle_material.color = Color(1.0, 0.85, 0.3, 0.9)
 	hit_particles.process_material = particle_material
-	
 	get_parent().add_child(hit_particles)
-	
+
+	# 命中冲击圈
+	var ring = Line2D.new()
+	var pts = 16
+	for i in range(pts + 1):
+		var a = i * 2.0 * PI / pts
+		ring.add_point(Vector2(cos(a), sin(a)) * 8.0)
+	ring.width = 2.0
+	ring.default_color = Color(1.0, 0.9, 0.4, 0.8)
+	var ring_node = Node2D.new()
+	ring_node.global_position = global_position
+	ring_node.add_child(ring)
+	get_parent().add_child(ring_node)
+
+	var ring_tw = ring_node.create_tween()
+	ring_tw.set_parallel(true)
+	ring_tw.tween_property(ring_node, "scale", Vector2(3.0, 3.0), 0.25).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	ring_tw.tween_property(ring_node, "modulate:a", 0.0, 0.25)
+	ring_tw.set_parallel(false)
+	ring_tw.tween_callback(ring_node.queue_free)
+
 	var timer = Timer.new()
-	timer.wait_time = 0.6
+	timer.wait_time = 0.8
 	timer.one_shot = true
 	timer.timeout.connect(hit_particles.queue_free)
 	hit_particles.add_child(timer)
