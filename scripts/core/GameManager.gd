@@ -62,14 +62,18 @@ var _edge_indicator_timer: float = 0.0
 # 僵尸类型名称（日志用）
 const _TYPE_NAMES: Dictionary = {
 	0: "基础", 1: "快速", 2: "坦克", 3: "爆炸",
-	4: "隐身", 5: "喷毒", 6: "治疗"
+	4: "隐身", 5: "喷毒", 6: "治疗", 7: "召唤师"
 }
 
 # 僵尸计分表
 const _TYPE_SCORE: Dictionary = {
 	0: 10, 1: 15, 2: 25, 3: 30,
-	4: 35, 5: 40, 6: 50
+	4: 35, 5: 40, 6: 50, 7: 60
 }
+
+# Boss 引用
+var boss_zombie: Zombie = null
+var zombies_spawned_before_boss: int = 0
 
 # 僵尸出场概率表 — 按回合阶段分层
 const _SPAWN_TABLE: Array = [
@@ -77,7 +81,8 @@ const _SPAWN_TABLE: Array = [
 	{ "max_round": 4,  "weights": { 0: 0.75, 1: 0.25 } },
 	{ "max_round": 6,  "weights": { 0: 0.45, 1: 0.30, 2: 0.15, 3: 0.10 } },
 	{ "max_round": 10, "weights": { 0: 0.25, 1: 0.20, 2: 0.20, 3: 0.15, 4: 0.10, 5: 0.10 } },
-	{ "max_round": 9999, "weights": { 0: 0.15, 1: 0.15, 2: 0.20, 3: 0.15, 4: 0.13, 5: 0.12, 6: 0.10 } },
+	{ "max_round": 14, "weights": { 0: 0.10, 1: 0.12, 2: 0.20, 3: 0.15, 4: 0.13, 5: 0.12, 6: 0.10, 7: 0.08 } },
+	{ "max_round": 9999, "weights": { 0: 0.08, 1: 0.10, 2: 0.18, 3: 0.15, 4: 0.13, 5: 0.14, 6: 0.12, 7: 0.10 } },
 ]
 
 # ═══════════════════════════════════════════════
@@ -85,6 +90,8 @@ const _SPAWN_TABLE: Array = [
 # ═══════════════════════════════════════════════
 
 func _ready():
+	add_to_group("game_manager")
+
 	if ResourceLoader.exists("res://scenes/Zombie.tscn"):
 		zombie_scene = preload("res://scenes/Zombie.tscn")
 
@@ -179,7 +186,6 @@ func start_new_round():
 	if ui_manager:
 		ui_manager.update_round_display(current_round)
 		ui_manager.update_zombies_display(_get_remaining_zombies(), zombies_to_spawn)
-		ui_manager.show_weapon_selection()
 		if player:
 			ui_manager.update_health_display(player.current_health, player.max_health)
 
@@ -207,20 +213,22 @@ func end_round():
 # 武器选择
 # ═══════════════════════════════════════════════
 
-func on_weapon_selected(weapon: WeaponCard):
+func on_weapon_selected(card):
 	if current_state != GameState.WEAPON_SELECTION:
 		return
 	if player:
-		player.apply_weapon_effect(weapon)
+		if card is UpgradeCard:
+			player.apply_upgrade_card(card)
+		else:
+			player.apply_weapon_effect(card)
 		if ui_manager:
 			ui_manager.update_health_display(player.current_health, player.max_health)
-			ui_manager.update_player_status(player)
 
 	current_state = GameState.COMBAT
 	weapon_selection_ended.emit()
 	if ui_manager:
 		ui_manager.hide_weapon_selection()
-	print("选择了武器: %s，效果已生效！" % weapon.card_name)
+	print("选择了: %s，效果已生效！" % card.card_name)
 
 func on_upgrade_skipped():
 	if current_state != GameState.WEAPON_SELECTION:
@@ -240,6 +248,11 @@ func spawn_zombie():
 		push_warning("僵尸场景未加载")
 		return
 
+	# Boss 回合: 首个生成的僵尸变为 Boss
+	if current_round % GameConfig.BOSS_INTERVAL == 0 and zombies_spawned == 0 and current_round > 0:
+		_spawn_boss_zombie()
+		return
+
 	var zombie_instance := zombie_scene.instantiate() as Zombie
 	if not zombie_instance:
 		push_warning("无法创建僵尸实例")
@@ -254,10 +267,6 @@ func spawn_zombie():
 	if randf() < elite_chance:
 		zombie_instance.set_elite(true)
 
-	# 回合难度缩放
-	var round_mult := 1.0 + log(1.0 + float(current_round)) * round_multiplier_base * 2.0
-	zombie_instance.apply_round_scaling(current_round, round_mult)
-
 	# 随机生成位置
 	if spawn_points.is_empty():
 		_update_spawn_points()
@@ -270,6 +279,10 @@ func spawn_zombie():
 	zombie_instance.died.connect(_on_zombie_died)
 	get_tree().current_scene.add_child(zombie_instance)
 
+	# 回合难度缩放（在 _ready 之后，确保类型属性已设置）
+	var round_mult := 1.0 + log(1.0 + float(current_round)) * round_multiplier_base * 2.0
+	zombie_instance.apply_round_scaling(current_round, round_mult)
+
 	zombies_spawned += 1
 	zombies_alive += 1
 
@@ -278,6 +291,37 @@ func spawn_zombie():
 
 	var type_name: String = _TYPE_NAMES.get(zombie_type, "未知")
 	print("生成僵尸 %d/%d (类型: %s, 强度: x%.2f)" % [zombies_spawned, zombies_to_spawn, type_name, round_mult])
+
+func _spawn_boss_zombie():
+	var zombie_instance := zombie_scene.instantiate() as Zombie
+	if not zombie_instance:
+		return
+
+	# Boss 使用 TANK 类型
+	zombie_instance.zombie_type = Zombie.ZombieType.TANK
+
+	# 随机生成位置（屏幕中央偏上）
+	var screen_size := get_viewport().get_visible_rect().size
+	zombie_instance.global_position = Vector2(screen_size.x / 2.0, screen_size.y * 0.2)
+
+	zombie_instance.set_player_target(player)
+	zombie_instance.died.connect(_on_zombie_died)
+	get_tree().current_scene.add_child(zombie_instance)
+
+	# 在 _ready 后设置 Boss 属性
+	var round_mult := 1.0 + log(1.0 + float(current_round)) * round_multiplier_base * 2.0
+	zombie_instance.apply_round_scaling(current_round, round_mult)
+	zombie_instance.set_boss()
+	boss_zombie = zombie_instance
+
+	zombies_spawned += 1
+	zombies_alive += 1
+
+	if ui_manager:
+		ui_manager.update_zombies_display(_get_remaining_zombies(), zombies_to_spawn)
+		ui_manager.show_round_banner("⚠ BOSS 来袭 ⚠")
+
+	print("BOSS 生成！回合 %d" % current_round)
 
 func _pick_zombie_type() -> Zombie.ZombieType:
 	## 从 _SPAWN_TABLE 中按当前回合数选择概率表，加权随机选取
@@ -314,6 +358,12 @@ func _on_zombie_died(_zombie: Zombie):
 
 	var base_pts: int = int(_TYPE_SCORE.get(_zombie.zombie_type, 10))
 	var pts: int = int(base_pts * GameConfig.ELITE_SCORE_MULT) if _zombie.is_elite else base_pts
+
+	# Boss 额外分数
+	if _zombie.is_boss:
+		pts = int(pts * GameConfig.BOSS_SCORE_MULT)
+		boss_zombie = null
+
 	score += pts
 
 	if SaveManager and SaveManager.instance:
@@ -402,3 +452,37 @@ func get_zombies_remaining() -> int:
 
 func _get_remaining_zombies() -> int:
 	return max(0, zombies_to_spawn - zombies_spawned + zombies_alive)
+
+func spawn_minion_zombie(pos: Vector2):
+	## 召唤师僵尸生成的小兵
+	if not zombie_scene:
+		return
+	if zombies_alive >= zombies_max_per_round + 10:
+		return  # 防止过多小兵
+
+	var minion := zombie_scene.instantiate() as Zombie
+	if not minion:
+		return
+	minion.zombie_type = Zombie.ZombieType.BASIC
+	minion.global_position = pos
+	minion.set_player_target(player)
+	minion.died.connect(_on_minion_died)
+	get_tree().current_scene.add_child(minion)
+
+	# 轻微缩放
+	var round_mult := 1.0 + log(1.0 + float(current_round)) * round_multiplier_base * 2.0
+	minion.apply_round_scaling(current_round, round_mult * 0.6)
+
+	zombies_alive += 1
+	if ui_manager:
+		ui_manager.update_zombies_display(_get_remaining_zombies(), zombies_to_spawn)
+
+func _on_minion_died(_zombie: Zombie):
+	zombies_alive -= 1
+	var base_pts: int = 5
+	score += base_pts
+	if SaveManager and SaveManager.instance:
+		SaveManager.add_kill()
+	if ui_manager:
+		ui_manager.update_score_display(score)
+		ui_manager.add_combo()

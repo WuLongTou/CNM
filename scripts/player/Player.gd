@@ -359,6 +359,9 @@ func die():
 func apply_weapon_effect(weapon: WeaponCard):
 	combat.apply_weapon_effect(weapon)
 
+func apply_upgrade_card(upgrade: UpgradeCard):
+	combat.apply_upgrade_card(upgrade)
+
 func activate_aura():
 	aura.activate()
 

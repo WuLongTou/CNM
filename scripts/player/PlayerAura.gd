@@ -81,7 +81,6 @@ func activate():
 func upgrade(extra_damage: float = 3.0, extra_radius: float = 15.0):
 	if not active:
 		activate()
-		return
 	damage += extra_damage
 	radius += extra_radius
 	_update_orb_positions()

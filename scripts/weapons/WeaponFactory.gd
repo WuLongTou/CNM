@@ -21,14 +21,15 @@ static func build_all() -> Array[WeaponCard]:
 static func get_prerequisites() -> Dictionary:
 	return {
 		"战斧": "铁剑", "双刀": "铁剑",
+		"淬毒短刀": "双刀",
 		"巨斧": "战斧", "长枪": "巨斧", "死神镰刀": "长枪",
 		"重弩": "弓箭", "散弹枪": "弓箭",
 		"狙击弩": "重弩", "轨迹弩": "重弩",
-		"回旋镖": "散弹枪", "连环回旋镖": "回旋镖",
+		"回旋镖": "散弹枪",
 		"火球法杖": "法杖", "魅惑法杖": "法杖",
-		"魅惑法杖·精通": "魅惑法杖",
+		"力场法杖": "法杖",
 		"冰霜法杖": "火球法杖", "雷电法杖": "火球法杖",
-		"时间法杖": "冰霜法杖", "死神法杖": "雷电法杖",
+		"死神法杖": "雷电法杖",
 	}
 
 # ═══════════════════════════════════════════════
@@ -51,6 +52,11 @@ const _WEAPON_DATA = [
 	{ "name": "双刀", "desc": "高攻速多目标",
 	  "type": ME, "cat": W, "tier": 2, "upcat": "武器", "icon": "🗡️", "rarity": 2,
 	  "tags": ["铁剑"], "dmg": 0.7, "asp": 1.5, "hp": -10,
+	  "melee_fx": { "MULTI_TARGET": 1 } },
+
+	{ "name": "淬毒短刀", "desc": "近战带毒持续伤害",
+	  "type": ME, "cat": W, "tier": 2, "upcat": "武器", "icon": "🗡️", "rarity": 2,
+	  "tags": ["双刀"], "dmg": 0.8, "asp": 1.4, "psn": 10,
 	  "melee_fx": { "MULTI_TARGET": 1 } },
 
 	{ "name": "巨斧", "desc": "超高伤害溅射",
@@ -98,11 +104,6 @@ const _WEAPON_DATA = [
 	  "tags": ["散弹枪"], "dmg": 0.7, "asp": 0.8, "cd": 0.6, "ammo": 1,
 	  "ranged_fx": { "RETURNING": 1 } },
 
-	{ "name": "连环回旋镖", "desc": "反弹次数提升",
-	  "type": RA, "cat": W, "tier": 4, "upcat": "武器", "icon": "🪃", "rarity": 3,
-	  "tags": ["回旋镖"], "dmg": 0.8, "asp": 0.85, "cd": 0.6, "ammo": 1,
-	  "ranged_fx": { "RETURNING": 2 } },
-
 	# ═══ 魔法武器 ═══
 	{ "name": "法杖", "desc": "基础魔法武器",
 	  "type": MA, "cat": W, "tier": 1, "upcat": "武器", "icon": "🪄", "rarity": 1,
@@ -118,11 +119,6 @@ const _WEAPON_DATA = [
 	  "tags": ["法杖"], "dmg": 0.8, "asp": 0.6,
 	  "magic_fx": { "CHARM": 3 } },
 
-	{ "name": "魅惑法杖·精通", "desc": "魅惑强度提升",
-	  "type": MA, "cat": W, "tier": 3, "upcat": "特效", "icon": "💖", "rarity": 3,
-	  "tags": ["魅惑法杖"], "dmg": 0.85, "asp": 0.6,
-	  "magic_fx": { "CHARM": 4 } },
-
 	{ "name": "冰霜法杖", "desc": "定身敌人",
 	  "type": MA, "cat": W, "tier": 3, "upcat": "武器", "icon": "❄️", "rarity": 2,
 	  "tags": ["火球法杖"], "dmg": 0.9, "asp": 0.55,
@@ -133,15 +129,15 @@ const _WEAPON_DATA = [
 	  "tags": ["火球法杖"], "dmg": 1.3, "asp": 0.45,
 	  "magic_fx": { "CHAIN": 3 } },
 
-	{ "name": "时间法杖", "desc": "时间减速",
-	  "type": MA, "cat": W, "tier": 4, "upcat": "武器", "icon": "⏳", "rarity": 3,
-	  "tags": ["冰霜法杖"], "asp": 0.5, "hcost": 5,
-	  "magic_fx": { "STUN": 4 } },
-
 	{ "name": "死神法杖", "desc": "死亡连锁",
 	  "type": MA, "cat": W, "tier": 4, "upcat": "武器", "icon": "💀", "rarity": 4,
 	  "tags": ["雷电法杖"], "dmg": 1.5, "asp": 0.4, "hcost": 15,
 	  "magic_fx": { "CHAIN": 4, "DOT": 3 } },
+
+	{ "name": "力场法杖", "desc": "范围击退所有敌人",
+	  "type": MA, "cat": W, "tier": 2, "upcat": "武器", "icon": "🌀", "rarity": 2,
+	  "tags": ["法杖"], "dmg": 0.9, "asp": 0.55,
+	  "magic_fx": { "PUSH": 2 } },
 
 	# ═══ 装备 ═══
 	{ "name": "生命药水", "desc": "恢复生命",
@@ -154,10 +150,6 @@ const _WEAPON_DATA = [
 	{ "name": "攻击宝石", "desc": "提升伤害",
 	  "type": ME, "cat": E, "tier": 1, "upcat": "特效", "icon": "💎", "rarity": 1,
 	  "dmg": 1.15, "hp": -10 },
-
-	{ "name": "攻击宝石·精良", "desc": "提升伤害",
-	  "type": ME, "cat": E, "tier": 2, "upcat": "特效", "icon": "💎",
-	  "tags": ["攻击宝石"], "dmg": 1.3, "hp": -12 },
 
 	{ "name": "暴击指环", "desc": "提升暴击率",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "戒指", "icon": "💍", "rarity": 2,
@@ -182,40 +174,12 @@ const _WEAPON_DATA = [
 	{ "name": "铁盔", "desc": "提高生命上限",
 	  "type": ME, "cat": E, "tier": 1, "upcat": "头盔", "icon": "⛑️", "hp": 15 },
 
-	{ "name": "钢盔", "desc": "显著提高生命上限",
-	  "type": ME, "cat": E, "tier": 2, "upcat": "头盔", "icon": "⛑️",
-	  "tags": ["铁盔"], "hp": 30 },
-
 	{ "name": "皮甲", "desc": "提高生命上限，略降速度",
 	  "type": ME, "cat": E, "tier": 1, "upcat": "护甲", "icon": "🧥",
 	  "hp": 20, "spd_mod": -5 },
 
-	{ "name": "板甲", "desc": "大幅提高生命上限",
-	  "type": ME, "cat": E, "tier": 2, "upcat": "护甲", "icon": "🧥",
-	  "tags": ["皮甲"], "hp": 40, "spd_mod": -10 },
-
-	{ "name": "迅捷靴", "desc": "大幅提升速度",
-	  "type": ME, "cat": E, "tier": 2, "upcat": "鞋子", "icon": "👟",
-	  "tags": ["敏捷靴"], "spd_mod": 35, "hp": -8 },
-
-	{ "name": "暴击指环·精良", "desc": "更高暴击率",
-	  "type": ME, "cat": E, "tier": 3, "upcat": "戒指", "icon": "💍",
-	  "tags": ["暴击指环"], "crit": 20 },
-
-	{ "name": "吸血护符·精良", "desc": "更高吸血比例",
-	  "type": ME, "cat": E, "tier": 3, "upcat": "buff", "icon": "🧿",
-	  "tags": ["吸血护符"], "ls": 12 },
-
 	{ "name": "疾风护符", "desc": "提升攻击速度",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "buff", "icon": "💨", "asp": 1.2 },
-
-	{ "name": "疾风护符·精良", "desc": "显著提升攻击速度",
-	  "type": ME, "cat": E, "tier": 3, "upcat": "buff", "icon": "💨",
-	  "tags": ["疾风护符"], "asp": 1.35 },
-
-	{ "name": "寒霜徽章·精良", "desc": "更高冰冻几率",
-	  "type": ME, "cat": E, "tier": 3, "upcat": "特效", "icon": "❄️",
-	  "tags": ["寒霜徽章"], "frz": 25 },
 
 	{ "name": "再生戒指", "desc": "每回合恢复额外生命",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "戒指", "icon": "💚",

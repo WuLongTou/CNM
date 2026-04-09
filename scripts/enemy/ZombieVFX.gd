@@ -12,6 +12,7 @@ const TYPE_VISUALS: Dictionary = {
 	Zombie.ZombieType.INVISIBLE: [Color(0.35, 0.55, 0.65), 34],
 	Zombie.ZombieType.SPITTER:   [Color(0.25, 0.70, 0.20), 40],
 	Zombie.ZombieType.HEALER:    [Color(0.25, 0.80, 0.40), 38],
+	Zombie.ZombieType.SUMMONER:  [Color(0.55, 0.15, 0.55), 40],
 }
 
 # 死亡粒子颜色
@@ -23,6 +24,7 @@ const DEATH_COLORS: Dictionary = {
 	Zombie.ZombieType.INVISIBLE: Color(0.4, 0.7, 0.8),
 	Zombie.ZombieType.SPITTER:   Color(0.2, 0.8, 0.2),
 	Zombie.ZombieType.HEALER:    Color(0.3, 0.9, 0.5),
+	Zombie.ZombieType.SUMMONER:  Color(0.6, 0.2, 0.6),
 }
 
 var zombie: Zombie
@@ -45,6 +47,9 @@ func create_visuals():
 	_create_status_labels()
 	if zombie.zombie_type == Zombie.ZombieType.INVISIBLE:
 		sprite.modulate.a = 0.3
+	# Boss 缩放（覆盖精英缩放）
+	if zombie.is_boss:
+		zombie.scale = GameConfig.BOSS_SCALE
 
 func _create_shadow():
 	shadow = Sprite2D.new()

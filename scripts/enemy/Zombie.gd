@@ -13,7 +13,16 @@ enum ZombieType {
 	EXPLODER,  ## 爆炸僵尸 - 死后爆炸
 	INVISIBLE, ## 隐身僵尸 - 周期性隐身
 	SPITTER,   ## 喷毒僵尸 - 远程中毒
-	HEALER     ## 治疗僵尸 - 治疗周围僵尸
+	HEALER,    ## 治疗僵尸 - 治疗周围僵尸
+	SUMMONER   ## 召唤师僵尸 - 召唤小僵尸
+}
+
+## 精英词缀枚举
+enum EliteAffix {
+	NONE,          ## 无词缀
+	REGENERATING,  ## 回血 - 每秒回复 2% 最大生命
+	SWIFT,         ## 迅捷 - 1.5x 速度
+	EXPLOSIVE      ## 爆裂 - 死亡时爆炸
 }
 
 @export var zombie_type: ZombieType = ZombieType.BASIC
@@ -31,6 +40,7 @@ const TYPE_STATS: Dictionary = {
 	ZombieType.INVISIBLE: [30,  10, 55.0],
 	ZombieType.SPITTER:   [35,  8,  35.0],
 	ZombieType.HEALER:    [45,  5,  30.0],
+	ZombieType.SUMMONER:  [40,  5,  28.0],
 }
 
 var current_health: int
@@ -62,9 +72,18 @@ var healer_cooldown_base: float = GameConfig.HEALER_COOLDOWN
 var healer_range: float = GameConfig.HEALER_RANGE
 var healer_amount: int = GameConfig.HEALER_AMOUNT
 
+# 召唤师僵尸
+var summoner_cooldown: float = 0.0
+var summoner_cooldown_base: float = GameConfig.SUMMONER_COOLDOWN
+
+# Boss 标记
+var is_boss: bool = false
+
 # 精英
 var is_elite: bool = false
 var elite_multiplier: float = GameConfig.ZOMBIE_ELITE_STAT_MULT
+var elite_affix: EliteAffix = EliteAffix.NONE
+var elite_regen_timer: float = 0.0
 
 # 节点引用（便于外部访问）
 var sprite: Sprite2D:
@@ -81,14 +100,14 @@ var vfx: ZombieVFX
 # ═══════════════════════════════════════════════
 
 func _ready():
-	# 精英加成
+	# 根据类型设置基础属性
+	_apply_type_stats()
+
+	# 精英加成（在类型属性之上）
 	if is_elite:
 		max_health = int(max_health * elite_multiplier)
 		damage = int(damage * elite_multiplier)
 		speed = speed * GameConfig.ZOMBIE_ELITE_SPEED_MULT
-
-	# 根据类型覆写属性
-	_apply_type_stats()
 
 	current_health = max_health
 	add_to_group("zombies")
@@ -178,6 +197,12 @@ func _physics_process(delta):
 		_handle_spitter(delta)
 	if zombie_type == ZombieType.HEALER:
 		_handle_healer(delta)
+	if zombie_type == ZombieType.SUMMONER:
+		_handle_summoner(delta)
+
+	# 精英词缀逻辑
+	if is_elite and elite_affix != EliteAffix.NONE:
+		_handle_elite_affix(delta)
 
 	if player:
 		_move_towards_player()
@@ -254,6 +279,44 @@ func _heal_nearby_zombies():
 	if healed_any and vfx:
 		vfx.show_heal_pulse(healer_range)
 
+func _handle_summoner(delta: float):
+	summoner_cooldown -= delta
+	if summoner_cooldown <= 0:
+		summoner_cooldown = summoner_cooldown_base
+		_summon_minions()
+
+func _summon_minions():
+	# 通过 group 通知 GameManager 生成小兵
+	get_tree().call_group("game_manager", "spawn_minion_zombie", global_position + Vector2(randf_range(-50, 50), randf_range(-50, 50)))
+	if randf() < 0.5:
+		get_tree().call_group("game_manager", "spawn_minion_zombie", global_position + Vector2(randf_range(-50, 50), randf_range(-50, 50)))
+
+func _handle_elite_affix(delta: float):
+	match elite_affix:
+		EliteAffix.REGENERATING:
+			elite_regen_timer += delta
+			if elite_regen_timer >= 1.0:
+				elite_regen_timer = 0.0
+				var heal_amt = max(1, int(max_health * GameConfig.ELITE_REGEN_PERCENT))
+				current_health = min(max_health, current_health + heal_amt)
+				if vfx:
+					vfx.update_status_labels()
+		EliteAffix.SWIFT:
+			pass  # 速度在 _apply_elite_affix 中处理
+		EliteAffix.EXPLOSIVE:
+			pass  # 在 die() 中处理
+
+func _apply_elite_affix():
+	if not is_elite:
+		return
+	var affixes = [EliteAffix.REGENERATING, EliteAffix.SWIFT, EliteAffix.EXPLOSIVE]
+	elite_affix = affixes[randi() % affixes.size()]
+
+	# 词缀额外效果
+	match elite_affix:
+		EliteAffix.SWIFT:
+			speed *= GameConfig.ELITE_SWIFT_MULT
+
 # ═══════════════════════════════════════════════
 # 攻击
 # ═══════════════════════════════════════════════
@@ -308,6 +371,10 @@ func die():
 		if SoundManager.instance:
 			SoundManager.play_explosion()
 
+	# 精英爆裂词缀
+	if is_elite and elite_affix == EliteAffix.EXPLOSIVE:
+		_elite_explosive_death()
+
 	if vfx:
 		vfx.spawn_death_effects()
 
@@ -317,6 +384,16 @@ func die():
 func _explode():
 	if player and global_position.distance_to(player.global_position) <= GameConfig.EXPLODER_RANGE:
 		player.take_damage(damage * int(GameConfig.EXPLODER_DAMAGE_MULT))
+
+func _elite_explosive_death():
+	# 对范围内的玩家和僵尸造成伤害
+	if player and global_position.distance_to(player.global_position) <= GameConfig.ELITE_EXPLOSIVE_RANGE:
+		player.take_damage(int(damage * GameConfig.ELITE_EXPLOSIVE_MULT))
+	# 对僵尸也造成伤害（包括魅惑中的）
+	for z in get_tree().get_nodes_in_group("zombies"):
+		if z is Zombie and z != self:
+			if global_position.distance_to(z.global_position) <= GameConfig.ELITE_EXPLOSIVE_RANGE:
+				z.take_damage(int(damage * GameConfig.ELITE_EXPLOSIVE_MULT))
 
 # ═══════════════════════════════════════════════
 # 状态效果 API
@@ -364,6 +441,20 @@ func set_player_target(target_player: Player):
 
 func set_elite(enabled: bool):
 	is_elite = enabled
+	if enabled:
+		_apply_elite_affix()
+
+func set_boss():
+	is_boss = true
+	is_elite = true
+	max_health = int(max_health * GameConfig.BOSS_STAT_MULT)
+	damage = int(damage * GameConfig.BOSS_STAT_MULT)
+	speed = speed * GameConfig.BOSS_SPEED_MULT
+	current_health = max_health
+	# 应用 Boss 缩放
+	scale = GameConfig.BOSS_SCALE
+	if vfx:
+		vfx.update_status_labels()
 
 # ═══════════════════════════════════════════════
 # 辅助

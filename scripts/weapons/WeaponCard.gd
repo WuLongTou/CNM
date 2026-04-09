@@ -94,8 +94,14 @@ var magic_effect_levels: Dictionary = {}
 
 var tags: Array = []
 
+# 升级追踪
+var upgrade_count: int = 0
+var upgrade_history: Dictionary = {}  # { UpgradeCard.UpgradeDirection.DAMAGE: 3, ... }
+var base_name: String = ""
+
 func init(name: String, desc: String, weapon_kind: WeaponType, card_tags: Array = []) -> WeaponCard:
 	card_name = name
+	base_name = name
 	description = desc
 	weapon_type = weapon_kind
 	melee_effects = []
@@ -337,3 +343,58 @@ func get_effect_detail(effect_name: String, effect_type: String, level: int) -> 
 				"DOT":
 					detail = get_magic_effect_detail(MagicEffect.DOT, level)
 	return detail
+
+# ═══════════════════════════════════════════════
+# 升级进化
+# ═══════════════════════════════════════════════
+
+const _EVOLVE_PREFIXES: Dictionary = {
+	2: {
+		UpgradeCard.UpgradeDirection.DAMAGE: "锋利",
+		UpgradeCard.UpgradeDirection.SPEED: "迅捷",
+		UpgradeCard.UpgradeDirection.CRIT: "精准",
+		UpgradeCard.UpgradeDirection.LEECH: "嗜血",
+		UpgradeCard.UpgradeDirection.DEFENSE: "坚固",
+		UpgradeCard.UpgradeDirection.EFFECT: "附魔",
+	},
+	5: {
+		UpgradeCard.UpgradeDirection.DAMAGE: "狂暴",
+		UpgradeCard.UpgradeDirection.SPEED: "疾风",
+		UpgradeCard.UpgradeDirection.CRIT: "致命",
+		UpgradeCard.UpgradeDirection.LEECH: "吸血",
+		UpgradeCard.UpgradeDirection.DEFENSE: "铁壁",
+		UpgradeCard.UpgradeDirection.EFFECT: "奥术",
+	},
+	8: {
+		UpgradeCard.UpgradeDirection.DAMAGE: "毁灭",
+		UpgradeCard.UpgradeDirection.SPEED: "闪电",
+		UpgradeCard.UpgradeDirection.CRIT: "审判",
+		UpgradeCard.UpgradeDirection.LEECH: "不朽",
+		UpgradeCard.UpgradeDirection.DEFENSE: "永恒",
+		UpgradeCard.UpgradeDirection.EFFECT: "传说",
+	},
+}
+
+func evolve_name():
+	if base_name == "":
+		base_name = card_name
+	var dominant := _get_dominant_direction()
+	if dominant == UpgradeCard.UpgradeDirection.NONE:
+		return
+	var prefix := ""
+	var thresholds := [8, 5, 2]
+	for t in thresholds:
+		if upgrade_count >= t and _EVOLVE_PREFIXES[t].has(dominant):
+			prefix = _EVOLVE_PREFIXES[t][dominant]
+			break
+	if prefix != "":
+		card_name = prefix + "·" + base_name
+
+func _get_dominant_direction() -> UpgradeCard.UpgradeDirection:
+	var best_dir := UpgradeCard.UpgradeDirection.NONE
+	var best_count := 0
+	for dir in upgrade_history:
+		if upgrade_history[dir] > best_count:
+			best_count = upgrade_history[dir]
+			best_dir = dir
+	return best_dir

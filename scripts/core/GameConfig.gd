@@ -120,6 +120,25 @@ const CHARM_RESIST_TANK: float = 0.4
 const CHARM_RESIST_FAST: float = 0.2
 const CHARM_MIN_DURATION: float = 1.0
 
+# 召唤师僵尸
+const SUMMONER_COOLDOWN: float = 5.0
+const SUMMONER_RANGE: float = 100.0
+const SUMMONER_COUNT_MIN: int = 1
+const SUMMONER_COUNT_MAX: int = 2
+
+# Boss 系统
+const BOSS_STAT_MULT: float = 3.0
+const BOSS_SPEED_MULT: float = 0.7
+const BOSS_SCORE_MULT: float = 5.0
+const BOSS_SCALE = Vector2(1.8, 1.8)
+const BOSS_INTERVAL: int = 5  # 每 N 轮出 Boss
+
+# 精英词缀
+const ELITE_REGEN_PERCENT: float = 0.02  # 每秒回复 2% 最大生命
+const ELITE_SWIFT_MULT: float = 1.5
+const ELITE_EXPLOSIVE_RANGE: float = 120.0
+const ELITE_EXPLOSIVE_MULT: float = 2.0
+
 # 回合缩放
 const SPITTER_MIN_COOLDOWN: float = 1.5
 const SPITTER_COOLDOWN_DECAY: float = 0.03

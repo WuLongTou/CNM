@@ -433,16 +433,61 @@ func apply_weapon_effect(weapon: WeaponCard):
 	player.active_effects.append(weapon)
 	recalculate_stats()
 
-	# 视觉反馈
-	player.vfx.show_upgrade_effect()
-	player.effect_applied.emit(weapon.card_name)
-	var color = Color.GOLD
-	match weapon.rarity:
-		2: color = Color(0.4, 0.7, 1.0)
-		3: color = Color(0.8, 0.4, 1.0)
-		4: color = Color(1.0, 0.8, 0.2)
-	VFXManager.spawn_floating_label(player.get_parent(), player.global_position, "+" + weapon.card_name, color)
-	_notify_ui_status()
+	_show_apply_feedback("+" + weapon.card_name, weapon.card_name, _get_rarity_color(weapon.rarity))
+
+func apply_upgrade_card(upgrade: UpgradeCard):
+	var target := upgrade.target_ref
+	if not target:
+		return
+
+	# 数值增量
+	target.damage_modifier += upgrade.damage_delta
+	target.attack_speed_modifier += upgrade.attack_speed_delta
+	target.health_modifier += upgrade.health_delta
+	target.speed_modifier += upgrade.speed_delta
+	target.critical_bonus += upgrade.crit_delta
+	target.life_steal_bonus += upgrade.life_steal_delta
+	target.freeze_bonus += upgrade.freeze_delta
+	target.poison_bonus += upgrade.poison_delta
+
+	# 特效等级提升
+	for fx_key in upgrade.effect_upgrades:
+		var delta: int = upgrade.effect_upgrades[fx_key]
+		var levels_dict: Dictionary = {}
+		if target.melee_effect_levels.has(fx_key):
+			levels_dict = target.melee_effect_levels
+		elif target.ranged_effect_levels.has(fx_key):
+			levels_dict = target.ranged_effect_levels
+		elif target.magic_effect_levels.has(fx_key):
+			levels_dict = target.magic_effect_levels
+		else:
+			match target.weapon_type:
+				WeaponCard.WeaponType.MELEE: levels_dict = target.melee_effect_levels
+				WeaponCard.WeaponType.RANGED: levels_dict = target.ranged_effect_levels
+				_: levels_dict = target.magic_effect_levels
+		levels_dict[fx_key] = levels_dict.get(fx_key, 0) + delta
+
+	# 副作用
+	match upgrade.tradeoff_type:
+		UpgradeCard.TradeoffType.HEALTH_COST:
+			target.health_cost += int(upgrade.tradeoff_value)
+		UpgradeCard.TradeoffType.SPEED:
+			target.speed_modifier += upgrade.tradeoff_value
+		UpgradeCard.TradeoffType.HEALTH_MAX:
+			target.health_modifier += upgrade.tradeoff_value
+
+	# 升级追踪
+	target.upgrade_count += 1
+	if upgrade.upgrade_direction != UpgradeCard.UpgradeDirection.NONE:
+		target.upgrade_history[upgrade.upgrade_direction] = target.upgrade_history.get(upgrade.upgrade_direction, 0) + 1
+
+	# 进化名称
+	target.evolve_name()
+
+	# 重新计算属性
+	recalculate_stats()
+
+	_show_apply_feedback("强化!" + target.card_name, target.card_name, Color(0.3, 1.0, 0.5))
 
 func recalculate_stats():
 	# 重置
@@ -605,6 +650,23 @@ func _can_pay_health_cost() -> bool:
 func _pay_health_cost():
 	if player.health_cost_per_attack > 0:
 		player.take_damage(player.health_cost_per_attack)
+
+func _show_apply_feedback(label_text: String, effect_name: String, color: Color):
+	player.vfx.show_upgrade_effect()
+	player.effect_applied.emit(effect_name)
+	VFXManager.spawn_floating_label(player.get_parent(), player.global_position, label_text, color)
+	_notify_ui_status()
+
+func _get_rarity_color(rarity: int) -> Color:
+	match rarity:
+		2:
+			return Color(0.4, 0.7, 1.0)
+		3:
+			return Color(0.8, 0.4, 1.0)
+		4:
+			return Color(1.0, 0.8, 0.2)
+		_:
+			return Color.GOLD
 
 func _notify_ui_status():
 	player.get_tree().call_group("ui_manager", "update_player_status", player)

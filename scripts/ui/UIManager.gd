@@ -4,7 +4,7 @@ extends Control
 ## 负责所有UI元素的创建、更新和交互
 ## 包括HUD、武器选择面板、tooltip、暂停界面等
 
-signal weapon_card_selected(weapon: WeaponCard)
+signal weapon_card_selected(weapon)
 signal upgrade_skipped
 
 # ═══ 组件引用 ═══
@@ -24,17 +24,22 @@ var lifesteal_label: Label
 var attack_interval_label: Label
 var attack_type_label: Label
 var target_priority_label: Label
-var owned_weapons_label: Label
 var dash_cooldown_label: Label
+var speed_label: Label
 var controls_panel: Panel
 var controls_visible: bool = false
 var welcome_panel: Panel
 var welcome_visible: bool = true
 var score_label: Label
 var health_bar: ProgressBar
+var boss_health_bar: ProgressBar
+var boss_health_label: Label
+var _boss_ui_visible: bool = false
+var _boss_ui_health: int = -1
+var _boss_ui_max_health: int = -1
 
 # ═══ 武器选择 ═══
-var current_weapon_options: Array[WeaponCard] = []
+var current_weapon_options: Array = []
 var game_manager: GameManager
 var weapon_deck: WeaponDeck
 
@@ -215,6 +220,8 @@ func _create_hud_panel():
 	row2.add_child(target_priority_label)
 	dash_cooldown_label = _make_stat_label("闪避 OK", Color(0.55, 0.85, 0.55))
 	row2.add_child(dash_cooldown_label)
+	speed_label = _make_stat_label("SPD 0", Color(0.55, 0.75, 0.65))
+	row2.add_child(speed_label)
 
 	# 效果图标容器
 	effects_container = HBoxContainer.new()
@@ -222,18 +229,53 @@ func _create_hud_panel():
 	effects_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row2.add_child(effects_container)
 
-	owned_weapons_label = Label.new()
-	owned_weapons_label.text = ""
-	owned_weapons_label.add_theme_font_size_override("font_size", 10)
-	owned_weapons_label.add_theme_color_override("font_color", Color(0.55, 0.55, 0.60))
-	row2.add_child(owned_weapons_label)
-
 	var help_btn = Button.new()
 	help_btn.text = "?"
 	help_btn.custom_minimum_size = Vector2(20, 20)
 	help_btn.focus_mode = Control.FOCUS_NONE
 	help_btn.pressed.connect(_toggle_controls_panel)
 	row2.add_child(help_btn)
+
+	# ═══ Boss 血条 ═══
+	boss_health_bar = ProgressBar.new()
+	boss_health_bar.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	boss_health_bar.offset_top = 66
+	boss_health_bar.offset_bottom = 78
+	boss_health_bar.offset_left = 16
+	boss_health_bar.offset_right = -16
+	boss_health_bar.custom_minimum_size.y = 12
+	boss_health_bar.visible = false
+	boss_health_bar.z_index = 5
+	boss_health_bar.show_percentage = false
+	var boss_bg = StyleBoxFlat.new()
+	boss_bg.bg_color = Color(0.15, 0.05, 0.05, 0.9)
+	boss_bg.corner_radius_top_left = 4
+	boss_bg.corner_radius_top_right = 4
+	boss_bg.corner_radius_bottom_left = 4
+	boss_bg.corner_radius_bottom_right = 4
+	boss_health_bar.add_theme_stylebox_override("background", boss_bg)
+	var boss_fill = StyleBoxFlat.new()
+	boss_fill.bg_color = Color(0.85, 0.15, 0.1)
+	boss_fill.corner_radius_top_left = 4
+	boss_fill.corner_radius_top_right = 4
+	boss_fill.corner_radius_bottom_left = 4
+	boss_fill.corner_radius_bottom_right = 4
+	boss_health_bar.add_theme_stylebox_override("fill", boss_fill)
+	add_child(boss_health_bar)
+
+	boss_health_label = Label.new()
+	boss_health_label.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	boss_health_label.offset_top = 66
+	boss_health_label.offset_bottom = 84
+	boss_health_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_health_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	boss_health_label.add_theme_font_size_override("font_size", 12)
+	boss_health_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.3))
+	boss_health_label.add_theme_constant_override("outline_size", 2)
+	boss_health_label.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.7))
+	boss_health_label.visible = false
+	boss_health_label.z_index = 6
+	add_child(boss_health_label)
 
 func _make_stat_label(text: String, color: Color) -> Label:
 	var lbl = Label.new()
@@ -267,25 +309,29 @@ func _create_weapon_selection_panel():
 	
 	# 武器选择标题
 	var title_label = Label.new()
-	title_label.text = "⚔️ 选择武器强化 ⚔️"
+	title_label.text = "⚔️ 选择本回合强化 ⚔️"
 	title_label.add_theme_font_size_override("font_size", 32)
 	title_label.add_theme_color_override("font_color", Color.GOLD)
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	main_vbox.add_child(title_label)
-	
+
 	current_weapon_label = Label.new()
 	current_weapon_label.text = "当前武器: 无"
 	current_weapon_label.add_theme_font_size_override("font_size", 16)
 	current_weapon_label.add_theme_color_override("font_color", Color(0.8, 0.8, 0.9))
 	current_weapon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	current_weapon_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	current_weapon_label.custom_minimum_size.x = 720
 	main_vbox.add_child(current_weapon_label)
-	
+
 	# 说明文字
 	var desc_label = Label.new()
-	desc_label.text = "选择一张武器卡牌来增强你的战斗能力"
+	desc_label.text = "你可能抽到新武器、装备，或对已有装备的强化卡"
 	desc_label.add_theme_font_size_override("font_size", 18)
 	desc_label.add_theme_color_override("font_color", Color.WHITE)
 	desc_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc_label.custom_minimum_size.x = 720
 	main_vbox.add_child(desc_label)
 	
 	# 创建武器按钮容器
@@ -490,11 +536,14 @@ func _create_pause_panel():
 
 func _create_round_banner():
 	round_banner = Label.new()
-	round_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	round_banner.position = Vector2(0, 20)
+	round_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
+	round_banner.offset_top = 20
+	round_banner.offset_bottom = 56
 	round_banner.text = ""
 	round_banner.visible = false
 	round_banner.z_index = 50
+	round_banner.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	round_banner.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	round_banner.add_theme_font_size_override("font_size", 28)
 	round_banner.add_theme_color_override("font_color", Color.GOLD)
 	round_banner.add_theme_constant_override("outline_size", 6)
@@ -554,9 +603,10 @@ func _create_controls_panel():
 	_create_info_card(container, "🏃 移动", "WASD 或 方向键\n自由移动角色", Color(0.3, 0.8, 0.3))
 	_create_info_card(container, "⚔️ 攻击", "按住空格进行攻击\n魔法类自动锁定", Color(0.8, 0.3, 0.3))
 	_create_info_card(container, "🗡️ 武器类型", "近战: 扇形斩击\n远程: 发射子弹\n魔法: 追踪导弹\n范围: 爆炸攻击", Color(0.8, 0.6, 0.2))
-	_create_info_card(container, "🎯 目标", "消灭所有僵尸\n选择武器卡牌\n生存更多回合", Color(0.6, 0.3, 0.8))
+	_create_info_card(container, "🎯 回合目标", "消灭所有僵尸\n回合开始时选择强化\n可跳过本次强化", Color(0.6, 0.3, 0.8))
 	_create_info_card(container, "💨 冲刺", "按 Shift 快速闪避\n有冷却时间", Color(0.4, 0.7, 1.0))
 	_create_info_card(container, "🔭 锁定", "按 Tab 切换目标优先级\n最近/最远/密集", Color(0.5, 0.8, 0.9))
+	_create_info_card(container, "⏸ 暂停", "按 ESC 暂停/继续游戏\n强化阶段无法手动暂停", Color(0.8, 0.8, 0.5))
 	
 	# 关闭提示
 	var close_hint = Label.new()
@@ -716,6 +766,32 @@ func _process(delta):
 	if game_manager and game_manager.player:
 		_update_dash_display(game_manager.player)
 		_update_attack_interval_display(game_manager.player)
+	# Boss 血条更新
+	if game_manager and game_manager.boss_zombie and is_instance_valid(game_manager.boss_zombie):
+		var boss = game_manager.boss_zombie
+		if not _boss_ui_visible:
+			_boss_ui_visible = true
+			if boss_health_bar:
+				boss_health_bar.visible = true
+			if boss_health_label:
+				boss_health_label.visible = true
+		if boss.current_health != _boss_ui_health or boss.max_health != _boss_ui_max_health:
+			_boss_ui_health = boss.current_health
+			_boss_ui_max_health = boss.max_health
+			if boss_health_bar:
+				boss_health_bar.max_value = boss.max_health
+				boss_health_bar.value = boss.current_health
+			if boss_health_label:
+				boss_health_label.text = "BOSS  " + str(boss.current_health) + "/" + str(boss.max_health)
+	else:
+		if _boss_ui_visible:
+			_boss_ui_visible = false
+			_boss_ui_health = -1
+			_boss_ui_max_health = -1
+			if boss_health_bar:
+				boss_health_bar.visible = false
+			if boss_health_label:
+				boss_health_label.visible = false
 	if screen_fx:
 		screen_fx.process_effects(delta)
 
@@ -785,7 +861,11 @@ func show_weapon_selection():
 			var weapon = current_weapon_options[i]
 			var button = weapon_buttons[i]
 			button.visible = true
-			
+
+			if weapon is UpgradeCard:
+				_render_upgrade_card(button, weapon)
+				continue
+
 			# 获取内部控件
 			var vbox = button.get_child(0).get_child(0) # Button -> Margin -> VBox
 			var category_node = vbox.get_node("Category")
@@ -954,17 +1034,7 @@ func hide_weapon_selection():
 		pause_panel.visible = true
 
 func _get_rarity_text(rarity: int) -> String:
-	match rarity:
-		1:
-			return "[普通]"
-		2:
-			return "[稀有]"
-		3:
-			return "[史诗]"
-		4:
-			return "[传说]"
-		_:
-			return "[未知]"
+	return WeaponFormatter.get_rarity_text(rarity)
 
 func _on_weapon_button_pressed(index: int):
 	if index < current_weapon_options.size():
@@ -986,7 +1056,10 @@ func _on_card_mouse_entered(index: int):
 	# 整张卡片悬停时显示详细tooltip
 	if index < current_weapon_options.size():
 		var weapon = current_weapon_options[index]
-		_show_tooltip(_get_weapon_tooltip_text(weapon))
+		if weapon is UpgradeCard:
+			_show_tooltip(_get_upgrade_tooltip_text(weapon))
+		else:
+			_show_tooltip(_get_weapon_tooltip_text(weapon))
 
 func _on_card_mouse_exited():
 	if tooltip_hide_timer:
@@ -1060,6 +1133,84 @@ func _position_tooltip():
 		clamp(mouse_pos.x + tooltip_offset.x, 10, screen_size.x - panel_size.x - 10),
 		clamp(mouse_pos.y + tooltip_offset.y, 10, screen_size.y - panel_size.y - 10)
 	)
+
+func _render_upgrade_card(button: Button, upgrade: UpgradeCard):
+	var vbox = button.get_child(0).get_child(0)
+	var category_node = vbox.get_node("Category")
+	var title_node = vbox.get_node("Title")
+	var type_node = vbox.get_node("Type")
+	var icon_node = vbox.get_node("IconContainer/Icon")
+	var desc_node = vbox.get_node("Desc")
+	var rarity_node = vbox.get_node("Rarity")
+
+	category_node.text = "【强化卡】"
+	title_node.text = upgrade.display_name
+	type_node.text = "强化已有装备"
+	icon_node.text = upgrade.icon
+	desc_node.text = upgrade.description
+	rarity_node.text = "升级"
+
+	title_node.add_theme_color_override("font_color", Color(0.55, 1.0, 0.65))
+	rarity_node.add_theme_color_override("font_color", Color(0.4, 0.95, 0.55))
+
+	var style = StyleBoxFlat.new()
+	style.bg_color = Color(0.10, 0.22, 0.12, 0.95)
+	style.border_width_left = 3
+	style.border_width_right = 3
+	style.border_width_top = 3
+	style.border_width_bottom = 3
+	style.border_color = Color(0.3, 0.95, 0.45)
+	style.corner_radius_top_left = 10
+	style.corner_radius_top_right = 10
+	style.corner_radius_bottom_left = 10
+	style.corner_radius_bottom_right = 10
+	style.shadow_size = 8
+	style.shadow_color = Color(0, 0, 0, 0.4)
+	button.add_theme_stylebox_override("normal", style)
+
+	var hover_style = style.duplicate()
+	hover_style.bg_color = style.bg_color.lightened(0.15)
+	hover_style.border_color = style.border_color.lightened(0.2)
+	hover_style.shadow_size = 12
+	button.add_theme_stylebox_override("hover", hover_style)
+
+func _get_upgrade_tooltip_text(upgrade: UpgradeCard) -> String:
+	var bb := ""
+	var target_name := upgrade.target_ref.card_name if upgrade.target_ref else "未知"
+	var count := upgrade.target_ref.upgrade_count if upgrade.target_ref else 0
+	bb += "[center][b][color=#66ff99]" + upgrade.display_name + "[/color][/b][/center]\n"
+	bb += "[center][color=#aaaaaa]强化目标: " + target_name + " · 已强化 " + str(count) + " 次[/color][/center]\n"
+	bb += "[center]━━━━━━━━━━━━━━━━━━━━[/center]\n\n"
+	bb += "[color=#88ff88]【强化效果】[/color]\n"
+	if upgrade.damage_delta > 0:
+		bb += "• 伤害 [color=#88ff88]+" + str(int(upgrade.damage_delta * 100)) + "%[/color]\n"
+	if upgrade.attack_speed_delta > 0:
+		bb += "• 攻速 [color=#88ff88]+" + str(int(upgrade.attack_speed_delta * 100)) + "%[/color]\n"
+	if upgrade.health_delta > 0:
+		bb += "• 生命 [color=#88ff88]+" + str(int(upgrade.health_delta)) + "[/color]\n"
+	if upgrade.speed_delta > 0:
+		bb += "• 速度 [color=#88ff88]+" + str(int(upgrade.speed_delta)) + "[/color]\n"
+	if upgrade.crit_delta > 0:
+		bb += "• 暴击 [color=#88ff88]+" + str(int(upgrade.crit_delta)) + "%[/color]\n"
+	if upgrade.life_steal_delta > 0:
+		bb += "• 吸血 [color=#88ff88]+" + str(int(upgrade.life_steal_delta)) + "%[/color]\n"
+	if upgrade.freeze_delta > 0:
+		bb += "• 冰冻 [color=#88ff88]+" + str(int(upgrade.freeze_delta)) + "%[/color]\n"
+	if upgrade.poison_delta > 0:
+		bb += "• 中毒 [color=#88ff88]+" + str(int(upgrade.poison_delta)) + "%[/color]\n"
+	if not upgrade.effect_upgrades.is_empty():
+		bb += "• [color=#88ff88]特效等级 +1[/color]\n"
+	if upgrade.tradeoff_type != UpgradeCard.TradeoffType.NONE:
+		bb += "\n[color=#ff8888]【副作用】[/color]\n"
+		match upgrade.tradeoff_type:
+			UpgradeCard.TradeoffType.HEALTH_COST:
+				bb += "• 每次攻击额外消耗 [color=#ff8888]+" + str(int(upgrade.tradeoff_value)) + "[/color] 生命\n"
+			UpgradeCard.TradeoffType.SPEED:
+				bb += "• 速度 [color=#ff8888]" + str(int(upgrade.tradeoff_value)) + "[/color]\n"
+			UpgradeCard.TradeoffType.HEALTH_MAX:
+				bb += "• 生命上限 [color=#ff8888]" + str(int(upgrade.tradeoff_value)) + "[/color]\n"
+	bb += "\n[color=#aaaaaa]选择后将直接强化你已有的装备。[/color]"
+	return bb
 
 func _get_weapon_tooltip_text(weapon: WeaponCard) -> String:
 	# 使用BBCode格式化tooltip内容
@@ -1219,13 +1370,19 @@ func _get_weapon_tooltip_text(weapon: WeaponCard) -> String:
 		bb += "\n"
 	
 	# ===== 风险提示区 =====
-	var has_risk = weapon.health_cost > 0 or weapon.health_modifier < 0
+	var has_risk = weapon.health_cost > 0 or weapon.health_modifier < 0 or weapon.speed_modifier < 0 or weapon.damage_modifier < 1.0 or weapon.attack_speed_modifier < 1.0
 	if has_risk:
 		bb += "[color=#ff6666]【⚠ 风险提示】[/color]\n"
 		if weapon.health_cost > 0:
 			bb += "  [color=#ff8888]● 每次攻击消耗 " + str(weapon.health_cost) + " 点生命[/color]\n"
 		if weapon.health_modifier < 0:
 			bb += "  [color=#ff8888]● 生命上限降低 " + str(abs(int(weapon.health_modifier))) + " 点[/color]\n"
+		if weapon.speed_modifier < 0:
+			bb += "  [color=#ff8888]● 移动速度降低 " + str(abs(int(weapon.speed_modifier))) + " 点[/color]\n"
+		if weapon.damage_modifier < 1.0:
+			bb += "  [color=#ff8888]● 伤害降低 " + str(int((1.0 - weapon.damage_modifier) * 100)) + "%[/color]\n"
+		if weapon.attack_speed_modifier < 1.0:
+			bb += "  [color=#ff8888]● 攻击速度降低 " + str(int((1.0 - weapon.attack_speed_modifier) * 100)) + "%[/color]\n"
 		bb += "\n"
 	
 	# ===== 替换提示 =====
@@ -1242,12 +1399,7 @@ func _get_weapon_tooltip_text(weapon: WeaponCard) -> String:
 	return bb
 
 func _get_rarity_color(rarity: int) -> String:
-	match rarity:
-		1: return "#cccccc"  # 普通 - 灰白
-		2: return "#4499ff"  # 稀有 - 蓝色
-		3: return "#cc66ff"  # 史诗 - 紫色
-		4: return "#ffcc00"  # 传说 - 金色
-		_: return "#ffffff"
+	return WeaponFormatter.get_rarity_color(rarity)
 
 func _hide_tooltip_panel():
 	if tooltip_panel:
@@ -1339,8 +1491,8 @@ func update_player_status(player: Player):
 		crit_label.text = "CRT " + str(int(player.critical_chance)) + "%"
 	if lifesteal_label:
 		lifesteal_label.text = "LS " + str(int(player.life_steal_percent)) + "%"
-	if attack_interval_label:
-		attack_interval_label.text = str(snapped(player.attack_cooldown, 0.01)) + "s"
+	if speed_label:
+		speed_label.text = "SPD " + str(int(player.current_speed))
 	if attack_type_label:
 		match player.current_attack_type:
 			Player.AttackType.MELEE:
@@ -1362,13 +1514,8 @@ func update_player_status(player: Player):
 				target_priority_label.text = "锁定: 密集"
 
 	
-	# 更新已拥有武器
-	if owned_weapons_label:
-		owned_weapons_label.text = _build_active_effects_summary(player)
-
 	# 更新效果图标显示
 	_update_effects_display(player)
-	
 	_update_status_tooltips(player)
 
 func _update_status_tooltips(player: Player):
@@ -1380,6 +1527,8 @@ func _update_status_tooltips(player: Player):
 		lifesteal_label.tooltip_text = "吸血比例: " + str(int(player.life_steal_percent)) + "%\n命中后回复对应比例生命"
 	if attack_interval_label:
 		attack_interval_label.tooltip_text = "攻击间隔: " + str(snapped(player.attack_cooldown, 0.01)) + " 秒\n数值越小攻击越快"
+	if speed_label:
+		speed_label.tooltip_text = "移动速度: " + str(int(player.current_speed)) + "\n受装备、升级和减速效果影响"
 	if target_priority_label:
 		var priority_text = "最近"
 		if player.target_priority == 1:
@@ -1387,81 +1536,11 @@ func _update_status_tooltips(player: Player):
 		elif player.target_priority == 2:
 			priority_text = "密集"
 		target_priority_label.tooltip_text = "目标优先级: " + priority_text + "\n按 Tab 切换"
-	if owned_weapons_label:
-		owned_weapons_label.tooltip_text = _build_active_effects_tooltip(player)
 	if attack_type_label:
-		attack_type_label.tooltip_text = _build_attack_effects_tooltip(player)
+		attack_type_label.tooltip_text = WeaponFormatter.build_attack_effects_tooltip(player)
 
 func _build_attack_effects_tooltip(player: Player) -> String:
-	var lines = []
-	var type_text = "近战"
-	if player.current_attack_type == Player.AttackType.RANGED:
-		type_text = "远程"
-	elif player.current_attack_type == Player.AttackType.MAGIC:
-		type_text = "魔法"
-	elif player.current_attack_type == Player.AttackType.AREA:
-		type_text = "范围"
-	var weapon_name = "无"
-	for effect in player.active_effects:
-		if effect.category == WeaponCard.WeaponCategory.WEAPON:
-			weapon_name = effect.card_name
-			break
-	lines.append("当前武器: " + weapon_name)
-	lines.append("攻击类型: " + type_text)
-	lines.append("基础伤害: " + str(int(player.current_damage)))
-
-	var melee_levels = {}
-	var ranged_levels = {}
-	var magic_levels = {}
-	for weapon in player.active_effects:
-		if weapon.weapon_type == WeaponCard.WeaponType.MELEE:
-			for effect in weapon.melee_effects:
-				var level = weapon.melee_effect_levels.get(effect, 1)
-				if melee_levels.get(effect, 0) < level:
-					melee_levels[effect] = level
-		elif weapon.weapon_type == WeaponCard.WeaponType.RANGED:
-			for effect in weapon.ranged_effects:
-				var level = weapon.ranged_effect_levels.get(effect, 1)
-				if ranged_levels.get(effect, 0) < level:
-					ranged_levels[effect] = level
-		elif weapon.weapon_type == WeaponCard.WeaponType.MAGIC:
-			for effect in weapon.magic_effects:
-				var level = weapon.magic_effect_levels.get(effect, 1)
-				if magic_levels.get(effect, 0) < level:
-					magic_levels[effect] = level
-
-	var effect_lines = []
-	var temp_card = WeaponCard.new()
-	if player.current_attack_type == Player.AttackType.MELEE:
-		for effect in melee_levels.keys():
-			effect_lines.append("• " + temp_card.get_melee_effect_desc(effect, melee_levels[effect]))
-	elif player.current_attack_type == Player.AttackType.RANGED:
-		for effect in ranged_levels.keys():
-			effect_lines.append("• " + temp_card.get_ranged_effect_desc(effect, ranged_levels[effect]))
-		if player.returning_projectiles and player.bounce_count > 0:
-			effect_lines.append("• 反弹次数: " + str(player.bounce_count))
-	elif player.current_attack_type == Player.AttackType.MAGIC:
-		for effect in magic_levels.keys():
-			effect_lines.append("• " + temp_card.get_magic_effect_desc(effect, magic_levels[effect]))
-	elif player.current_attack_type == Player.AttackType.AREA:
-		effect_lines.append("• 范围爆炸")
-
-	if player.critical_chance > 0:
-		effect_lines.append("• 暴击率 +" + str(int(player.critical_chance)) + "%")
-	if player.life_steal_percent > 0:
-		effect_lines.append("• 吸血 +" + str(int(player.life_steal_percent)) + "%")
-	if player.freeze_duration > 0:
-		effect_lines.append("• 冰冻几率 +" + str(int(player.freeze_duration)) + "%")
-	if player.poison_damage > 0:
-		effect_lines.append("• 中毒几率 +" + str(int(player.poison_damage)) + "%")
-	if player.aura.active:
-		effect_lines.append("• 护盾领域: 启用")
-
-	if effect_lines.is_empty():
-		effect_lines.append("• 无特效")
-	lines.append("特效:")
-	lines.append("\n".join(effect_lines))
-	return "\n".join(lines)
+	return WeaponFormatter.build_attack_effects_tooltip(player)
 
 func _update_effects_display(player: Player):
 	if not effects_container:
@@ -1483,10 +1562,10 @@ func _update_effects_display(player: Player):
 				"name": effect.card_name,
 				"type": "weapon",
 				"color": _get_rarity_color_value(effect.rarity),
-				"tooltip": _get_effect_tooltip(effect, player)
+				"tooltip": WeaponFormatter.get_effect_tooltip(effect)
 			})
 			break
-	
+
 	# 2. 装备
 	for effect in player.active_effects:
 		if effect.category == WeaponCard.WeaponCategory.EQUIPMENT:
@@ -1495,7 +1574,7 @@ func _update_effects_display(player: Player):
 				"name": effect.card_name,
 				"type": "equipment",
 				"color": _get_rarity_color_value(effect.rarity),
-				"tooltip": _get_effect_tooltip(effect, player)
+				"tooltip": WeaponFormatter.get_effect_tooltip(effect)
 			})
 	
 	# 3. 护盾 (如果激活)
@@ -1505,7 +1584,7 @@ func _update_effects_display(player: Player):
 			"name": "冰霜护盾",
 			"type": "buff",
 			"color": Color(0.3, 0.8, 1.0),
-			"tooltip": "【冰霜护盾】\n伤害: " + str(int(player.aura_damage)) + "\n范围: " + str(int(player.aura_radius)) + "\n效果: 环绕的冰晶会伤害并减速接触的敌人"
+			"tooltip": "【冰霜护盾】\n伤害: " + str(int(player.aura.damage)) + "\n范围: " + str(int(player.aura.radius)) + "\n效果: 环绕的冰晶会伤害并减速接触的敌人"
 		})
 	
 	# 4. 特殊属性
@@ -1602,91 +1681,20 @@ func _on_effect_icon_exited():
 	if tooltip_hide_timer:
 		tooltip_hide_timer.start()
 
-func _get_effect_tooltip(weapon: WeaponCard, _player: Player) -> String:
-	var text = "【" + weapon.card_name + "】\n"
-	text += "类型: " + ("装备" if weapon.category == WeaponCard.WeaponCategory.EQUIPMENT else weapon.get_weapon_type_text()) + "\n"
-	text += "等级: Lv." + str(weapon.tier) + "\n"
-	text += "稀有度: " + _get_rarity_text(weapon.rarity) + "\n\n"
-	
-	# 属性
-	if weapon.damage_modifier != 1.0:
-		var mod = int((weapon.damage_modifier - 1.0) * 100)
-		text += "伤害: " + ("+" if mod > 0 else "") + str(mod) + "%\n"
-	if weapon.health_modifier != 0:
-		text += "生命: " + ("+" if weapon.health_modifier > 0 else "") + str(int(weapon.health_modifier)) + "\n"
-	if weapon.speed_modifier != 0:
-		text += "速度: " + ("+" if weapon.speed_modifier > 0 else "") + str(int(weapon.speed_modifier)) + "\n"
-	if weapon.critical_bonus > 0:
-		text += "暴击: +" + str(int(weapon.critical_bonus)) + "%\n"
-	if weapon.life_steal_bonus > 0:
-		text += "吸血: +" + str(int(weapon.life_steal_bonus)) + "%\n"
-	
-	return text
+func _get_effect_tooltip(weapon: WeaponCard, _player: Player = null) -> String:
+	return WeaponFormatter.get_effect_tooltip(weapon)
 
 func _get_rarity_color_value(rarity: int) -> Color:
-	match rarity:
-		1: return Color(0.7, 0.7, 0.7)  # 普通 - 灰
-		2: return Color(0.3, 0.6, 1.0)  # 稀有 - 蓝
-		3: return Color(0.7, 0.3, 0.9)  # 史诗 - 紫
-		4: return Color(1.0, 0.8, 0.2)  # 传说 - 金
-		_: return Color.WHITE
+	return WeaponFormatter.get_rarity_color_value(rarity)
 
 func _build_active_effects_summary(player: Player) -> String:
-	if player.active_effects.is_empty():
-		return ""
-	var current_weapon = "无"
-	var effects = _get_effect_level_summary(player)
-	for effect in player.active_effects:
-		if effect.category == WeaponCard.WeaponCategory.WEAPON:
-			current_weapon = effect.card_name
-			break
-	if effects.is_empty():
-		return "🎒 " + current_weapon
-	return "🎒 " + current_weapon + " | " + " | ".join(effects)
+	return WeaponFormatter.build_active_effects_summary(player)
 
 func _build_active_effects_tooltip(player: Player) -> String:
-	if player.active_effects.is_empty():
-		return "已获得: 无"
-	var current_weapon = "无"
-	for effect in player.active_effects:
-		if effect.category == WeaponCard.WeaponCategory.WEAPON:
-			current_weapon = effect.card_name
-			break
-	var effects = _get_effect_level_summary(player)
-	if effects.is_empty():
-		return "当前武器: " + current_weapon + "\n特效: 无"
-	return "当前武器: " + current_weapon + "\n特效:\n- " + "\n- ".join(effects)
+	return WeaponFormatter.build_active_effects_tooltip(player)
 
 func _get_effect_level_summary(player: Player) -> Array[String]:
-	var melee_levels = {}
-	var ranged_levels = {}
-	var magic_levels = {}
-	for weapon in player.active_effects:
-		if weapon.weapon_type == WeaponCard.WeaponType.MELEE:
-			for effect in weapon.melee_effects:
-				var level = weapon.melee_effect_levels.get(effect, 1)
-				if melee_levels.get(effect, 0) < level:
-					melee_levels[effect] = level
-		elif weapon.weapon_type == WeaponCard.WeaponType.RANGED:
-			for effect in weapon.ranged_effects:
-				var level = weapon.ranged_effect_levels.get(effect, 1)
-				if ranged_levels.get(effect, 0) < level:
-					ranged_levels[effect] = level
-		elif weapon.weapon_type == WeaponCard.WeaponType.MAGIC:
-			for effect in weapon.magic_effects:
-				var level = weapon.magic_effect_levels.get(effect, 1)
-				if magic_levels.get(effect, 0) < level:
-					magic_levels[effect] = level
-	
-	var result: Array[String] = []
-	var temp_card = WeaponCard.new()
-	for effect in melee_levels.keys():
-		result.append(temp_card.get_melee_effect_desc(effect, melee_levels[effect]))
-	for effect in ranged_levels.keys():
-		result.append(temp_card.get_ranged_effect_desc(effect, ranged_levels[effect]))
-	for effect in magic_levels.keys():
-		result.append(temp_card.get_magic_effect_desc(effect, magic_levels[effect]))
-	return result
+	return WeaponFormatter.get_effect_level_summary(player)
 
 func set_game_manager(manager: GameManager):
 	game_manager = manager

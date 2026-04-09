@@ -15,8 +15,8 @@ func _ready():
 # 抽卡系统
 # ═══════════════════════════════════════════════
 
-func draw_three_cards(player: Player = null) -> Array[WeaponCard]:
-	var pool: Array[WeaponCard] = []
+func draw_three_cards(player: Player = null) -> Array:
+	var pool: Array = []
 
 	if player == null:
 		pool = all_weapons.duplicate()
@@ -29,14 +29,15 @@ func draw_three_cards(player: Player = null) -> Array[WeaponCard]:
 	pool.shuffle()
 
 	# 去重抽取
-	var drawn: Array[WeaponCard] = []
+	var drawn: Array = []
 	var names: Array[String] = []
 	for card in pool:
 		if drawn.size() >= 3:
 			break
-		if not names.has(card.card_name):
+		var card_id: String = card.card_name
+		if not names.has(card_id):
 			drawn.append(card)
-			names.append(card.card_name)
+			names.append(card_id)
 
 	# 如果池子太小，从全库补充
 	if drawn.size() < 3:
@@ -58,7 +59,7 @@ func get_random_weapon() -> WeaponCard:
 # 智能池构建
 # ═══════════════════════════════════════════════
 
-func _build_smart_pool(player: Player) -> Array[WeaponCard]:
+func _build_smart_pool(player: Player) -> Array:
 	var inventory_names: Array[String] = []
 	var current_type = null
 	var current_tier: int = 0
@@ -93,7 +94,7 @@ func _build_smart_pool(player: Player) -> Array[WeaponCard]:
 				off_type_pool.append(w)
 
 	# 权重组合
-	var pool: Array[WeaponCard] = []
+	var pool: Array = []
 	for w in upgrade_pool:
 		pool.append(w)
 		pool.append(w)  # 升级双倍权重
@@ -104,6 +105,22 @@ func _build_smart_pool(player: Player) -> Array[WeaponCard]:
 	for w in equipment_pool:
 		if randf() < 0.35:
 			pool.append(w)
+
+	# 升级卡池
+	var effect_count := player.active_effects.size()
+	var upgrade_weight := 0.25
+	if effect_count >= 4:
+		upgrade_weight = 0.55
+	elif effect_count >= 2:
+		upgrade_weight = 0.40
+
+	var added_targets: Array = []
+	for effect in player.active_effects:
+		if effect is WeaponCard and not added_targets.has(effect):
+			if randf() < upgrade_weight:
+				pool.append(UpgradeGenerator.generate(effect))
+				added_targets.append(effect)
+
 	return pool
 
 func _collect_effects(w: WeaponCard, fx: Dictionary):
