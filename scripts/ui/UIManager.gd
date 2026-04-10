@@ -1531,7 +1531,7 @@ func _update_status_tooltips(player: Player):
 	if damage_label:
 		damage_label.tooltip_text = "攻击力: " + str(int(player.current_damage)) + "\n基础伤害与倍率已计入"
 	if crit_label:
-		crit_label.tooltip_text = "暴击概率: " + str(int(player.critical_chance)) + "%\n暴击伤害倍率: x2.0"
+		crit_label.tooltip_text = "暴击概率: " + str(int(player.critical_chance)) + "%\n暴击伤害倍率: x" + str(snapped(player.crit_multiplier, 0.1))
 	if lifesteal_label:
 		lifesteal_label.tooltip_text = "吸血比例: " + str(int(player.life_steal_percent)) + "%\n命中后回复对应比例生命"
 	if speed_label:
