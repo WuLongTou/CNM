@@ -69,7 +69,7 @@ const _WEAPON_DATA = [
 	  "tags": ["巨斧"], "dmg": 1.4, "asp": 0.8,
 	  "melee_fx": { "MULTI_TARGET": 2, "KNOCKBACK": 1 } },
 
-	{ "name": "死神镰刀", "desc": "击杀AOE+吸血",
+	{ "name": "死神镰刀", "desc": "击杀爆炸并获得护盾",
 	  "type": ME, "cat": W, "tier": 4, "upcat": "武器", "icon": "⚰️", "rarity": 4,
 	  "tags": ["长枪"], "dmg": 2.0, "asp": 0.9, "hcost": 10,
 	  "melee_fx": { "KILL_EXPLOSION": 2, "KILL_SHIELD": 1 } },
@@ -140,7 +140,7 @@ const _WEAPON_DATA = [
 	  "magic_fx": { "PUSH": 2 } },
 
 	# ═══ 装备 ═══
-	{ "name": "生命药水", "desc": "恢复生命",
+	{ "name": "生命药水", "desc": "提高生命上限",
 	  "type": ME, "cat": E, "tier": 1, "upcat": "buff", "icon": "🧪", "rarity": 1, "hp": 30 },
 
 	{ "name": "敏捷靴", "desc": "提升速度",
@@ -185,7 +185,7 @@ const _WEAPON_DATA = [
 	  "type": ME, "cat": E, "tier": 2, "upcat": "戒指", "icon": "💚",
 	  "hp": 10, "ls": 3 },
 
-	{ "name": "狂战士护腕", "desc": "大幅提升伤害，但降低防御",
+	{ "name": "狂战士护腕", "desc": "大幅提升伤害，但降低生命上限",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "buff", "icon": "💪",
 	  "dmg": 1.35, "hp": -20 },
 
