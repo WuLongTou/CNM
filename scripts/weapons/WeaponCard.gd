@@ -66,7 +66,6 @@ enum MagicEffect {
 @export var speed_modifier: float = 0.0
 
 @export var cooldown: float = 0.0
-@export var ammo_cost: int = 0
 @export var health_cost: int = 0
 
 # 额外属性加成

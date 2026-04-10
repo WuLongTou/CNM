@@ -35,7 +35,7 @@ static func get_prerequisites() -> Dictionary:
 # ═══════════════════════════════════════════════
 # 数据表
 # 字段:  name, desc, type, cat, tier, upcat, icon, [tags]
-# 可选:  dmg, spd, asp, cd, hp, spd_mod, crit, ls, frz, psn, aura, hcost, ammo
+# 可选:  dmg, spd, asp, cd, hp, spd_mod, crit, ls, frz, psn, aura, hcost
 # 效果:  melee_fx, ranged_fx, magic_fx  (dict: effect_enum -> level)
 # ═══════════════════════════════════════════════
 
@@ -77,31 +77,31 @@ const _WEAPON_DATA = [
 	# ═══ 远程武器 ═══
 	{ "name": "弓箭", "desc": "基础远程武器",
 	  "type": RA, "cat": W, "tier": 1, "upcat": "武器", "icon": "🏹", "rarity": 1,
-	  "dmg": 0.9, "asp": 0.8, "cd": 0.6, "ammo": 1 },
+	  "dmg": 0.9, "asp": 0.8, "cd": 0.6 },
 
 	{ "name": "重弩", "desc": "连发武器",
 	  "type": RA, "cat": W, "tier": 2, "upcat": "武器", "icon": "🎯", "rarity": 2,
-	  "tags": ["弓箭"], "dmg": 0.8, "asp": 0.7, "cd": 0.8, "ammo": 2,
+	  "tags": ["弓箭"], "dmg": 0.8, "asp": 0.7, "cd": 0.8,
 	  "ranged_fx": { "MULTI_SHOT": 1 } },
 
 	{ "name": "散弹枪", "desc": "扇形攻击",
 	  "type": RA, "cat": W, "tier": 2, "upcat": "武器", "icon": "🔫", "rarity": 2,
-	  "tags": ["弓箭"], "dmg": 0.6, "asp": 0.6, "cd": 1.0, "ammo": 5,
+	  "tags": ["弓箭"], "dmg": 0.6, "asp": 0.6, "cd": 1.0,
 	  "ranged_fx": { "MULTI_SHOT": 2 } },
 
 	{ "name": "狙击弩", "desc": "超高伤害穿透",
 	  "type": RA, "cat": W, "tier": 3, "upcat": "武器", "icon": "🎯", "rarity": 3,
-	  "tags": ["重弩"], "dmg": 2.2, "asp": 0.4, "cd": 1.5, "ammo": 2,
+	  "tags": ["重弩"], "dmg": 2.2, "asp": 0.4, "cd": 1.5,
 	  "ranged_fx": { "PIERCING": 2 } },
 
 	{ "name": "轨迹弩", "desc": "路径伤害",
 	  "type": RA, "cat": W, "tier": 3, "upcat": "武器", "icon": "➰", "rarity": 2,
-	  "tags": ["重弩"], "dmg": 1.0, "asp": 0.75, "cd": 0.7, "ammo": 1,
+	  "tags": ["重弩"], "dmg": 1.0, "asp": 0.75, "cd": 0.7,
 	  "ranged_fx": { "TRAJECTORY_DAMAGE": 1 } },
 
 	{ "name": "回旋镖", "desc": "弹道返回",
 	  "type": RA, "cat": W, "tier": 3, "upcat": "武器", "icon": "🪃", "rarity": 2,
-	  "tags": ["散弹枪"], "dmg": 0.7, "asp": 0.8, "cd": 0.6, "ammo": 1,
+	  "tags": ["散弹枪"], "dmg": 0.7, "asp": 0.8, "cd": 0.6,
 	  "ranged_fx": { "RETURNING": 1 } },
 
 	# ═══ 魔法武器 ═══
@@ -109,7 +109,7 @@ const _WEAPON_DATA = [
 	  "type": MA, "cat": W, "tier": 1, "upcat": "武器", "icon": "🪄", "rarity": 1,
 	  "asp": 0.5, "magic_fx": { "DOT": 1 } },
 
-	{ "name": "火球法杖", "desc": "连锁爆炸",
+	{ "name": "火球法杖", "desc": "连锁击退",
 	  "type": MA, "cat": W, "tier": 2, "upcat": "武器", "icon": "🔥", "rarity": 2,
 	  "tags": ["法杖"], "dmg": 1.2, "asp": 0.5,
 	  "magic_fx": { "CHAIN": 1, "PUSH": 1 } },
@@ -155,7 +155,7 @@ const _WEAPON_DATA = [
 	  "type": ME, "cat": E, "tier": 2, "upcat": "戒指", "icon": "💍", "rarity": 2,
 	  "crit": 12 },
 
-	{ "name": "吸血护符", "desc": "攻击回复生命",
+	{ "name": "吸血护符", "desc": "攻击附带吸血效果",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "buff", "icon": "🧿", "rarity": 2,
 	  "ls": 6 },
 
@@ -181,7 +181,7 @@ const _WEAPON_DATA = [
 	{ "name": "疾风护符", "desc": "提升攻击速度",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "buff", "icon": "💨", "asp": 1.2 },
 
-	{ "name": "再生戒指", "desc": "每回合恢复额外生命",
+	{ "name": "再生戒指", "desc": "提高生命上限并附带少量吸血",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "戒指", "icon": "💚",
 	  "hp": 10, "ls": 3 },
 
@@ -189,11 +189,11 @@ const _WEAPON_DATA = [
 	  "type": ME, "cat": E, "tier": 2, "upcat": "buff", "icon": "💪",
 	  "dmg": 1.35, "hp": -20 },
 
-	{ "name": "猎人印记", "desc": "增加暴击和暴击伤害",
+	{ "name": "猎人印记", "desc": "增加暴击并提升伤害",
 	  "type": ME, "cat": E, "tier": 3, "upcat": "buff", "icon": "🎯",
 	  "crit": 15, "dmg": 1.1 },
 
-	{ "name": "幽灵斗篷", "desc": "提升移动速度和闪避效果",
+	{ "name": "幽灵斗篷", "desc": "提升移动速度，代价是少量生命上限",
 	  "type": ME, "cat": E, "tier": 2, "upcat": "护甲", "icon": "👻",
 	  "spd_mod": 30, "hp": -5 },
 ]
@@ -214,7 +214,6 @@ static func _build_card(d: Dictionary) -> WeaponCard:
 	if d.has("dmg"):    c.damage_modifier = d["dmg"]
 	if d.has("asp"):    c.attack_speed_modifier = d["asp"]
 	if d.has("cd"):     c.cooldown = d["cd"]
-	if d.has("ammo"):   c.ammo_cost = d["ammo"]
 	if d.has("hp"):     c.health_modifier = d["hp"]
 	if d.has("spd_mod"):c.speed_modifier = d["spd_mod"]
 	if d.has("crit"):   c.critical_bonus = d["crit"]

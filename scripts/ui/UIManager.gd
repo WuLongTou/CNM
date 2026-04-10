@@ -79,6 +79,8 @@ func _ready():
 	_setup_connections()
 	_create_tooltip_panel()
 	_create_pause_panel()
+	get_viewport().size_changed.connect(_on_ui_viewport_size_changed)
+	_on_ui_viewport_size_changed()
 	set_process(true)
 
 func _create_ui_elements():
@@ -206,21 +208,21 @@ func _create_hud_panel():
 	row2.add_theme_constant_override("separation", 10)
 	main_vbox.add_child(row2)
 
-	damage_label = _make_stat_label("ATK 10", Color(1.0, 0.65, 0.25))
+	damage_label = _make_stat_label("攻击 10", Color(1.0, 0.65, 0.25))
 	row2.add_child(damage_label)
-	attack_interval_label = _make_stat_label("0.50s", Color(0.8, 0.8, 0.45))
+	attack_interval_label = _make_stat_label("间隔 0.50s", Color(0.8, 0.8, 0.45))
 	row2.add_child(attack_interval_label)
-	crit_label = _make_stat_label("CRT 0%", Color(0.85, 0.65, 1.0))
+	crit_label = _make_stat_label("暴击 0%", Color(0.85, 0.65, 1.0))
 	row2.add_child(crit_label)
-	lifesteal_label = _make_stat_label("LS 0%", Color(0.85, 0.40, 0.40))
+	lifesteal_label = _make_stat_label("吸血 0%", Color(0.85, 0.40, 0.40))
 	row2.add_child(lifesteal_label)
 	attack_type_label = _make_stat_label("近战", Color(0.50, 0.85, 0.85))
 	row2.add_child(attack_type_label)
 	target_priority_label = _make_stat_label("最近", Color(0.55, 0.75, 0.75))
 	row2.add_child(target_priority_label)
-	dash_cooldown_label = _make_stat_label("闪避 OK", Color(0.55, 0.85, 0.55))
+	dash_cooldown_label = _make_stat_label("闪避 就绪", Color(0.55, 0.85, 0.55))
 	row2.add_child(dash_cooldown_label)
-	speed_label = _make_stat_label("SPD 0", Color(0.55, 0.75, 0.65))
+	speed_label = _make_stat_label("速度 0", Color(0.55, 0.75, 0.65))
 	row2.add_child(speed_label)
 
 	# 效果图标容器
@@ -536,9 +538,9 @@ func _create_pause_panel():
 
 func _create_round_banner():
 	round_banner = Label.new()
-	round_banner.set_anchors_and_offsets_preset(Control.PRESET_TOP_WIDE)
-	round_banner.offset_top = 20
-	round_banner.offset_bottom = 56
+	round_banner.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	var viewport_size := get_viewport().get_visible_rect().size
+	round_banner.custom_minimum_size = Vector2(min(720.0, viewport_size.x - 40.0), 80)
 	round_banner.text = ""
 	round_banner.visible = false
 	round_banner.z_index = 50
@@ -554,8 +556,7 @@ func _create_round_banner():
 func _create_controls_panel():
 	controls_panel = Panel.new()
 	controls_panel.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
-	controls_panel.size = Vector2(300, 400)
-	controls_panel.position = Vector2(-320, 20)
+	_on_ui_viewport_size_changed()
 	controls_panel.visible = false
 	controls_panel.focus_mode = Control.FOCUS_NONE
 	
@@ -799,21 +800,20 @@ func _update_dash_display(player: Player):
 	if not dash_cooldown_label:
 		return
 	if player.can_dash:
-		dash_cooldown_label.text = "闪避: 就绪"
+		dash_cooldown_label.text = "闪避 就绪"
 		dash_cooldown_label.tooltip_text = "闪避已就绪，按 Shift 使用"
 	else:
 		var remaining = player.dash_cooldown_timer.time_left if player.dash_cooldown_timer else 0.0
-		dash_cooldown_label.text = "闪避: " + str(snapped(remaining, 0.1)) + "s"
+		dash_cooldown_label.text = "闪避 " + str(snapped(remaining, 0.1)) + "s"
 		dash_cooldown_label.tooltip_text = "闪避冷却中，还需 " + str(snapped(remaining, 0.1)) + "s"
 
 func _update_attack_interval_display(player: Player):
 	if not attack_interval_label:
 		return
 	var interval_text = str(snapped(player.attack_cooldown, 0.01)) + "s"
-	var remaining = 0.0
+	var cooldown_text = "就绪"
 	if player.combat and player.combat.attack_timer and not player.combat.can_attack:
-		remaining = player.combat.attack_timer.time_left
-	var cooldown_text = "就绪" if remaining <= 0.01 else str(snapped(remaining, 0.1)) + "s"
+		cooldown_text = str(snapped(player.combat.attack_timer.time_left, 0.1)) + "s"
 	attack_interval_label.text = "间隔 " + interval_text + " | 冷却 " + cooldown_text
 	attack_interval_label.tooltip_text = "攻击间隔: " + interval_text + "\n下次可攻击: " + cooldown_text
 
@@ -1085,7 +1085,8 @@ func _show_tooltip(text: String):
 	tooltip_label.reset_size()
 	
 	# 计算尺寸 - 使用固定宽度，高度自适应
-	var content_width = tooltip_max_width
+	var screen_size = get_viewport().get_visible_rect().size
+	var content_width = min(tooltip_max_width, max(260.0, screen_size.x * 0.32))
 	var content_height = tooltip_label.get_content_height()
 	
 	# 确保最小高度
@@ -1334,7 +1335,7 @@ func _get_weapon_tooltip_text(weapon: WeaponCard) -> String:
 	# 护盾领域
 	if weapon.grants_aura:
 		if player and player.aura.active:
-			bb += "  [color=#aaddff]● 护盾领域: 升级 (伤害+5, 范围+20)[/color]\n"
+			bb += "  [color=#aaddff]● 护盾领域: 升级 (伤害+3, 范围+15)[/color]\n"
 		else:
 			bb += "  [color=#aaddff]● 护盾领域: 启用[/color]\n"
 		has_stats = true
@@ -1408,6 +1409,14 @@ func _hide_tooltip_panel():
 func _hide_round_banner(banner: Control):
 	if banner:
 		banner.visible = false
+
+func _on_ui_viewport_size_changed():
+	var viewport_size := get_viewport().get_visible_rect().size
+	if controls_panel:
+		controls_panel.size = Vector2(min(340.0, viewport_size.x * 0.36), min(520.0, viewport_size.y - 40.0))
+		controls_panel.position = Vector2(-controls_panel.size.x - 20.0, 20)
+	if round_banner:
+		round_banner.custom_minimum_size = Vector2(min(720.0, viewport_size.x - 40.0), 80)
 
 func _on_weapon_selection_started():
 	show_weapon_selection()
@@ -1486,13 +1495,13 @@ func update_zombies_display(zombies_remaining: int, total_zombies: int):
 
 func update_player_status(player: Player):
 	if damage_label:
-		damage_label.text = "ATK " + str(int(player.current_damage))
+		damage_label.text = "攻击 " + str(int(player.current_damage))
 	if crit_label:
-		crit_label.text = "CRT " + str(int(player.critical_chance)) + "%"
+		crit_label.text = "暴击 " + str(int(player.critical_chance)) + "%"
 	if lifesteal_label:
-		lifesteal_label.text = "LS " + str(int(player.life_steal_percent)) + "%"
+		lifesteal_label.text = "吸血 " + str(int(player.life_steal_percent)) + "%"
 	if speed_label:
-		speed_label.text = "SPD " + str(int(player.current_speed))
+		speed_label.text = "速度 " + str(int(player.current_speed))
 	if attack_type_label:
 		match player.current_attack_type:
 			Player.AttackType.MELEE:
@@ -1525,8 +1534,6 @@ func _update_status_tooltips(player: Player):
 		crit_label.tooltip_text = "暴击概率: " + str(int(player.critical_chance)) + "%\n暴击伤害倍率: x2.0"
 	if lifesteal_label:
 		lifesteal_label.tooltip_text = "吸血比例: " + str(int(player.life_steal_percent)) + "%\n命中后回复对应比例生命"
-	if attack_interval_label:
-		attack_interval_label.tooltip_text = "攻击间隔: " + str(snapped(player.attack_cooldown, 0.01)) + " 秒\n数值越小攻击越快"
 	if speed_label:
 		speed_label.tooltip_text = "移动速度: " + str(int(player.current_speed)) + "\n受装备、升级和减速效果影响"
 	if target_priority_label:
@@ -1538,9 +1545,6 @@ func _update_status_tooltips(player: Player):
 		target_priority_label.tooltip_text = "目标优先级: " + priority_text + "\n按 Tab 切换"
 	if attack_type_label:
 		attack_type_label.tooltip_text = WeaponFormatter.build_attack_effects_tooltip(player)
-
-func _build_attack_effects_tooltip(player: Player) -> String:
-	return WeaponFormatter.build_attack_effects_tooltip(player)
 
 func _update_effects_display(player: Player):
 	if not effects_container:
@@ -1681,20 +1685,8 @@ func _on_effect_icon_exited():
 	if tooltip_hide_timer:
 		tooltip_hide_timer.start()
 
-func _get_effect_tooltip(weapon: WeaponCard, _player: Player = null) -> String:
-	return WeaponFormatter.get_effect_tooltip(weapon)
-
 func _get_rarity_color_value(rarity: int) -> Color:
 	return WeaponFormatter.get_rarity_color_value(rarity)
-
-func _build_active_effects_summary(player: Player) -> String:
-	return WeaponFormatter.build_active_effects_summary(player)
-
-func _build_active_effects_tooltip(player: Player) -> String:
-	return WeaponFormatter.build_active_effects_tooltip(player)
-
-func _get_effect_level_summary(player: Player) -> Array[String]:
-	return WeaponFormatter.get_effect_level_summary(player)
 
 func set_game_manager(manager: GameManager):
 	game_manager = manager

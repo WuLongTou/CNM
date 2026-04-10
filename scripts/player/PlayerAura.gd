@@ -59,6 +59,8 @@ func handle(delta: float):
 				continue
 			if hitbox.global_position.distance_to(zombie.global_position) < detect_range:
 				zombie.take_damage(int(damage))
+				if player:
+					player.register_damage_dealt(zombie, damage)
 				get_tree().call_group("ui_manager", "show_damage_number", zombie.global_position, int(damage), false)
 				zombie.apply_freeze(1.0)
 				VFXManager.spawn_hit_effect(player.get_parent(), zombie.global_position)

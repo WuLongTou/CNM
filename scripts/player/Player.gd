@@ -80,8 +80,6 @@ var dot_damage: float = 0.0
 # 武器效果累积值
 # ═══════════════════════════════════════════════
 var damage_bonus: float = 0.0
-var speed_multiplier: float = 1.0
-var area_damage: float = 0.0
 var life_steal_percent: float = 0.0
 var critical_chance: float = 0.0
 var freeze_duration: float = 0.0
@@ -361,6 +359,9 @@ func apply_weapon_effect(weapon: WeaponCard):
 
 func apply_upgrade_card(upgrade: UpgradeCard):
 	combat.apply_upgrade_card(upgrade)
+
+func register_damage_dealt(zombie: Zombie, damage: float):
+	combat.register_damage_dealt(zombie, damage)
 
 func activate_aura():
 	aura.activate()

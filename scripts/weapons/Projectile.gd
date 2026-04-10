@@ -46,6 +46,9 @@ func _check_trajectory_collision():
 				var trajectory_damage = int(damage * trajectory_damage_ratio)
 				if trajectory_damage > 0:
 					zombie.take_damage(trajectory_damage)
+					damaged_enemies.append(zombie)
+					if shooter is Player:
+						(shooter as Player).register_damage_dealt(zombie, trajectory_damage)
 					get_tree().call_group("ui_manager", "show_damage_number", zombie.global_position, trajectory_damage, false)
 
 func _on_body_entered(body):
@@ -119,6 +122,7 @@ func _apply_shooter_effects(target):
 	if shooter and shooter is Player:
 		var player = shooter as Player
 		if target is Zombie:
+			player.register_damage_dealt(target, damage)
 			if player.freeze_duration > 0 and randf() < (player.freeze_duration / 100.0):
 				target.apply_freeze(0.8)
 			if player.poison_damage > 0 and randf() < (player.poison_damage / 100.0):

@@ -59,7 +59,9 @@ func _on_body_entered(body):
 
 func _deal_damage(zombie: Zombie):
 	zombie.take_damage(int(damage))
-	
+	if shooter is Player:
+		(shooter as Player).register_damage_dealt(zombie, damage)
+
 	# 魅惑 - 让僵尸攻击其他僵尸
 	if charm_duration > 0:
 		zombie.apply_charm(charm_duration)

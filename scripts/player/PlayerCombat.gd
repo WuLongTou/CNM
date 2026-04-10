@@ -55,9 +55,9 @@ func handle_auto_attack(_delta):
 		return
 	if not can_attack:
 		return
-	var target = _find_target_zombie(GameConfig.MAGIC_ATTACK_RANGE)
+	var target := _find_target_zombie(GameConfig.MAGIC_ATTACK_RANGE)
 	if target:
-		_cast_magic_missile(target)
+		_perform_magic_attack(target)
 
 # ═══════════════════════════════════════════════
 # 攻击执行
@@ -78,14 +78,15 @@ func perform_attack():
 				SoundManager.play_ranged_attack()
 			_perform_area_attack()
 		Player.AttackType.MAGIC:
-			if SoundManager.instance:
-				SoundManager.play_magic_attack()
-			_perform_magic_attack()
+			var target := _find_target_zombie(GameConfig.MAGIC_ATTACK_RANGE)
+			if target:
+				if SoundManager.instance:
+					SoundManager.play_magic_attack()
+				_perform_magic_attack(target)
 
 func _perform_melee_attack():
 	if not _can_pay_health_cost():
 		return
-	_pay_health_cost()
 	var bodies = attack_area.get_overlapping_bodies()
 	var targets: Array[Zombie] = []
 	for body in bodies:
@@ -93,6 +94,9 @@ func _perform_melee_attack():
 			targets.append(body)
 			if targets.size() >= player.melee_target_count:
 				break
+	if targets.is_empty():
+		return
+	_begin_attack()
 	for zombie in targets:
 		attack_zombie(zombie)
 		player.vfx.show_attack_effect(zombie.global_position, player.current_attack_type)
@@ -100,11 +104,10 @@ func _perform_melee_attack():
 func _perform_ranged_attack():
 	if not _can_pay_health_cost():
 		return
-	_pay_health_cost()
-	_notify_ui_status()
 	var target = _find_target_zombie(GameConfig.RANGED_ATTACK_RANGE)
 	if not target:
 		return
+	_begin_attack(true)
 	if player.multi_shot_count > 1:
 		var targets = _get_nearest_zombies(GameConfig.RANGED_ATTACK_RANGE, player.multi_shot_count)
 		for z in targets:
@@ -119,32 +122,22 @@ func _perform_ranged_attack():
 func _perform_area_attack():
 	if not _can_pay_health_cost():
 		return
-	_pay_health_cost()
-	_notify_ui_status()
+	_begin_attack(true)
 	_create_area_explosion()
 	player.vfx.show_attack_effect(player.global_position, player.current_attack_type)
-	can_attack = false
-	attack_timer.start()
 
-func _perform_magic_attack():
-	if not _can_pay_health_cost():
+func _perform_magic_attack(target: Zombie):
+	if not _can_pay_health_cost() or not target:
 		return
-	_pay_health_cost()
-	var target = _find_target_zombie(GameConfig.MAGIC_ATTACK_RANGE)
-	if target:
-		_cast_magic_missile(target)
-		player.vfx.show_attack_effect(target.global_position, player.current_attack_type)
+	_begin_attack()
+	_cast_magic_missile(target)
+	player.vfx.show_attack_effect(target.global_position, player.current_attack_type)
 
 # ═══════════════════════════════════════════════
 # 僵尸攻击核心逻辑
 # ═══════════════════════════════════════════════
 
 func attack_zombie(zombie: Zombie):
-	if not can_attack:
-		return
-	can_attack = false
-	attack_timer.start()
-
 	var damage = player.current_damage
 	var is_critical = randf() < (player.critical_chance / 100.0)
 	if is_critical:
@@ -153,14 +146,14 @@ func attack_zombie(zombie: Zombie):
 	var hit_pos = zombie.global_position
 	zombie.take_damage(int(damage))
 	player.get_tree().call_group("ui_manager", "show_damage_number", hit_pos, int(damage), is_critical)
+	register_damage_dealt(zombie, damage)
 
 	# 打击反馈
 	var shake = 8.0 if is_critical else 3.0
 	player.get_tree().call_group("ui_manager", "shake_screen", shake)
 	VFXManager.flash_sprite(player, player.sprite)
 
-	if not is_instance_valid(zombie):
-		_on_enemy_killed(hit_pos, damage)
+	if zombie.current_health <= 0:
 		return
 
 	if SoundManager.instance:
@@ -188,16 +181,7 @@ func attack_zombie(zombie: Zombie):
 					var splash_dmg = int(damage * GameConfig.SPLASH_DAMAGE_MULT)
 					other.take_damage(splash_dmg)
 					player.get_tree().call_group("ui_manager", "show_damage_number", other.global_position, splash_dmg, false)
-
-	# 检查延迟击杀
-	await player.get_tree().process_frame
-	if not is_instance_valid(zombie):
-		_on_enemy_killed(hit_pos, damage)
-
-	# 生命偷取
-	if player.life_steal_percent > 0:
-		var heal_amt = int(damage * player.life_steal_percent / 100.0)
-		player.heal(heal_amt)
+					register_damage_dealt(other, splash_dmg)
 
 func _on_enemy_killed(pos: Vector2, damage: float = 0):
 	if SoundManager.instance:
@@ -211,12 +195,10 @@ func _on_enemy_killed(pos: Vector2, damage: float = 0):
 			if z is Zombie and pos.distance_to(z.global_position) <= GameConfig.KILL_EXPLOSION_RADIUS:
 				z.take_damage(player.kill_explosion_damage)
 				player.get_tree().call_group("ui_manager", "show_damage_number", z.global_position, player.kill_explosion_damage, false)
+				register_damage_dealt(z, player.kill_explosion_damage)
 
 	if player.kill_shield_amount > 0:
 		player.shield_amount = min(player.shield_amount + player.kill_shield_amount, GameConfig.MAX_SHIELD)
-
-	if player.life_steal_percent > 0 and damage > 0:
-		player.heal(int(damage * player.life_steal_percent / 100.0))
 
 # ═══════════════════════════════════════════════
 # 目标选择
@@ -283,8 +265,6 @@ func _get_nearest_zombies(max_range: float, count: int) -> Array[Zombie]:
 # ═══════════════════════════════════════════════
 
 func _fire_projectile(target_pos: Vector2):
-	can_attack = false
-	attack_timer.start()
 	var base_dir = (target_pos - player.global_position).normalized()
 	var direction = base_dir.rotated(deg_to_rad(randf_range(-2.0, 2.0)))
 
@@ -345,9 +325,6 @@ func _create_bullet() -> Projectile:
 	return bullet
 
 func _cast_magic_missile(target: Zombie):
-	can_attack = false
-	attack_timer.start()
-
 	var missile = _create_magic_missile()
 	missile.global_position = player.global_position
 	missile.target = target
@@ -414,6 +391,7 @@ func _create_area_explosion():
 		if body is Zombie:
 			var damage = player.current_damage * GameConfig.AREA_DAMAGE_MULT
 			body.take_damage(int(damage))
+			register_damage_dealt(body, damage)
 
 	VFXManager.spawn_particle_burst(player.get_parent(), pos, Color(1.0, 0.5, 0.0),
 		20, 0.5, 60.0, 150.0, Vector3(0, 80, 0), 1.5, 3.0)
@@ -494,10 +472,8 @@ func recalculate_stats():
 	player.max_health = player.base_max_health
 	player.current_speed = player.base_speed
 	player.damage_bonus = 0.0
-	player.speed_multiplier = 1.0
 	player.multi_shot_count = 1
 	player.piercing_count = 0
-	player.area_damage = 0.0
 	player.life_steal_percent = 0.0
 	player.critical_chance = 0.0
 	player.freeze_duration = 0.0
@@ -571,7 +547,10 @@ func _apply_effect_values(weapon: WeaponCard):
 	if weapon.poison_bonus > 0:
 		player.poison_damage = max(player.poison_damage, weapon.poison_bonus)
 	if weapon.grants_aura:
-		player.aura.activate()
+		if player.aura.active:
+			player.upgrade_aura()
+		else:
+			player.activate_aura()
 
 	if weapon.category == WeaponCard.WeaponCategory.WEAPON:
 		player.weapon_attack_speed_modifier = weapon.attack_speed_modifier
@@ -650,6 +629,26 @@ func _can_pay_health_cost() -> bool:
 func _pay_health_cost():
 	if player.health_cost_per_attack > 0:
 		player.take_damage(player.health_cost_per_attack)
+
+func apply_lifesteal(damage: float):
+	if player.life_steal_percent <= 0 or damage <= 0:
+		return
+	var heal_amt := int(damage * player.life_steal_percent / 100.0)
+	if heal_amt > 0:
+		player.heal(heal_amt)
+
+func _begin_attack(notify_ui: bool = false):
+	can_attack = false
+	attack_timer.start()
+	_pay_health_cost()
+	if notify_ui:
+		_notify_ui_status()
+
+func register_damage_dealt(zombie: Zombie, damage: float):
+	apply_lifesteal(damage)
+	if zombie and zombie.current_health <= 0 and not zombie.has_meta("player_kill_processed"):
+		zombie.set_meta("player_kill_processed", true)
+		_on_enemy_killed(zombie.global_position, damage)
 
 func _show_apply_feedback(label_text: String, effect_name: String, color: Color):
 	player.vfx.show_upgrade_effect()
