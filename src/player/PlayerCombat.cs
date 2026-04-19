@@ -13,6 +13,32 @@ using ZombieWars.Weapons;
 using static ZombieWars.Core.GameEnums;
 using Zombie = ZombieWars.Enemy.Zombie;
 
+/// <summary>
+/// Performance optimization: Static texture cache to avoid regenerating textures every frame.
+/// </summary>
+public static class TextureCache
+{
+    private static readonly System.Collections.Generic.Dictionary<string, ImageTexture> _cache = new();
+
+    public static ImageTexture? Get(string key) => _cache.TryGetValue(key, out var tex) ? tex : null;
+
+    public static void Set(string key, ImageTexture tex)
+    {
+        if (!_cache.ContainsKey(key))
+            _cache[key] = tex;
+    }
+
+    public static ImageTexture GetOrCreate(string key, Func<ImageTexture> factory)
+    {
+        if (!_cache.TryGetValue(key, out var tex))
+        {
+            tex = factory();
+            _cache[key] = tex;
+        }
+        return tex;
+    }
+}
+
 public partial class PlayerCombat : Node
 {
     public Player? Player { get; set; }
@@ -21,6 +47,49 @@ public partial class PlayerCombat : Node
     private Timer _attackTimer = null!;
     public Timer AttackTimer => _attackTimer;
     public bool CanAttack { get; set; } = true;
+
+    // Combo reward system
+    private int _currentCombo = 0;
+    private float _comboTimer = 0.0f;
+    private float _damageBonusFromCombo = 0.0f;
+    private int _maxComboThisRound = 0;
+
+    public int CurrentCombo => _currentCombo;
+    public float DamageBonusFromCombo => _damageBonusFromCombo;
+    public int MaxComboThisRound => _maxComboThisRound;
+
+    public override void _Process(double delta)
+    {
+        // Combo decay
+        if (_comboTimer > 0)
+        {
+            _comboTimer -= (float)delta;
+            if (_comboTimer <= 0)
+            {
+                _currentCombo = 0;
+                _damageBonusFromCombo = 0.0f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Called when player kills a zombie - triggers combo reward.
+    /// </summary>
+    public void OnKill()
+    {
+        _currentCombo++;
+        _comboTimer = GameConfig.ComboDecayTime;
+        if (_currentCombo > _maxComboThisRound)
+            _maxComboThisRound = _currentCombo;
+
+        // Combo damage bonus: each combo level adds 5% damage (max 50%)
+        _damageBonusFromCombo = Mathf.Min(_currentCombo * 0.05f, 0.5f);
+    }
+
+    public void ResetComboStats()
+    {
+        _maxComboThisRound = 0;
+    }
 
     public void Setup(Player p)
     {
@@ -53,6 +122,10 @@ public partial class PlayerCombat : Node
 
     public void HandleManualAttack()
     {
+        // Safety: recover CanAttack if timer finished but callback didn't fire
+        if (!CanAttack && _attackTimer != null && _attackTimer.IsStopped())
+            CanAttack = true;
+
         if (Player!.CurrentAttackType == AttackType.Magic)
         {
             // Magic: require manual trigger, aim at nearest zombie or mouse direction
@@ -162,10 +235,14 @@ public partial class PlayerCombat : Node
             .Take(Player.MeleeTargetCount)
             .ToList();
 
+        // Always trigger cooldown — even a whiffed swing should cost the cooldown.
+        // This prevents the bug where attacking with no targets in range leaves
+        // CanAttack=false permanently (since _BeginAttack was never called).
+        _BeginAttack();
+
         if (targets.Count == 0)
             return;
 
-        _BeginAttack();
         foreach (var zombie in targets)
         {
             AttackZombie(zombie);
@@ -349,34 +426,39 @@ public partial class PlayerCombat : Node
     private Projectile _CreateBullet()
     {
         var bullet = new Projectile();
-        int bw = 14;
-        int bh = 6;
-        using var img = Image.Create(bw, bh, false, Image.Format.Rgba8);
 
-        for (int by = 0; by < bh; by++)
+        // Use cached bullet texture for performance
+        var tex = TextureCache.GetOrCreate("bullet", () =>
         {
-            for (int bx = 0; bx < bw; bx++)
+            int bw = 14;
+            int bh = 6;
+            using var img = Image.Create(bw, bh, false, Image.Format.Rgba8);
+
+            for (int by = 0; by < bh; by++)
             {
-                if (bx > bw - 5)
+                for (int bx = 0; bx < bw; bx++)
                 {
-                    float centerDist = Mathf.Abs(by - bh / 2.0f);
-                    float maxDist = (bw - bx) * (bh / 2.0f) / 5.0f;
-                    if (centerDist <= maxDist)
-                        img.SetPixel(bx, by, new Color(0.9f, 0.85f, 0.7f));
-                }
-                else if (by >= (bh >> 1) - 1 && by <= (bh >> 1))
-                {
-                    img.SetPixel(bx, by, new Color(0.6f, 0.45f, 0.3f));
-                }
-                if (bx < 3)
-                {
-                    if (by == 0 || by == bh - 1)
-                        img.SetPixel(bx, by, new Color(0.7f, 0.3f, 0.2f, 0.8f));
+                    if (bx > bw - 5)
+                    {
+                        float centerDist = Mathf.Abs(by - bh / 2.0f);
+                        float maxDist = (bw - bx) * (bh / 2.0f) / 5.0f;
+                        if (centerDist <= maxDist)
+                            img.SetPixel(bx, by, new Color(0.9f, 0.85f, 0.7f));
+                    }
+                    else if (by >= (bh >> 1) - 1 && by <= (bh >> 1))
+                    {
+                        img.SetPixel(bx, by, new Color(0.6f, 0.45f, 0.3f));
+                    }
+                    if (bx < 3)
+                    {
+                        if (by == 0 || by == bh - 1)
+                            img.SetPixel(bx, by, new Color(0.7f, 0.3f, 0.2f, 0.8f));
+                    }
                 }
             }
-        }
+            return ImageTexture.CreateFromImage(img);
+        });
 
-        var tex = ImageTexture.CreateFromImage(img);
         var sprite = new Sprite2D { Texture = tex };
         bullet.AddChild(sprite);
 
@@ -424,30 +506,35 @@ public partial class PlayerCombat : Node
             CollisionLayer = 0,
             CollisionMask = 0b010 // Detect zombies (layer 2)
         };
-        int size = 12;
-        using var img = Image.Create(size, size, false, Image.Format.Rgba8);
 
-        for (int x = 0; x < size; x++)
+        // Use cached magic missile texture for performance
+        var tex = TextureCache.GetOrCreate("magic_missile", () =>
         {
-            for (int y = 0; y < size; y++)
+            int size = 12;
+            using var img = Image.Create(size, size, false, Image.Format.Rgba8);
+
+            for (int x = 0; x < size; x++)
             {
-                float dist = new Vector2(x - size / 2.0f, y - size / 2.0f).Length();
-                if (dist < 2)
-                    img.SetPixel(x, y, new Color(1.0f, 1.0f, 1.0f, 0.95f));
-                else if (dist < 4)
+                for (int y = 0; y < size; y++)
                 {
-                    float t = (dist - 2) / 2.0f;
-                    img.SetPixel(x, y, new Color(0.8f - t * 0.3f, 0.5f - t * 0.2f, 1.0f, 0.9f - t * 0.3f));
-                }
-                else if (dist < 6)
-                {
-                    float t = (dist - 4) / 2.0f;
-                    img.SetPixel(x, y, new Color(0.4f, 0.2f, 0.8f, 0.4f * (1.0f - t)));
+                    float dist = new Vector2(x - size / 2.0f, y - size / 2.0f).Length();
+                    if (dist < 2)
+                        img.SetPixel(x, y, new Color(1.0f, 1.0f, 1.0f, 0.95f));
+                    else if (dist < 4)
+                    {
+                        float t = (dist - 2) / 2.0f;
+                        img.SetPixel(x, y, new Color(0.8f - t * 0.3f, 0.5f - t * 0.2f, 1.0f, 0.9f - t * 0.3f));
+                    }
+                    else if (dist < 6)
+                    {
+                        float t = (dist - 4) / 2.0f;
+                        img.SetPixel(x, y, new Color(0.4f, 0.2f, 0.8f, 0.4f * (1.0f - t)));
+                    }
                 }
             }
-        }
+            return ImageTexture.CreateFromImage(img);
+        });
 
-        var tex = ImageTexture.CreateFromImage(img);
         var sprite = new Sprite2D { Texture = tex };
         missile.AddChild(sprite);
 
@@ -498,9 +585,10 @@ public partial class PlayerCombat : Node
 
     private void _PerformMineAttack()
     {
-        if (!_CanPayHealthCost()) return;
-        CanAttack = false;
-        _attackTimer.Start();
+        if (!_CanPayHealthCost())
+            return;
+
+        _BeginAttack();
 
         Vector2 placePos = Player!.GlobalPosition + new Vector2(
             (float)GD.RandRange(-20, 20),
@@ -689,6 +777,8 @@ public partial class PlayerCombat : Node
             Core.GameConfig.BaseAttackCooldown / totalSpeed);
         Player.AttackCooldown = Math.Max(Player.AttackCooldown, Player.WeaponCooldown);
         _attackTimer.WaitTime = Player.AttackCooldown;
+        _attackTimer.Stop();
+        CanAttack = true;
         _UpdateAttackRange(Player.WeaponRangeModifier);
         Player.CurrentHealth = Math.Clamp(Player.CurrentHealth, 0, Player.MaxHealth);
     }
@@ -846,7 +936,12 @@ public partial class PlayerCombat : Node
 
     private bool _CanPayHealthCost()
     {
-        return Player!.HealthCostPerAttack <= 0 || Player.CurrentHealth > Player.HealthCostPerAttack;
+        if (Player!.HealthCostPerAttack <= 0 || Player.CurrentHealth > Player.HealthCostPerAttack)
+            return true;
+
+        VFXManager.SpawnFloatingLabel(Player.GetParent(), Player.GlobalPosition, "生命不足", Colors.OrangeRed, 16);
+        GameServices.UI.UpdatePlayerStatus(Player);
+        return false;
     }
 
     private void _PayHealthCost()

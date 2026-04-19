@@ -41,9 +41,9 @@ public partial class WeaponEvolutionSystem : Node
     private static readonly Dictionary<(string, string), FusionRecipe> FusionRecipes = new()
     {
         {
-            ("Fire Sword", "Ice Wand"),
+            ("战斧", "冰霜法杖"),
             new FusionRecipe(
-                "Elemental Dual Blade",
+                "元素双刃剑",
                 "融合了烈焰与寒冰之力的双持武器，攻击附带火与冰的双重效果",
                 WeaponType.Melee,
                 new MeleeEffect[] { MeleeEffect.Splash },
@@ -53,15 +53,15 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MeleeEffect.Splash, 2 },
                     { (long)MagicEffect.Dot, 2 }
                 },
-                "Fire Sword",
-                "Ice Wand",
+                "战斧",
+                "冰霜法杖",
                 5
             )
         },
         {
-            ("Multi-shot", "Pierce"),
+            ("重弩", "狙击弩"),
             new FusionRecipe(
-                "Scatter Cannon",
+                "弹幕加农炮",
                 "发射多发穿透弹，每发子弹都可贯穿多个敌人",
                 WeaponType.Ranged,
                 new[] { RangedEffect.MultiShot, RangedEffect.Piercing },
@@ -70,15 +70,15 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)RangedEffect.MultiShot, 2 },
                     { (long)RangedEffect.Piercing, 2 }
                 },
-                "Multi-shot",
-                "Pierce",
+                "重弩",
+                "狙击弩",
                 5
             )
         },
         {
-            ("Chain", "Charm"),
+            ("雷电法杖", "魅惑法杖"),
             new FusionRecipe(
-                "Mind Control Staff",
+                "心灵控制法杖",
                 "连锁闪电在敌人间跳跃，最后一个目标会被魅惑",
                 WeaponType.Magic,
                 new MagicEffect[] { MagicEffect.Chain, MagicEffect.Charm },
@@ -87,15 +87,15 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MagicEffect.Chain, 2 },
                     { (long)MagicEffect.Charm, 1 }
                 },
-                "Chain",
-                "Charm",
+                "雷电法杖",
+                "魅惑法杖",
                 5
             )
         },
         {
-            ("Splash", "Knockback"),
+            ("巨斧", "长枪"),
             new FusionRecipe(
-                "Hammer of Doom",
+                "毁灭之锤",
                 "毁灭之锤：超大面积溅射并击退所有命中敌人",
                 WeaponType.Melee,
                 new MeleeEffect[] { MeleeEffect.Splash, MeleeEffect.Knockback },
@@ -104,15 +104,15 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MeleeEffect.Splash, 3 },
                     { (long)MeleeEffect.Knockback, 2 }
                 },
-                "Splash",
-                "Knockback",
+                "巨斧",
+                "长枪",
                 5
             )
         },
         {
-            ("Life Steal", "Crit"),
+            ("双刀", "淬毒短刀"),
             new FusionRecipe(
-                "Vampiric Blade",
+                "致命之刃",
                 "致命之刃：暴击时吸取敌人生命，击杀回复大量生命",
                 WeaponType.Melee,
                 new MeleeEffect[] { MeleeEffect.KillShield, MeleeEffect.KillExplosion },
@@ -121,16 +121,16 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MeleeEffect.KillShield, 2 },
                     { (long)MeleeEffect.KillExplosion, 2 }
                 },
-                "Life Steal",
-                "Crit",
+                "双刀",
+                "淬毒短刀",
                 5
             )
         },
         {
-            ("Aura", "DOT"),
+            ("冰霜护盾", "火球法杖"),
             new FusionRecipe(
-                "Plague Aura Staff",
-                "瘟疫领域：对范围内所有敌人持续造成伤害并减速",
+                "瘟疫领域法杖",
+                "瘟疫领域：对范围内所有敌人持续造成伤害",
                 WeaponType.Magic,
                 new MagicEffect[] { MagicEffect.Dot, MagicEffect.Stun },
                 new Godot.Collections.Dictionary<long, int>
@@ -138,15 +138,15 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MagicEffect.Dot, 3 },
                     { (long)MagicEffect.Stun, 1 }
                 },
-                "Aura",
-                "DOT",
+                "冰霜护盾",
+                "火球法杖",
                 5
             )
         },
         {
-            ("Fire Sword", "Fire Sword"),
+            ("战斧", "战斧"),
             new FusionRecipe(
-                "Inferno Greatsword",
+                "炽焰大剑",
                 "传说中的炽焰大剑，攻击引发大范围火焰爆炸",
                 WeaponType.Melee,
                 new MeleeEffect[] { MeleeEffect.KillExplosion, MeleeEffect.Splash },
@@ -155,16 +155,16 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MeleeEffect.KillExplosion, 3 },
                     { (long)MeleeEffect.Splash, 2 }
                 },
-                "Fire Sword",
-                "Fire Sword",
+                "战斧",
+                "战斧",
                 6
             )
         },
         {
-            ("Multi-shot", "Multi-shot"),
+            ("重弩", "重弩"),
             new FusionRecipe(
-                "Barrage Cannon",
-                "弹幕加农：同时发射6发子弹形成弹幕覆盖",
+                "弹幕加农",
+                "同时发射6发子弹形成弹幕覆盖",
                 WeaponType.Ranged,
                 new RangedEffect[] { RangedEffect.MultiShot, RangedEffect.TrajectoryDamage },
                 new Godot.Collections.Dictionary<long, int>
@@ -172,16 +172,16 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)RangedEffect.MultiShot, 3 },
                     { (long)RangedEffect.TrajectoryDamage, 2 }
                 },
-                "Multi-shot",
-                "Multi-shot",
+                "重弩",
+                "重弩",
                 6
             )
         },
         {
-            ("Chain", "Chain"),
+            ("雷电法杖", "雷电法杖"),
             new FusionRecipe(
-                "Thunder God Staff",
-                "雷霆之神杖：连锁闪电跳跃10次，每次伤害递增",
+                "雷霆之神杖",
+                "连锁闪电跳跃10次，每次伤害递增",
                 WeaponType.Magic,
                 new MagicEffect[] { MagicEffect.Chain, MagicEffect.Dot },
                 new Godot.Collections.Dictionary<long, int>
@@ -189,16 +189,16 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MagicEffect.Chain, 3 },
                     { (long)MagicEffect.Dot, 2 }
                 },
-                "Chain",
-                "Chain",
+                "雷电法杖",
+                "雷电法杖",
                 6
             )
         },
         {
-            ("Stun", "Freeze"),
+            ("冰霜法杖", "寒霜徽章"),
             new FusionRecipe(
-                "Absolute Zero Staff",
-                "绝对零度之杖：冻结所有命中敌人3秒，范围极大",
+                "绝对零度之杖",
+                "冻结所有命中敌人3秒，范围极大",
                 WeaponType.Magic,
                 new[] { MagicEffect.Stun, MagicEffect.Push },
                 new Godot.Collections.Dictionary<long, int>
@@ -206,8 +206,8 @@ public partial class WeaponEvolutionSystem : Node
                     { (long)MagicEffect.Stun, 3 },
                     { (long)MagicEffect.Push, 2 }
                 },
-                "Stun",
-                "Freeze",
+                "冰霜法杖",
+                "寒霜徽章",
                 5
             )
         }

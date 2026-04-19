@@ -355,6 +355,30 @@ public static partial class WeaponFactory
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "👻" },
             { "spd_mod", 30f }, { "hp", -5f }
         },
+
+        // 反伤护甲 - NEW: 受伤时反弹伤害
+        new GodotDictionary
+        {
+            { "name", "荆棘护甲" }, { "desc", "受伤时反弹部分伤害给攻击者" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "🌿" }, { "rarity", 2 },
+            { "hp", 20f }
+        },
+
+        // 闪避护符 - NEW: 额外闪避能力
+        new GodotDictionary
+        {
+            { "name", "闪避护符" }, { "desc", "略微提升移动速度和闪避能力" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "💨" }, { "rarity", 2 },
+            { "spd_mod", 15f }, { "hp", 5f }
+        },
+
+        // 生命汲取 - NEW: 提升吸血效果
+        new GodotDictionary
+        {
+            { "name", "生命汲取" }, { "desc", "大幅提升吸血效果和生命上限" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "buff" }, { "icon", "🩸" }, { "rarity", 3 },
+            { "ls", 12f }, { "hp", 15f }
+        },
     };
 
     // ═══════════════════════════════════════════════

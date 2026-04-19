@@ -21,6 +21,8 @@ public static partial class ZombieRegistry
         if (z == null || _zombies.Contains(z))
             return;
         _zombies.Add(z);
+        // Invalidate spatial grid when new zombie spawns
+        SpatialUtils.InvalidateGrid();
     }
 
     public static void Unregister(Zombie z)
@@ -28,6 +30,8 @@ public static partial class ZombieRegistry
         if (z == null)
             return;
         _zombies.Remove(z);
+        // Invalidate spatial grid when zombie dies
+        SpatialUtils.InvalidateGrid();
     }
 
     public static void RefreshFromGroup(SceneTree tree)
@@ -38,5 +42,7 @@ public static partial class ZombieRegistry
             if (node is Zombie z)
                 _zombies.Add(z);
         }
+        // Rebuild spatial grid
+        SpatialUtils.InvalidateGrid();
     }
 }

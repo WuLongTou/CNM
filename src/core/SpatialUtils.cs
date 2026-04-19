@@ -6,10 +6,82 @@ using ZombieWars.Enemy;
 
 /// <summary>
 /// Spatial utilities for distance calculations and spatial queries.
-/// Replaces duplicated distance calculation code throughout the codebase.
+/// Includes spatial hashing grid for O(1) range queries with many entities.
 /// </summary>
 public static class SpatialUtils
 {
+    // Spatial hash grid for efficient range queries
+    private const float GridCellSize = 100.0f;
+    private static readonly Dictionary<Vector2I, List<Zombie>> _spatialGrid = new();
+    private static bool _gridDirty = true;
+
+    /// <summary>
+    /// Marks the spatial grid as dirty and needing rebuild.
+    /// Call this when zombies spawn or die.
+    /// </summary>
+    public static void InvalidateGrid()
+    {
+        _gridDirty = true;
+    }
+
+    /// <summary>
+    /// Rebuilds the spatial hash grid.
+    /// </summary>
+    private static void RebuildGrid()
+    {
+        _spatialGrid.Clear();
+        foreach (var zombie in ZombieRegistry.All)
+        {
+            if (!IsValidZombie(zombie))
+                continue;
+
+            Vector2I cell = GetCell(zombie.GlobalPosition);
+            if (!_spatialGrid.TryGetValue(cell, out var list))
+            {
+                list = new List<Zombie>();
+                _spatialGrid[cell] = list;
+            }
+            list.Add(zombie);
+        }
+        _gridDirty = false;
+    }
+
+    private static Vector2I GetCell(Vector2 pos)
+    {
+        return new Vector2I(
+            (int)(pos.X / GridCellSize),
+            (int)(pos.Y / GridCellSize)
+        );
+    }
+
+    /// <summary>
+    /// Gets all zombies in cells that could be within range of a position.
+    /// Uses spatial hashing for faster queries.
+    /// </summary>
+    private static List<Zombie> GetZombiesInCells(Vector2 position, float range)
+    {
+        if (_gridDirty)
+            RebuildGrid();
+
+        var result = new List<Zombie>();
+        int cellRange = (int)(range / GridCellSize) + 1;
+        Vector2I center = GetCell(position);
+
+        for (int dx = -cellRange; dx <= cellRange; dx++)
+        {
+            for (int dy = -cellRange; dy <= cellRange; dy++)
+            {
+                Vector2I cell = center + new Vector2I(dx, dy);
+                if (_spatialGrid.TryGetValue(cell, out var list))
+                {
+                    result.AddRange(list);
+                }
+            }
+        }
+
+        return result;
+    }
+
     /// <summary>
     /// Checks if a zombie is valid (alive and instance is valid).
     /// </summary>
@@ -30,16 +102,36 @@ public static class SpatialUtils
         Zombie? nearest = null;
         float nearestDistSq = maxRange * maxRange;
 
-        foreach (var zombie in ZombieRegistry.All)
+        // Use spatial grid for large ranges
+        if (maxRange > GridCellSize * 3)
         {
-            if (!IsValidZombie(zombie))
-                continue;
-
-            float distSq = position.DistanceSquaredTo(zombie.GlobalPosition);
-            if (distSq < nearestDistSq)
+            foreach (var zombie in GetZombiesInCells(position, maxRange))
             {
-                nearestDistSq = distSq;
-                nearest = zombie;
+                if (!IsValidZombie(zombie))
+                    continue;
+
+                float distSq = position.DistanceSquaredTo(zombie.GlobalPosition);
+                if (distSq < nearestDistSq)
+                {
+                    nearestDistSq = distSq;
+                    nearest = zombie;
+                }
+            }
+        }
+        else
+        {
+            // Direct search for small ranges
+            foreach (var zombie in ZombieRegistry.All)
+            {
+                if (!IsValidZombie(zombie))
+                    continue;
+
+                float distSq = position.DistanceSquaredTo(zombie.GlobalPosition);
+                if (distSq < nearestDistSq)
+                {
+                    nearestDistSq = distSq;
+                    nearest = zombie;
+                }
             }
         }
 
@@ -108,13 +200,20 @@ public static class SpatialUtils
 
     /// <summary>
     /// Gets all zombies within range of a position.
+    /// Uses direct search for small ranges (grid can be stale due to zombie movement).
     /// </summary>
     public static List<Zombie> GetZombiesInRange(Vector2 position, float range)
     {
         var result = new List<Zombie>();
         float rangeSq = range * range;
 
-        foreach (var zombie in ZombieRegistry.All)
+        // Spatial grid is only rebuilt on spawn/death, not movement.
+        // For small ranges (melee), use direct search to avoid stale positions.
+        IEnumerable<Zombie> candidates = range > GridCellSize * 3
+            ? GetZombiesInCells(position, range)
+            : ZombieRegistry.All;
+
+        foreach (var zombie in candidates)
         {
             if (!IsValidZombie(zombie))
                 continue;

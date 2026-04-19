@@ -802,22 +802,111 @@ public partial class ZombieVfx : Node
 
     public void ShowFrozen()
     {
-        if (_sprite != null) _sprite.Modulate = Colors.Cyan;
+        if (_sprite != null)
+        {
+            _sprite.Modulate = Colors.Cyan;
+            // Add ice particle effect
+            _SpawnStatusParticles(new Color(0.5f, 0.8f, 1.0f), 5, 0.3f);
+        }
     }
 
     public void ShowStunned()
     {
-        if (_sprite != null) _sprite.Modulate = new Color(0.8f, 0.8f, 1.0f);
+        if (_sprite != null)
+        {
+            _sprite.Modulate = new Color(0.8f, 0.8f, 1.0f);
+            // Show stun stars
+            _SpawnStunStars();
+        }
     }
 
     public void ShowPoisoned()
     {
-        if (_sprite != null) _sprite.Modulate = Colors.Purple;
+        if (_sprite != null)
+        {
+            _sprite.Modulate = Colors.Purple;
+            // Add poison drip effect
+            _SpawnStatusParticles(new Color(0.4f, 0.9f, 0.3f), 3, 0.5f);
+        }
     }
 
     public void ShowCharmed()
     {
-        if (_sprite != null) _sprite.Modulate = Colors.Magenta;
+        if (_sprite != null)
+        {
+            _sprite.Modulate = Colors.Magenta;
+            // Add heart particles
+            _SpawnStatusParticles(new Color(1.0f, 0.5f, 0.7f), 4, 0.4f);
+        }
+    }
+
+    private void _SpawnStatusParticles(Color color, int amount, float lifetime)
+    {
+        var particles = new GpuParticles2D
+        {
+            GlobalPosition = _zombie.GlobalPosition,
+            Emitting = true,
+            Amount = amount,
+            Lifetime = lifetime,
+            OneShot = true
+        };
+
+        var mat = new ParticleProcessMaterial
+        {
+            Direction = new Vector3(0, -1, 0),
+            InitialVelocityMin = 20.0f,
+            InitialVelocityMax = 60.0f,
+            Gravity = new Vector3(0, -50, 0),
+            ScaleMin = 0.5f,
+            ScaleMax = 1.0f,
+            Color = color
+        };
+        particles.ProcessMaterial = mat;
+        _zombie.GetParent().AddChild(particles);
+
+        var timer = new Timer { WaitTime = lifetime + 0.2f, OneShot = true };
+        timer.Timeout += () => particles.QueueFree();
+        particles.AddChild(timer);
+        timer.Start();
+    }
+
+    private void _SpawnStunStars()
+    {
+        // Create rotating star effect for stun
+        for (int i = 0; i < 3; i++)
+        {
+            var star = new Label
+            {
+                Text = "⭐",
+                GlobalPosition = _zombie.GlobalPosition + new Vector2(
+                    (float)Mathf.Cos(i * Mathf.Tau / 3) * 20,
+                    -30 + (float)Mathf.Sin(i * Mathf.Tau / 3) * 10
+                ),
+                ZIndex = 15
+            };
+            star.AddThemeFontSizeOverride("font_size", 14);
+            _zombie.GetParent().AddChild(star);
+
+            var tw = _zombie.CreateTween();
+            tw.SetLoops(2);
+            tw.TweenProperty(star, "position:y", star.Position.Y - 10, 0.3f);
+            tw.TweenProperty(star, "position:y", star.Position.Y, 0.3f);
+            tw.TweenCallback(Callable.From(() =>
+            {
+                if (IsInstanceValid(star))
+                    star.QueueFree();
+            }));
+
+            // Auto-free after stun duration
+            var autoFree = new Timer { WaitTime = 2.0f, OneShot = true };
+            autoFree.Timeout += () =>
+            {
+                if (IsInstanceValid(star))
+                    star.QueueFree();
+            };
+            _zombie.AddChild(autoFree);
+            autoFree.Start();
+        }
     }
 
     public void ShowInvisible(bool revealed)
@@ -861,9 +950,15 @@ public partial class ZombieVfx : Node
     private void _SpawnDeathParticles()
     {
         Color deathColor = DeathColors.TryGetValue(_zombie.ZombieType, out var dc) ? dc : new Color(0.4f, 0.55f, 0.3f);
-        int particleCount = GameConfig.ZombieDeathParticlesDefault;
-        if (_zombie.ZombieType == ZombieType.Tank) particleCount = GameConfig.ZombieDeathParticlesTank;
-        else if (_zombie.ZombieType == ZombieType.Exploder) particleCount = GameConfig.ZombieDeathParticlesExploder;
+
+        // Use configurable particle counts based on zombie type
+        int particleCount;
+        if (_zombie.IsBoss)
+            particleCount = GameConfig.VfxDeathParticlesBoss;
+        else if (_zombie.ZombieType == ZombieType.Tank)
+            particleCount = GameConfig.VfxDeathParticlesTank;
+        else
+            particleCount = GameConfig.VfxDeathParticlesDefault;
 
         var particles = new GpuParticles2D();
         particles.GlobalPosition = _zombie.GlobalPosition;
@@ -883,7 +978,7 @@ public partial class ZombieVfx : Node
         particles.ProcessMaterial = mat;
         _zombie.GetParent().AddChild(particles);
 
-        if (_zombie.ZombieType == ZombieType.Exploder)
+        if (_zombie.ZombieType == ZombieType.Exploder || _zombie.IsBoss)
         {
             _SpawnExplosionRing();
         }

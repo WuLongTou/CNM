@@ -17,6 +17,59 @@ public partial class SoundManager : Node
 	private int _sfxChannelIdx;
 	private readonly Dictionary<string, AudioStream> _sfxCache = new();
 
+	// Sound toggle state
+	private bool _sfxEnabled = true;
+	private bool _musicEnabled = true;
+	private float _sfxVolumeMultiplier = 1.0f;
+	private float _musicVolumeMultiplier = 1.0f;
+
+	public bool SfxEnabled
+	{
+		get => _sfxEnabled;
+		set
+		{
+			_sfxEnabled = value;
+			foreach (var ch in _sfxChannels)
+				ch.VolumeDb = value ? GameConfig.SfxVolumeDb + Mathf.LinearToDb(_sfxVolumeMultiplier) : -80.0f;
+		}
+	}
+
+	public bool MusicEnabled
+	{
+		get => _musicEnabled;
+		set
+		{
+			_musicEnabled = value;
+			if (_musicPlayer != null)
+				_musicPlayer.VolumeDb = value ? GameConfig.MusicVolumeDb + Mathf.LinearToDb(_musicVolumeMultiplier) : -80.0f;
+		}
+	}
+
+	public float SfxVolume
+	{
+		get => _sfxVolumeMultiplier;
+		set
+		{
+			_sfxVolumeMultiplier = Mathf.Clamp(value, 0.0f, 2.0f);
+			if (_sfxEnabled)
+			{
+				foreach (var ch in _sfxChannels)
+					ch.VolumeDb = GameConfig.SfxVolumeDb + Mathf.LinearToDb(_sfxVolumeMultiplier);
+			}
+		}
+	}
+
+	public float MusicVolume
+	{
+		get => _musicVolumeMultiplier;
+		set
+		{
+			_musicVolumeMultiplier = Mathf.Clamp(value, 0.0f, 2.0f);
+			if (_musicEnabled && _musicPlayer != null)
+				_musicPlayer.VolumeDb = GameConfig.MusicVolumeDb + Mathf.LinearToDb(_musicVolumeMultiplier);
+		}
+	}
+
 	public override void _Ready()
 	{
 		Instance = this;
@@ -60,7 +113,7 @@ public partial class SoundManager : Node
 
 	private void _PlaySfx(string key)
 	{
-		if (!_sfxCache.TryGetValue(key, out var stream)) return;
+		if (!_sfxEnabled || !_sfxCache.TryGetValue(key, out var stream)) return;
 		var ch = _sfxChannels[_sfxChannelIdx];
 		_sfxChannelIdx = (_sfxChannelIdx + 1) % _sfxChannels.Length;
 		ch.Stream = stream;

@@ -70,18 +70,36 @@ public partial class WeatherSystem : CanvasLayer
     private float _tickTimer;
     private float _tickInterval = 1.0f;
 
+    private record Atmosphere(
+        float TintR, float TintG, float TintB,
+        float SpriteDarken,
+        float FogBrightMult,
+        float FireLightMult,
+        float Strength
+    );
+
+    private static readonly Atmosphere ClearAtmosphere    = new(1, 1, 1, 1, 1, 1, 1);
+    private static readonly Atmosphere RainAtmosphere     = new(0.88f, 0.90f, 1.0f, 0.88f, 0.85f, 0.7f, 1);
+    private static readonly Atmosphere AcidAtmosphere     = new(0.9f, 1.0f, 0.7f, 0.85f, 0.80f, 0.6f, 1);
+    private static readonly Atmosphere FogAtmosphere      = new(0.82f, 0.85f, 0.88f, 0.75f, 0.60f, 0.5f, 1);
+    private static readonly Atmosphere NightAtmosphere    = new(0.70f, 0.72f, 0.85f, 0.65f, 0.40f, 0.3f, 1);
+    private static readonly Atmosphere BloodMoonAtmosphere= new(1.1f, 0.78f, 0.72f, 0.90f, 0.85f, 0.8f, 1);
+    private static readonly Atmosphere StormAtmosphere    = new(0.75f, 0.78f, 0.90f, 0.70f, 0.50f, 0.4f, 1);
+
+    private Atmosphere _currentAtmosphere = ClearAtmosphere;
+    private float _targetAtmosphereStrength = 1.0f;
+    private float _atmosphereBlendTimer = 0.0f;
+
     // Lightning
     private float _lightningTimer;
     private float _lightningCooldown = 5.0f;
     private bool _lightningActive;
 
-    // Weather overlays
-    private ColorRect? _darknessOverlay;
-    private ColorRect? _rainOverlay;
     private GpuParticles2D? _rainParticles;
     private GpuParticles2D? _acidParticles;
     private GpuParticles2D? _fogParticles;
     private Control? _fogSprite;
+    private ColorRect? _vignetteRect;
 
     // Timers
     private Timer? _weatherChangeTimer;
@@ -110,35 +128,34 @@ public partial class WeatherSystem : CanvasLayer
 
     private void _CreateOverlays()
     {
-        // Reduced opacity overlays - weather should be part of the world, not covering it
-        _darknessOverlay = new ColorRect
+        _vignetteRect = new ColorRect
         {
-            Name = "DarknessOverlay",
+            Name = "VignetteOverlay",
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            ZIndex = 5, // Reduced z-index to be behind UI but affect world
-            Color = new Color(0, 0, 0, 0)
+            ZIndex = 5
         };
-        _darknessOverlay.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        AddChild(_darknessOverlay);
+        _vignetteRect.SetAnchorsPreset(Control.LayoutPreset.FullRect);
 
-        _rainOverlay = new ColorRect
-        {
-            Name = "RainOverlay",
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ZIndex = 6, // Reduced z-index
-            Color = new Color(0.1f, 0.15f, 0.3f, 0.0f)
-        };
-        _rainOverlay.SetAnchorsPreset(Control.LayoutPreset.FullRect);
-        AddChild(_rainOverlay);
+        var vigShader = new Shader();
+        vigShader.Code = @"
+shader_type canvas_item;
+uniform float intensity : hint_range(0.0, 1.0) = 0.0;
+void fragment() {
+    float dist = distance(UV, vec2(0.5));
+    float vig = smoothstep(0.35, 0.75, dist);
+    COLOR = vec4(0.0, 0.0, 0.0, vig * intensity * 0.25);
+}";
+        _vignetteRect.Material = new ShaderMaterial { Shader = vigShader };
+        AddChild(_vignetteRect);
     }
 
     private void _CreateParticles()
     {
-        // Rain particles
+        // Rain particles — world-integrated, between background and game entities
         _rainParticles = new GpuParticles2D
         {
             Name = "RainParticles",
-            ZIndex = 102,
+            ZIndex = 45,
             Emitting = false,
             OneShot = false
         };
@@ -147,7 +164,7 @@ public partial class WeatherSystem : CanvasLayer
             Gravity = new Vector3(0, 800, 0),
             InitialVelocityMin = 300,
             InitialVelocityMax = 500,
-            Color = new Color(0.5f, 0.6f, 0.8f, 0.6f),
+            Color = new Color(0.5f, 0.6f, 0.8f, 0.5f),
             Spread = 0.1f
         };
         _rainParticles.ProcessMaterial = rainMat;
@@ -157,7 +174,7 @@ public partial class WeatherSystem : CanvasLayer
         _acidParticles = new GpuParticles2D
         {
             Name = "AcidParticles",
-            ZIndex = 102,
+            ZIndex = 45,
             Emitting = false,
             OneShot = false
         };
@@ -166,17 +183,17 @@ public partial class WeatherSystem : CanvasLayer
             Gravity = new Vector3(0, 600, 0),
             InitialVelocityMin = 200,
             InitialVelocityMax = 400,
-            Color = new Color(0.6f, 1.0f, 0.1f, 0.7f),
+            Color = new Color(0.5f, 0.9f, 0.1f, 0.55f),
             Spread = 0.1f
         };
         _acidParticles.ProcessMaterial = acidMat;
         AddChild(_acidParticles);
 
-        // Fog particles (drifting)
+        // Fog particles (drifting) — world space, above rain
         _fogParticles = new GpuParticles2D
         {
             Name = "FogParticles",
-            ZIndex = 103,
+            ZIndex = 46,
             Emitting = false,
             OneShot = false
         };
@@ -185,7 +202,7 @@ public partial class WeatherSystem : CanvasLayer
             Gravity = new Vector3(20, 0, 0),
             InitialVelocityMin = 10,
             InitialVelocityMax = 40,
-            Color = new Color(0.8f, 0.8f, 0.85f, 0.3f),
+            Color = new Color(0.7f, 0.7f, 0.75f, 0.25f),
             Spread = 0.3f
         };
         _fogParticles.ProcessMaterial = fogMat;
@@ -417,38 +434,36 @@ public partial class WeatherSystem : CanvasLayer
         {
             case WeatherType.Rain:
                 _StartRain(intensity);
-                if (_darknessOverlay != null)
-                    _darknessOverlay.Color = new Color(0, 0, 0.05f, 0.1f * mult);
+                _ApplyWorldAtmosphere(RainAtmosphere with { Strength = mult });
+                _SetVignetteIntensity(0.05f * mult);
                 break;
 
             case WeatherType.AcidRain:
                 _StartAcidRain(intensity);
-                if (_darknessOverlay != null)
-                    _darknessOverlay.Color = new Color(0.05f, 0.05f, 0, 0.08f * mult);
+                _ApplyWorldAtmosphere(AcidAtmosphere);
+                _SetVignetteIntensity(0.08f * mult);
                 break;
 
             case WeatherType.Fog:
                 _StartFog(intensity);
-                if (_darknessOverlay != null)
-                    _darknessOverlay.Color = new Color(0.1f, 0.1f, 0.12f, 0.25f * mult);
+                _ApplyWorldAtmosphere(FogAtmosphere with { Strength = mult });
+                _SetVignetteIntensity(0.1f * mult);
                 break;
 
             case WeatherType.Night:
-                if (_darknessOverlay != null)
-                    _darknessOverlay.Color = new Color(0, 0, 0.05f, 0.35f);
-                _StartNightVignette();
+                _ApplyWorldAtmosphere(NightAtmosphere with { Strength = mult });
+                _SetVignetteIntensity(0.2f * mult);
                 break;
 
             case WeatherType.BloodMoon:
-                if (_darknessOverlay != null)
-                    _darknessOverlay.Color = new Color(0.3f, 0.0f, 0.0f, 0.2f);
-                _StartBloodMoonOverlay();
+                _ApplyWorldAtmosphere(BloodMoonAtmosphere);
+                _SetVignetteIntensity(0.05f);
                 break;
 
             case WeatherType.Storm:
                 _StartRain(intensity);
-                if (_darknessOverlay != null)
-                    _darknessOverlay.Color = new Color(0.02f, 0.02f, 0.06f, 0.3f * mult);
+                _ApplyWorldAtmosphere(StormAtmosphere with { Strength = mult });
+                _SetVignetteIntensity(0.15f * mult);
                 _lightningCooldown = 4.0f / mult;
                 break;
         }
@@ -471,10 +486,10 @@ public partial class WeatherSystem : CanvasLayer
             _fogParticles.Emitting = false;
             _fogParticles.Visible = false;
         }
-        if (_rainOverlay != null)
-            _rainOverlay.Color = new Color(0.1f, 0.15f, 0.3f, 0.0f);
         if (_lightningTimerNode != null)
             _lightningTimerNode.Stop();
+        _ApplyWorldAtmosphere(ClearAtmosphere);
+        _SetVignetteIntensity(0.0f);
     }
 
     private void _StartRain(WeatherIntensity intensity)
@@ -484,9 +499,6 @@ public partial class WeatherSystem : CanvasLayer
         _rainParticles.Visible = true;
         _rainParticles.Emitting = true;
         _rainParticles.Amount = (int)(200 * IntensityMultipliers[(int)intensity]);
-
-        if (_rainOverlay != null)
-            _rainOverlay.Color = new Color(0.1f, 0.15f, 0.3f, 0.05f * IntensityMultipliers[(int)intensity]);
     }
 
     private void _StartAcidRain(WeatherIntensity intensity)
@@ -496,9 +508,6 @@ public partial class WeatherSystem : CanvasLayer
         _acidParticles.Visible = true;
         _acidParticles.Emitting = true;
         _acidParticles.Amount = (int)(150 * IntensityMultipliers[(int)intensity]);
-
-        if (_rainOverlay != null)
-            _rainOverlay.Color = new Color(0.3f, 0.6f, 0.05f, 0.03f * IntensityMultipliers[(int)intensity]);
     }
 
     private void _StartFog(WeatherIntensity intensity)
@@ -511,29 +520,6 @@ public partial class WeatherSystem : CanvasLayer
 
         var mat = (ParticleProcessMaterial)_fogParticles.ProcessMaterial;
         mat.Color = new Color(0.8f, 0.8f, 0.85f, 0.25f * IntensityMultipliers[(int)intensity]);
-
-        // Also add a subtle fog overlay
-        if (_rainOverlay != null)
-            _rainOverlay.Color = new Color(0.5f, 0.5f, 0.55f, 0.06f * IntensityMultipliers[(int)intensity]);
-    }
-
-    private void _StartNightVignette()
-    {
-        // Night: subtle darkening at edges via darkness overlay
-        // Player gets a faint glow to compensate
-        var player = GetTree().GetFirstNodeInGroup("player");
-        if (player != null && player is Player p)
-        {
-            p.Call("apply_buff", (int)BuffType.Invincible, 99999.0f, 1.0f, 0.0f, "夜视");
-        }
-    }
-
-    private void _StartBloodMoonOverlay()
-    {
-        if (_rainOverlay == null) return;
-
-        // Subtle red tint
-        _rainOverlay.Color = new Color(0.5f, 0.05f, 0.05f, 0.05f);
     }
 
     // ═══════════════════════════════════════════════════
@@ -587,14 +573,14 @@ public partial class WeatherSystem : CanvasLayer
 
     private void _FlashLightning()
     {
-        if (_darknessOverlay == null) return;
+        if (_vignetteRect == null) return;
 
-        var original = _darknessOverlay.Color;
-        _darknessOverlay.Color = new Color(1.0f, 1.0f, 1.0f, 0.3f);
+        var origAlpha = ((ShaderMaterial)_vignetteRect.Material).GetShaderParameter("intensity");
+        var mat = (ShaderMaterial)_vignetteRect.Material;
+        mat.SetShaderParameter("intensity", 1.0f);
 
         var tw = CreateTween();
-        tw.TweenProperty(_darknessOverlay, "color", original, 0.3f)
-            .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        tw.TweenCallback(Callable.From(() => mat.SetShaderParameter("intensity", origAlpha)));
     }
 
     private void _SpawnLightningBolt(Vector2 pos)
@@ -656,6 +642,53 @@ public partial class WeatherSystem : CanvasLayer
     private void _UpdateTransition(float t)
     {
         // Fade transitions handled by ColorRect alpha changes in _StartWeatherEffects
+    }
+
+    // ═══════════════════════════════════════════════════
+    // World Atmosphere — world-integrated, no full-screen overlay
+    // ═══════════════════════════════════════════════════
+
+    private void _ApplyWorldAtmosphere(Atmosphere atmosphere)
+    {
+        _currentAtmosphere = atmosphere;
+        _targetAtmosphereStrength = atmosphere.Strength;
+        _atmosphereBlendTimer = 0.0f;
+
+        var bg = GetTree().GetFirstNodeInGroup("background") as Background;
+        bg?.SetAtmosphereTint(atmosphere.TintR, atmosphere.TintG, atmosphere.TintB, atmosphere.FogBrightMult, atmosphere.FireLightMult);
+        _ApplySpriteAtmosphereToEntities(atmosphere);
+    }
+
+    private void _ApplySpriteAtmosphereToEntities(Atmosphere atm)
+    {
+        foreach (var zombie in ZombieRegistry.All)
+        {
+            if (!IsInstanceValid(zombie) || zombie.Sprite == null) continue;
+            float dark = Mathf.Lerp(1.0f, atm.SpriteDarken, _targetAtmosphereStrength);
+            float r = atm.TintR * dark;
+            float g = atm.TintG * dark;
+            float b = atm.TintB * dark;
+            zombie.Sprite.Modulate = new Color(
+                Mathf.Clamp(r, 0.1f, 1.5f),
+                Mathf.Clamp(g, 0.1f, 1.5f),
+                Mathf.Clamp(b, 0.1f, 1.5f));
+        }
+
+        var player = GetTree().GetFirstNodeInGroup("player") as Player;
+        if (player?.Sprite != null)
+        {
+            float dark = Mathf.Lerp(1.0f, atm.SpriteDarken, _targetAtmosphereStrength);
+            player.Sprite.Modulate = new Color(
+                Mathf.Clamp(atm.TintR * dark, 0.1f, 1.5f),
+                Mathf.Clamp(atm.TintG * dark, 0.1f, 1.5f),
+                Mathf.Clamp(atm.TintB * dark, 0.1f, 1.5f));
+        }
+    }
+
+    private void _SetVignetteIntensity(float intensity)
+    {
+        if (_vignetteRect?.Material is ShaderMaterial mat)
+            mat.SetShaderParameter("intensity", intensity);
     }
 
     // ═══════════════════════════════════════════════════

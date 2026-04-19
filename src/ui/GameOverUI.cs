@@ -6,6 +6,7 @@ using ZombieWars.Audio;
 
 /// <summary>
 /// Game Over screen — death fade-in, stats, restart / quit buttons.
+/// Enhanced with detailed statistics and achievements.
 /// </summary>
 public partial class GameOverUI : Control
 {
@@ -42,12 +43,12 @@ public partial class GameOverUI : Control
 		bgTw.TweenProperty(bg, "color:a", 0.75f, 0.8f).SetTrans(Tween.TransitionType.Cubic);
 		bgTw.Parallel().TweenProperty(redTint, "color:a", 0.25f, 1.0f).SetTrans(Tween.TransitionType.Cubic);
 
-		// Content panel
+		// Content panel - larger for more stats
 		var content = new Panel
 		{
 			ZIndex = 52,
 			Modulate = new Color(1, 1, 1, 0),
-			CustomMinimumSize = new Vector2(380, 360)
+			CustomMinimumSize = new Vector2(420, 440)
 		};
 		content.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
 		content.Position -= content.CustomMinimumSize / 2;
@@ -79,7 +80,7 @@ public partial class GameOverUI : Control
 		{
 			Alignment = BoxContainer.AlignmentMode.Center
 		};
-		vbox.AddThemeConstantOverride("separation", 14);
+		vbox.AddThemeConstantOverride("separation", 12);
 		margin.AddChild(vbox);
 
 		// Title
@@ -109,20 +110,60 @@ public partial class GameOverUI : Control
 
 		int roundCount = _gameManager?.GetCurrentRound() ?? 0;
 		int totalScore = _gameManager?.Score ?? 0;
-		int killed = _gameManager?.Score ?? 0;
+		int kills = _gameManager?.Score ?? 0;
 
 		_AddStatRow(statsBox, "存活波数", roundCount.ToString(), new Color(0.9f, 0.78f, 0.35f));
-		_AddStatRow(statsBox, "消灭数量", killed.ToString(), new Color(0.75f, 0.75f, 0.75f));
+		_AddStatRow(statsBox, "消灭敌人", kills.ToString(), new Color(0.75f, 0.75f, 0.75f));
 		_AddStatRow(statsBox, "最终得分", totalScore.ToString(), new Color(1.0f, 0.85f, 0.2f));
 
 		int high = SaveManager.Instance != null ? SaveManager.GetHighScore() : 0;
 		if (totalScore >= high && totalScore > 0)
-			_AddStatRow(statsBox, "新纪录!", totalScore.ToString(), new Color(1.0f, 0.6f, 0.1f));
-		else
+			_AddStatRow(statsBox, "🏆 新纪录!", totalScore.ToString(), new Color(1.0f, 0.6f, 0.1f));
+		else if (high > 0)
 			_AddStatRow(statsBox, "最高分", high.ToString(), new Color(0.6f, 0.6f, 0.55f));
 
+		// Achievements section
+		var achievementsLabel = new Label
+		{
+			Text = "━━ 成就 ━━",
+			HorizontalAlignment = HorizontalAlignment.Center
+		};
+		achievementsLabel.AddThemeFontSizeOverride("font_size", 12);
+		achievementsLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.55f));
+		vbox.AddChild(achievementsLabel);
+
+		// Achievement badges
+		var achievementsBox = new HBoxContainer
+		{
+			Alignment = BoxContainer.AlignmentMode.Center
+		};
+		achievementsBox.AddThemeConstantOverride("separation", 10);
+		vbox.AddChild(achievementsBox);
+
+		// Check and display achievements
+		if (roundCount >= 10)
+			_AddAchievementBadge(achievementsBox, "🌟", "坚持10波", new Color(1.0f, 0.85f, 0.3f));
+		if (kills >= 100)
+			_AddAchievementBadge(achievementsBox, "💀", "击杀100", new Color(0.7f, 0.7f, 0.7f));
+		if (totalScore >= 1000)
+			_AddAchievementBadge(achievementsBox, "🏅", "得分1000", new Color(0.9f, 0.75f, 0.3f));
+		if (roundCount >= 20)
+			_AddAchievementBadge(achievementsBox, "👑", "坚持20波", new Color(1.0f, 0.9f, 0.4f));
+
+		// Tips for next run
+		var tipsLabel = new Label
+		{
+			Text = _GetTipForNextRun(roundCount, kills),
+			HorizontalAlignment = HorizontalAlignment.Center,
+			AutowrapMode = TextServer.AutowrapMode.WordSmart,
+			CustomMinimumSize = new Vector2(360, 0)
+		};
+		tipsLabel.AddThemeFontSizeOverride("font_size", 11);
+		tipsLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.5f));
+		vbox.AddChild(tipsLabel);
+
 		// Spacer
-		var spacer = new Control { CustomMinimumSize = new Vector2(0, 10) };
+		var spacer = new Control { CustomMinimumSize = new Vector2(0, 8) };
 		vbox.AddChild(spacer);
 
 		// Buttons
@@ -154,6 +195,31 @@ public partial class GameOverUI : Control
 			.SetTrans(Tween.TransitionType.Sine);
 
 		SoundManager.Instance?.PlayGameOver();
+	}
+
+	private void _AddAchievementBadge(HBoxContainer parent, string icon, string text, Color color)
+	{
+		var badge = new Label
+		{
+			Text = icon + " " + text,
+			TooltipText = icon + " " + text
+		};
+		badge.AddThemeFontSizeOverride("font_size", 11);
+		badge.AddThemeColorOverride("font_color", color);
+		parent.AddChild(badge);
+	}
+
+	private string _GetTipForNextRun(int rounds, int kills)
+	{
+		if (rounds < 3)
+			return "💡 提示: 多尝试不同的武器组合，找到适合你的流派！";
+		if (rounds < 7)
+			return "💡 提示: 注意走位和闪避，避免被包围！";
+		if (kills < 50)
+			return "💡 提示: 优先获取范围伤害装备来提高清怪效率！";
+		if (rounds < 10)
+			return "💡 提示: 吸血和护盾装备能有效提高生存能力！";
+		return "💡 提示: 继续保持！你已经非常强了！";
 	}
 
 	private void _AddStatRow(VBoxContainer parent, string labelText, string valueText, Color color)

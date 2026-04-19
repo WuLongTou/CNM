@@ -370,15 +370,59 @@ public partial class Zombie : CharacterBody2D
     private void _SpitPoison(Node target)
     {
         var proj = new Sprite2D();
-        var img = Image.Create(10, 10, false, Image.Format.Rgba8);
-        img.Fill(Colors.Green);
-        proj.Texture = ImageTexture.CreateFromImage(img);
+        // Use cached poison texture for performance
+        proj.Texture = _GetCachedPoisonTexture();
         proj.GlobalPosition = GlobalPosition;
         GetParent().AddChild(proj);
 
         var tw = CreateTween();
         tw.TweenProperty(proj, "global_position", ((Node2D)target).GlobalPosition, 0.5);
         tw.TweenCallback(Callable.From(() => _CompletePoisonSpit(target, proj)));
+    }
+
+    // Static cache for poison texture
+    private static ImageTexture? _cachedPoisonTexture;
+    private static ImageTexture _GetCachedPoisonTexture()
+    {
+        if (_cachedPoisonTexture != null)
+            return _cachedPoisonTexture;
+
+        var img = Image.Create(10, 10, false, Image.Format.Rgba8);
+        img.Fill(Colors.Green);
+        _cachedPoisonTexture = ImageTexture.CreateFromImage(img);
+        return _cachedPoisonTexture;
+    }
+
+    // Static cache for arrow texture
+    private static ImageTexture? _cachedArrowTexture;
+    private static ImageTexture _GetCachedArrowTexture()
+    {
+        if (_cachedArrowTexture != null)
+            return _cachedArrowTexture;
+
+        int bw = 20;
+        int bh = 4;
+        using var img = Image.Create(bw, bh, false, Image.Format.Rgba8);
+
+        for (int x = 0; x < bw; x++)
+        {
+            for (int y = 0; y < bh; y++)
+            {
+                // Arrow shaft
+                if (x < bw - 5)
+                {
+                    img.SetPixel(x, y, new Color(0.5f, 0.3f, 0.1f));
+                }
+                // Arrow head (brighter tip)
+                else
+                {
+                    img.SetPixel(x, y, new Color(0.8f, 0.6f, 0.2f));
+                }
+            }
+        }
+
+        _cachedArrowTexture = ImageTexture.CreateFromImage(img);
+        return _cachedArrowTexture;
     }
 
     private void _HandleArcher(float delta)
@@ -398,24 +442,13 @@ public partial class Zombie : CharacterBody2D
     {
         if (target == null) return;
 
-        // Create arrow sprite
-        var arrow = new Sprite2D();
-        var img = Image.Create(20, 4, false, Image.Format.Rgba8);
-        // Arrow shaft
-        for (int x = 0; x < 20; x++)
+        // Use cached arrow texture for performance
+        var arrow = new Sprite2D
         {
-            for (int y = 0; y < 4; y++)
-            {
-                // Arrow head (brighter tip)
-                if (x >= 16)
-                    img.SetPixel(x, y, new Color(0.8f, 0.6f, 0.2f));
-                else
-                    img.SetPixel(x, y, new Color(0.5f, 0.3f, 0.1f));
-            }
-        }
-        arrow.Texture = ImageTexture.CreateFromImage(img);
-        arrow.GlobalPosition = GlobalPosition;
-        arrow.ZIndex = 10;
+            Texture = _GetCachedArrowTexture(),
+            GlobalPosition = GlobalPosition,
+            ZIndex = 10
+        };
 
         // Calculate direction and rotate arrow
         Vector2 direction = ((Node2D)target).GlobalPosition - GlobalPosition;
@@ -435,10 +468,17 @@ public partial class Zombie : CharacterBody2D
         if (IsInstanceValid(arrow))
             arrow.QueueFree();
 
-        if (IsInstanceValid(target) && target.HasMethod("TakeDamage"))
+        if (IsInstanceValid(target))
         {
-            // Direct damage on hit
-            target.Call("TakeDamage", Damage);
+            // Direct damage on hit - pass attacker for counterattack
+            if (target is ZombieWars.Player.Player player)
+            {
+                player.TakeDamage(Damage, this);
+            }
+            else if (target.HasMethod("TakeDamage"))
+            {
+                target.Call("TakeDamage", Damage);
+            }
 
             // Visual feedback
             VFXManager.SpawnHitEffect(GetParent(), ((Node2D)target).GlobalPosition, new Color(0.8f, 0.6f, 0.3f));
@@ -622,7 +662,7 @@ public partial class Zombie : CharacterBody2D
     public void AttackPlayer()
     {
         if (Player is ZombieWars.Player.Player p)
-            p.TakeDamage(Damage);
+            p.TakeDamage(Damage, this); // Pass self as attacker for counterattack
         else
             Player?.Call("TakeDamage", Damage);
     }

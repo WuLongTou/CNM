@@ -32,7 +32,7 @@ public partial class GameManager : Node
     [Export] public float RoundMultiplierBase = 0.04f;
     [Export] public float EliteChanceBase = 0.02f;
     [Export] public float EliteChancePerRound = 0.010f;
-    [Export] public float EliteChanceMax = 0.25f;
+    [Export] public float EliteChanceMax = 0.18f; // Balanced from 0.25f
 
     [Export] public bool HealBetweenRounds = true;
     [Export] public float HealPercent = 0.20f;

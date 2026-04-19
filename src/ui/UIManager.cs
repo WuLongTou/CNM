@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using ZombieWars.Core;
 using ZombieWars.Weapons;
+using ZombieWars.Audio;
 using Player = ZombieWars.Player.Player;
 using static ZombieWars.Core.GameEnums;
 
@@ -56,6 +57,7 @@ public partial class UIManager : Control
 	private bool _bossUiVisible;
 	private int _bossUiHealth = -1;
 	private int _bossUiMaxHealth = -1;
+	private Button _soundToggleButton = null!;
 
 	// ═══════════════════════════════════════════════
 	// Weapon Selection
@@ -279,6 +281,18 @@ public partial class UIManager : Control
 		_effectsContainer.AddThemeConstantOverride("separation", 3);
 		_effectsContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
 		row2.AddChild(_effectsContainer);
+
+		// Sound toggle button
+		var soundBtn = new Button
+		{
+			Text = "🔊",
+			CustomMinimumSize = new Vector2(24, 20),
+			FocusMode = Control.FocusModeEnum.None,
+			TooltipText = "点击切换音效"
+		};
+		soundBtn.Pressed += _ToggleSound;
+		row2.AddChild(soundBtn);
+		_soundToggleButton = soundBtn;
 
 		var helpBtn = new Button
 		{
@@ -540,6 +554,16 @@ public partial class UIManager : Control
 			hintLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
 			cardVbox.AddChild(hintLabel);
 		}
+
+		// Keyboard hint label
+		var keyboardHintLabel = new Label
+		{
+			Text = "💡 按 [1] [2] [3] 选择 | 按 [S] 或 [空格] 跳过",
+			HorizontalAlignment = HorizontalAlignment.Center
+		};
+		keyboardHintLabel.AddThemeFontSizeOverride("font_size", 14);
+		keyboardHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
+		mainVbox.AddChild(keyboardHintLabel);
 
 		// Skip button
 		var skipContainer = new CenterContainer();
@@ -1045,6 +1069,18 @@ public partial class UIManager : Control
 		if (_weaponSelectionPanel.Visible && !_controlsVisible) return;
 		_controlsVisible = !_controlsVisible;
 		_controlsPanel.Visible = _controlsVisible;
+	}
+
+	private void _ToggleSound()
+	{
+		var sm = SoundManager.Instance;
+		if (sm == null) return;
+
+		sm.SfxEnabled = !sm.SfxEnabled;
+		if (_soundToggleButton != null)
+		{
+			_soundToggleButton.Text = sm.SfxEnabled ? "🔊" : "🔇";
+		}
 	}
 
 	private void _StartGame()

@@ -1,11 +1,13 @@
 namespace ZombieWars.UI;
 
+using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Vfx;
 
 /// <summary>
 /// Screen effects: shake, damage flash, low-HP vignette, attack flash, damage numbers, combo.
+/// Optimized with damage number pooling and throttling for better performance.
 /// </summary>
 public partial class ScreenEffects : Node
 {
@@ -20,11 +22,36 @@ public partial class ScreenEffects : Node
 	private int _comboCount;
 	private float _comboTimer;
 
+	// Damage number optimization: pooling and throttling
+	private const int MaxDamageNumbers = 15;
+	private const float DamageNumberThrottle = 0.05f; // Minimum interval between damage numbers in same area
+	private readonly Queue<Label> _damageNumberPool = new();
+	private readonly List<Label> _activeDamageNumbers = new();
+	private float _damageNumberThrottleTimer = 0.0f;
+	private Vector2 _lastDamagePos;
+
 	public override void _Ready()
 	{
 		_CreateDamageFlash();
 		_CreateLowHpVignette();
 		_CreateAttackFlash();
+		_InitDamageNumberPool();
+	}
+
+	private void _InitDamageNumberPool()
+	{
+		for (int i = 0; i < MaxDamageNumbers; i++)
+		{
+			var label = new Label
+			{
+				Visible = false,
+				ZIndex = 20
+			};
+			label.AddThemeConstantOverride("outline_size", 3);
+			label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
+			AddChild(label);
+			_damageNumberPool.Enqueue(label);
+		}
 	}
 
 	public void ProcessEffects(float delta)
@@ -49,6 +76,13 @@ public partial class ScreenEffects : Node
 			if (_comboTimer <= 0)
 				_comboCount = 0;
 		}
+
+		// Update damage number throttle
+		if (_damageNumberThrottleTimer > 0)
+			_damageNumberThrottleTimer -= delta;
+
+		// Clean up inactive damage numbers
+		_activeDamageNumbers.RemoveAll(l => !IsInstanceValid(l) || !l.Visible);
 	}
 
 	public void SetOriginalPos(Vector2 pos) => _originalPos = pos;
@@ -150,10 +184,37 @@ void fragment() {
 
 	public void ShowDamageNumber(Vector2 pos, int amount, bool isCritical = false)
 	{
+		// Throttle: if same position and throttle active, aggregate damage
+		if (amount > 0 && _damageNumberThrottleTimer > 0 &&
+			pos.DistanceTo(_lastDamagePos) < 30)
+		{
+			// Skip this damage number - will be handled by aggregation
+			return;
+		}
+		_damageNumberThrottleTimer = DamageNumberThrottle;
+		_lastDamagePos = pos;
+
+		// Get pooled label
+		Label? label = null;
+		if (_damageNumberPool.Count > 0)
+		{
+			label = _damageNumberPool.Dequeue();
+		}
+		else if (_activeDamageNumbers.Count >= MaxDamageNumbers)
+		{
+			// Reuse oldest active label
+			label = _activeDamageNumbers[0];
+			_activeDamageNumbers.RemoveAt(0);
+		}
+
+		if (label == null)
+			return;
+
 		int fontSize;
 		Color color;
 		string text;
 
+		// Scale damage number by damage amount for visual hierarchy
 		if (amount < 0)
 		{
 			color = new Color(0.3f, 1.0f, 0.4f);
@@ -163,27 +224,37 @@ void fragment() {
 		else if (isCritical)
 		{
 			color = new Color(1.0f, 0.85f, 0.15f);
-			fontSize = 28;
+			fontSize = 32; // Larger for critical hits
 			text = amount + "!";
+		}
+		else if (amount >= 50)
+		{
+			color = new Color(1.0f, 0.6f, 0.2f);
+			fontSize = 22; // Big damage
+			text = amount.ToString();
+		}
+		else if (amount >= 20)
+		{
+			color = new Color(1.0f, 0.9f, 0.5f);
+			fontSize = 16; // Medium damage
+			text = amount.ToString();
 		}
 		else
 		{
-			color = new Color(1, 1, 1);
-			fontSize = 14;
+			color = new Color(0.9f, 0.9f, 0.9f);
+			fontSize = 12; // Small damage
 			text = amount.ToString();
 		}
 
-		var label = new Label
-		{
-			GlobalPosition = pos + new Vector2((float)GD.RandRange(-15, 15), (float)GD.RandRange(-25, -15)),
-			ZIndex = 20,
-			Text = text
-		};
+		label.Text = text;
+		label.GlobalPosition = pos + new Vector2((float)GD.RandRange(-15, 15), (float)GD.RandRange(-25, -15));
 		label.AddThemeFontSizeOverride("font_size", fontSize);
 		label.AddThemeColorOverride("font_color", color);
-		label.AddThemeConstantOverride("outline_size", 3);
-		label.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
-		AddChild(label);
+		label.Visible = true;
+		label.Scale = Vector2.One;
+		label.Modulate = label.Modulate with { A = 1.0f };
+
+		_activeDamageNumbers.Add(label);
 
 		var tw = CreateTween();
 		if (isCritical)
@@ -196,6 +267,7 @@ void fragment() {
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 			tw.Parallel().TweenProperty(label, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.6f)
 				.SetDelay(0.25f);
+			tw.TweenCallback(Callable.From(() => _ReturnToPool(label)));
 		}
 		else if (amount < 0)
 		{
@@ -203,6 +275,7 @@ void fragment() {
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 			tw.Parallel().TweenProperty(label, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.6f)
 				.SetDelay(0.2f);
+			tw.TweenCallback(Callable.From(() => _ReturnToPool(label)));
 		}
 		else
 		{
@@ -210,8 +283,18 @@ void fragment() {
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 			tw.Parallel().TweenProperty(label, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.55f)
 				.SetDelay(0.12f);
+			tw.TweenCallback(Callable.From(() => _ReturnToPool(label)));
 		}
-		tw.TweenCallback(Callable.From(label.QueueFree));
+	}
+
+	private void _ReturnToPool(Label label)
+	{
+		if (label == null || !IsInstanceValid(label))
+			return;
+
+		label.Visible = false;
+		_activeDamageNumbers.Remove(label);
+		_damageNumberPool.Enqueue(label);
 	}
 
 	// ══ Combo System ══

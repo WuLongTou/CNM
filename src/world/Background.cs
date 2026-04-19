@@ -474,4 +474,21 @@ public partial class Background : Node2D
                 fog.Modulate = fog.Modulate with { A = Mathf.Lerp(0.7f, 1.5f, Tension) };
         }
     }
+
+    public void SetAtmosphereTint(float r, float g, float b, float fogBrightMult, float fireLightMult)
+    {
+        if (_backgroundRect != null)
+            _backgroundRect.Modulate = new Color(r, g, b, 1.0f);
+
+        foreach (TextureRect fog in _fogLayers)
+        {
+            if (IsInstanceValid(fog))
+                fog.Modulate = fog.Modulate with
+                {
+                    R = Mathf.Lerp(fog.Modulate.R, r, fogBrightMult),
+                    G = Mathf.Lerp(fog.Modulate.G, g, fogBrightMult),
+                    B = Mathf.Lerp(fog.Modulate.B, b, fogBrightMult)
+                };
+        }
+    }
 }

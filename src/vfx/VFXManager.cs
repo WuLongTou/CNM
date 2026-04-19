@@ -96,6 +96,9 @@ public partial class VFXManager : Node
 		float velMax = 100.0f, Vector3 gravity = default,
 		float scaleMin = 0.8f, float scaleMax = 1.5f)
 	{
+		// Cap particle count for performance
+		count = Mathf.Min(count, GameConfig.VfxExplosionParticles);
+
 		var particles = new GpuParticles2D
 		{
 			GlobalPosition = pos,

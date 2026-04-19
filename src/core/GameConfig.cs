@@ -175,6 +175,17 @@ public static class GameConfig
     public const int EdgeIndicatorMinCount = 2;
     public const float EliteScoreMult = 1.5f;
 
+    // Elite spawn rate balance (adjusted)
+    public const float EliteChanceMax = 0.18f; // Reduced from 0.25f for better balance
+
+    // ═══════════════════════════════════════════════
+    // Combo System
+    // ═══════════════════════════════════════════════
+
+    public const float ComboDecayTime = 2.0f;
+    public const float ComboDamageBonusPerLevel = 0.05f;
+    public const float ComboMaxBonus = 0.5f;
+
     // ═══════════════════════════════════════════════
     // Audio
     // ═══════════════════════════════════════════════
@@ -207,7 +218,6 @@ public static class GameConfig
     // ═══════════════════════════════════════════════
 
     public const float HudHeight = 52.0f;
-    public const float ComboDecayTime = 2.0f;
     public const float ShakeDecay = 8.0f;
     public const float TooltipMaxWidth = 360.0f;
     public static readonly Godot.Vector2 TooltipOffset = new(15.0f, 15.0f);
@@ -233,4 +243,14 @@ public static class GameConfig
     public const float VfxHitLifetime = 0.3f;
     public const float VfxPopupFloatDistance = 40.0f;
     public const float VfxPopupDuration = 0.8f;
+
+    // Configurable particle counts for performance tuning
+    public const int VfxDeathParticlesDefault = 15;
+    public const int VfxDeathParticlesTank = 25;
+    public const int VfxDeathParticlesBoss = 35;
+    public const int VfxExplosionParticles = 25;
+
+    // Damage number optimization
+    public const int VfxMaxDamageNumbers = 15;
+    public const float VfxDamageNumberThrottle = 0.05f;
 }

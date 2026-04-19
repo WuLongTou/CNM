@@ -317,7 +317,7 @@ public partial class Player : CharacterBody2D
         BuffSystem.AddBuff(buffType, source, duration, value);
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int amount, Zombie? attacker = null)
     {
         if (IsDead || InvincibleTimer > 0)
             return;
@@ -344,11 +344,31 @@ public partial class Player : CharacterBody2D
             SoundManager.Instance?.PlayPlayerHurt();
             Vfx?.UpdateStatusDisplays();
 
+            // Counterattack: thorns-like damage when hit
+            _TryCounterattack(attacker);
+
             if ((float)CurrentHealth / (float)MaxHealth <= Core.GameConfig.HealthLowThreshold)
                 VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "危险！", Colors.Red);
 
             if (CurrentHealth <= 0)
                 Die();
+        }
+    }
+
+    private void _TryCounterattack(Zombie? attacker)
+    {
+        // Check if player has any thorns/counterattack ability
+        // For now, we give a small chance to reflect damage
+        float counterChance = 0.15f; // 15% chance to counter
+        if (GD.Randf() < counterChance && attacker != null)
+        {
+            int counterDamage = (int)(CurrentDamage * 0.3f);
+            if (counterDamage > 0)
+            {
+                attacker.TakeDamage(counterDamage);
+                GameServices.UI.ShowDamageNumber(attacker.GlobalPosition, counterDamage, false);
+                VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "反击!", new Color(1.0f, 0.5f, 0.3f));
+            }
         }
     }
 
@@ -380,6 +400,9 @@ public partial class Player : CharacterBody2D
         if (Collision != null) Collision.Disabled = true;
         _dashTimer?.Stop();
         _dashCooldownTimer?.Stop();
+        Combat?.AttackTimer.Stop();
+        if (Combat != null)
+            Combat.CanAttack = true;
         if (HealthDisplay != null) HealthDisplay.Visible = false;
         if (AttackTypeDisplay != null) AttackTypeDisplay.Visible = false;
         if (MeleeRangeIndicator != null) MeleeRangeIndicator.Visible = false;
