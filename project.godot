@@ -8,11 +8,15 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="僵尸大战"
 run/main_scene="res://scenes/Main.tscn"
-config/features=PackedStringArray("4.5", "Forward Plus")
+config/features=PackedStringArray("4.6", "C#", "Forward Plus")
 config/icon="res://assets/textures/icon.svg"
 
 [display]
@@ -21,6 +25,176 @@ window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
+
+[dotnet]
+
+project/assembly_name="僵尸大战"
+project/assembly_options=""
+project/solution_file="僵尸大战.csproj"
+
+[editor.script]
+
+templates={
+"C# Class (CharacterBody2D)": "# ${NAME}.cs — ${DATE} ${TIME}
+
+using Godot;
+using System;
+
+public partial class ${NAME} : CharacterBody2D
+{
+	// Movement
+	[ExportGroup(\"Movement\")]
+	[Export] private float _speed = 200.0f;
+	[Export] private float _jumpVelocity = -400.0f;
+
+	// Gravity
+	private float _gravity = ProjectSettings.GetSetting(\"physics/2d/default_gravity\").AsSingle();
+
+	public override void _Ready()
+	{
+	}
+
+	public override void _PhysicsProcess(double delta)
+	{
+		// Add gravity
+		if (!IsOnFloor())
+			Velocity += new Vector2(0, 1) * _gravity * (float)delta;
+
+		// Handle jump
+		if (Input.IsActionJustPressed(\"ui_accept\") && IsOnFloor())
+			Velocity = new Vector2(Velocity.X, _jumpVelocity);
+
+		// Get input direction
+		var direction = Input.GetAxis(\"ui_left\", \"ui_right\");
+		if (direction != 0)
+		{
+			Velocity = new Vector2(direction * _speed, Velocity.Y);
+		}
+		else
+		{
+					Velocity = new Vector2(Mathf.MoveToward(Velocity.X, 0, _speed), Velocity.Y);
+		}
+
+		MoveAndSlide();
+	}
+}
+",
+"C# Class (Control)": "# ${NAME}.cs — ${DATE} ${TIME}
+
+using Godot;
+using System;
+
+public partial class ${NAME} : Control
+{
+	// Signals
+	// [Signal] public delegate void MySignalEventHandler(object sender, int value);
+
+	public override void _Ready()
+	{
+	}
+
+	public override void _Process(double delta)
+	{
+	}
+}
+",
+"C# Class (Node2D)": "# ${NAME}.cs — ${DATE} ${TIME}
+
+using Godot;
+using System;
+
+public partial class ${NAME} : Node2D
+{
+	// Node references
+	// [Export] private Sprite2D _sprite;
+
+	// Signals
+	// [Signal] public delegate void MySignalEventHandler(object sender, int value);
+
+	public override void _Ready()
+	{
+		// GD.Print(\"${NAME} ready\");
+	}
+
+	public override void _Process(double delta)
+	{
+	}
+
+	public override void _PhysicsProcess(double delta)
+	{
+	}
+}
+",
+"C# Singletons.Manager": "# ${NAME}.cs — ${DATE} ${TIME}
+
+using Godot;
+using System;
+
+/// <summary>
+/// Singleton manager for ${DESC}.
+/// Access via: ${NAME}.Instance
+/// </summary>
+public partial class ${NAME} : Node
+{
+	public static ${NAME}? Instance { get; private set; }
+
+	public override void _EnterTree()
+	{
+		if (Instance != null && Instance != this)
+		{
+			QueueFree();
+			return;
+		}
+		Instance = this;
+	}
+
+	public override void _ExitTree()
+	{
+		if (Instance == this)
+			Instance = null;
+	}
+
+	public override void _Ready()
+	{
+		GD.Print(\"[${NAME}] Initialized\");
+	}
+}
+",
+"C# Static Class": "# ${NAME}.cs — ${DATE} ${TIME}
+
+using Godot;
+using System;
+
+public static class ${NAME}
+{
+	private static bool _initialized = false;
+
+	public static void Initialize()
+	{
+		if (_initialized) return;
+		_initialized = true;
+	}
+}
+",
+"Empty C# Script": "# ${NAME}.cs — ${DATE} ${TIME}
+
+using Godot;
+using System;
+
+public partial class ${NAME} : ${BASE}
+{
+	// Called when the node enters the scene tree for the first time.
+	public override void _Ready()
+	{
+	}
+
+	// Called every frame. 'delta' is the elapsed time since the previous frame.
+	public override void _Process(double delta)
+	{
+	}
+}
+"
+}
 
 [input]
 

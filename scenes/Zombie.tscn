@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3 uid="uid://cjm8vw2hn7p3d"]
 
-[ext_resource type="Script" uid="uid://t6cyj3h55ce6" path="res://scripts/enemy/Zombie.gd" id="1_1l9mk"]
+[ext_resource type="Script" uid="uid://dvdww3xfyocew" path="res://src/enemy/Zombie.cs" id="1_1l9mk"]
 
 [node name="Zombie" type="CharacterBody2D"]
 script = ExtResource("1_1l9mk")
