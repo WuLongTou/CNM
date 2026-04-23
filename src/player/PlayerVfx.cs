@@ -92,6 +92,23 @@ public partial class PlayerVfx : Node
     private static Texture2D? _mageBase;
     private static bool _allSpritesLoaded = false;
 
+    public static void ResetSpriteCache()
+    {
+        _warriorWalkFrames.Clear();
+        _rangerWalkFrames.Clear();
+        _mageWalkFrames.Clear();
+        _warriorAttackFrames.Clear();
+        _rangerAttackFrames.Clear();
+        _mageAttackFrames.Clear();
+        _warriorIdle = null;
+        _rangerIdle = null;
+        _mageIdle = null;
+        _warriorBase = null;
+        _rangerBase = null;
+        _mageBase = null;
+        _allSpritesLoaded = false;
+    }
+
     private AttackType _lastAttackType = AttackType.Melee;
 
     private void _TryLoadPngSprites()
@@ -123,7 +140,7 @@ public partial class PlayerVfx : Node
 
         // Priority 1: Processed sprites (white bg stripped, centered, 96x96 individual PNGs)
         // Layout: processed/{char}/warrior_walk_01.png ... warrior_walk_08.png, warrior_attack_01.png...06.png, warrior_idle.png
-        string processedDir = $"res://assets/sprites/player/processed/{charName}";
+        string processedDir = $"res://assets/sprites/player/{charName}";
         bool hasProcessed = _HasProcessedSprites(processedDir, charName);
 
         if (hasProcessed)
@@ -142,9 +159,22 @@ public partial class PlayerVfx : Node
                 if (frame != null) attackOut.Add(frame);
             }
 
-            string idlePath = $"{processedDir}/{charName}_idle.png";
-            idleOut = TextureUtils.LoadNormalizedSprite(idlePath);
-            baseOut = idleOut;
+            // Load idle frames (idle_01 through idle_04, or single idle.png fallback)
+            for (int i = 1; i <= 4; i++)
+            {
+                string path = $"{processedDir}/{charName}_idle_{i:D2}.png";
+                var frame = TextureUtils.LoadNormalizedSprite(path);
+                if (frame != null) idleOut = frame;
+                if (i == 1) baseOut = frame; // Use frame 1 as base
+            }
+
+            // Fallback: try single idle.png if no multi-frame
+            if (idleOut == null)
+            {
+                string singlePath = $"{processedDir}/{charName}_idle.png";
+                idleOut = TextureUtils.LoadNormalizedSprite(singlePath);
+                baseOut = idleOut;
+            }
             return;
         }
 
@@ -567,7 +597,7 @@ public partial class PlayerVfx : Node
         using var idleImg = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
         float idleCx = size / 2.0f;
         float idleCy = size / 2.0f;
-        float breathe = 0.5f; // Mid-breath position
+        // Mid-breath position (unused in static idle frame)
 
         // Shadow
         for (int x = 0; x < size; x++)
@@ -819,7 +849,7 @@ public partial class PlayerVfx : Node
         if (_trailTimer < Core.GameConfig.DashTrailInterval)
             return;
         _trailTimer -= Core.GameConfig.DashTrailInterval;
-        VFXManager.SpawnGhostTrail(Player!.GetParent(), Player.Sprite, Player.GlobalPosition, new Color(0.5f, 0.8f, 1.0f, 0.5f));
+        VFXManager.SpawnGhostTrail(Player!.GetParent(), Player.Sprite!, Player.GlobalPosition, new Color(0.5f, 0.8f, 1.0f, 0.5f));
     }
 
     public void ResetDashTrail()
