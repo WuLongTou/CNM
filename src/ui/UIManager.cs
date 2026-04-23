@@ -19,41 +19,41 @@ public partial class UIManager : Control
 	// ═══════════════════════════════════════════════
 	// Signals
 	// ═══════════════════════════════════════════════
-	public event Action<object?> WeaponCardSelected;
-	public event Action UpgradeSkipped;
+	public event Action<object?> WeaponCardSelected = delegate {};
+	public event Action UpgradeSkipped = delegate {};
 
 	// ═══════════════════════════════════════════════
 	// Component References
 	// ═══════════════════════════════════════════════
-	private ScreenEffects _screenFx;
-	private GameOverUI _gameOverUi;
+	private ScreenEffects _screenFx = null!;
+	private GameOverUI _gameOverUi = null!;
 
 	// ═══════════════════════════════════════════════
 	// HUD
 	// ═══════════════════════════════════════════════
-	private Panel _weaponSelectionPanel;
+	private Panel _weaponSelectionPanel = null!;
 	private readonly List<Button> _weaponButtons = new();
 	private Button? _skipButton;
-	private Panel _hudPanel;
-	private Label _healthLabel;
-	private Label _roundLabel;
-	private Label _zombiesLabel;
-	private Label _damageLabel;
-	private Label _critLabel;
-	private Label _lifestealLabel;
-	private Label _attackIntervalLabel;
-	private Label _attackTypeLabel;
-	private Label _targetPriorityLabel;
-	private Label _dashCooldownLabel;
-	private Label _speedLabel;
-	private Panel _controlsPanel;
+	private Panel _hudPanel = null!;
+	private Label _healthLabel = null!;
+	private Label _roundLabel = null!;
+	private Label _zombiesLabel = null!;
+	private Label _damageLabel = null!;
+	private Label _critLabel = null!;
+	private Label _lifestealLabel = null!;
+	private Label _attackIntervalLabel = null!;
+	private Label _attackTypeLabel = null!;
+	private Label _targetPriorityLabel = null!;
+	private Label _dashCooldownLabel = null!;
+	private Label _speedLabel = null!;
+	private Panel _controlsPanel = null!;
 	private bool _controlsVisible;
-	private Panel _welcomePanel;
+	private Panel _welcomePanel = null!;
 	private bool _welcomeVisible = true;
-	private Label _scoreLabel;
-	private ProgressBar _healthBar;
-	private ProgressBar _bossHealthBar;
-	private Label _bossHealthLabel;
+	private Label _scoreLabel = null!;
+	private ProgressBar _healthBar = null!;
+	private ProgressBar _bossHealthBar = null!;
+	private Label _bossHealthLabel = null!;
 	private bool _bossUiVisible;
 	private int _bossUiHealth = -1;
 	private int _bossUiMaxHealth = -1;
@@ -69,8 +69,8 @@ public partial class UIManager : Control
 	// ═══════════════════════════════════════════════
 	// Tooltip
 	// ═══════════════════════════════════════════════
-	private Panel _tooltipPanel;
-	private RichTextLabel _tooltipLabel;
+	private Panel _tooltipPanel = null!;
+	private RichTextLabel _tooltipLabel = null!;
 	private Timer? _tooltipHideTimer;
 	private float _tooltipMaxWidth = GameConfig.TooltipMaxWidth;
 	private Vector2 _tooltipOffset = GameConfig.TooltipOffset;
@@ -78,20 +78,20 @@ public partial class UIManager : Control
 	// ═══════════════════════════════════════════════
 	// Pause
 	// ═══════════════════════════════════════════════
-	private Panel _pausePanel;
-	private Label _pauseLabel;
+	private Panel _pausePanel = null!;
+	private Label _pauseLabel = null!;
 	private bool _pauseLockedByUpgrade;
 	private bool _userPaused;
-	private Label _currentWeaponLabel;
+	private Label _currentWeaponLabel = null!;
 
-		private Label _roundBanner;
+		private Label _roundBanner = null!;
 		private Panel? _roundSummaryPanel;
 		private Tween? _lowHealthTween;
 
 	// ═══════════════════════════════════════════════
 	// Effects / Buff Icons
 	// ═══════════════════════════════════════════════
-	private HBoxContainer _effectsContainer;
+	private HBoxContainer _effectsContainer = null!;
 	private readonly Dictionary<string, Button> _effectIcons = new();
 
 	// ═══════════════════════════════════════════════
@@ -1040,6 +1040,7 @@ public partial class UIManager : Control
 		if (_attackIntervalLabel == null) return;
 		var intervalText = Mathf.Snapped(player.AttackCooldown, 0.1f).ToString("F1") + "s";
 		string cooldownText;
+		if (player.Combat == null) return;
 		if (player.Combat.AttackTimer.TimeLeft < 0.05f)
 			cooldownText = "就绪";
 		else

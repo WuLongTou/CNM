@@ -99,7 +99,7 @@ public partial class Background : Node2D
     {
         int w = 640;
         int h = 360;
-        using var img = Image.Create(w, h, false, Image.Format.Rgba8);
+        using var img = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
 
         for (int y = 0; y < h; y++)
         {
@@ -429,7 +429,7 @@ public partial class Background : Node2D
                 Rotation = (float)GD.RandRange(0.0f, Mathf.Tau)
             };
 
-            using var img = Image.Create(s, s, false, Image.Format.Rgba8);
+            using var img = Image.CreateEmpty(s, s, false, Image.Format.Rgba8);
             float center = s / 2.0f;
             bool isBlood = GD.Randf() < 0.6f;
 

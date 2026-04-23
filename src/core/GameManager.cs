@@ -15,11 +15,11 @@ using UIManager = ZombieWars.UI.UIManager;
 /// </summary>
 public partial class GameManager : Node
 {
-    public event Action<int> RoundStarted;
-    public event Action<int> RoundEnded;
-    public event Action WeaponSelectionStarted;
-    public event Action WeaponSelectionEnded;
-    public event Action GameOver;
+    public event Action<int> RoundStarted = delegate {};
+    public event Action<int> RoundEnded = delegate {};
+    public event Action WeaponSelectionStarted = delegate {};
+    public event Action WeaponSelectionEnded = delegate {};
+    public event Action GameOver = delegate {};
 
     [Export] public int ZombiesPerRoundBase = 3;
     [Export] public int ZombiesIncreasePerRound = 1;
@@ -57,11 +57,11 @@ public partial class GameManager : Node
     public Zombie? BossZombie { get; private set; }
     private WeaponDeck? _weaponDeck;
     private Zombie? _bossZombie;
-    private Player _player;
-    private PackedScene _zombieScene;
+    private Player _player = null!;
+    private PackedScene _zombieScene = null!;
     private List<Vector2> _spawnPoints = new();
 
-    private UIManager _uiManager;
+    private UIManager _uiManager = null!;
 
     public int Score { get; private set; }
     public int HighScore { get; private set; }
@@ -283,7 +283,7 @@ public partial class GameManager : Node
         _uiManager?.HideRoundBanner();
     }
 
-    public void OnWeaponSelected(object card)
+    public void OnWeaponSelected(object? card)
     {
         GD.Print($"[GameManager] OnWeaponSelected state={CurrentState}, card={card?.GetType().Name}");
         if (CurrentState != GameState.WeaponSelection) return;
@@ -355,7 +355,7 @@ public partial class GameManager : Node
         {
             _UpdateSpawnPoints();
         }
-        var spawnPos = _spawnPoints[(int)(GD.Randi() % (uint)_spawnPoints.Count)];
+        var spawnPos = _spawnPoints[(int)(GD.Randi() % _spawnPoints.Count)];
         var offset = new Vector2(
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange,
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange
@@ -482,6 +482,8 @@ public partial class GameManager : Node
 
         _spawnTimer = 999999.0f;
         _zombiesToSpawn = 0;
+        _zombiesAlive = 0;
+        ZombieRegistry.Clear();
 
         LogUtils.Print($"游戏结束！坚持了 {CurrentRound} 回合，得分: {Score}");
 

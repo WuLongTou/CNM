@@ -239,15 +239,13 @@ public partial class PlayerCombat : Node
         // This prevents the bug where attacking with no targets in range leaves
         // CanAttack=false permanently (since _BeginAttack was never called).
         _BeginAttack();
+        Player!.Vfx?.ShowAttackEffect(_GetAttackEffectTargetPosition(targets), Player.CurrentAttackType);
 
         if (targets.Count == 0)
             return;
 
         foreach (var zombie in targets)
-        {
             AttackZombie(zombie);
-            Player!.Vfx?.ShowAttackEffect(zombie.GlobalPosition, Player.CurrentAttackType);
-        }
     }
 
     private void _PerformRangedAttack()
@@ -266,6 +264,7 @@ public partial class PlayerCombat : Node
                 _BeginAttack(notifyUi: true);
                 _FireProjectile(mousePos);
                 Player.Vfx?.CreateMuzzleFlash((mousePos - Player.GlobalPosition).Normalized());
+                Player.Vfx?.ShowAttackEffect(mousePos, Player.CurrentAttackType);
             }
             return;
         }
@@ -325,7 +324,7 @@ public partial class PlayerCombat : Node
 
         float shake = isCritical ? 8.0f : 3.0f;
         GameServices.UI.ShakeScreen(shake);
-        VFXManager.FlashSprite(Player, Player.Sprite, Colors.White);
+        VFXManager.FlashSprite(Player, Player.Sprite!, Colors.White);
 
         if (zombie.CurrentHealth <= 0)
             return;
@@ -364,22 +363,23 @@ public partial class PlayerCombat : Node
 
     private void _OnEnemyKilled(Vector2 pos, float damage = 0)
     {
+        var p = Player!;
         ZombieWars.Audio.SoundManager.Instance?.PlayZombieDie();
         ZombieWars.Audio.SoundManager.Instance?.NotifyKill();
 
-        if (Player.KillExplosionDamage > 0)
+        if (p.KillExplosionDamage > 0)
         {
             var targets = SpatialUtils.GetZombiesInRange(pos, Core.GameConfig.KillExplosionRadius);
             foreach (var z in targets)
             {
-                z.TakeDamage(Player.KillExplosionDamage);
-                GameServices.UI.ShowDamageNumber(z.GlobalPosition, Player.KillExplosionDamage, false);
-                RegisterDamageDealt(z, Player.KillExplosionDamage);
+                z.TakeDamage(p.KillExplosionDamage);
+                GameServices.UI.ShowDamageNumber(z.GlobalPosition, p.KillExplosionDamage, false);
+                RegisterDamageDealt(z, p.KillExplosionDamage);
             }
         }
 
-        if (Player.KillShieldAmount > 0)
-            Player.ShieldAmount = Math.Min(Player.ShieldAmount + Player.KillShieldAmount, Core.GameConfig.MaxShield);
+        if (p.KillShieldAmount > 0)
+            p.ShieldAmount = Math.Min(p.ShieldAmount + p.KillShieldAmount, Core.GameConfig.MaxShield);
     }
 
     public Zombie? _FindTargetZombie(float maxRange)
@@ -387,12 +387,13 @@ public partial class PlayerCombat : Node
         if (ZombieRegistry.Count == 0)
             return null;
 
-        return Player.TargetPriority switch
+        var p = Player!;
+        return p.TargetPriority switch
         {
-            0 => SpatialUtils.FindNearestZombie(Player.GlobalPosition, maxRange),
-            1 => SpatialUtils.FindFarthestZombie(Player.GlobalPosition, maxRange),
-            2 => SpatialUtils.FindDensestZombie(Player.GlobalPosition),
-            _ => SpatialUtils.FindNearestZombie(Player.GlobalPosition, maxRange)
+            0 => SpatialUtils.FindNearestZombie(p.GlobalPosition, maxRange),
+            1 => SpatialUtils.FindFarthestZombie(p.GlobalPosition, maxRange),
+            2 => SpatialUtils.FindDensestZombie(p.GlobalPosition),
+            _ => SpatialUtils.FindNearestZombie(p.GlobalPosition, maxRange)
         };
     }
 
@@ -432,7 +433,7 @@ public partial class PlayerCombat : Node
         {
             int bw = 14;
             int bh = 6;
-            using var img = Image.Create(bw, bh, false, Image.Format.Rgba8);
+            using var img = Image.CreateEmpty(bw, bh, false, Image.Format.Rgba8);
 
             for (int by = 0; by < bh; by++)
             {
@@ -496,7 +497,6 @@ public partial class PlayerCombat : Node
         missile.ChainCount = Player.ChainCount;
         missile.Shooter = Player;
         Player.GetParent().AddChild(missile);
-                ZombieWars.Audio.SoundManager.Instance?.PlayMagicAttack();
     }
 
     private MagicMissile _CreateMagicMissile()
@@ -511,7 +511,7 @@ public partial class PlayerCombat : Node
         var tex = TextureCache.GetOrCreate("magic_missile", () =>
         {
             int size = 12;
-            using var img = Image.Create(size, size, false, Image.Format.Rgba8);
+            using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
 
             for (int x = 0; x < size; x++)
             {
@@ -562,6 +562,16 @@ public partial class PlayerCombat : Node
         trail.ProcessMaterial = tmat;
         missile.AddChild(trail);
         return missile;
+    }
+
+    private Vector2 _GetAttackEffectTargetPosition(List<Zombie> targets)
+    {
+        if (targets.Count > 0)
+            return targets[0].GlobalPosition;
+
+        Vector2 fallback = Player!.GlobalPosition + new Vector2(Player.Sprite?.FlipH == true ? -40.0f : 40.0f, 0.0f);
+        Zombie? rangedTarget = _FindTargetZombie(Core.GameConfig.RangedAttackRange);
+        return rangedTarget?.GlobalPosition ?? fallback;
     }
 
     private void _CreateAreaExplosion()
@@ -767,6 +777,7 @@ public partial class PlayerCombat : Node
         {
             Player.CurrentAttackType = AttackType.Melee;
         }
+        Player.Vfx?.SwitchWeaponSprites(Player.CurrentAttackType);
 
         foreach (var effect in Player.ActiveEffects)
             _ApplyEffectValues(effect);
@@ -863,64 +874,67 @@ public partial class PlayerCombat : Node
 
     private void _ApplyMeleeEffect(int effect, int level)
     {
+        var p = Player!;
         switch (effect)
         {
             case (int)MeleeEffect.Splash:
-                Player!.SplashRadius = 30.0f + level * 10.0f;
+                p.SplashRadius = 30.0f + level * 10.0f;
                 break;
             case (int)MeleeEffect.MultiTarget:
-                Player.MeleeTargetCount = Math.Max(Player.MeleeTargetCount, 1 + level);
+                p.MeleeTargetCount = Math.Max(p.MeleeTargetCount, 1 + level);
                 break;
             case (int)MeleeEffect.KillExplosion:
-                Player.KillExplosionDamage += level * 50;
+                p.KillExplosionDamage += level * 50;
                 break;
             case (int)MeleeEffect.KillShield:
-                Player.KillShieldAmount += level * 20;
+                p.KillShieldAmount += level * 20;
                 break;
             case (int)MeleeEffect.Knockback:
-                Player.KnockbackForce += level * 50;
+                p.KnockbackForce += level * 50;
                 break;
         }
     }
 
     private void _ApplyRangedEffect(int effect, int level)
     {
+        var p = Player!;
         switch (effect)
         {
             case (int)RangedEffect.MultiShot:
-                Player!.MultiShotCount = Math.Max(Player.MultiShotCount, 1 + level);
+                p.MultiShotCount = Math.Max(p.MultiShotCount, 1 + level);
                 break;
             case (int)RangedEffect.TrajectoryDamage:
-                Player.TrajectoryDamageRatio = Math.Max(Player.TrajectoryDamageRatio, level * 0.3f);
+                p.TrajectoryDamageRatio = Math.Max(p.TrajectoryDamageRatio, level * 0.3f);
                 break;
             case (int)RangedEffect.Returning:
-                Player.ReturningProjectiles = true;
-                Player.BounceCount = Math.Max(Player.BounceCount, level);
+                p.ReturningProjectiles = true;
+                p.BounceCount = Math.Max(p.BounceCount, level);
                 break;
             case (int)RangedEffect.Piercing:
-                Player.PiercingCount += level;
+                p.PiercingCount += level;
                 break;
         }
     }
 
     private void _ApplyMagicEffect(int effect, int level)
     {
+        var p = Player!;
         switch (effect)
         {
             case (int)MagicEffect.Charm:
-                Player!.CharmDuration = Math.Max(Player.CharmDuration, level * 5.0f);
+                p.CharmDuration = Math.Max(p.CharmDuration, level * 5.0f);
                 break;
             case (int)MagicEffect.Push:
-                Player.PushForce += level * 80;
+                p.PushForce += level * 80;
                 break;
             case (int)MagicEffect.Stun:
-                Player.StunDuration = Math.Max(Player.StunDuration, level * 1.5f);
+                p.StunDuration = Math.Max(p.StunDuration, level * 1.5f);
                 break;
             case (int)MagicEffect.Chain:
-                Player.ChainCount = Math.Max(Player.ChainCount, level);
+                p.ChainCount = Math.Max(p.ChainCount, level);
                 break;
             case (int)MagicEffect.Dot:
-                Player.DotDamage += level * 5;
+                p.DotDamage += level * 5;
                 break;
         }
     }

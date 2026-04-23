@@ -115,7 +115,10 @@ public partial class Player : CharacterBody2D
         CurrentDamage = BaseDamage;
         CurrentSpeed = BaseSpeed;
 
-        Sprite = new Sprite2D();
+        Sprite = new Sprite2D
+        {
+            TextureFilter = TextureFilterEnum.Nearest
+        };
         AddChild(Sprite);
 
         Collision = new CollisionShape2D();
@@ -127,6 +130,7 @@ public partial class Player : CharacterBody2D
         // Set collision layers for zombie detection
         CollisionLayer = 0b001; // Layer 1 - zombies detect this
         CollisionMask = 0b010; // Layer 2 - collide with zombies
+        AddToGroup("player");
 
         Vfx = new PlayerVfx { Name = "VFX" };
         AddChild(Vfx);
@@ -282,19 +286,13 @@ public partial class Player : CharacterBody2D
                 if (dmg > 0)
                     TakeDamage(dmg);
             }
-            if (PoisonedTimer <= 0 && Sprite != null)
-                Sprite.Modulate = Colors.White;
         }
     }
 
     private void _HandleInvincibility(float delta)
     {
         if (InvincibleTimer > 0)
-        {
             InvincibleTimer -= delta;
-            if (InvincibleTimer <= 0 && Sprite != null)
-                Sprite.Modulate = Colors.White;
-        }
     }
 
     public void ApplyPoison(float damagePerSecond, float duration)
@@ -302,8 +300,6 @@ public partial class Player : CharacterBody2D
         PoisonedDps = Math.Max(PoisonedDps, damagePerSecond);
         PoisonedTimer = Math.Max(PoisonedTimer, duration);
         PoisonedTickTimer = Math.Min(PoisonedTickTimer, 0.1f);
-        if (Sprite != null)
-            Sprite.Modulate = new Color(0.7f, 0.3f, 0.8f);
     }
 
     public void ApplyBuffFromZombie(BuffType buffType, float duration, float value)
@@ -315,6 +311,11 @@ public partial class Player : CharacterBody2D
             _ => BuffSource.ZombieHealer
         };
         BuffSystem.AddBuff(buffType, source, duration, value);
+    }
+
+    public void ApplyCharmed(float duration)
+    {
+        CharmDuration = Mathf.Max(CharmDuration, duration);
     }
 
     public void TakeDamage(int amount, Zombie? attacker = null)
@@ -339,7 +340,7 @@ public partial class Player : CharacterBody2D
             GameServices.UI.FlashDamage();
             GameServices.UI.ShakeScreen(5.0f);
             InvincibleTimer = InvincibleDuration;
-            VFXManager.FlashHurt(this, Sprite);
+            VFXManager.FlashHurt(this, Sprite!);
             Vfx?.PlayHurtAnim();
             SoundManager.Instance?.PlayPlayerHurt();
             Vfx?.UpdateStatusDisplays();
@@ -381,13 +382,13 @@ public partial class Player : CharacterBody2D
     public void ApplyWeaponEffect(object? card)
     {
         if (card is WeaponCard wc)
-            Combat?.ApplyWeaponEffect(wc);
+            ApplyWeaponEffect(wc);
     }
 
     public void ApplyUpgradeCard(object? card)
     {
         if (card is UpgradeCard uc)
-            Combat?.ApplyUpgradeCard(uc);
+            ApplyUpgradeCard(uc);
     }
 
     public void Die()

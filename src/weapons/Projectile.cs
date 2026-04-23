@@ -9,7 +9,7 @@ using ZombieWars.Player;
 
 public partial class Projectile : CharacterBody2D
 {
-    public Vector2 Velocity;
+    public new Vector2 Velocity;
     public float Damage { get; set; } = 10.0f;
     public float Lifetime { get; set; } = 3.0f;
     public float TrajectoryDamageRatio { get; set; } = 0.0f;

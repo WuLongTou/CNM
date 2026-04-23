@@ -71,7 +71,7 @@ public partial class PlayerAura : Node2D
                     Player?.RegisterDamageDealt(zombie, Damage);
                     GameServices.UI.ShowDamageNumber(zombie.GlobalPosition, (int)Damage, false);
                     zombie.ApplyFreeze(1.0f);
-                    VFXManager.SpawnHitEffect(Player?.GetParent(), zombie.GlobalPosition, new Color(0.3f, 0.8f, 1.0f));
+                    VFXManager.SpawnHitEffect(Player!.GetParent(), zombie.GlobalPosition, new Color(0.3f, 0.8f, 1.0f));
                     _hitCooldowns[zid] = Core.GameConfig.AuraHitCooldown;
                     break;
                 }
@@ -110,7 +110,7 @@ public partial class PlayerAura : Node2D
             Monitoring = true,
             Monitorable = false,
             CollisionLayer = 0,
-            CollisionMask = 1
+            CollisionMask = 0b010
         };
 
         var col = new CollisionShape2D();
@@ -120,7 +120,7 @@ public partial class PlayerAura : Node2D
 
         var sprite = new Sprite2D();
         int size = 16;
-        using var img = Image.Create(size, size, false, Image.Format.Rgba8);
+        using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
         float center = size / 2.0f;
 
         for (int x = 0; x < size; x++)

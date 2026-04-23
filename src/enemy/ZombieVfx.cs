@@ -92,7 +92,9 @@ public partial class ZombieVfx : Node
             baseName = _GetZombieAssetName(type);
             paths = new[]
             {
+                $"res://assets/sprites/zombies/zombie_{baseName}.png",
                 $"res://assets/sprites/zombies/zombie_{baseName}.jpg",
+                $"res://assets/sprites/zombies/{baseName}.png",
                 $"res://assets/sprites/zombies/{baseName}.jpg",
             };
         }
@@ -117,36 +119,39 @@ public partial class ZombieVfx : Node
 
     private void _LoadWalkFrames(string baseName)
     {
-        // Try to load walk frames in various naming conventions
+        // Try PNG first (generated interpolated frames), then JPG fallback
 
-        // Pattern 1: zombie_walk_1.jpg (generic)
-        for (int i = 1; i <= 4; i++)
+        // Pattern 1: zombie_walk_1 (generic)
+        for (int i = 1; i <= 6; i++)
         {
-            string path = $"res://assets/sprites/zombies/zombie_walk_{i}.jpg";
-            var tex = TextureUtils.LoadNormalizedSprite(path);
+            var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/zombie_walk_{i}.png");
+            if (tex == null)
+                tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/zombie_walk_{i}.jpg");
             if (tex != null)
                 _walkFrames.Add(tex);
         }
 
-        // Pattern 2: zombie_basic_walk_1.jpg (type-specific naming)
+        // Pattern 2: zombie_basic_walk_1 (type-specific naming)
         if (_walkFrames.Count == 0)
         {
-            for (int i = 1; i <= 4; i++)
+            for (int i = 1; i <= 6; i++)
             {
-                string path = $"res://assets/sprites/zombies/{baseName}_walk_{i}.jpg";
-                var tex = TextureUtils.LoadNormalizedSprite(path);
+                var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.png");
+                if (tex == null)
+                    tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.jpg");
                 if (tex != null)
                     _walkFrames.Add(tex);
             }
         }
 
-        // Pattern 3: zombie_frame_1.jpg (frame-based)
+        // Pattern 3: zombie_frame_1 (frame-based)
         if (_walkFrames.Count == 0)
         {
-            for (int i = 1; i <= 4; i++)
+            for (int i = 1; i <= 6; i++)
             {
-                string path = $"res://assets/sprites/zombies/{baseName}_frame_{i}.jpg";
-                var tex = TextureUtils.LoadNormalizedSprite(path);
+                var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_frame_{i}.png");
+                if (tex == null)
+                    tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_frame_{i}.jpg");
                 if (tex != null)
                     _walkFrames.Add(tex);
             }
@@ -186,6 +191,13 @@ public partial class ZombieVfx : Node
             {
                 _GenerateAndCacheSprite(_zombie.ZombieType);
             }
+        }
+
+        // Load walk frames from cache
+        if (_walkFramesCache.TryGetValue(_zombie.ZombieType, out var cachedFrames))
+        {
+            _walkFrames.Clear();
+            _walkFrames.AddRange(cachedFrames);
         }
 
         _CreateStatusLabels();
@@ -236,22 +248,25 @@ public partial class ZombieVfx : Node
         var baseColor = TypeColors.TryGetValue(type, out var c) ? c : TypeColors[ZombieType.Basic];
         var size = TypeSizes.TryGetValue(type, out var s) ? s : TypeSizes[ZombieType.Basic];
 
-        var image = Image.Create(size, size, false, Image.Format.Rgba8);
-        float cx = size / 2.0f;
-        float cy = size / 2.0f;
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                var color = _ComputePixelForType(x, y, cx, cy, size, baseColor, type);
-                color = _ApplyTypeOverlayForType(x, y, cx, cy, size, baseColor, color, type);
-                image.SetPixel(x, y, color);
-            }
-        }
-
+        // Generate idle sprite
+        var image = _CreateZombieImage(type, baseColor, size, 0, 0, 0);
         var texture = ImageTexture.CreateFromImage(image);
         _spriteCache[type] = texture;
+
+        // Generate walk frames for smoother animation
+        if (!_walkFramesCache.ContainsKey(type))
+        {
+            var walkFrames = new List<Texture2D>();
+            for (int frame = 0; frame < 12; frame++)
+            {
+                float walkPhase = frame / 12.0f;
+                float legSwing = Mathf.Sin(walkPhase * Mathf.Tau) * 3.0f;
+                float bodyBob = -Mathf.Abs(Mathf.Sin(walkPhase * Mathf.Tau)) * 1.5f;
+                var walkImg = _CreateZombieImage(type, baseColor, size, legSwing, bodyBob, frame);
+                walkFrames.Add(ImageTexture.CreateFromImage(walkImg));
+            }
+            _walkFramesCache[type] = walkFrames;
+        }
 
         // If this is for our current zombie, apply it
         if (_zombie != null && _zombie.ZombieType == type && _sprite != null)
@@ -266,12 +281,40 @@ public partial class ZombieVfx : Node
         }
     }
 
-    private Color _ComputePixelForType(int x, int y, float cx, float cy, int size, Color baseColor, ZombieType type)
+    // Cache for walk frames by zombie type
+    private static readonly Dictionary<ZombieType, List<Texture2D>> _walkFramesCache = new();
+
+    public static void ResetSpriteCache()
+    {
+        _spriteCache.Clear();
+        _walkFramesCache.Clear();
+        _cacheInitialized = false;
+    }
+
+    private Image _CreateZombieImage(ZombieType type, Color baseColor, int size, float legSwing, float bodyBob, int frame)
+    {
+        var image = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        float cx = size / 2.0f;
+        float cy = size / 2.0f;
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                var color = _ComputePixelForType(x, y, cx, cy, size, baseColor, type, legSwing, bodyBob, frame);
+                color = _ApplyTypeOverlayForType(x, y, cx, cy, size, baseColor, color, type);
+                image.SetPixel(x, y, color);
+            }
+        }
+        return image;
+    }
+
+    private Color _ComputePixelForType(int x, int y, float cx, float cy, int size, Color baseColor, ZombieType type, float legSwing = 0, float bodyBob = 0, int frame = 0)
     {
         // Simplified sprite generation for cache
         Color color = Color.Color8(0, 0, 0, 0);
         float headR = size * 0.22f;
-        float headCy = cy * 0.52f;
+        float headCy = cy * 0.52f + bodyBob;
 
         float hd = new Vector2(x - cx, y - headCy).Length();
         if (hd <= headR)
@@ -301,9 +344,9 @@ public partial class ZombieVfx : Node
                 }
             }
         }
-        else if (y >= cy * 0.78f && y <= cy * 1.4f)
+        else if (y >= cy * 0.78f + bodyBob && y <= cy * 1.4f + bodyBob)
         {
-            float bw = size * 0.20f - Mathf.Abs(y - cy * 1.1f) * 0.03f;
+            float bw = size * 0.20f - Mathf.Abs(y - cy * 1.1f - bodyBob) * 0.03f;
             if (Mathf.Abs(x - cx) <= bw)
             {
                 color = baseColor.Darkened(0.15f);
@@ -311,19 +354,21 @@ public partial class ZombieVfx : Node
                 {
                     color = new Color(0.20f, 0.18f, 0.15f);
                 }
-                if (y >= cy * 0.9f && y <= cy * 1.15f && y % 3 == 0 && Mathf.Abs(x - cx) <= bw * 0.6)
+                if (y >= cy * 0.9f + bodyBob && y <= cy * 1.15f + bodyBob && y % 3 == 0 && Mathf.Abs(x - cx) <= bw * 0.6)
                 {
                     color = baseColor.Darkened(0.4f);
                 }
             }
         }
-        else if (y >= cy * 0.85f && y <= cy * 1.5f)
+        else if (y >= cy * 0.85f + bodyBob && y <= cy * 1.5f + bodyBob)
         {
-            float la = cx - size * 0.34f + (float)Mathf.Sin(y * 0.25f) * 2;
-            float ra = cx + size * 0.32f + (float)Mathf.Sin(y * 0.25f + Mathf.Pi) * 2;
+            // Arms with swing animation
+            float armSwing = Mathf.Sin((frame / 12.0f) * Mathf.Tau) * 2.0f;
+            float la = cx - size * 0.34f + (float)Mathf.Sin(y * 0.25f) * 2 + armSwing;
+            float ra = cx + size * 0.32f + (float)Mathf.Sin(y * 0.25f + Mathf.Pi) * 2 - armSwing;
             if (Mathf.Abs(x - la) <= 4 || Mathf.Abs(x - ra) <= 4)
             {
-                if (y > cy * 1.15f)
+                if (y > cy * 1.15f + bodyBob)
                 {
                     color = new Color(0.2f, 0.2f, 0.2f, 0.9f);
                 }
@@ -331,6 +376,17 @@ public partial class ZombieVfx : Node
                 {
                     color = baseColor.Darkened(0.25f);
                 }
+            }
+        }
+
+        // Animated legs
+        if (y >= cy * 1.3f + bodyBob && y <= cy * 1.7f)
+        {
+            float leftLegX = cx - size * 0.12f + legSwing;
+            float rightLegX = cx + size * 0.12f - legSwing;
+            if (Mathf.Abs(x - leftLegX) <= 3.5f || Mathf.Abs(x - rightLegX) <= 3.5f)
+            {
+                color = baseColor.Darkened(0.3f);
             }
         }
 
@@ -389,240 +445,6 @@ public partial class ZombieVfx : Node
         return color;
     }
 
-    private void _DrawZombieSprite()
-    {
-        var baseColor = TypeColors.TryGetValue(_zombie.ZombieType, out var c)
-            ? c
-            : TypeColors[ZombieType.Basic];
-        var size = TypeSizes.TryGetValue(_zombie.ZombieType, out var s)
-            ? s
-            : TypeSizes[ZombieType.Basic];
-
-        var image = Image.Create(size, size, false, Image.Format.Rgba8);
-        float cx = size / 2.0f;
-        float cy = size / 2.0f;
-
-        for (int y = 0; y < size; y++)
-        {
-            for (int x = 0; x < size; x++)
-            {
-                var color = _ComputePixel(x, y, cx, cy, size, baseColor);
-                color = _ApplyTypeOverlay(x, y, cx, cy, size, baseColor, color);
-                image.SetPixel(x, y, color);
-            }
-        }
-
-        var texture = ImageTexture.CreateFromImage(image);
-        _sprite.Texture = texture;
-
-        _StartIdleAnimation();
-
-        if (_zombie.IsElite)
-        {
-            _CreateEliteRing(size * 0.7f, baseColor.Lightened(0.4f));
-            _sprite.Scale = GameConfig.ZombieEliteScale;
-        }
-    }
-
-    private Color _ComputePixel(int x, int y, float cx, float cy, int size, Color baseColor)
-    {
-        Color color = Color.Color8(0, 0, 0, 0);
-        float headR = size * 0.22f;
-        float headCy = cy * 0.52f;
-
-        float hd = new Vector2(x - cx, y - headCy).Length();
-        if (hd <= headR)
-        {
-            color = baseColor;
-            if (hd > headR * 0.65 && ((x + y) % 3 == 0))
-            {
-                color = baseColor.Darkened(0.35f);
-            }
-
-            var le = new Vector2(cx - size * 0.09f, headCy);
-            var re = new Vector2(cx + size * 0.09f, headCy);
-            if (new Vector2(x - le.X, y - le.Y).Length() <= size * 0.045f)
-            {
-                color = new Color(1.0f, 0.15f, 0.10f);
-            }
-            else if (new Vector2(x - re.X, y - re.Y).Length() <= size * 0.045f)
-            {
-                color = new Color(1.0f, 0.15f, 0.10f);
-            }
-
-            if (y >= headCy + headR * 0.4 && y <= headCy + headR * 0.7)
-            {
-                if (Mathf.Abs(x - cx) <= headR * 0.5)
-                {
-                    color = new Color(0.08f, 0.0f, 0.0f);
-                }
-            }
-        }
-        else if (y >= cy * 0.78f && y <= cy * 1.4f)
-        {
-            float bw = size * 0.20f - Mathf.Abs(y - cy * 1.1f) * 0.03f;
-            if (Mathf.Abs(x - cx) <= bw)
-            {
-                color = baseColor.Darkened(0.15f);
-                if (y % 4 == 0 && Mathf.Abs(x - cx) > bw * 0.5)
-                {
-                    color = new Color(0.20f, 0.18f, 0.15f);
-                }
-                if (y >= cy * 0.9f && y <= cy * 1.15f && y % 3 == 0 && Mathf.Abs(x - cx) <= bw * 0.6)
-                {
-                    color = baseColor.Darkened(0.4f);
-                }
-            }
-        }
-        else if (y >= cy * 0.85f && y <= cy * 1.5f)
-        {
-            float la = cx - size * 0.34f + (float)Mathf.Sin(y * 0.25f) * 2;
-            float ra = cx + size * 0.32f + (float)Mathf.Sin(y * 0.25f + Mathf.Pi) * 2;
-            if (Mathf.Abs(x - la) <= size * 0.055f)
-            {
-                color = baseColor.Darkened(0.2f);
-                if (y % 5 == 0)
-                {
-                    color = baseColor.Darkened(0.45f);
-                }
-            }
-            else if (Mathf.Abs(x - ra) <= size * 0.055f)
-            {
-                color = baseColor.Darkened(0.2f);
-                if (y % 5 == 0)
-                {
-                    color = baseColor.Darkened(0.45f);
-                }
-            }
-        }
-        else if (y >= cy * 1.4f)
-        {
-            float llx = cx - size * 0.11f + (y - cy * 1.4f) * 0.07f;
-            float rlx = cx + size * 0.10f - (y - cy * 1.4f) * 0.05f;
-            if (Mathf.Abs(x - llx) <= size * 0.07f)
-            {
-                color = baseColor.Darkened(0.30f);
-            }
-            else if (Mathf.Abs(x - rlx) <= size * 0.07f)
-            {
-                color = baseColor.Darkened(0.30f);
-            }
-        }
-
-        return color;
-    }
-
-    private Color _ApplyTypeOverlay(int x, int y, float cx, float cy, int size, Color baseColor, Color color)
-    {
-        switch (_zombie.ZombieType)
-        {
-            case ZombieType.Tank:
-                if (color.A > 0)
-                {
-                    if (y < size * 0.15f || y > size * 0.88f)
-                    {
-                        color = new Color(0.35f, 0.30f, 0.28f);
-                    }
-                    if (x < size * 0.12f || x > size * 0.88f)
-                    {
-                        color = new Color(0.35f, 0.30f, 0.28f);
-                    }
-                }
-                if ((x < size * 0.16f || x > size * 0.84f) && y % 7 == 3)
-                {
-                    if (color.A > 0)
-                    {
-                        color = new Color(0.50f, 0.48f, 0.45f);
-                    }
-                }
-                if (y >= cy * 0.6f && y <= cy * 0.8f)
-                {
-                    if (Mathf.Abs(x - (cx - size * 0.3f)) <= 4 || Mathf.Abs(x - (cx + size * 0.3f)) <= 4)
-                    {
-                        color = new Color(0.40f, 0.35f, 0.30f);
-                    }
-                }
-                break;
-
-            case ZombieType.Fast:
-                if (color.A > 0)
-                {
-                    color = color.Lightened(0.15f);
-                }
-                if ((x <= 2 || x >= size - 3) && y % 2 == 0 && y > size * 0.3f && y < size * 0.7f)
-                {
-                    color = new Color(0.9f, 0.8f, 0.3f, 0.5f);
-                }
-                break;
-
-            case ZombieType.Exploder:
-                float coreD = new Vector2(x - cx, y - cy * 1.15f).Length();
-                if (coreD <= size * 0.10f)
-                {
-                    color = new Color(1.0f, 0.6f, 0.1f, 0.95f);
-                }
-                else if (coreD <= size * 0.15f && coreD > size * 0.10f)
-                {
-                    if (color.A > 0)
-                    {
-                        color = baseColor.Lightened(0.4f);
-                    }
-                }
-                break;
-
-            case ZombieType.Invisible:
-                if (color.A > 0)
-                {
-                    color = color with { A = 0.55f };
-                }
-                float outlineD = new Vector2(x - cx, y - cy).Length();
-                if (outlineD >= size * 0.38f && outlineD <= size * 0.42f)
-                {
-                    color = new Color(0.4f, 0.8f, 0.9f, 0.25f);
-                }
-                break;
-
-            case ZombieType.Spitter:
-                float cheekL = new Vector2(x - (cx - size * 0.15f), y - (cy * 0.55f)).Length();
-                float cheekR = new Vector2(x - (cx + size * 0.15f), y - (cy * 0.55f)).Length();
-                if (cheekL <= size * 0.08f || cheekR <= size * 0.08f)
-                {
-                    color = new Color(0.15f, 0.85f, 0.15f, 0.9f);
-                }
-                if (Mathf.Abs(x - cx) <= 1 && y >= cy * 0.7f && y <= cy * 0.85f)
-                {
-                    color = new Color(0.10f, 0.75f, 0.10f, 0.7f);
-                }
-                break;
-
-            case ZombieType.Healer:
-                if (y >= cy * 0.85f && y <= cy * 1.15f)
-                {
-                    if (Mathf.Abs(x - cx) <= 2)
-                    {
-                        color = Colors.White;
-                    }
-                }
-                if (Mathf.Abs(y - cy) <= 2 && y >= cy * 0.9f && y <= cy * 1.1f)
-                {
-                    if (x >= cx - size * 0.1f && x <= cx + size * 0.1f)
-                    {
-                        color = Colors.White;
-                    }
-                }
-                float hd2 = new Vector2(x - cx, y - cy).Length();
-                if (hd2 >= size * 0.42f && hd2 <= size * 0.45f)
-                {
-                    if ((x + y) % 4 == 0)
-                    {
-                        color = new Color(0.3f, 1.0f, 0.5f, 0.4f);
-                    }
-                }
-                break;
-        }
-
-        return color;
-    }
 
     private void _StartIdleAnimation()
     {
@@ -632,35 +454,47 @@ public partial class ZombieVfx : Node
         switch (_zombie.ZombieType)
         {
             case ZombieType.Exploder:
-        tw.TweenProperty(_sprite, "scale", new Vector2(1.1f, 1.1f), 1.5f).SetTrans(Tween.TransitionType.Sine);
-        tw.TweenProperty(_sprite, "scale", new Vector2(0.9f, 0.9f), 1.5f).SetTrans(Tween.TransitionType.Sine);
+                // Pulsing scale for danger
+                tw.TweenProperty(_sprite, "scale", new Vector2(1.08f, 1.08f), 1.2f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector2(0.92f, 0.92f), 1.2f).SetTrans(Tween.TransitionType.Sine);
                 break;
 
             case ZombieType.Fast:
-        tw.TweenProperty(_sprite, "position:x", 2.0f, 0.1f);
-        tw.TweenProperty(_sprite, "position:x", -2.0f, 0.1f);
-        tw.TweenProperty(_sprite, "position:x", 0.0f, 0.1f);
+                // Quick jittering
+                tw.TweenProperty(_sprite, "position:x", 1.5f, 0.08f);
+                tw.TweenProperty(_sprite, "position:x", -1.5f, 0.08f);
+                tw.TweenProperty(_sprite, "position:x", 0.0f, 0.08f);
                 break;
 
             case ZombieType.Tank:
-        tw.TweenProperty(_sprite, "position:y", 2.0f, 2.0f).SetTrans(Tween.TransitionType.Sine);
-        tw.TweenProperty(_sprite, "position:y", 0.0f, 2.0f).SetTrans(Tween.TransitionType.Sine);
+                // Slow heavy breathing
+                tw.TweenProperty(_sprite, "scale", new Vector2(1.03f, 1.02f), 2.5f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector2(1.0f, 1.0f), 2.5f).SetTrans(Tween.TransitionType.Sine);
                 break;
 
             case ZombieType.Healer:
-        tw.TweenProperty(_sprite, "rotation", Mathf.Pi * 2, 4.0f);
-        break;
+                // Gentle floating
+                tw.TweenProperty(_sprite, "position:y", -2.0f, 1.5f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "position:y", 2.0f, 1.5f).SetTrans(Tween.TransitionType.Sine);
+                break;
 
-        default:
-            tw.TweenProperty(_sprite, "rotation", Mathf.DegToRad(5), 3.0f).SetTrans(Tween.TransitionType.Sine);
-            tw.TweenProperty(_sprite, "rotation", Mathf.DegToRad(-5), 3.0f).SetTrans(Tween.TransitionType.Sine);
-            break;
+            case ZombieType.Invisible:
+                // Flickering alpha
+                tw.TweenProperty(_sprite, "modulate:a", 0.5f, 1.0f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "modulate:a", 0.3f, 1.0f).SetTrans(Tween.TransitionType.Sine);
+                break;
+
+            default:
+                // Normal breathing - subtle scale pulse
+                tw.TweenProperty(_sprite, "scale", new Vector2(1.02f, 1.015f), 2.0f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector2(1.0f, 1.0f), 2.0f).SetTrans(Tween.TransitionType.Sine);
+                break;
         }
     }
 
     /// <summary>
     /// Update walk animation. Call this from Zombie._PhysicsProcess.
-    /// Uses smooth frame cycling for fluid animation.
+    /// Uses smooth frame cycling for fluid animation with 12 frames.
     /// </summary>
     public void UpdateWalkAnimation(float delta)
     {
@@ -670,7 +504,6 @@ public partial class ZombieVfx : Node
         // If no walk frames loaded, use the sprite texture for idle bobbing
         if (_walkFrames.Count <= 1)
         {
-            // Subtle idle animation even when standing still
             _animTimer += delta;
             return;
         }
@@ -680,7 +513,8 @@ public partial class ZombieVfx : Node
         if (_isMoving)
         {
             _animTimer += delta;
-            float frameInterval = GameConfig.WalkAnimSpeed;
+            // Use slightly faster frame interval for smoother feel
+            float frameInterval = GameConfig.WalkAnimSpeed * 0.85f;
             if (_animTimer >= frameInterval)
             {
                 _animTimer -= frameInterval;
@@ -1075,7 +909,7 @@ public partial class ZombieVfx : Node
 
     private Texture2D _MakeEllipseTexture(int width, int height, Color color)
     {
-        var image = Image.Create(width, height, false, Image.Format.Rgba8);
+        var image = Image.CreateEmpty(width, height, false, Image.Format.Rgba8);
         float cx = width / 2.0f;
         float cy = height / 2.0f;
 

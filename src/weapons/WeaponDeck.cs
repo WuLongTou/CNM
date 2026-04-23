@@ -97,7 +97,7 @@ public partial class WeaponDeck : Node
 	{
 		if (_allWeapons.Count == 0)
 			return null;
-		return _allWeapons[(int)(GD.Randi() % (uint)_allWeapons.Count)];
+		return _allWeapons[(int)(GD.Randi() % _allWeapons.Count)];
 	}
 
 	private Array<WeaponCard> _BuildSmartPool(Player player)

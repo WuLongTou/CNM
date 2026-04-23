@@ -5,6 +5,7 @@ using Godot;
 using ZombieWars.Core;
 using ZombieWars.Vfx;
 using static ZombieWars.Core.GameEnums;
+using Player = ZombieWars.Player.Player;
 
 /// <summary>
 /// Zombie ability system — extends special zombie behavior with new abilities.
@@ -184,7 +185,7 @@ public partial class ZombieAbilitySystem : Node
             ZIndex = _zombie.ZIndex - 1
         };
 
-        var img = Image.Create(32, 32, false, Image.Format.Rgba8);
+        var img = Image.CreateEmpty(32, 32, false, Image.Format.Rgba8);
         img.Fill(new Color(0.6f, 0.6f, 1.0f, 0.3f));
         ghostSprite.Texture = ImageTexture.CreateFromImage(img);
         parent.AddChild(ghostSprite);
@@ -423,47 +424,51 @@ public partial class ZombieAbilitySystem : Node
     private void _TriggerExplosion()
     {
         if (_zombie == null) return;
+        var self = _zombie;
         _isChargingExplosion = false;
 
         float range = GameConfig.ExploderRange * 2.0f;
-        int damage = (int)(_zombie.Damage * GameConfig.ExploderDamageMult * 1.5f);
+        int damage = (int)(self.Damage * GameConfig.ExploderDamageMult * 1.5f);
 
         // Damage player
-        if (_player != null && _zombie.GlobalPosition.DistanceTo(_player.GlobalPosition) <= range)
+        if (_player != null && self.GlobalPosition.DistanceTo(_player.GlobalPosition) <= range)
         {
-            _player.Call("take_damage", damage);
+            if (_player is Player p)
+                p.TakeDamage(damage, self);
+            else
+                _player.Call("TakeDamage", damage);
         }
 
         // Damage zombies
         foreach (var z in ZombieRegistry.All)
         {
-            if (!IsInstanceValid(z) || z == _zombie)
+            if (!IsInstanceValid(z) || z == self)
                 continue;
-            if (_zombie.GlobalPosition.DistanceTo(z.GlobalPosition) <= range)
+            if (self.GlobalPosition.DistanceTo(z.GlobalPosition) <= range)
             {
                 z.TakeDamage(damage);
             }
         }
 
         // Visual explosion
-        var parent = _zombie.GetParent();
+        var parent = self.GetParent();
         if (parent != null)
         {
-            VFXManager.SpawnParticleBurst(parent, _zombie.GlobalPosition,
+            VFXManager.SpawnParticleBurst(parent, self.GlobalPosition,
                 new Color(1.0f, 0.4f, 0.0f, 0.9f), 40, 0.8f, 60.0f, 150.0f,
                 new Vector3(0, -50, 0), 1.0f, 2.5f);
-            VFXManager.SpawnImpactRing(parent, _zombie.GlobalPosition, range * 0.5f,
+            VFXManager.SpawnImpactRing(parent, self.GlobalPosition, range * 0.5f,
                 new Color(1.0f, 0.6f, 0.1f, 0.8f), 4.0f);
 
             // Spawn fire trail
-            _SpawnFireTrail(_zombie.GlobalPosition);
+            _SpawnFireTrail(self.GlobalPosition);
         }
 
         // Sound
         GameServices.Audio.PlayExplosion();
 
         // Kill self
-        _zombie.TakeDamage(_zombie.CurrentHealth);
+        self.TakeDamage(self.CurrentHealth);
     }
 
     private void _SpawnFireTrail(Vector2 origin)
@@ -487,7 +492,7 @@ public partial class ZombieAbilitySystem : Node
                 Modulate = new Color(1.0f, 0.4f, 0.1f, 0.7f)
             };
 
-            var img = Image.Create(20, 20, false, Image.Format.Rgba8);
+            var img = Image.CreateEmpty(20, 20, false, Image.Format.Rgba8);
             img.Fill(new Color(1.0f, 0.4f, 0.1f, 0.6f));
             fireSprite.Texture = ImageTexture.CreateFromImage(img);
 
@@ -535,7 +540,8 @@ public partial class ZombieAbilitySystem : Node
         _controlTimer = _controlDuration;
 
         // Show visual effect on player
-        _player.Call("apply_charmed", _controlDuration);
+        if (_player is Player p2)
+            p2.ApplyCharmed(_controlDuration);
 
         // Show mind-control effect
         var parent = _zombie.GetParent();

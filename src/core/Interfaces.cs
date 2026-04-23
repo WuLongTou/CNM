@@ -40,7 +40,7 @@ public interface IPlayer : IDamageable
     float CritMultiplier { get; }
 
     void RegisterDamageDealt(Zombie target, float damage);
-    void TakeDamage(int amount);
+    new void TakeDamage(int amount);
 }
 
 /// <summary>
@@ -53,7 +53,7 @@ public interface IZombie : IDamageable
     float Speed { get; }
     bool IsElite { get; }
     bool IsBoss { get; }
-    Vector2 GlobalPosition { get; }
+    new Vector2 GlobalPosition { get; }
     Vector2 Velocity { get; set; }
 }
 

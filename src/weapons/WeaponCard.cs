@@ -403,18 +403,18 @@ public partial class WeaponCard : Resource
         if (dominant == UpgradeCard.UpgradeDirection.None)
             return;
 
-        string prefix = "";
+        string? prefixVal = null;
         int[] thresholds = { 8, 5, 2 };
         foreach (int t in thresholds)
         {
-            if (UpgradeCount >= t && EvolvePrefixes.TryGetValue(t, out var tier) && tier.TryGetValue(dominant, out prefix))
+            if (UpgradeCount >= t && EvolvePrefixes.TryGetValue(t, out var tier) && tier.TryGetValue(dominant, out prefixVal))
             {
                 break;
             }
         }
 
-        if (prefix != "")
-            CardName = $"{prefix}·{BaseName}";
+        if (prefixVal != null)
+            CardName = $"{prefixVal}·{BaseName}";
     }
 
     private UpgradeCard.UpgradeDirection _GetDominantDirection()

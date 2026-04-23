@@ -46,6 +46,12 @@ public partial class Main : Node2D
 		AddChild(_weatherSystem);
 		_weatherSystem.StartWeatherCycle();
 
+		TextureUtils.ClearCache();
+		ZombieWars.Player.PlayerVfx.ResetSpriteCache();
+		ZombieWars.Enemy.ZombieVfx.ResetSpriteCache();
+		ZombieRegistry.Clear();
+		GameServices.Clear();
+
 		// Cache typed references to autoloaded/child nodes.
 		_background   = GetNode<Background>("Background");
 		_player       = GetNode<PlayerClass>("Player");

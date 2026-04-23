@@ -7,6 +7,7 @@ using ZombieWars.Core;
 using ZombieWars.Vfx;
 using static ZombieWars.Core.GameEnums;
 using EnemyAbilitySystem = ZombieWars.Enemy.ZombieAbilitySystem;
+using Player = ZombieWars.Player.Player;
 
 /// <summary>
 /// Zombie base class — streamlined facade.
@@ -19,7 +20,7 @@ public partial class Zombie : CharacterBody2D
     // Signals & Events
     // ═══════════════════════════════════════════════
 
-    public event Action<Zombie> Died;
+    public event Action<Zombie> Died = delegate {};
 
     // ═══════════════════════════════════════════════
     // Exported Properties
@@ -53,7 +54,7 @@ public partial class Zombie : CharacterBody2D
     // ═══════════════════════════════════════════════
 
     public int CurrentHealth { get; set; }
-    public Node2D Player { get; set; }
+    public Node2D Player { get; set; } = null!;
 
     // Status effects
     private bool _isFrozen;
@@ -67,7 +68,7 @@ public partial class Zombie : CharacterBody2D
     // Charm
     private bool _isCharmed;
     private float _charmTimer;
-    private Node _originalPlayer;
+    private Node2D? _originalPlayer;
 
     // Type-specific state
     private float _invisibleTimer;
@@ -101,11 +102,11 @@ public partial class Zombie : CharacterBody2D
     // Node References
     // ═══════════════════════════════════════════════
 
-    public Sprite2D Sprite => _vfx?.Sprite;
+    public Sprite2D? Sprite => _vfx?.Sprite;
 
-    private CollisionShape2D _collision;
-    private Area2D _touchDamageArea;
-    private ZombieVfx _vfx;
+    private CollisionShape2D _collision = null!;
+    private Area2D _touchDamageArea = null!;
+    private ZombieVfx _vfx = null!;
     private ZombieAbilitySystem? _abilitySystem;
     private float _touchDamageCooldown;
     private const float TouchDamageInterval = 1.0f; // Damage per second when touching
@@ -261,7 +262,7 @@ public partial class Zombie : CharacterBody2D
             if (_charmTimer <= 0)
             {
                 _isCharmed = false;
-                Player = (Node2D)_originalPlayer;
+                Player = _originalPlayer!;
             }
         }
 
@@ -387,7 +388,7 @@ public partial class Zombie : CharacterBody2D
         if (_cachedPoisonTexture != null)
             return _cachedPoisonTexture;
 
-        var img = Image.Create(10, 10, false, Image.Format.Rgba8);
+        var img = Image.CreateEmpty(10, 10, false, Image.Format.Rgba8);
         img.Fill(Colors.Green);
         _cachedPoisonTexture = ImageTexture.CreateFromImage(img);
         return _cachedPoisonTexture;
@@ -402,7 +403,7 @@ public partial class Zombie : CharacterBody2D
 
         int bw = 20;
         int bh = 4;
-        using var img = Image.Create(bw, bh, false, Image.Format.Rgba8);
+        using var img = Image.CreateEmpty(bw, bh, false, Image.Format.Rgba8);
 
         for (int x = 0; x < bw; x++)
         {
@@ -579,7 +580,7 @@ public partial class Zombie : CharacterBody2D
             EliteAffix.Swift,
             EliteAffix.Explosive
         };
-        _eliteAffix = affixes[GD.Randi() % affixes.Length];
+        _eliteAffix = affixes[(int)(GD.Randi() % affixes.Length)];
 
         switch (_eliteAffix)
         {
@@ -661,10 +662,8 @@ public partial class Zombie : CharacterBody2D
 
     public void AttackPlayer()
     {
-        if (Player is ZombieWars.Player.Player p)
-            p.TakeDamage(Damage, this); // Pass self as attacker for counterattack
-        else
-            Player?.Call("TakeDamage", Damage);
+        if (Player is Player p)
+            p.TakeDamage(Damage, this);
     }
 
     // ═══════════════════════════════════════════════
@@ -713,7 +712,8 @@ public partial class Zombie : CharacterBody2D
     {
         if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.ExploderRange)
         {
-            Player.Call("take_damage", (int)(Damage * GameConfig.ExploderDamageMult));
+            if (Player is Player p)
+                p.TakeDamage((int)(Damage * GameConfig.ExploderDamageMult), this);
         }
     }
 
@@ -722,7 +722,8 @@ public partial class Zombie : CharacterBody2D
         // Damage player
         if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.EliteExplosiveRange)
         {
-            Player.Call("take_damage", (int)(Damage * GameConfig.EliteExplosiveMult));
+            if (Player is Player p)
+                p.TakeDamage((int)(Damage * GameConfig.EliteExplosiveMult), this);
         }
 
         // Damage zombies

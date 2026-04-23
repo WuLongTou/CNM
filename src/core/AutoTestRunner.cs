@@ -19,6 +19,9 @@ public partial class AutoTestRunner : Node
     private bool _attackRegressionChecksPassed;
     private int _initialRound;
 
+    private static readonly System.Reflection.BindingFlags PrivateInstance =
+        System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+
     public override async void _Ready()
     {
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
@@ -32,7 +35,8 @@ public partial class AutoTestRunner : Node
         }
 
         _player = GetTree().GetFirstNodeInGroup("player") as Player
-            ?? GetNodeOrNull<Player>("/root/Main/Player");
+            ?? GetNodeOrNull<Player>("/root/Main/Player")
+            ?? GetTree().CurrentScene?.GetNodeOrNull<Player>("Player");
         if (_player == null)
         {
             GD.PrintErr("[AUTOTEST] Player not found");
@@ -146,6 +150,8 @@ public partial class AutoTestRunner : Node
         if (combat.CanAttack)
             throw new Exception("[AUTOTEST] attack should enter cooldown after PerformAttack");
 
+        _AssertAttackAnimTriggeredWithoutTargets();
+
         combat.RecalculateStats();
         if (!combat.CanAttack || !combat.AttackTimer.IsStopped())
             throw new Exception("[AUTOTEST] RecalculateStats should resync attack state and stop stale cooldown timer");
@@ -169,5 +175,26 @@ public partial class AutoTestRunner : Node
 
         GD.Print("[AUTOTEST] attack regression checks passed");
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+    }
+
+    private void _AssertAttackAnimTriggeredWithoutTargets()
+    {
+        if (_player?.Vfx == null)
+            throw new Exception("[AUTOTEST] Player VFX missing during attack assertion");
+
+        var vfx = _player.Vfx;
+        var animStateField = typeof(PlayerVfx).GetField("_animState", PrivateInstance);
+        var stateTimerField = typeof(PlayerVfx).GetField("_stateTimer", PrivateInstance);
+        var attackFramesField = typeof(PlayerVfx).GetField("_attackFrames", PrivateInstance);
+
+        var animState = animStateField?.GetValue(vfx)?.ToString();
+        var stateTimer = (float?)stateTimerField?.GetValue(vfx) ?? 0.0f;
+        var attackFrames = attackFramesField?.GetValue(vfx) as Godot.Collections.Array<Texture2D>;
+
+        if (attackFrames == null || attackFrames.Count == 0)
+            throw new Exception("[AUTOTEST] attack frames should be available before attack assertion");
+
+        if (animState != "Attack" || stateTimer <= 0.0f)
+            throw new Exception($"[AUTOTEST] attack without targets should still trigger attack animation, got state={animState}, timer={stateTimer}");
     }
 }

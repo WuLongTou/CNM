@@ -42,7 +42,12 @@ public static partial class ZombieRegistry
             if (node is Zombie z)
                 _zombies.Add(z);
         }
-        // Rebuild spatial grid
         SpatialUtils.InvalidateGrid();
+    }
+
+    public static void Clear()
+    {
+        _zombies.Clear();
+        SpatialUtils.Clear();
     }
 }

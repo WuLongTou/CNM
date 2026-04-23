@@ -66,7 +66,8 @@ public static class GameConfig
     public const float TopUiMargin = 56.0f;
 
     // Animation
-    public const float WalkAnimSpeed = 0.1f;
+    public const float WalkAnimSpeed = 0.06f; // Faster for smoother animation (was 0.1f)
+    public const float IdleBreathSpeed = 2.0f; // Breathing animation cycle
 
     // ═══════════════════════════════════════════════
     // Aura System

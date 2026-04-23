@@ -174,7 +174,7 @@ public static partial class UpgradeGenerator
         if (candidates.Count == 0)
             return;
 
-        var pick = candidates[(int)(GD.Randi() % (uint)candidates.Count)];
+        var pick = candidates[(int)(GD.Randi() % candidates.Count)];
         int effectKey = pick.EffectKey;
         int current = card.EffectUpgrades.ContainsKey(effectKey) ? (int)card.EffectUpgrades[effectKey] : 0;
         card.EffectUpgrades[effectKey] = current + 1;
@@ -182,7 +182,7 @@ public static partial class UpgradeGenerator
 
     private static void _ApplyTradeoff(UpgradeCard card)
     {
-        var t = _TRADEOFFS[(int)(GD.Randi() % (uint)_TRADEOFFS.Length)];
+        var t = _TRADEOFFS[(int)(GD.Randi() % _TRADEOFFS.Length)];
         card.TradeoffKind = t.Item1;
         card.TradeoffValue = (float)GD.RandRange(t.Item2, t.Item3);
     }

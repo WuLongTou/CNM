@@ -160,7 +160,7 @@ public partial class MagicMissile : Area2D
         {
             float t = (float)i / segments;
             Vector2 basePoint = from.Lerp(to, t);
-            float offset = (float)(Random.Shared.NextDouble() * 16.0 - 8.0) * (1.0f - Mathf.Abs(t - 0.5f) * 2.0f);
+            float offset = (float)GD.RandRange(-8.0, 8.0) * (1.0f - Mathf.Abs(t - 0.5f) * 2.0f);
             lightning.AddPoint(basePoint + perp * offset);
         }
         lightning.AddPoint(to);

@@ -225,6 +225,12 @@ public static class SpatialUtils
         return result;
     }
 
+    public static void Clear()
+    {
+        _spatialGrid.Clear();
+        _gridDirty = true;
+    }
+
     /// <summary>
     /// Calculates distance squared (avoids sqrt for performance when exact distance not needed).
     /// </summary>

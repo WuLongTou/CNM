@@ -232,9 +232,9 @@ void fragment() {
     {
         // Randomly change weather
         var types = Enum.GetValues<WeatherType>();
-        var newType = types[GD.Randi() % types.Length];
+        var newType = types[(int)(GD.Randi() % types.Length)];
         var intensities = Enum.GetValues<WeatherIntensity>();
-        var newIntensity = intensities[GD.Randi() % intensities.Length];
+        var newIntensity = intensities[(int)(GD.Randi() % intensities.Length)];
         ChangeWeather(newType, newIntensity);
     }
 
@@ -656,33 +656,6 @@ void fragment() {
 
         var bg = GetTree().GetFirstNodeInGroup("background") as Background;
         bg?.SetAtmosphereTint(atmosphere.TintR, atmosphere.TintG, atmosphere.TintB, atmosphere.FogBrightMult, atmosphere.FireLightMult);
-        _ApplySpriteAtmosphereToEntities(atmosphere);
-    }
-
-    private void _ApplySpriteAtmosphereToEntities(Atmosphere atm)
-    {
-        foreach (var zombie in ZombieRegistry.All)
-        {
-            if (!IsInstanceValid(zombie) || zombie.Sprite == null) continue;
-            float dark = Mathf.Lerp(1.0f, atm.SpriteDarken, _targetAtmosphereStrength);
-            float r = atm.TintR * dark;
-            float g = atm.TintG * dark;
-            float b = atm.TintB * dark;
-            zombie.Sprite.Modulate = new Color(
-                Mathf.Clamp(r, 0.1f, 1.5f),
-                Mathf.Clamp(g, 0.1f, 1.5f),
-                Mathf.Clamp(b, 0.1f, 1.5f));
-        }
-
-        var player = GetTree().GetFirstNodeInGroup("player") as Player;
-        if (player?.Sprite != null)
-        {
-            float dark = Mathf.Lerp(1.0f, atm.SpriteDarken, _targetAtmosphereStrength);
-            player.Sprite.Modulate = new Color(
-                Mathf.Clamp(atm.TintR * dark, 0.1f, 1.5f),
-                Mathf.Clamp(atm.TintG * dark, 0.1f, 1.5f),
-                Mathf.Clamp(atm.TintB * dark, 0.1f, 1.5f));
-        }
     }
 
     private void _SetVignetteIntensity(float intensity)

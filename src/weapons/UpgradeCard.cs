@@ -47,7 +47,7 @@ public partial class UpgradeCard : WeaponCard
     public float TradeoffValue { get; set; } = 0.0f;
 
     public UpgradeDirection UpgradeDirection_ { get; set; } = UpgradeDirection.None;
-    public string UpgradeCategory { get; set; } = "强化";
+    public new string UpgradeCategory { get; set; } = "强化";
 
     private string _BuildDescription()
     {
