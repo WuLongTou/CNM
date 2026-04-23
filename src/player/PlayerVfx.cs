@@ -58,14 +58,6 @@ public partial class PlayerVfx : Node
         var img = baseImg.Duplicate() as Image;
         if (img == null) return;
 
-        // Downscale to 128px max for consistent display size across all textures
-        int maxDim = 128;
-        if (img.GetWidth() > maxDim || img.GetHeight() > maxDim)
-        {
-            float ratio = Mathf.Min((float)maxDim / img.GetWidth(), (float)maxDim / img.GetHeight());
-            img.Resize((int)(img.GetWidth() * ratio), (int)(img.GetHeight() * ratio));
-        }
-
         // Use the processed (potentially resized) image for all states
         _idleFrame = ImageTexture.CreateFromImage(img);
         if (_walkFrames.Count == 0)
@@ -85,60 +77,233 @@ public partial class PlayerVfx : Node
         _dashFrame = ImageTexture.CreateFromImage(dashImg);
     }
 
+    // Per-weapon-type sprite caches
+    private static readonly Godot.Collections.Array<Texture2D> _warriorWalkFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _rangerWalkFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _mageWalkFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _warriorAttackFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _rangerAttackFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _mageAttackFrames = new();
+    private static Texture2D? _warriorIdle;
+    private static Texture2D? _rangerIdle;
+    private static Texture2D? _mageIdle;
+    private static Texture2D? _warriorBase;
+    private static Texture2D? _rangerBase;
+    private static Texture2D? _mageBase;
+    private static bool _allSpritesLoaded = false;
+
+    private AttackType _lastAttackType = AttackType.Melee;
+
     private void _TryLoadPngSprites()
     {
-        string playerSprite = "res://assets/sprites/player/player_warrior.jpg";
-        string idleSprite = "res://assets/sprites/player/player_idle.jpg";
-
-        // Load walk frames using normalized texture loader
-        for (int i = 1; i <= 4; i++)
+        if (!_allSpritesLoaded)
         {
-            string path = $"res://assets/sprites/player/player_walk_{i}.jpg";
-            var tex = TextureUtils.LoadNormalizedSprite(path);
-            if (tex != null)
-                _walkFrames.Add(tex);
+            _allSpritesLoaded = true;
+            _LoadCharacterSprites("warrior", _warriorWalkFrames, _warriorAttackFrames,
+                out _warriorIdle, out _warriorBase);
+            _LoadCharacterSprites("ranger", _rangerWalkFrames, _rangerAttackFrames,
+                out _rangerIdle, out _rangerBase);
+            _LoadCharacterSprites("mage", _mageWalkFrames, _mageAttackFrames,
+                out _mageIdle, out _mageBase);
         }
 
-        // Load idle frames
-        var idleTex = TextureUtils.LoadNormalizedSprite(idleSprite);
-        if (idleTex != null)
-            _idleFrames.Add(idleTex);
+        // Apply current weapon type sprites
+        _ApplyWeaponSprites();
+    }
 
-        // Fallback: use player_walk_1 as idle if no dedicated idle sprite
-        if (_idleFrames.Count == 0 && _walkFrames.Count > 0)
-            _idleFrames.Add(_walkFrames[0]);
+    private static void _LoadCharacterSprites(string charName,
+        Godot.Collections.Array<Texture2D> walkOut,
+        Godot.Collections.Array<Texture2D> attackOut,
+        out Texture2D? idleOut, out Texture2D? baseOut)
+    {
+        walkOut.Clear();
+        attackOut.Clear();
+        idleOut = null;
+        baseOut = null;
 
-        // Load attack frames
-        for (int i = 1; i <= 3; i++)
+        // Priority 1: Processed sprites (white bg stripped, centered, 96x96 individual PNGs)
+        // Layout: processed/{char}/warrior_walk_01.png ... warrior_walk_08.png, warrior_attack_01.png...06.png, warrior_idle.png
+        string processedDir = $"res://assets/sprites/player/processed/{charName}";
+        bool hasProcessed = _HasProcessedSprites(processedDir, charName);
+
+        if (hasProcessed)
         {
-            string path = $"res://assets/sprites/player/player_attack_{i}.jpg";
-            var tex = TextureUtils.LoadNormalizedSprite(path);
-            if (tex != null)
-                _attackFrames.Add(tex);
+            for (int i = 1; i <= 8; i++)
+            {
+                string path = $"{processedDir}/{charName}_walk_{i:D2}.png";
+                var frame = TextureUtils.LoadNormalizedSprite(path);
+                if (frame != null) walkOut.Add(frame);
+            }
+
+            for (int i = 1; i <= 6; i++)
+            {
+                string path = $"{processedDir}/{charName}_attack_{i:D2}.png";
+                var frame = TextureUtils.LoadNormalizedSprite(path);
+                if (frame != null) attackOut.Add(frame);
+            }
+
+            string idlePath = $"{processedDir}/{charName}_idle.png";
+            idleOut = TextureUtils.LoadNormalizedSprite(idlePath);
+            baseOut = idleOut;
+            return;
         }
 
-        // Load base warrior sprite for state variant generation
-        _baseTexture = TextureUtils.LoadNormalizedSprite(playerSprite);
-        if (_baseTexture != null)
+        // Priority 2: Original individual frame files (may have white bg)
+        _LoadOriginalIndividualFrames(charName, walkOut, attackOut, out idleOut, out baseOut);
+        if (walkOut.Count >= 8)
+            return;
+
+        // Priority 3: Atlas fallback (4x4 grid)
+        _LoadFromAtlas(charName, walkOut, attackOut, out idleOut, out baseOut);
+    }
+
+    private static bool _HasProcessedSprites(string dir, string charName)
+    {
+        // Check if processed walk frame 01 exists
+        string testPath = $"{dir}/{charName}_walk_01.png";
+        if (!FileAccess.FileExists(testPath))
+            return false;
+        // Also check attack frame 01
+        string atkPath = $"{dir}/{charName}_attack_01.png";
+        return FileAccess.FileExists(atkPath);
+    }
+
+    private static void _LoadOriginalIndividualFrames(string charName,
+        Godot.Collections.Array<Texture2D> walkOut,
+        Godot.Collections.Array<Texture2D> attackOut,
+        out Texture2D? idleOut, out Texture2D? baseOut)
+    {
+        walkOut.Clear();
+        attackOut.Clear();
+        idleOut = null;
+        baseOut = null;
+
+        for (int i = 1; i <= 8; i++)
         {
-            Player!.Sprite!.Texture = _baseTexture;
+            string pngPath = $"res://assets/sprites/player/{charName}_walk_{i}.png";
+            string jpgPath = $"res://assets/sprites/player/{charName}_walk_{i}.jpg";
+
+            string path = FileAccess.FileExists(pngPath) ? pngPath :
+                          FileAccess.FileExists(jpgPath) ? jpgPath : "";
+            if (string.IsNullOrEmpty(path)) continue;
+
+            var frame = TextureUtils.LoadNormalizedSprite(path);
+            if (frame != null)
+                walkOut.Add(frame);
+        }
+
+        string idlePng = $"res://assets/sprites/player/{charName}_idle.png";
+        string idleJpg = $"res://assets/sprites/player/{charName}_idle.jpg";
+        string idlePath = FileAccess.FileExists(idlePng) ? idlePng :
+                          FileAccess.FileExists(idleJpg) ? idleJpg : "";
+        if (!string.IsNullOrEmpty(idlePath))
+            idleOut = TextureUtils.LoadNormalizedSprite(idlePath);
+
+        if (idleOut == null && walkOut.Count > 0)
+            idleOut = walkOut[0];
+
+        for (int i = 1; i <= 6; i++)
+        {
+            string pngPath = $"res://assets/sprites/player/{charName}_attack_{i}.png";
+            string jpgPath = $"res://assets/sprites/player/{charName}_attack_{i}.jpg";
+
+            string path = FileAccess.FileExists(pngPath) ? pngPath :
+                          FileAccess.FileExists(jpgPath) ? jpgPath : "";
+            if (string.IsNullOrEmpty(path)) continue;
+
+            var frame = TextureUtils.LoadNormalizedSprite(path);
+            if (frame != null)
+                attackOut.Add(frame);
+        }
+
+        baseOut = idleOut;
+    }
+
+    private static void _LoadFromAtlas(string charName,
+        Godot.Collections.Array<Texture2D> walkOut,
+        Godot.Collections.Array<Texture2D> attackOut,
+        out Texture2D? idleOut, out Texture2D? baseOut)
+    {
+        walkOut.Clear();
+        attackOut.Clear();
+        idleOut = null;
+        baseOut = null;
+
+        string atlasPath = $"res://assets/sprites/player/{charName}_atlas.png";
+        if (!FileAccess.FileExists(atlasPath))
+            return;
+
+        var atlasFrames = TextureUtils.LoadAtlasFrames(atlasPath, 4, 4);
+        if (atlasFrames.Count < 8)
+            return;
+
+        // Atlas layout: row0 = idle(2), row1-2 = walk(8), row2-3 = attack(6)
+        // index 0-1: idle, 2-9: walk (8), 10-15: attack (6)
+        int idx = 0;
+        if (atlasFrames.Count > 0)
+            idleOut = atlasFrames[0];
+        idx = 2;
+        for (int i = 0; i < 8 && idx < atlasFrames.Count; i++, idx++)
+            walkOut.Add(atlasFrames[idx]);
+        for (int i = 0; i < 6 && idx < atlasFrames.Count; i++, idx++)
+            attackOut.Add(atlasFrames[idx]);
+
+        baseOut = idleOut;
+    }
+
+    /// Switch active sprites based on current weapon type. Call when weapon changes.
+    public void SwitchWeaponSprites(AttackType attackType)
+    {
+        if (attackType == _lastAttackType) return;
+        _lastAttackType = attackType;
+        _ApplyWeaponSprites();
+    }
+
+    private void _ApplyWeaponSprites()
+    {
+        _walkFrames.Clear();
+        _attackFrames.Clear();
+        _idleFrame = null;
+        _baseTexture = null;
+
+        switch (_lastAttackType)
+        {
+            case AttackType.Ranged:
+                _walkFrames.AddRange(_rangerWalkFrames);
+                _attackFrames.AddRange(_rangerAttackFrames);
+                _idleFrame = _rangerIdle;
+                _baseTexture = _rangerBase;
+                break;
+            case AttackType.Magic:
+            case AttackType.Area:
+                _walkFrames.AddRange(_mageWalkFrames);
+                _attackFrames.AddRange(_mageAttackFrames);
+                _idleFrame = _mageIdle;
+                _baseTexture = _mageBase;
+                break;
+            default: // Melee, Mine
+                _walkFrames.AddRange(_warriorWalkFrames);
+                _attackFrames.AddRange(_warriorAttackFrames);
+                _idleFrame = _warriorIdle;
+                _baseTexture = _warriorBase;
+                break;
+        }
+
+        if (_idleFrame != null && Player?.Sprite != null)
+            Player.Sprite.Texture = _idleFrame;
+        else if (_walkFrames.Count > 0 && Player?.Sprite != null)
+            Player.Sprite.Texture = _walkFrames[0];
+
+        if (Player?.Sprite != null)
+            Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
+
+        if (_baseTexture != null && Player?.Sprite != null)
+        {
+            Player.Sprite.Texture = _baseTexture;
             CallDeferred(MethodName._GenerateStateVariantsDeferred);
         }
 
-        // Set idle frame from loaded frames
-        if (_idleFrames.Count > 0)
-        {
-            _idleFrame = _idleFrames[0];
-            if (Player!.Sprite != null && Player.Sprite.Texture == null)
-                Player.Sprite.Texture = _idleFrame;
-        }
-
-        // Set sprite scale to 1.0 for normalized textures
-        if (Player?.Sprite != null && (_walkFrames.Count > 0 || _idleFrames.Count > 0))
-            Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
-
-        // If no textures loaded, generate fallback sprites
-        if (_walkFrames.Count == 0 && _idleFrames.Count == 0 && _baseTexture == null)
+        if (_walkFrames.Count == 0 && _idleFrame == null && _baseTexture == null)
             _CreatePlayerSprite();
     }
 
@@ -250,7 +415,7 @@ public partial class PlayerVfx : Node
 
     private Texture2D _MakeShadowTexture(int w, int h, Color color)
     {
-        using var img = Image.Create(w, h, false, Image.Format.Rgba8);
+        using var img = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
         float cx = w / 2.0f;
         float cy = h / 2.0f;
         float rx = w / 2.0f;
@@ -274,72 +439,119 @@ public partial class PlayerVfx : Node
 
     private void _CreatePlayerSprite()
     {
-        int size = 40;
+        int size = 48;
         var framesData = new Godot.Collections.Array<Image>();
 
-        for (int frameIdx = 0; frameIdx < 4; frameIdx++)
+        // Generate 16 walk frames for smooth animation
+        for (int frameIdx = 0; frameIdx < 16; frameIdx++)
         {
-            using var img = Image.Create(size, size, false, Image.Format.Rgba8);
+            using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
             float cx = size / 2.0f;
             float cy = size / 2.0f;
-            float bob = 0.0f;
-            if (frameIdx == 1) bob = -1.5f;
-            else if (frameIdx == 3) bob = 1.0f;
 
+            float walkPhase = frameIdx / 16.0f;
+            float legSwing = Mathf.Sin(walkPhase * Mathf.Tau) * 4.0f;
+            float bodyBob = -Mathf.Abs(Mathf.Sin(walkPhase * Mathf.Tau)) * 2.0f;
+            float armSwing = Mathf.Sin(walkPhase * Mathf.Tau) * 3.0f;
+
+            // Shadow under feet
             for (int x = 0; x < size; x++)
             {
                 for (int y = 0; y < size; y++)
                 {
-                    float bodyTop = cy * 0.55f + bob;
-                    float bodyBot = cy * 1.5f + bob;
-                    if (y >= bodyTop && y <= bodyBot)
+                    float shadowY = size * 0.88f;
+                    float shadowDist = Mathf.Abs(y - shadowY);
+                    if (shadowDist < 3 && Mathf.Abs(x - cx) < 10)
                     {
-                        float bodyW = size * 0.22f - Mathf.Abs(y - cy * 1.0f - bob) * 0.04f;
-                        if (Mathf.Abs(x - cx) < bodyW)
-                            img.SetPixel(x, y, new Color(0.25f, 0.30f, 0.22f));
+                        img.SetPixel(x, y, new Color(0, 0, 0, 0.15f));
                     }
                 }
             }
 
+            // Body
             for (int x = 0; x < size; x++)
             {
                 for (int y = 0; y < size; y++)
                 {
-                    float headR = size * 0.18f;
-                    float headCy = cy * 0.42f + bob;
+                    float bodyTop = cy * 0.48f + bodyBob;
+                    float bodyBot = cy * 1.35f + bodyBob;
+                    if (y >= bodyTop && y <= bodyBot)
+                    {
+                        float bodyW = size * 0.18f - Mathf.Abs(y - cy - bodyBob) * 0.03f;
+                        if (Mathf.Abs(x - cx) < bodyW)
+                        {
+                            float shade = 0.25f + (y - bodyTop) / (bodyBot - bodyTop) * 0.05f;
+                            img.SetPixel(x, y, new Color(shade * 0.8f, shade * 0.9f, shade * 0.7f));
+                        }
+                    }
+                }
+            }
+
+            // Head
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float headR = size * 0.16f;
+                    float headCy = cy * 0.38f + bodyBob;
                     float hd = new Vector2(x - cx, y - headCy).Length();
                     if (hd < headR)
                     {
-                        if (hd > headR * 0.65f)
-                            img.SetPixel(x, y, new Color(0.3f, 0.35f, 0.25f));
+                        if (hd > headR * 0.7f)
+                            img.SetPixel(x, y, new Color(0.28f, 0.32f, 0.22f));
+                        else if (hd > headR * 0.3f)
+                            img.SetPixel(x, y, new Color(0.72f, 0.58f, 0.48f));
                         else
-                            img.SetPixel(x, y, new Color(0.75f, 0.6f, 0.5f));
+                            img.SetPixel(x, y, new Color(0.78f, 0.62f, 0.52f));
                     }
                 }
             }
 
-            int eyeY = (int)(cy * 0.38f + bob);
+            // Eyes
+            int eyeY = (int)(cy * 0.34f + bodyBob);
             foreach (int dx in new[] { -1, 1 })
             {
-                int ex = (int)(cx + dx * size * 0.06f);
+                int ex = (int)(cx + dx * size * 0.055f);
                 if (ex >= 0 && ex < size && eyeY >= 0 && eyeY < size)
-                    img.SetPixel(ex, eyeY, new Color(0.9f, 0.9f, 0.9f));
+                {
+                    img.SetPixel(ex, eyeY, new Color(0.1f, 0.1f, 0.1f));
+                    if (eyeY - 1 >= 0) img.SetPixel(ex, eyeY - 1, new Color(0.95f, 0.95f, 0.95f));
+                    if (eyeY + 1 < size) img.SetPixel(ex, eyeY + 1, new Color(0.2f, 0.2f, 0.2f));
+                }
             }
 
-            float legOffset = 0.0f;
-            if (frameIdx == 1) legOffset = 3.0f;
-            else if (frameIdx == 3) legOffset = -3.0f;
+            // Arms
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float armTop = cy * 0.5f + bodyBob;
+                    float armBot = cy * 1.1f + bodyBob;
+                    if (y >= armTop && y <= armBot)
+                    {
+                        foreach (int side in new[] { -1, 1 })
+                        {
+                            float armCenterX = cx + side * (size * 0.22f + side * armSwing);
+                            if (Mathf.Abs(x - armCenterX) < 2.5f)
+                            {
+                                img.SetPixel(x, y, new Color(0.28f, 0.32f, 0.22f));
+                            }
+                        }
+                    }
+                }
+            }
 
-            for (int ly = (int)(cy * 1.5f + bob); ly <= (int)(cy * 1.85f + bob); ly++)
+            // Legs with walking animation
+            for (int y = (int)(cy * 1.2f + bodyBob); y <= (int)(cy * 1.75f + bodyBob); y++)
             {
                 foreach (int side in new[] { -1, 1 })
                 {
-                    int lx = (int)(cx + side * size * 0.08f + side * legOffset * (side == 1 ? 1 : -1));
-                    if (lx >= 0 && lx < size && ly >= 0 && ly < size)
+                    float legOffsetX = side * legSwing;
+                    int lx = (int)(cx + side * size * 0.08f + legOffsetX);
+                    if (lx >= 0 && lx < size && y >= 0 && y < size)
                     {
-                        img.SetPixel(lx, ly, new Color(0.2f, 0.22f, 0.18f));
-                        if (lx + 1 < size)
-                            img.SetPixel(lx + 1, ly, new Color(0.2f, 0.22f, 0.18f));
+                        img.SetPixel(lx, y, new Color(0.18f, 0.2f, 0.15f));
+                        if (lx + 1 < size) img.SetPixel(lx + 1, y, new Color(0.18f, 0.2f, 0.15f));
                     }
                 }
             }
@@ -351,7 +563,189 @@ public partial class PlayerVfx : Node
         foreach (var img in framesData)
             _walkFrames.Add(ImageTexture.CreateFromImage(img));
 
-        _idleFrame = _walkFrames.Count > 0 ? _walkFrames[0] : null;
+        // Generate idle frame with subtle breathing
+        using var idleImg = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+        float idleCx = size / 2.0f;
+        float idleCy = size / 2.0f;
+        float breathe = 0.5f; // Mid-breath position
+
+        // Shadow
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float shadowY = size * 0.88f;
+                if (Mathf.Abs(y - shadowY) < 3 && Mathf.Abs(x - idleCx) < 10)
+                {
+                    idleImg.SetPixel(x, y, new Color(0, 0, 0, 0.18f));
+                }
+            }
+        }
+
+        // Body
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float bodyTop = idleCy * 0.48f;
+                float bodyBot = idleCy * 1.35f;
+                if (y >= bodyTop && y <= bodyBot)
+                {
+                    float bodyW = size * 0.18f - Mathf.Abs(y - idleCy) * 0.03f;
+                    if (Mathf.Abs(x - idleCx) < bodyW)
+                    {
+                        float shade = 0.25f + (y - bodyTop) / (bodyBot - bodyTop) * 0.05f;
+                        idleImg.SetPixel(x, y, new Color(shade * 0.8f, shade * 0.9f, shade * 0.7f));
+                    }
+                }
+            }
+        }
+
+        // Head
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float headR = size * 0.16f;
+                float headCy = idleCy * 0.38f;
+                float hd = new Vector2(x - idleCx, y - headCy).Length();
+                if (hd < headR)
+                {
+                    if (hd > headR * 0.7f)
+                        idleImg.SetPixel(x, y, new Color(0.28f, 0.32f, 0.22f));
+                    else if (hd > headR * 0.3f)
+                        idleImg.SetPixel(x, y, new Color(0.72f, 0.58f, 0.48f));
+                    else
+                        idleImg.SetPixel(x, y, new Color(0.78f, 0.62f, 0.52f));
+                }
+            }
+        }
+
+        // Eyes
+        int idleEyeY = (int)(idleCy * 0.34f);
+        foreach (int dx in new[] { -1, 1 })
+        {
+            int ex = (int)(idleCx + dx * size * 0.055f);
+            if (ex >= 0 && ex < size && idleEyeY >= 0 && idleEyeY < size)
+            {
+                idleImg.SetPixel(ex, idleEyeY, new Color(0.1f, 0.1f, 0.1f));
+                if (idleEyeY - 1 >= 0) idleImg.SetPixel(ex, idleEyeY - 1, new Color(0.95f, 0.95f, 0.95f));
+            }
+        }
+
+        _idleFrame = ImageTexture.CreateFromImage(idleImg);
+
+        // Generate attack frames (8 frames showing weapon swing)
+        _attackFrames.Clear();
+        for (int attackFrame = 0; attackFrame < 8; attackFrame++)
+        {
+            using var attackImg = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+            float attackCx = size / 2.0f;
+            float attackCy = size / 2.0f;
+            float attackPhase = attackFrame / 8.0f;
+            float weaponAngle = Mathf.Lerp(-0.8f, 0.8f, attackPhase);
+            float bodyLean = Mathf.Sin(attackPhase * Mathf.Pi) * 1.5f;
+
+            // Shadow
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float shadowY = size * 0.88f;
+                    if (Mathf.Abs(y - shadowY) < 3 && Mathf.Abs(x - attackCx) < 10)
+                    {
+                        attackImg.SetPixel(x, y, new Color(0, 0, 0, 0.15f));
+                    }
+                }
+            }
+
+            // Body with lean
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float leanOffset = bodyLean * (y - attackCy * 0.5f) / (size * 0.5f);
+                    float bodyTop = attackCy * 0.48f;
+                    float bodyBot = attackCy * 1.35f;
+                    if (y >= bodyTop && y <= bodyBot)
+                    {
+                        float bodyW = size * 0.18f - Mathf.Abs(y - attackCy) * 0.03f;
+                        if (Mathf.Abs(x - attackCx - leanOffset) < bodyW)
+                        {
+                            float shade = 0.25f + (y - bodyTop) / (bodyBot - bodyTop) * 0.05f;
+                            attackImg.SetPixel(x, y, new Color(shade * 0.9f, shade * 0.8f, shade * 0.6f));
+                        }
+                    }
+                }
+            }
+
+            // Head
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float leanOffset = bodyLean * (y - attackCy * 0.3f) / (size * 0.3f);
+                    float headR = size * 0.16f;
+                    float headCy = attackCy * 0.38f;
+                    float hd = new Vector2(x - attackCx - leanOffset, y - headCy).Length();
+                    if (hd < headR)
+                    {
+                        if (hd > headR * 0.7f)
+                            attackImg.SetPixel(x, y, new Color(0.3f, 0.34f, 0.24f));
+                        else if (hd > headR * 0.3f)
+                            attackImg.SetPixel(x, y, new Color(0.72f, 0.58f, 0.48f));
+                        else
+                            attackImg.SetPixel(x, y, new Color(0.78f, 0.62f, 0.52f));
+                    }
+                }
+            }
+
+            // Weapon (sword)
+            for (int x = 0; x < size; x++)
+            {
+                for (int y = 0; y < size; y++)
+                {
+                    float weaponOriginX = attackCx + size * 0.2f;
+                    float weaponOriginY = attackCy * 0.6f;
+                    float weaponLen = size * 0.45f;
+                    float weaponWidth = 2.5f;
+
+                    // Rotate point around origin
+                    float cos = Mathf.Cos(weaponAngle);
+                    float sin = Mathf.Sin(weaponAngle);
+                    float dx = x - weaponOriginX;
+                    float dy = y - weaponOriginY;
+                    float rotX = dx * cos - dy * sin;
+                    float rotY = dx * sin + dy * cos;
+
+                    if (rotX >= 0 && rotX <= weaponLen && Mathf.Abs(rotY) < weaponWidth)
+                    {
+                        float t = rotX / weaponLen;
+                        if (t < 0.15f)
+                            attackImg.SetPixel(x, y, new Color(0.6f, 0.5f, 0.3f)); // Handle
+                        else
+                            attackImg.SetPixel(x, y, new Color(0.85f, 0.85f, 0.9f)); // Blade
+                    }
+                }
+            }
+
+            // Legs (stable stance)
+            for (int y = (int)(attackCy * 1.2f); y <= (int)(attackCy * 1.75f); y++)
+            {
+                foreach (int side in new[] { -1, 1 })
+                {
+                    int lx = (int)(attackCx + side * size * 0.1f);
+                    if (lx >= 0 && lx < size && y >= 0 && y < size)
+                    {
+                        attackImg.SetPixel(lx, y, new Color(0.18f, 0.2f, 0.15f));
+                        if (lx + 1 < size) attackImg.SetPixel(lx + 1, y, new Color(0.18f, 0.2f, 0.15f));
+                    }
+                }
+            }
+
+            _attackFrames.Add(ImageTexture.CreateFromImage(attackImg));
+        }
+
         if (Player!.Sprite != null && _idleFrame != null)
             Player.Sprite.Texture = _idleFrame;
     }
@@ -369,6 +763,7 @@ public partial class PlayerVfx : Node
             {
                 _animState = AnimState.Idle;
                 Player.Sprite.Texture = _idleFrame ?? (_walkFrames.Count > 0 ? _walkFrames[0] : null);
+                Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
             }
             return;
         }
@@ -387,13 +782,7 @@ public partial class PlayerVfx : Node
                 Player.Sprite.Texture = _walkFrames[_currentFrame];
             }
         }
-        else if (_isMoving && _idleFrame != null)
-        {
-            _animState = AnimState.Walk;
-            if (Player.Sprite.Texture != _idleFrame)
-                Player.Sprite.Texture = _idleFrame;
-        }
-        else
+        else if (!_isMoving)
         {
             _animState = AnimState.Idle;
             if (_currentFrame != 0 && _walkFrames.Count > 0)
@@ -402,6 +791,14 @@ public partial class PlayerVfx : Node
                 Player.Sprite.Texture = _walkFrames[0];
             }
             _animTimer = 0.0f;
+        }
+
+        // Breathing animation for idle
+        if (_animState == AnimState.Idle && _idleFrame != null)
+        {
+            _animTimer += delta;
+            float breathe = Mathf.Sin(_animTimer * Mathf.Tau / Core.GameConfig.IdleBreathSpeed) * 0.02f;
+            Player.Sprite.Scale = new Vector2(1.0f + breathe, 1.0f - breathe * 0.5f);
         }
 
         if (Player!.Velocity.X < -10)
@@ -647,7 +1044,7 @@ public partial class PlayerVfx : Node
 
     private Texture2D _MakeRangeTexture(int size)
     {
-        using var img = Image.Create(size, size, false, Image.Format.Rgba8);
+        using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
         int center = size / 2;
         int radius = center - 2;
 

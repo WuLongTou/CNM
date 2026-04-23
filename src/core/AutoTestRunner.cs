@@ -15,6 +15,7 @@ public partial class AutoTestRunner : Node
     private bool _started;
     private bool _combatSeen;
     private bool _roundCompleted;
+    private bool _spriteRegressionChecksPassed;
     private bool _attackRegressionChecksPassed;
     private int _initialRound;
 
@@ -30,7 +31,8 @@ public partial class AutoTestRunner : Node
             return;
         }
 
-        _player = GetTree().GetFirstNodeInGroup("player") as Player;
+        _player = GetTree().GetFirstNodeInGroup("player") as Player
+            ?? GetNodeOrNull<Player>("/root/Main/Player");
         if (_player == null)
         {
             GD.PrintErr("[AUTOTEST] Player not found");
@@ -39,6 +41,8 @@ public partial class AutoTestRunner : Node
 
         _initialRound = _gameManager.CurrentRound;
         GD.Print("[AUTOTEST] Runner attached");
+        _RunSpriteRegressionChecks();
+        _spriteRegressionChecksPassed = true;
         _ = RunAsync();
     }
 
@@ -89,6 +93,44 @@ public partial class AutoTestRunner : Node
 
         GD.PrintErr("[AUTOTEST] timeout before reaching next round");
         GetTree().Quit(2);
+    }
+
+    private void _RunSpriteRegressionChecks()
+    {
+        if (_player?.Vfx == null)
+            throw new Exception("[AUTOTEST] Player VFX missing");
+
+        GD.Print("[AUTOTEST] running sprite regression checks");
+
+        var vfxType = typeof(PlayerVfx);
+        var warriorWalkField = vfxType.GetField("_warriorWalkFrames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var warriorAttackField = vfxType.GetField("_warriorAttackFrames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var warriorIdleField = vfxType.GetField("_warriorIdle", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var rangerWalkField = vfxType.GetField("_rangerWalkFrames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var mageWalkField = vfxType.GetField("_mageWalkFrames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+
+        var warriorWalk = warriorWalkField?.GetValue(null) as Godot.Collections.Array<Texture2D>;
+        var warriorAttack = warriorAttackField?.GetValue(null) as Godot.Collections.Array<Texture2D>;
+        var warriorIdle = warriorIdleField?.GetValue(null) as Texture2D;
+        var rangerWalk = rangerWalkField?.GetValue(null) as Godot.Collections.Array<Texture2D>;
+        var mageWalk = mageWalkField?.GetValue(null) as Godot.Collections.Array<Texture2D>;
+
+        if (warriorWalk == null || warriorWalk.Count != 8)
+            throw new Exception($"[AUTOTEST] warrior walk should load 8 frames, got {warriorWalk?.Count ?? -1}");
+
+        if (warriorAttack == null || warriorAttack.Count != 6)
+            throw new Exception($"[AUTOTEST] warrior attack should load 6 frames, got {warriorAttack?.Count ?? -1}");
+
+        if (warriorIdle == null)
+            throw new Exception("[AUTOTEST] warrior idle sprite should be loaded");
+
+        if (rangerWalk == null || rangerWalk.Count != 8)
+            throw new Exception($"[AUTOTEST] ranger walk should load 8 frames, got {rangerWalk?.Count ?? -1}");
+
+        if (mageWalk == null || mageWalk.Count != 8)
+            throw new Exception($"[AUTOTEST] mage walk should load 8 frames, got {mageWalk?.Count ?? -1}");
+
+        GD.Print("[AUTOTEST] sprite regression checks passed");
     }
 
     private async Task _RunAttackRegressionChecks()
