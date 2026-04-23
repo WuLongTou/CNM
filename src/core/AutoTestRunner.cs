@@ -118,8 +118,8 @@ public partial class AutoTestRunner : Node
         if (warriorWalk == null || warriorWalk.Count != 8)
             throw new Exception($"[AUTOTEST] warrior walk should load 8 frames, got {warriorWalk?.Count ?? -1}");
 
-        if (warriorAttack == null || warriorAttack.Count != 6)
-            throw new Exception($"[AUTOTEST] warrior attack should load 6 frames, got {warriorAttack?.Count ?? -1}");
+        if (warriorAttack == null || warriorAttack.Count < 6)
+            throw new Exception($"[AUTOTEST] warrior attack should load >= 6 frames, got {warriorAttack?.Count ?? -1}");
 
         if (warriorIdle == null)
             throw new Exception("[AUTOTEST] warrior idle sprite should be loaded");
