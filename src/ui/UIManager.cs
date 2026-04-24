@@ -9,6 +9,8 @@ using ZombieWars.Weapons;
 using ZombieWars.Audio;
 using Player = ZombieWars.Player.Player;
 using static ZombieWars.Core.GameEnums;
+using static ZombieWars.UI.HandDrawnTheme;
+using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 /// <summary>
 /// UI Manager — creates and manages all in-game UI elements.
@@ -140,12 +142,9 @@ public partial class UIManager : Control
 		_hudPanel.CustomMinimumSize = new Vector2(0, 48);
 		_hudPanel.OffsetBottom = 52;
 
-		var hudStyle = new StyleBoxFlat
-		{
-			BgColor = new Color(0.04f, 0.04f, 0.06f, 0.90f),
-			BorderWidthBottom = 1,
-			BorderColor = new Color(0.25f, 0.18f, 0.12f, 0.4f)
-		};
+		var hudStyle = MakeDarkPanel(0.90f);
+		hudStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
+		hudStyle.BorderWidthBottom = 1;
 		_hudPanel.AddThemeStyleboxOverride("panel", hudStyle);
 		AddChild(_hudPanel);
 
@@ -179,29 +178,8 @@ public partial class UIManager : Control
 			SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin,
 			ShowPercentage = false
 		};
-		var hpBg = new StyleBoxFlat
-		{
-			BgColor = new Color(0.12f, 0.03f, 0.03f),
-			CornerRadiusTopLeft = 2,
-			CornerRadiusBottomLeft = 2,
-			CornerRadiusTopRight = 2,
-			CornerRadiusBottomRight = 2,
-			BorderWidthTop = 1,
-			BorderWidthBottom = 1,
-			BorderWidthLeft = 1,
-			BorderWidthRight = 1,
-			BorderColor = new Color(0.30f, 0.10f, 0.08f, 0.4f)
-		};
-		var hpFill = new StyleBoxFlat
-		{
-			BgColor = new Color(0.65f, 0.18f, 0.14f),
-			CornerRadiusTopLeft = 2,
-			CornerRadiusBottomLeft = 2,
-			CornerRadiusTopRight = 2,
-			CornerRadiusBottomRight = 2
-		};
-		_healthBar.AddThemeStyleboxOverride("background", hpBg);
-		_healthBar.AddThemeStyleboxOverride("fill", hpFill);
+		_healthBar.AddThemeStyleboxOverride("background", MakeHpBarBg());
+		_healthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(HandDrawnTheme.Colors.HpHigh));
 		hpWrapper.AddChild(_healthBar);
 
 		_healthLabel = new Label
@@ -209,7 +187,7 @@ public partial class UIManager : Control
 			Text = "120/120"
 		};
 		_healthLabel.AddThemeFontSizeOverride("font_size", 11);
-		_healthLabel.AddThemeColorOverride("font_color", new Color(0.9f, 0.85f, 0.8f));
+		_healthLabel.AddThemeColorOverride("font_color", new Color(0.94f, 0.91f, 0.91f));
 		_healthLabel.AddThemeConstantOverride("outline_size", 2);
 		_healthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
 		_healthLabel.VerticalAlignment = VerticalAlignment.Center;
@@ -227,7 +205,7 @@ public partial class UIManager : Control
 			Text = "第 1 波"
 		};
 		_roundLabel.AddThemeFontSizeOverride("font_size", 14);
-		_roundLabel.AddThemeColorOverride("font_color", new Color(0.90f, 0.78f, 0.35f));
+		_roundLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
 		_roundLabel.AddThemeConstantOverride("outline_size", 2);
 		_roundLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
 		centerBox.AddChild(_roundLabel);
@@ -237,7 +215,7 @@ public partial class UIManager : Control
 			Text = "剩余 0"
 		};
 		_zombiesLabel.AddThemeFontSizeOverride("font_size", 12);
-		_zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.75f, 0.75f));
+		_zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
 		centerBox.AddChild(_zombiesLabel);
 
 		// Right: score
@@ -249,7 +227,7 @@ public partial class UIManager : Control
 		};
 		_scoreLabel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
 		_scoreLabel.AddThemeFontSizeOverride("font_size", 14);
-		_scoreLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.85f, 0.25f));
+		_scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
 		_scoreLabel.AddThemeConstantOverride("outline_size", 2);
 		_scoreLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
 		row1.AddChild(_scoreLabel);
@@ -259,21 +237,21 @@ public partial class UIManager : Control
 		row2.AddThemeConstantOverride("separation", 10);
 		mainVbox.AddChild(row2);
 
-		_damageLabel = _MakeStatLabel("攻击 10", new Color(1.0f, 0.65f, 0.25f));
+		_damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f));
 		row2.AddChild(_damageLabel);
-		_attackIntervalLabel = _MakeStatLabel("间隔 0.50s", new Color(0.8f, 0.8f, 0.45f));
+		_attackIntervalLabel = _MakeStatLabel("间隔 0.50s", new Color(0.75f, 0.65f, 0.45f));
 		row2.AddChild(_attackIntervalLabel);
-		_critLabel = _MakeStatLabel("暴击 0%", new Color(0.85f, 0.65f, 1.0f));
+		_critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f));
 		row2.AddChild(_critLabel);
-		_lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.85f, 0.40f, 0.40f));
+		_lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f));
 		row2.AddChild(_lifestealLabel);
-		_attackTypeLabel = _MakeStatLabel("近战", new Color(0.50f, 0.85f, 0.85f));
+		_attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f));
 		row2.AddChild(_attackTypeLabel);
-		_targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.75f, 0.75f));
+		_targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f));
 		row2.AddChild(_targetPriorityLabel);
-		_dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.85f, 0.55f));
+		_dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f));
 		row2.AddChild(_dashCooldownLabel);
-		_speedLabel = _MakeStatLabel("速度 0", new Color(0.55f, 0.75f, 0.65f));
+		_speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f));
 		row2.AddChild(_speedLabel);
 
 		// Effect icons container
@@ -316,22 +294,8 @@ public partial class UIManager : Control
 		_bossHealthBar.CustomMinimumSize = new Vector2(0, 12);
 		_bossHealthBar.Visible = false;
 		_bossHealthBar.ZIndex = 5;
-		var bossBg = new StyleBoxFlat
-		{
-			BgColor = new Color(0.15f, 0.05f, 0.05f, 0.9f),
-			CornerRadiusTopLeft = 4,
-			CornerRadiusTopRight = 4,
-			CornerRadiusBottomLeft = 4,
-			CornerRadiusBottomRight = 4
-		};
-		var bossFill = new StyleBoxFlat
-		{
-			BgColor = new Color(0.85f, 0.15f, 0.1f),
-			CornerRadiusTopLeft = 4,
-			CornerRadiusTopRight = 4,
-			CornerRadiusBottomLeft = 4,
-			CornerRadiusBottomRight = 4
-		};
+		var bossBg = MakeHpBarBg();
+		var bossFill = MakeHpBarFill(HandDrawnTheme.Colors.BloodBright);
 		_bossHealthBar.AddThemeStyleboxOverride("background", bossBg);
 		_bossHealthBar.AddThemeStyleboxOverride("fill", bossFill);
 		AddChild(_bossHealthBar);
@@ -343,7 +307,7 @@ public partial class UIManager : Control
 		_bossHealthLabel.HorizontalAlignment = HorizontalAlignment.Center;
 		_bossHealthLabel.VerticalAlignment = VerticalAlignment.Center;
 		_bossHealthLabel.AddThemeFontSizeOverride("font_size", 12);
-		_bossHealthLabel.AddThemeColorOverride("font_color", new Color(1.0f, 0.3f, 0.3f));
+		_bossHealthLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
 		_bossHealthLabel.AddThemeConstantOverride("outline_size", 2);
 		_bossHealthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
 		_bossHealthLabel.Visible = false;
@@ -370,10 +334,8 @@ public partial class UIManager : Control
 			MouseFilter = Control.MouseFilterEnum.Ignore
 		};
 		_weaponSelectionPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		var weaponStyle = new StyleBoxFlat
-		{
-			BgColor = new Color(0.02f, 0.02f, 0.08f, 0.92f)
-		};
+		var weaponStyle = MakeDarkPanel(0.92f);
+		weaponStyle.BgColor = new Color(BattlefieldBg, 0.95f);
 		_weaponSelectionPanel.AddThemeStyleboxOverride("panel", weaponStyle);
 		AddChild(_weaponSelectionPanel);
 
@@ -391,7 +353,7 @@ public partial class UIManager : Control
 			Text = "⚔️ 选择本回合强化 ⚔️"
 		};
 		titleLabel.AddThemeFontSizeOverride("font_size", 32);
-		titleLabel.AddThemeColorOverride("font_color", Colors.Gold);
+		titleLabel.AddThemeColorOverride("font_color", BloodBright);
 		titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
 		mainVbox.AddChild(titleLabel);
 
@@ -414,8 +376,7 @@ public partial class UIManager : Control
 			CustomMinimumSize = new Vector2(720, 0)
 		};
 		descLabel.AddThemeFontSizeOverride("font_size", 18);
-		descLabel.AddThemeColorOverride("font_color", Colors.White);
-		descLabel.HorizontalAlignment = HorizontalAlignment.Center;
+		descLabel.AddThemeColorOverride("font_color", Godot.Colors.White);		descLabel.HorizontalAlignment = HorizontalAlignment.Center;
 		mainVbox.AddChild(descLabel);
 
 		// Card button container
@@ -465,7 +426,7 @@ public partial class UIManager : Control
 				HorizontalAlignment = HorizontalAlignment.Center
 			};
 			categoryLabel.AddThemeFontSizeOverride("font_size", 12);
-			categoryLabel.AddThemeColorOverride("font_color", Colors.LightGray);
+			categoryLabel.AddThemeColorOverride("font_color", PencilGray);
 			cardVbox.AddChild(categoryLabel);
 
 			// 2. Title
@@ -510,7 +471,7 @@ public partial class UIManager : Control
 				HorizontalAlignment = HorizontalAlignment.Center
 			};
 			typeLabel.AddThemeFontSizeOverride("font_size", 14);
-			typeLabel.AddThemeColorOverride("font_color", Colors.LightGray);
+			typeLabel.AddThemeColorOverride("font_color", NoteTextDim);
 			cardVbox.AddChild(typeLabel);
 
 			// 5. Description (keywords only)
@@ -522,7 +483,7 @@ public partial class UIManager : Control
 				AutowrapMode = TextServer.AutowrapMode.WordSmart
 			};
 			desc.AddThemeFontSizeOverride("font_size", 13);
-			desc.AddThemeColorOverride("font_color", new Color(0.8f, 0.9f, 1.0f));
+			desc.AddThemeColorOverride("font_color", NoteTextDim);
 			cardVbox.AddChild(desc);
 
 			// Spacer
@@ -551,7 +512,7 @@ public partial class UIManager : Control
 				HorizontalAlignment = HorizontalAlignment.Center
 			};
 			hintLabel.AddThemeFontSizeOverride("font_size", 11);
-			hintLabel.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
+			hintLabel.AddThemeColorOverride("font_color", PencilGray);
 			cardVbox.AddChild(hintLabel);
 		}
 
@@ -575,6 +536,13 @@ public partial class UIManager : Control
 			CustomMinimumSize = new Vector2(150, 40)
 		};
 		_skipButton.AddThemeFontSizeOverride("font_size", 16);
+		var skipNormal = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
+		skipNormal.BgColor = new Color(0.25f, 0.2f, 0.2f, 0.9f);
+		_skipButton.AddThemeStyleboxOverride("normal", skipNormal);
+		var skipHover = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
+		skipHover.BgColor = new Color(0.35f, 0.28f, 0.28f, 0.9f);
+		_skipButton.AddThemeStyleboxOverride("hover", skipHover);
+		_skipButton.AddThemeColorOverride("font_color", NoteBg);
 		skipContainer.AddChild(_skipButton);
 	}
 
@@ -588,19 +556,10 @@ public partial class UIManager : Control
 			ProcessMode = ProcessModeEnum.Always
 		};
 
-		var tooltipStyle = new StyleBoxFlat
-		{
-			BgColor = new Color(0.05f, 0.05f, 0.12f, 0.96f),
-			BorderWidthLeft = 2,
-			BorderWidthRight = 2,
-			BorderWidthTop = 2,
-			BorderWidthBottom = 2,
-			BorderColor = new Color(0.35f, 0.55f, 0.95f, 0.9f),
-			CornerRadiusTopLeft = 8,
-			CornerRadiusTopRight = 8,
-			CornerRadiusBottomLeft = 8,
-			CornerRadiusBottomRight = 8
-		};
+		var tooltipStyle = MakeNotePanel(shadowSize: 6f);
+		tooltipStyle.BgColor = new Color(NoteBg, 0.98f);
+		tooltipStyle.ShadowSize = 8;
+		tooltipStyle.ShadowOffset = new Vector2(3, 3);
 		_tooltipPanel.AddThemeStyleboxOverride("panel", tooltipStyle);
 
 		_tooltipLabel = new RichTextLabel
@@ -613,7 +572,7 @@ public partial class UIManager : Control
 		};
 		_tooltipLabel.AddThemeFontSizeOverride("normal_font_size", 14);
 		_tooltipLabel.AddThemeFontSizeOverride("bold_font_size", 15);
-		_tooltipLabel.AddThemeColorOverride("default_color", Colors.White);
+		_tooltipLabel.AddThemeColorOverride("default_color", NoteText);
 
 		var margin = new MarginContainer
 		{
@@ -647,7 +606,7 @@ public partial class UIManager : Control
 			ProcessMode = ProcessModeEnum.Always
 		};
 		_pausePanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		var styleBox = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0.6f) };
+		var styleBox = new StyleBoxFlat { BgColor = new Color(BattlefieldBg, 0.7f) };
 		_pausePanel.AddThemeStyleboxOverride("panel", styleBox);
 		AddChild(_pausePanel);
 
@@ -655,14 +614,32 @@ public partial class UIManager : Control
 		center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		_pausePanel.AddChild(center);
 
+		var pauseCard = new Panel();
+		pauseCard.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
+		var pauseCardStyle = MakeNotePanel(borderRadius: 5f, shadowSize: 8f);
+		pauseCard.AddThemeStyleboxOverride("panel", pauseCardStyle);
+
+		var pauseVbox = new VBoxContainer();
+		pauseVbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		pauseCard.AddChild(pauseVbox);
+
+		var pauseMargin = new MarginContainer();
+		pauseMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		pauseMargin.AddThemeConstantOverride("margin_left", 30);
+		pauseMargin.AddThemeConstantOverride("margin_right", 30);
+		pauseMargin.AddThemeConstantOverride("margin_top", 20);
+		pauseMargin.AddThemeConstantOverride("margin_bottom", 20);
+		pauseVbox.AddChild(pauseMargin);
+
 		_pauseLabel = new Label
 		{
 			Text = "⏸ 暂停中\n按 ESC 继续",
 			HorizontalAlignment = HorizontalAlignment.Center
 		};
 		_pauseLabel.AddThemeFontSizeOverride("font_size", 28);
-		_pauseLabel.AddThemeColorOverride("font_color", Colors.White);
-		center.AddChild(_pauseLabel);
+		_pauseLabel.AddThemeColorOverride("font_color", NoteText);
+		pauseMargin.AddChild(_pauseLabel);
+		center.AddChild(pauseCard);
 	}
 
 	private void _CreateRoundBanner()
@@ -685,9 +662,9 @@ public partial class UIManager : Control
 		);
 		_roundBanner.CustomMinimumSize = new Vector2(400.0f, 80);
 		_roundBanner.AddThemeFontSizeOverride("font_size", 32);
-		_roundBanner.AddThemeColorOverride("font_color", Colors.Gold);
+		_roundBanner.AddThemeColorOverride("font_color", BloodBright);
 		_roundBanner.AddThemeConstantOverride("outline_size", 6);
-		_roundBanner.AddThemeColorOverride("font_outline_color", Colors.Black);
+		_roundBanner.AddThemeColorOverride("font_outline_color", InkBlack);
 		AddChild(_roundBanner);
 	}
 
@@ -701,19 +678,7 @@ public partial class UIManager : Control
 		_controlsPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopRight);
 		_OnUiViewportSizeChanged();
 
-		var styleBox = new StyleBoxFlat
-		{
-			BgColor = new Color(0.1f, 0.1f, 0.2f, 0.95f),
-			BorderWidthLeft = 3,
-			BorderWidthTop = 3,
-			BorderWidthRight = 3,
-			BorderWidthBottom = 3,
-			BorderColor = new Color(0.4f, 0.6f, 1.0f, 0.8f),
-			CornerRadiusTopLeft = 10,
-			CornerRadiusTopRight = 10,
-			CornerRadiusBottomLeft = 10,
-			CornerRadiusBottomRight = 10
-		};
+		var styleBox = MakeNotePanel(borderRadius: 5f, shadowSize: 6f);
 		_controlsPanel.AddThemeStyleboxOverride("panel", styleBox);
 		AddChild(_controlsPanel);
 
@@ -731,12 +696,12 @@ public partial class UIManager : Control
 			Text = "🎮 操作指南"
 		};
 		titleLabel.AddThemeFontSizeOverride("font_size", 20);
-		titleLabel.AddThemeColorOverride("font_color", new Color(0.4f, 0.8f, 1.0f));
+		titleLabel.AddThemeColorOverride("font_color", NoteText);
 		titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
 		container.AddChild(titleLabel);
 
 		var separator = new HSeparator();
-		separator.AddThemeColorOverride("separator", new Color(0.4f, 0.6f, 1.0f, 0.5f));
+		separator.AddThemeColorOverride("separator", new Color(NoteBorder, 0.5f));
 		container.AddChild(separator);
 
 		_CreateInfoCard(container, "🏃 移动", "WASD 或 方向键\n自由移动角色", new Color(0.3f, 0.8f, 0.3f));
@@ -765,9 +730,9 @@ public partial class UIManager : Control
 		};
 		var cardStyle = new StyleBoxFlat
 		{
-			BgColor = new Color(0.15f, 0.15f, 0.25f, 0.8f),
+			BgColor = new Color(NoteBg, 0.85f),
 			BorderWidthLeft = 2,
-			BorderColor = accentColor,
+			BorderColor = NoteBorder,
 			CornerRadiusTopLeft = 5,
 			CornerRadiusTopRight = 5,
 			CornerRadiusBottomLeft = 5,
@@ -783,7 +748,7 @@ public partial class UIManager : Control
 
 		var titleLabel = new Label { Text = title };
 		titleLabel.AddThemeFontSizeOverride("font_size", 14);
-		titleLabel.AddThemeColorOverride("font_color", accentColor);
+		titleLabel.AddThemeColorOverride("font_color", NoteText);
 		cardContainer.AddChild(titleLabel);
 
 		var contentLabel = new Label
@@ -792,7 +757,7 @@ public partial class UIManager : Control
 			AutowrapMode = TextServer.AutowrapMode.WordSmart
 		};
 		contentLabel.AddThemeFontSizeOverride("font_size", 12);
-		contentLabel.AddThemeColorOverride("font_color", Colors.White);
+		contentLabel.AddThemeColorOverride("font_color", NoteText);
 		cardContainer.AddChild(contentLabel);
 
 		var spacer = new Control { CustomMinimumSize = new Vector2(0, 5) };
@@ -803,7 +768,7 @@ public partial class UIManager : Control
 	{
 		_welcomePanel = new Panel();
 		_welcomePanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-		var styleBox = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0.8f) };
+		var styleBox = new StyleBoxFlat { BgColor = new Color(BattlefieldBg, 0.85f) };
 		_welcomePanel.AddThemeStyleboxOverride("panel", styleBox);
 		AddChild(_welcomePanel);
 
@@ -825,11 +790,13 @@ public partial class UIManager : Control
 
 		var title = new Label { Text = "🧟 僵尸大战 🧟" };
 		title.AddThemeFontSizeOverride("font_size", 36);
+		title.AddThemeColorOverride("font_color", BloodBright);
 		title.HorizontalAlignment = HorizontalAlignment.Center;
 		vbox.AddChild(title);
 
 		var subtitle = new Label { Text = "Zombie vs Survivors" };
 		subtitle.AddThemeFontSizeOverride("font_size", 18);
+		subtitle.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
 		subtitle.HorizontalAlignment = HorizontalAlignment.Center;
 		vbox.AddChild(subtitle);
 
@@ -851,6 +818,7 @@ public partial class UIManager : Control
 				label.CustomMinimumSize = new Vector2(0, 8);
 			else
 				label.AddThemeFontSizeOverride("font_size", 16);
+			label.AddThemeColorOverride("font_color", new Color(0.7f, 0.55f, 0.55f));
 			label.HorizontalAlignment = HorizontalAlignment.Center;
 			vbox.AddChild(label);
 		}
@@ -861,6 +829,13 @@ public partial class UIManager : Control
 			CustomMinimumSize = new Vector2(180, 50)
 		};
 		startButton.AddThemeFontSizeOverride("font_size", 22);
+		var startNormal = MakeNotePanel(borderRadius: 4f, shadowSize: 4f);
+		startNormal.BgColor = new Color(0.25f, 0.12f, 0.12f, 0.9f);
+		startButton.AddThemeStyleboxOverride("normal", startNormal);
+		var startHover = MakeNotePanel(borderRadius: 4f, shadowSize: 4f);
+		startHover.BgColor = new Color(0.35f, 0.18f, 0.18f, 0.9f);
+		startButton.AddThemeStyleboxOverride("hover", startHover);
+		startButton.AddThemeColorOverride("font_color", NoteBg);
 		startButton.Pressed += _StartGame;
 		vbox.AddChild(startButton);
 
@@ -870,6 +845,13 @@ public partial class UIManager : Control
 			CustomMinimumSize = new Vector2(120, 40)
 		};
 		helpButton.AddThemeFontSizeOverride("font_size", 16);
+		var helpNormal = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
+		helpNormal.BgColor = new Color(0.2f, 0.15f, 0.15f, 0.9f);
+		helpButton.AddThemeStyleboxOverride("normal", helpNormal);
+		var helpHover = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
+		helpHover.BgColor = new Color(0.3f, 0.22f, 0.22f, 0.9f);
+		helpButton.AddThemeStyleboxOverride("hover", helpHover);
+		helpButton.AddThemeColorOverride("font_color", NoteBg);
 		helpButton.Pressed += _ToggleControlsPanel;
 		vbox.AddChild(helpButton);
 	}
@@ -1214,65 +1196,43 @@ public partial class UIManager : Control
 				switch (wc.Rarity)
 				{
 					case 1:
-						baseColor = new Color(0.25f, 0.25f, 0.30f, 0.95f);
-						borderColor = new Color(0.5f, 0.5f, 0.55f);
-						titleNode.AddThemeColorOverride("font_color", Colors.White);
-						rarityNode.AddThemeColorOverride("font_color", Colors.LightGray);
+						baseColor = new Color(RarityCommonBg, 0.95f);
+						borderColor = RarityCommon;
+						titleNode.AddThemeColorOverride("font_color", NoteText);
+						rarityNode.AddThemeColorOverride("font_color", PencilGray);
 						break;
 					case 2:
-						baseColor = new Color(0.12f, 0.18f, 0.32f, 0.95f);
-						borderColor = new Color(0.3f, 0.55f, 0.95f);
-						titleNode.AddThemeColorOverride("font_color", new Color(0.6f, 0.8f, 1.0f));
-						rarityNode.AddThemeColorOverride("font_color", new Color(0.4f, 0.7f, 1.0f));
+						baseColor = new Color(RarityRareBg, 0.95f);
+						borderColor = RarityRare;
+						titleNode.AddThemeColorOverride("font_color", BloodBright);
+						rarityNode.AddThemeColorOverride("font_color", RarityRare);
 						break;
 					case 3:
-						baseColor = new Color(0.22f, 0.12f, 0.32f, 0.95f);
-						borderColor = new Color(0.7f, 0.35f, 0.95f);
-						titleNode.AddThemeColorOverride("font_color", new Color(0.9f, 0.6f, 1.0f));
-						rarityNode.AddThemeColorOverride("font_color", new Color(0.8f, 0.5f, 1.0f));
+						baseColor = new Color(RarityEpicBg, 0.95f);
+						borderColor = RarityEpic;
+						titleNode.AddThemeColorOverride("font_color", RarityEpic);
+						rarityNode.AddThemeColorOverride("font_color", RarityEpic);
 						break;
 					case 4:
-						baseColor = new Color(0.32f, 0.26f, 0.12f, 0.95f);
-						borderColor = new Color(1.0f, 0.8f, 0.25f);
+						baseColor = new Color(0.82f, 0.66f, 0.31f, 0.95f);
+						borderColor = new Color(1f, 0.8f, 0.25f);
 						titleNode.AddThemeColorOverride("font_color", new Color(1.0f, 0.9f, 0.4f));
-						rarityNode.AddThemeColorOverride("font_color", Colors.Gold);
+						rarityNode.AddThemeColorOverride("font_color", Godot.Colors.Gold);
 						break;
 					default:
-						baseColor = new Color(0.25f, 0.25f, 0.30f, 0.95f);
-						borderColor = new Color(0.5f, 0.5f, 0.55f);
-						titleNode.AddThemeColorOverride("font_color", Colors.White);
-						rarityNode.AddThemeColorOverride("font_color", Colors.LightGray);
+						baseColor = new Color(RarityCommonBg, 0.95f);
+						borderColor = RarityCommon;
+						titleNode.AddThemeColorOverride("font_color", NoteText);
+						rarityNode.AddThemeColorOverride("font_color", PencilGray);
 						break;
 				}
 
-				var cardStyle = new StyleBoxFlat
-				{
-					BgColor = baseColor,
-					BorderWidthLeft = 3,
-					BorderWidthRight = 3,
-					BorderWidthTop = 3,
-					BorderWidthBottom = 3,
-					BorderColor = borderColor,
-					CornerRadiusTopLeft = 10,
-					CornerRadiusTopRight = 10,
-					CornerRadiusBottomLeft = 10,
-					CornerRadiusBottomRight = 10
-				};
+				var cardStyle = MakeCardPanel(baseColor, borderColor);
 				button.AddThemeStyleboxOverride("normal", cardStyle);
 
-				var cardHoverStyle = new StyleBoxFlat
-				{
-					BgColor = _Lighten(baseColor, 0.15f),
-					BorderWidthLeft = 3,
-					BorderWidthRight = 3,
-					BorderWidthTop = 3,
-					BorderWidthBottom = 3,
-					BorderColor = _Lighten(borderColor, 0.25f),
-					CornerRadiusTopLeft = 10,
-					CornerRadiusTopRight = 10,
-					CornerRadiusBottomLeft = 10,
-					CornerRadiusBottomRight = 10
-				};
+				var hoverBg = _Lighten(baseColor, 0.08f);
+				var hoverBorder = _Lighten(borderColor, 0.1f);
+				var cardHoverStyle = MakeCardPanel(hoverBg, hoverBorder);
 				button.AddThemeStyleboxOverride("hover", cardHoverStyle);
 			}
 			else
@@ -1492,37 +1452,13 @@ public partial class UIManager : Control
 		descNode.Text = upgrade.Description;
 		rarityNode.Text = "升级";
 
-		titleNode.AddThemeColorOverride("font_color", new Color(0.55f, 1.0f, 0.65f));
-		rarityNode.AddThemeColorOverride("font_color", new Color(0.4f, 0.95f, 0.55f));
+		titleNode.AddThemeColorOverride("font_color", UpgradeTitle);
+		rarityNode.AddThemeColorOverride("font_color", UpgradeBorder);
 
-		var style = new StyleBoxFlat
-		{
-			BgColor = new Color(0.10f, 0.22f, 0.12f, 0.95f),
-			BorderWidthLeft = 3,
-			BorderWidthRight = 3,
-			BorderWidthTop = 3,
-			BorderWidthBottom = 3,
-			BorderColor = new Color(0.3f, 0.95f, 0.45f),
-			CornerRadiusTopLeft = 10,
-			CornerRadiusTopRight = 10,
-			CornerRadiusBottomLeft = 10,
-			CornerRadiusBottomRight = 10
-		};
+		var style = MakeCardPanel(UpgradeBg, UpgradeBorder);
 		button.AddThemeStyleboxOverride("normal", style);
 
-		var hoverStyle = new StyleBoxFlat
-		{
-			BgColor = _Lighten(new Color(0.10f, 0.22f, 0.12f, 0.95f), 0.15f),
-			BorderWidthLeft = 3,
-			BorderWidthRight = 3,
-			BorderWidthTop = 3,
-			BorderWidthBottom = 3,
-			BorderColor = _Lighten(new Color(0.3f, 0.95f, 0.45f), 0.2f),
-			CornerRadiusTopLeft = 10,
-			CornerRadiusTopRight = 10,
-			CornerRadiusBottomLeft = 10,
-			CornerRadiusBottomRight = 10
-		};
+		var hoverStyle = MakeCardPanel(_Lighten(UpgradeBg, 0.08f), _Lighten(UpgradeBorder, 0.1f));
 		button.AddThemeStyleboxOverride("hover", hoverStyle);
 	}
 
@@ -1889,7 +1825,7 @@ public partial class UIManager : Control
 
 		var bgStyle = new StyleBoxFlat
 		{
-			BgColor = new Color(0, 0, 0, 0.45f)
+			BgColor = new Color(BattlefieldBg, 0.6f)
 		};
 		_roundSummaryPanel.AddThemeStyleboxOverride("panel", bgStyle);
 		AddChild(_roundSummaryPanel);
@@ -1905,21 +1841,8 @@ public partial class UIManager : Control
 		card.CustomMinimumSize = new Vector2(340, 260);
 		card.MouseFilter = Control.MouseFilterEnum.Ignore;
 
-		var cardStyle = new StyleBoxFlat
-		{
-			BgColor = new Color(0.06f, 0.06f, 0.12f, 0.97f),
-			BorderWidthLeft = 2,
-			BorderWidthRight = 2,
-			BorderWidthTop = 2,
-			BorderWidthBottom = 2,
-			BorderColor = new Color(0.85f, 0.70f, 0.25f, 0.7f),
-			CornerRadiusTopLeft = 16,
-			CornerRadiusTopRight = 16,
-			CornerRadiusBottomLeft = 16,
-			CornerRadiusBottomRight = 16,
-			ShadowColor = new Color(0, 0, 0, 0.5f),
-			ShadowSize = 12
-		};
+		var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 8f);
+		cardStyle.ShadowOffset = new Vector2(4, 4);
 		card.AddThemeStyleboxOverride("panel", cardStyle);
 		center.AddChild(card);
 
@@ -1944,9 +1867,9 @@ public partial class UIManager : Control
 			HorizontalAlignment = HorizontalAlignment.Center
 		};
 		titleLbl.AddThemeFontSizeOverride("font_size", 26);
-		titleLbl.AddThemeColorOverride("font_color", new Color(1.0f, 0.85f, 0.30f));
+		titleLbl.AddThemeColorOverride("font_color", BloodBright);
 		titleLbl.AddThemeConstantOverride("outline_size", 3);
-		titleLbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.8f));
+		titleLbl.AddThemeColorOverride("font_outline_color", InkBlack);
 		vbox.AddChild(titleLbl);
 
 		// Subtitle
@@ -1969,9 +1892,9 @@ public partial class UIManager : Control
 		var sp1 = new Control { CustomMinimumSize = new Vector2(0, 4), MouseFilter = Control.MouseFilterEnum.Ignore };
 		vbox.AddChild(sp1);
 
-		_AddStatRow(vbox, "本波击杀", kills.ToString(), new Color(1.0f, 0.55f, 0.35f));
-		_AddStatRow(vbox, "累计击杀", totalKills.ToString(), new Color(0.9f, 0.45f, 0.40f));
-		_AddStatRow(vbox, "当前得分", score.ToString(), new Color(1.0f, 0.88f, 0.30f));
+		_AddStatRow(vbox, "本波击杀", kills.ToString(), new Color(0.8f, 0.5f, 0.4f));
+		_AddStatRow(vbox, "累计击杀", totalKills.ToString(), BloodRed);
+		_AddStatRow(vbox, "当前得分", score.ToString(), new Color(0.85f, 0.6f, 0.45f));
 
 		// Spacer
 		var sp2 = new Control { CustomMinimumSize = new Vector2(0, 6), MouseFilter = Control.MouseFilterEnum.Ignore };
@@ -2061,18 +1984,11 @@ public partial class UIManager : Control
 		_healthBar.Value = currentHealth;
 		float healthPercent = (float)currentHealth / maxHealth;
 
-		var fillStyle = _healthBar.GetThemeStylebox("fill");
-		if (fillStyle != null)
-		{
-			var dup = (StyleBoxFlat)fillStyle.Duplicate();
-			if (healthPercent > 0.6f)
-				dup.BgColor = GameConfig.HpColorHigh;
-			else if (healthPercent > 0.3f)
-				dup.BgColor = GameConfig.HpColorMed;
-			else
-				dup.BgColor = GameConfig.HpColorLow;
-			_healthBar.AddThemeStyleboxOverride("fill", dup);
-		}
+		var hpColor = healthPercent > GameConfig.HealthHighThreshold ? HandDrawnTheme.Colors.HpHigh
+			: healthPercent > GameConfig.HealthMedThreshold ? HandDrawnTheme.Colors.HpMed
+			: HandDrawnTheme.Colors.HpLow;
+		var fillStyle = MakeHpBarFill(hpColor);
+		_healthBar.AddThemeStyleboxOverride("fill", fillStyle);
 
 		if (_healthLabel != null)
 			_healthLabel.Text = $"{currentHealth}/{maxHealth}";

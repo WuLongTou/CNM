@@ -6,6 +6,7 @@ using ZombieWars.Core;
 using static ZombieWars.Core.GameEnums;
 using ZombieWars.Player;
 using ZombieWars.Weapons;
+using ZombieWars.UI;
 using Array = Godot.Collections.Array;
 using Godot.Collections;
 
@@ -27,11 +28,10 @@ public static partial class WeaponFormatter
     {
         return rarity switch
         {
-            1 => "#cccccc",
-            2 => "#4499ff",
-            3 => "#cc66ff",
-            4 => "#ffcc00",
-            _ => "#ffffff",
+            2 => "#c0392b",
+            3 => "#f39c12",
+            4 => "#ffcc40",
+            _ => "#9a8a8a"
         };
     }
 
@@ -39,11 +39,10 @@ public static partial class WeaponFormatter
     {
         return rarity switch
         {
-            1 => new Color(0.7f, 0.7f, 0.7f),
-            2 => new Color(0.3f, 0.6f, 1.0f),
-            3 => new Color(0.7f, 0.3f, 0.9f),
-            4 => new Color(1.0f, 0.8f, 0.2f),
-            _ => Colors.White,
+            2 => HandDrawnTheme.Colors.RarityRare,
+            3 => HandDrawnTheme.Colors.RarityEpic,
+            4 => new Color(1f, 0.8f, 0.25f),
+            _ => new Color(0.6f, 0.54f, 0.54f)
         };
     }
 

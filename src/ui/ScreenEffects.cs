@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Vfx;
+using static ZombieWars.UI.HandDrawnTheme;
+using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 /// <summary>
 /// Screen effects: shake, damage flash, low-HP vignette, attack flash, damage numbers, combo.
@@ -111,7 +113,7 @@ public partial class ScreenEffects : Node
 	public void FlashDamage()
 	{
 		if (_damageFlash == null) return;
-		_damageFlash.Color = new Color(0.8f, 0.1f, 0.1f, 0.25f);
+		_damageFlash.Color = new Color(BloodBright, 0.2f);
 		var tw = CreateTween();
 		tw.TweenProperty(_damageFlash, "color:a", 0.0f, 0.5f);
 	}
@@ -223,26 +225,26 @@ void fragment() {
 		}
 		else if (isCritical)
 		{
-			color = new Color(1.0f, 0.85f, 0.15f);
-			fontSize = 32; // Larger for critical hits
+			color = BloodBright;
+			fontSize = 32;
 			text = amount + "!";
 		}
 		else if (amount >= 50)
 		{
-			color = new Color(1.0f, 0.6f, 0.2f);
-			fontSize = 22; // Big damage
+			color = BloodRed;
+			fontSize = 22;
 			text = amount.ToString();
 		}
 		else if (amount >= 20)
 		{
-			color = new Color(1.0f, 0.9f, 0.5f);
-			fontSize = 16; // Medium damage
+			color = new Color(0.8f, 0.45f, 0.35f);
+			fontSize = 16;
 			text = amount.ToString();
 		}
 		else
 		{
-			color = new Color(0.9f, 0.9f, 0.9f);
-			fontSize = 12; // Small damage
+			color = NoteText;
+			fontSize = 12;
 			text = amount.ToString();
 		}
 
@@ -333,14 +335,21 @@ void fragment() {
 		_comboLabel.AddThemeFontSizeOverride("font_size", 20 + Mathf.Min(_comboCount, 10));
 
 		Color color;
-		if (_comboCount >= 10)
-			color = new Color(1.0f, 0.3f, 0.1f);
-		else if (_comboCount >= 7)
-			color = new Color(1.0f, 0.6f, 0.1f);
+		var comboColors = new[]
+		{
+			NoteBg,
+			new Color(0.95f, 0.75f, 0.65f),
+			new Color(0.9f, 0.5f, 0.4f),
+			BloodBright
+		};
+		if (_comboCount >= 12)
+			color = comboColors[3];
+		else if (_comboCount >= 8)
+			color = comboColors[2];
 		else if (_comboCount >= 5)
-			color = new Color(1.0f, 0.85f, 0.15f);
+			color = comboColors[1];
 		else
-			color = new Color(1, 1, 1);
+			color = comboColors[0];
 		_comboLabel.AddThemeColorOverride("font_color", color);
 
 		var screen = GetViewport().GetVisibleRect().Size;
@@ -404,7 +413,7 @@ void fragment() {
 		{
 			MouseFilter = Control.MouseFilterEnum.Ignore,
 			ZIndex = 36,
-			Color = new Color(0.5f, 0.05f, 0.05f, 0.2f)
+			Color = new Color(BloodRed, 0.25f)
 		};
 		overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
 		AddChild(overlay);

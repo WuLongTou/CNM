@@ -229,9 +229,9 @@ public static class GameConfig
     public const float HealthLowThreshold = 0.25f;
 
     // Health bar colors
-    public static readonly Godot.Color HpColorHigh = new(0.22f, 0.55f, 0.22f);
-    public static readonly Godot.Color HpColorMed = new(0.65f, 0.60f, 0.15f);
-    public static readonly Godot.Color HpColorLow = new(0.70f, 0.15f, 0.12f);
+    public static readonly Godot.Color HpColorHigh = new(0.65f, 0.35f, 0.35f);
+    public static readonly Godot.Color HpColorMed = new(0.75f, 0.45f, 0.25f);
+    public static readonly Godot.Color HpColorLow = new(0.753f, 0.224f, 0.169f);
 
     // ═══════════════════════════════════════════════
     // Visual Effects (VFX)
