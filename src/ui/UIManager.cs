@@ -1125,7 +1125,7 @@ public partial class UIManager : Control
 				var categoryNode = (Label)vbox.GetNode("Category");
 				var titleNode = (Label)vbox.GetNode("Title");
 				var typeNode = (Label)vbox.GetNode("Type");
-				var iconNode = (Label)vbox.GetNode("IconContainer/Icon");
+				var iconNode = vbox.FindChild("Icon", true, false) as Label;
 				var descNode = (Label)vbox.GetNode("Desc");
 				var rarityNode = (Label)vbox.GetNode("Rarity");
 
@@ -1163,7 +1163,7 @@ public partial class UIManager : Control
 				rarityNode.Text = WeaponFormatter.GetRarityText(wc.Rarity);
 
 				// 使用真实武器图片替代 emoji 图标
-				if (wc.IconTexture != null)
+				if (wc.IconTexture != null && iconNode != null)
 				{
 					// Check if we already have a TextureRect (avoid duplicates on reuse)
 					var existingTex = iconNode.GetParent()?.GetNodeOrNull<TextureRect>("IconTex");
@@ -1185,52 +1185,53 @@ public partial class UIManager : Control
 						iconNode.GetParent()?.AddChild(texRect);
 					}
 				}
-				else
+				else if (iconNode != null)
 				{
 					iconNode.Text = wc.Icon;
 				}
 
-				Color baseColor = NoteBg;
+				Color baseColor;
 				Color borderColor;
-				Color titleColor;
 
 				switch (wc.Rarity)
 				{
 					case 1:
+						baseColor = new Color(RarityCommonBg, 0.95f);
 						borderColor = RarityCommon;
-						titleColor = NoteText;
+						titleNode.AddThemeColorOverride("font_color", NoteText);
 						rarityNode.AddThemeColorOverride("font_color", PencilGray);
 						break;
 					case 2:
-						borderColor = BloodRed;
-						borderColor = new Color(BloodRed, 0.9f);
-						titleColor = BloodRed;
-						rarityNode.AddThemeColorOverride("font_color", BloodRed);
+						baseColor = new Color(RarityRareBg, 0.95f);
+						borderColor = RarityRare;
+						titleNode.AddThemeColorOverride("font_color", BloodBright);
+						rarityNode.AddThemeColorOverride("font_color", RarityRare);
 						break;
 					case 3:
+						baseColor = new Color(RarityEpicBg, 0.95f);
 						borderColor = RarityEpic;
-						titleColor = new Color(0.82f, 0.55f, 0.08f);
+						titleNode.AddThemeColorOverride("font_color", RarityEpic);
 						rarityNode.AddThemeColorOverride("font_color", RarityEpic);
 						break;
 					case 4:
+						baseColor = new Color(0.82f, 0.66f, 0.31f, 0.95f);
 						borderColor = new Color(1f, 0.8f, 0.25f);
-						titleColor = new Color(0.7f, 0.5f, 0.0f);
-						rarityNode.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.25f));
+						titleNode.AddThemeColorOverride("font_color", new Color(1.0f, 0.9f, 0.4f));
+						rarityNode.AddThemeColorOverride("font_color", Godot.Colors.Gold);
 						break;
 					default:
+						baseColor = new Color(RarityCommonBg, 0.95f);
 						borderColor = RarityCommon;
-						titleColor = NoteText;
+						titleNode.AddThemeColorOverride("font_color", NoteText);
 						rarityNode.AddThemeColorOverride("font_color", PencilGray);
 						break;
 				}
 
-				titleNode.AddThemeColorOverride("font_color", titleColor);
-
 				var cardStyle = MakeCardPanel(baseColor, borderColor);
 				button.AddThemeStyleboxOverride("normal", cardStyle);
 
-				var hoverBg = _Lighten(baseColor, 0.04f);
-				var hoverBorder = _Lighten(borderColor, 0.15f);
+				var hoverBg = _Lighten(baseColor, 0.08f);
+				var hoverBorder = _Lighten(borderColor, 0.1f);
 				var cardHoverStyle = MakeCardPanel(hoverBg, hoverBorder);
 				button.AddThemeStyleboxOverride("hover", cardHoverStyle);
 			}
@@ -1398,8 +1399,8 @@ public partial class UIManager : Control
 		foreach (var pos in candidates)
 		{
 			bool inside = pos.X >= 0 && pos.Y >= 0 &&
-			              pos.X + panelSize.X <= screenSize.X &&
-			              pos.Y + panelSize.Y <= screenSize.Y;
+						  pos.X + panelSize.X <= screenSize.X &&
+						  pos.Y + panelSize.Y <= screenSize.Y;
 			if (inside)
 			{
 				var dist = pos.DistanceTo(mousePos);
@@ -1440,24 +1441,24 @@ public partial class UIManager : Control
 		var categoryNode = (Label)vbox.GetNode("Category");
 		var titleNode = (Label)vbox.GetNode("Title");
 		var typeNode = (Label)vbox.GetNode("Type");
-		var iconNode = (Label)vbox.GetNode("IconContainer/Icon");
+		var iconNode = vbox.FindChild("Icon", true, false) as Label;
 		var descNode = (Label)vbox.GetNode("Desc");
 		var rarityNode = (Label)vbox.GetNode("Rarity");
 
 		categoryNode.Text = "【强化卡】";
 		titleNode.Text = upgrade.DisplayName;
 		typeNode.Text = "强化已有装备";
-		iconNode.Text = upgrade.Icon;
+		if (iconNode != null) iconNode.Text = upgrade.Icon;
 		descNode.Text = upgrade.Description;
 		rarityNode.Text = "升级";
 
-		titleNode.AddThemeColorOverride("font_color", new Color(0.55f, 0.3f, 0.3f));
-		rarityNode.AddThemeColorOverride("font_color", new Color(0.5f, 0.35f, 0.35f));
+		titleNode.AddThemeColorOverride("font_color", UpgradeTitle);
+		rarityNode.AddThemeColorOverride("font_color", UpgradeBorder);
 
-		var style = MakeCardPanel(NoteBg, UpgradeBorder);
+		var style = MakeCardPanel(UpgradeBg, UpgradeBorder);
 		button.AddThemeStyleboxOverride("normal", style);
 
-		var hoverStyle = MakeCardPanel(NoteBgHover, _Lighten(UpgradeBorder, 0.15f));
+		var hoverStyle = MakeCardPanel(_Lighten(UpgradeBg, 0.08f), _Lighten(UpgradeBorder, 0.1f));
 		button.AddThemeStyleboxOverride("hover", hoverStyle);
 	}
 
@@ -1695,8 +1696,8 @@ public partial class UIManager : Control
 
 		// Risk section
 		bool hasRisk = weapon.HealthCost > 0 || weapon.HealthModifier < 0 ||
-		               weapon.SpeedModifier < 0 || weapon.DamageModifier < 1.0f ||
-		               weapon.AttackSpeedModifier < 1.0f;
+					   weapon.SpeedModifier < 0 || weapon.DamageModifier < 1.0f ||
+					   weapon.AttackSpeedModifier < 1.0f;
 		if (hasRisk)
 		{
 			bb += "[color=#ff6666]【⚠ 风险提示】[/color]\n";
