@@ -113,19 +113,22 @@ public partial class PlayerVfx : Node
 
     private void _TryLoadPngSprites()
     {
-        if (!_allSpritesLoaded)
-        {
-            _allSpritesLoaded = true;
-            _LoadCharacterSprites("warrior", _warriorWalkFrames, _warriorAttackFrames,
-                out _warriorIdle, out _warriorBase);
-            _LoadCharacterSprites("ranger", _rangerWalkFrames, _rangerAttackFrames,
-                out _rangerIdle, out _rangerBase);
-            _LoadCharacterSprites("mage", _mageWalkFrames, _mageAttackFrames,
-                out _mageIdle, out _mageBase);
-        }
-
-        // Apply current weapon type sprites
+        _ReloadStaticSprites();
         _ApplyWeaponSprites();
+    }
+
+    private void _ReloadStaticSprites()
+    {
+        if (_allSpritesLoaded && _warriorIdle != null)
+            return;
+
+        _allSpritesLoaded = true;
+        _LoadCharacterSprites("warrior", _warriorWalkFrames, _warriorAttackFrames,
+            out _warriorIdle, out _warriorBase);
+        _LoadCharacterSprites("ranger", _rangerWalkFrames, _rangerAttackFrames,
+            out _rangerIdle, out _rangerBase);
+        _LoadCharacterSprites("mage", _mageWalkFrames, _mageAttackFrames,
+            out _mageIdle, out _mageBase);
     }
 
     private static void _LoadCharacterSprites(string charName,
@@ -291,6 +294,10 @@ public partial class PlayerVfx : Node
 
     private void _ApplyWeaponSprites()
     {
+        // Re-load from disk if static caches were cleared (e.g. scene reload)
+        if (!_allSpritesLoaded || _warriorIdle == null)
+            _ReloadStaticSprites();
+
         _walkFrames.Clear();
         _attackFrames.Clear();
         _idleFrame = null;

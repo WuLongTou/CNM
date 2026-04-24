@@ -47,8 +47,6 @@ public partial class Main : Node2D
 		_weatherSystem.StartWeatherCycle();
 
 		TextureUtils.ClearCache();
-		ZombieWars.Player.PlayerVfx.ResetSpriteCache();
-		ZombieWars.Enemy.ZombieVfx.ResetSpriteCache();
 		ZombieRegistry.Clear();
 		GameServices.Clear();
 

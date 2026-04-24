@@ -56,7 +56,6 @@ public partial class GameManager : Node
     public Player? PlayerRef { get; private set; }
     public Zombie? BossZombie { get; private set; }
     private WeaponDeck? _weaponDeck;
-    private Zombie? _bossZombie;
     private Player _player = null!;
     private PackedScene _zombieScene = null!;
     private List<Vector2> _spawnPoints = new();
@@ -71,13 +70,13 @@ public partial class GameManager : Node
     private static readonly Dictionary<int, string> TypeNames = new()
     {
         { 0, "基础" }, { 1, "快速" }, { 2, "坦克" }, { 3, "爆炸" },
-        { 4, "隐身" }, { 5, "喷毒" }, { 6, "治疗" }, { 7, "召唤师" }
+        { 4, "隐身" }, { 5, "喷毒" }, { 6, "治疗" }, { 7, "召唤师" }, { 8, "射手" }
     };
 
     private static readonly Dictionary<int, int> TypeScore = new()
     {
         { 0, 10 }, { 1, 15 }, { 2, 25 }, { 3, 30 },
-        { 4, 35 }, { 5, 40 }, { 6, 50 }, { 7, 60 }
+        { 4, 35 }, { 5, 40 }, { 6, 50 }, { 7, 60 }, { 8, 45 }
     };
 
     private struct SpawnEntry
@@ -118,7 +117,7 @@ public partial class GameManager : Node
             }
         }
 
-        var saveManager = GetNodeOrNull("/root/SaveManager");
+        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
         if (saveManager != null)
         {
             HighScore = _GetHighScore(saveManager);
@@ -164,7 +163,6 @@ public partial class GameManager : Node
 
         if (_zombiesSpawned >= _zombiesToSpawn && _zombiesAlive <= 0)
         {
-            GD.Print($"[GameManager] 回合完成 spawned={_zombiesSpawned}, toSpawn={_zombiesToSpawn}, alive={_zombiesAlive}");
             EndRound();
         }
     }
@@ -285,7 +283,6 @@ public partial class GameManager : Node
 
     public void OnWeaponSelected(object? card)
     {
-        GD.Print($"[GameManager] OnWeaponSelected state={CurrentState}, card={card?.GetType().Name}");
         if (CurrentState != GameState.WeaponSelection) return;
 
         if (_player != null)
@@ -395,7 +392,6 @@ public partial class GameManager : Node
         var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
         zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
         zombieInstance.SetBoss();
-        _bossZombie = zombieInstance;
         BossZombie = zombieInstance;
 
         _zombiesSpawned++;
@@ -451,13 +447,12 @@ public partial class GameManager : Node
         if (zombie.IsBoss)
         {
             pts = (int)(pts * GameConfig.BossScoreMult);
-            _bossZombie = null;
             BossZombie = null;
         }
 
         Score += pts;
 
-        var saveManager = GetNodeOrNull("/root/SaveManager");
+        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
         if (saveManager != null) _AddKill(saveManager);
 
         _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
@@ -487,7 +482,7 @@ public partial class GameManager : Node
 
         LogUtils.Print($"游戏结束！坚持了 {CurrentRound} 回合，得分: {Score}");
 
-        var saveManager = GetNodeOrNull("/root/SaveManager");
+        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
         if (saveManager != null)
         {
             _SaveHighScore(saveManager, Score);
@@ -565,13 +560,15 @@ public partial class GameManager : Node
     private void _OnMinionDied(Zombie zombie)
     {
         _zombiesAlive--;
+        _roundKills++;
+        _totalKills++;
         Score += 5;
 
-        var saveManager = GetNodeOrNull("/root/SaveManager");
+        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
         if (saveManager != null) _AddKill(saveManager);
 
-        _uiManager?.Call("update_score_display", Score);
-        _uiManager?.Call("add_combo");
+        _uiManager?.UpdateScoreDisplay(Score);
+        _uiManager?.AddCombo();
     }
 
     private static int _GetHighScore(Node sm) => sm.HasMethod("get_high_score") ? (int)sm.Call("get_high_score") : 0;

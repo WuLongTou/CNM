@@ -64,6 +64,7 @@ public partial class ZombieVfx : Node
     private float _animTimer = 0.0f;
     private bool _isMoving = false;
     private bool _facingLeft = false;
+    private bool _pngLoaded;
 
     public Sprite2D Sprite => _sprite;
 
@@ -92,8 +93,6 @@ public partial class ZombieVfx : Node
             baseName = _GetZombieAssetName(type);
             paths = new[]
             {
-                $"res://assets/sprites/zombies/zombie_{baseName}.png",
-                $"res://assets/sprites/zombies/zombie_{baseName}.jpg",
                 $"res://assets/sprites/zombies/{baseName}.png",
                 $"res://assets/sprites/zombies/{baseName}.jpg",
             };
@@ -104,12 +103,11 @@ public partial class ZombieVfx : Node
 
         foreach (string p in paths)
         {
-            // Use TextureUtils for normalized loading
             var tex = TextureUtils.LoadNormalizedSprite(p);
             if (tex != null)
             {
                 _sprite.Texture = tex;
-                // If no walk frames loaded, use main sprite as first frame
+                _pngLoaded = true;
                 if (_walkFrames.Count == 0)
                     _walkFrames.Add(tex);
                 return;
@@ -119,42 +117,14 @@ public partial class ZombieVfx : Node
 
     private void _LoadWalkFrames(string baseName)
     {
-        // Try PNG first (generated interpolated frames), then JPG fallback
-
-        // Pattern 1: zombie_walk_1 (generic)
+        // Pattern 1: zombie_basic_walk_1 (type-specific, matches actual file names)
         for (int i = 1; i <= 6; i++)
         {
-            var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/zombie_walk_{i}.png");
+            var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.png");
             if (tex == null)
-                tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/zombie_walk_{i}.jpg");
+                tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.jpg");
             if (tex != null)
                 _walkFrames.Add(tex);
-        }
-
-        // Pattern 2: zombie_basic_walk_1 (type-specific naming)
-        if (_walkFrames.Count == 0)
-        {
-            for (int i = 1; i <= 6; i++)
-            {
-                var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.png");
-                if (tex == null)
-                    tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.jpg");
-                if (tex != null)
-                    _walkFrames.Add(tex);
-            }
-        }
-
-        // Pattern 3: zombie_frame_1 (frame-based)
-        if (_walkFrames.Count == 0)
-        {
-            for (int i = 1; i <= 6; i++)
-            {
-                var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_frame_{i}.png");
-                if (tex == null)
-                    tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_frame_{i}.jpg");
-                if (tex != null)
-                    _walkFrames.Add(tex);
-            }
         }
     }
 
@@ -168,6 +138,7 @@ public partial class ZombieVfx : Node
         ZombieType.Spitter => "zombie_spitter",
         ZombieType.Healer => "zombie_healer",
         ZombieType.Summoner => "zombie_summoner",
+        ZombieType.Archer => "zombie_archer",
         _ => "zombie_basic"
     };
 
@@ -178,6 +149,7 @@ public partial class ZombieVfx : Node
         _zombie.AddChild(_sprite);
 
         // Priority: PNG assets > cached generated sprites > generate on the fly
+        _pngLoaded = false;
         _TryLoadPngSprite(_zombie.ZombieType);
         if (_sprite.Texture == null)
         {
@@ -193,8 +165,8 @@ public partial class ZombieVfx : Node
             }
         }
 
-        // Load walk frames from cache
-        if (_walkFramesCache.TryGetValue(_zombie.ZombieType, out var cachedFrames))
+        // Only use cached walk frames if PNG loading failed
+        if (!_pngLoaded && _walkFramesCache.TryGetValue(_zombie.ZombieType, out var cachedFrames))
         {
             _walkFrames.Clear();
             _walkFrames.AddRange(cachedFrames);

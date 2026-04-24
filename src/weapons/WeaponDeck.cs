@@ -23,8 +23,6 @@ public partial class WeaponDeck : Node
 		_allWeapons = new Array<WeaponCard>(WeaponFactory.BuildAll());
 		_prerequisites = WeaponFactory.GetPrerequisites();
 		AddChild(_evolution);
-		GD.Print("武器库初始化完成: " + _allWeapons.Count + " 种武器");
-		GD.Print("武器进化系统已就绪: " + _evolution.GetAllRecipes().Length + " 个融合配方");
 	}
 
 	/// <summary>

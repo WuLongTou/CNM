@@ -343,7 +343,7 @@ public partial class ZombieAbilitySystem : Node
         if (_player != null)
             clone.SetPlayerTarget(_player);
 
-        clone.Connect("died", Callable.From<Zombie>(_OnCloneDeath));
+        clone.Died += _OnCloneDeath;
         parent.AddChild(clone);
 
         // Brief spawn effect

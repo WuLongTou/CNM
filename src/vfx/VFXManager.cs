@@ -29,8 +29,16 @@ public partial class VFXManager : Node
 		"res://assets/sprites/effects/effect_charm.jpg",
 		"res://assets/sprites/effects/effect_death.jpg",
 		"res://assets/sprites/effects/effect_explosion.jpg",
+		"res://assets/sprites/effects/effect_aura.jpg",
+		"res://assets/sprites/effects/effect_shield.jpg",
+		"res://assets/sprites/effects/effect_smoke.jpg",
+		"res://assets/sprites/effects/effect_stun.jpg",
+		"res://assets/sprites/effects/effect_freeze.jpg",
+		"res://assets/sprites/effects/effect_crit.jpg",
+		"res://assets/sprites/effects/effect_dash.jpg",
+		"res://assets/sprites/effects/effect_upgrade.jpg",
 	};
-	private static Texture2D?[] _effectCache = new Texture2D?[8];
+	private static Texture2D?[] _effectCache = new Texture2D?[16];
 	private static bool _cacheInitialized = false;
 
 	public override void _Ready()

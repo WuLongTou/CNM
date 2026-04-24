@@ -219,7 +219,7 @@ public partial class Player : CharacterBody2D
             {
                 Vector2 dir = (zombie.GlobalPosition - GlobalPosition).Normalized();
                 float factor = (Core.GameConfig.RepulsionDistance - dist) / Core.GameConfig.RepulsionDistance;
-                Velocity += dir * factor * Core.GameConfig.RepulsionForce * 0.016f;
+                Velocity += dir * factor * Core.GameConfig.RepulsionForce * (float)GetPhysicsProcessDeltaTime();
             }
         }
     }

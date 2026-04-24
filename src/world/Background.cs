@@ -38,7 +38,10 @@ public partial class Background : Node2D
     {
         string[] paths = {
             "res://assets/sprites/backgrounds/ground_stone.jpg",
-            "res://assets/sprites/backgrounds/ground_graveyard.jpg"
+            "res://assets/sprites/backgrounds/ground_graveyard.jpg",
+            "res://assets/sprites/backgrounds/ground_dungeon.jpg",
+            "res://assets/sprites/backgrounds/ground_cemetery.jpg",
+            "res://assets/sprites/backgrounds/ground_ruins.jpg"
         };
 
         foreach (string p in paths)

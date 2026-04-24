@@ -43,6 +43,7 @@ public partial class WeaponCard : Resource
     [Export] public TargetPriority TargetPriority { get; set; } = TargetPriority.Nearest;
 
     [Export] public string Icon { get; set; } = "⚔️";
+    [Export] public Texture2D? IconTexture { get; set; } = null;
     [Export] public int Rarity { get; set; } = 1;
     [Export] public int Duration { get; set; } = -1;
 

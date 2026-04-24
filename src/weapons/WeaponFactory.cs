@@ -51,10 +51,35 @@ public static partial class WeaponFactory
 
     // ═══════════════════════════════════════════════
     // 数据表
-    // 字段: name, desc, type, cat, tier, upcat, icon, [tags]
+    // 字段: name, desc, type, cat, tier, upcat, icon, icon_tex, [tags]
     // 可选: dmg, spd, asp, cd, hp, spd_mod, crit, ls, frz, psn, aura, hcost
     // 效果: melee_fx, ranged_fx, magic_fx (dict: effect_enum -> level)
     // ═══════════════════════════════════════════════
+
+    // 武器图标纹理映射
+    private static readonly Dictionary<string, string> _WeaponIconTextures = new()
+    {
+        { "铁剑", "res://assets/sprites/weapons/sword_basic.jpg" },
+        { "战斧", "res://assets/sprites/weapons/axe_battle.jpg" },
+        { "双刀", "res://assets/sprites/weapons/dagger_twin.jpg" },
+        { "淬毒短刀", "res://assets/sprites/weapons/dagger_twin.jpg" },
+        { "巨斧", "res://assets/sprites/weapons/axe_battle.jpg" },
+        { "长枪", "res://assets/sprites/weapons/sword_basic.jpg" },
+        { "死神镰刀", "res://assets/sprites/weapons/axe_battle.jpg" },
+        { "弓箭", "res://assets/sprites/weapons/bow_long.jpg" },
+        { "重弩", "res://assets/sprites/weapons/crossbow_heavy.jpg" },
+        { "散弹枪", "res://assets/sprites/weapons/crossbow_heavy.jpg" },
+        { "狙击弩", "res://assets/sprites/weapons/crossbow_heavy.jpg" },
+        { "轨迹弩", "res://assets/sprites/weapons/crossbow_heavy.jpg" },
+        { "回旋镖", "res://assets/sprites/weapons/throwing_knives.jpg" },
+        { "法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+        { "火球法杖", "res://assets/sprites/weapons/sword_fire.jpg" },
+        { "魅惑法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+        { "冰霜法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+        { "雷电法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+        { "死神法杖", "res://assets/sprites/weapons/sword_fire.jpg" },
+        { "力场法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+    };
 
     private static readonly GodotArray _WEAPON_DATA = new GodotArray
     {
@@ -397,6 +422,13 @@ public static partial class WeaponFactory
         c.Tier = d.ContainsKey("tier") ? d["tier"].AsInt32() : 1;
         c.UpgradeCategory = d.ContainsKey("upcat") ? d["upcat"].AsString() : "";
         c.Icon = d.ContainsKey("icon") ? d["icon"].AsString() : "⚔️";
+
+        // 加载武器图标纹理
+        if (_WeaponIconTextures.TryGetValue(name, out var texPath))
+        {
+            if (FileAccess.FileExists(texPath))
+                c.IconTexture = GD.Load<Texture2D>(texPath);
+        }
 
         // 属性修改器
         if (d.ContainsKey("dmg")) c.DamageModifier = d["dmg"].AsSingle();

@@ -34,9 +34,9 @@ public interface IDamager
 public interface IPlayer : IDamageable
 {
     float CurrentSpeed { get; }
-    int CurrentDamage { get; }
-    int CriticalChance { get; }
-    int LifeStealPercent { get; }
+    float CurrentDamage { get; }
+    float CriticalChance { get; }
+    float LifeStealPercent { get; }
     float CritMultiplier { get; }
 
     void RegisterDamageDealt(Zombie target, float damage);

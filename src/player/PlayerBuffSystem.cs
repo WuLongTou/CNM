@@ -109,7 +109,6 @@ public partial class PlayerBuffSystem : Node
         _SpawnApplyVFX(buff);
 
         BuffApplied?.Invoke(buff);
-        LogUtils.Print($"BUFF APPLIED: {type} ({source}) — {buff.Description}");
         return true;
     }
 
@@ -123,7 +122,6 @@ public partial class PlayerBuffSystem : Node
         _activeBuffs.Remove(type);
         _ClearVisualOverlay(type);
         BuffRemoved?.Invoke(buff);
-        LogUtils.Print($"BUFF REMOVED: {type}");
     }
 
     /// <summary>Clear all active buffs (e.g. on death).</summary>
@@ -254,7 +252,6 @@ public partial class PlayerBuffSystem : Node
         _activeBuffs.Remove(type);
         _ClearVisualOverlay(type);
         BuffExpired?.Invoke(buff);
-        LogUtils.Print($"BUFF EXPIRED: {type}");
     }
 
     // ═══════════════════════════════════════════════════

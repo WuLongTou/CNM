@@ -62,7 +62,8 @@ public partial class Zombie : CharacterBody2D
     private bool _isStunned;
     private float _stunTimer;
     private float _slowMultiplier = 1.0f;
-    private float _poisonTimer;
+    private float _poisonRemaining;
+    private float _poisonTickTimer;
     private float _poisonDamage;
 
     // Charm
@@ -220,9 +221,6 @@ public partial class Zombie : CharacterBody2D
                 GameConfig.SpitterCooldown - roundNumber * GameConfig.SpitterCooldownDecay);
         }
 
-        // GD.Print is used for debug logs
-        GD.Print($"僵尸升级 - 回合: {roundNumber}, 血量: {MaxHealth}, 伤害: {Damage}, 速度: {Speed:F1}, 倍数: x{multiplier:F2}");
-
         _vfx?.UpdateStatusLabels();
     }
 
@@ -266,13 +264,14 @@ public partial class Zombie : CharacterBody2D
             }
         }
 
-        if (_poisonTimer > 0)
+        if (_poisonRemaining > 0)
         {
-            _poisonTimer -= d;
-            if (_poisonTimer <= 0)
+            _poisonRemaining -= d;
+            _poisonTickTimer -= d;
+            if (_poisonTickTimer <= 0 && _poisonRemaining > 0)
             {
+                _poisonTickTimer = GameConfig.ZombiePoisonTick;
                 TakeDamage((int)_poisonDamage);
-                _poisonTimer = GameConfig.ZombiePoisonTick;
             }
         }
 
@@ -760,7 +759,8 @@ public partial class Zombie : CharacterBody2D
     public void ApplyPoison(float damagePerSecond, float duration)
     {
         _poisonDamage = damagePerSecond;
-        _poisonTimer = duration;
+        _poisonRemaining = duration;
+        _poisonTickTimer = GameConfig.ZombiePoisonTick;
         _vfx?.ShowPoisoned();
     }
 

@@ -141,8 +141,7 @@ public partial class Projectile : CharacterBody2D
                     _damagedEnemies.Add(zombie);
                     if (Shooter is Player p)
                         p.RegisterDamageDealt(zombie, trajDmg);
-                    var uiMgr = GetTree().GetFirstNodeInGroup("ui_manager") as UI.UIManager;
-                    uiMgr?.ShowDamageNumber(zombie.GlobalPosition, trajDmg, false);
+                    GameServices.UI.ShowDamageNumber(zombie.GlobalPosition, trajDmg, false);
                 }
             }
         }

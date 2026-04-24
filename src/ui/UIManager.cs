@@ -926,7 +926,6 @@ public partial class UIManager : Control
 
 		if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left && IsUpgradeActive())
 		{
-			GD.Print($"[UIManager] 点击检测 pos={mb.GlobalPosition}, buttons={_weaponButtons.Count}");
 			for (int i = 0; i < _weaponButtons.Count; i++)
 			{
 				if (i < _currentWeaponOptions.Count && _weaponButtons[i].GetGlobalRect().HasPoint(mb.GlobalPosition))
@@ -1180,7 +1179,34 @@ public partial class UIManager : Control
 
 				descNode.Text = keywords.Count > 0 ? string.Join(" ", keywords) : "基础";
 				rarityNode.Text = WeaponFormatter.GetRarityText(wc.Rarity);
-				iconNode.Text = wc.Icon;
+
+				// 使用真实武器图片替代 emoji 图标
+				if (wc.IconTexture != null)
+				{
+					// Check if we already have a TextureRect (avoid duplicates on reuse)
+					var existingTex = iconNode.GetParent()?.GetNodeOrNull<TextureRect>("IconTex");
+					if (existingTex != null)
+					{
+						existingTex.Texture = wc.IconTexture;
+					}
+					else
+					{
+						var texRect = new TextureRect
+						{
+							Name = "IconTex",
+							Texture = wc.IconTexture,
+							ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+							StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+							CustomMinimumSize = new Vector2(60, 60)
+						};
+						iconNode.GetParent()?.RemoveChild(iconNode);
+						iconNode.GetParent()?.AddChild(texRect);
+					}
+				}
+				else
+				{
+					iconNode.Text = wc.Icon;
+				}
 
 				Color baseColor;
 				Color borderColor;
@@ -1319,11 +1345,9 @@ public partial class UIManager : Control
 
 	private void _OnWeaponButtonPressed(int index)
 	{
-		GD.Print($"[UIManager] 卡片点击 index={index}, options={_currentWeaponOptions.Count}");
 		if (index < _currentWeaponOptions.Count)
 		{
 			var selectedWeapon = _currentWeaponOptions[index];
-			GD.Print($"[UIManager] 选中: {selectedWeapon?.GetType().Name}, WeaponCardSelected={WeaponCardSelected != null}");
 			WeaponCardSelected?.Invoke(selectedWeapon);
 			HideWeaponSelection();
 			_HideTooltip();
@@ -1334,7 +1358,6 @@ public partial class UIManager : Control
 
 	private void _OnSkipPressed()
 	{
-		GD.Print("[UIManager] 跳过升级");
 		UpgradeSkipped?.Invoke();
 		HideWeaponSelection();
 		_HideTooltip();
