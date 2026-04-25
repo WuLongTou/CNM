@@ -516,4 +516,47 @@ public static class TextureUtils
             }
         }
     }
+
+    public static Image FlipHorizontal(Image src)
+    {
+        int w = src.GetWidth();
+        int h = src.GetHeight();
+        var dst = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                dst.SetPixel(x, y, src.GetPixel(w - 1 - x, y));
+            }
+        }
+        return dst;
+    }
+
+    public static bool FacesLeft(Texture2D tex)
+    {
+        var img = tex.GetImage();
+        if (img == null) return false;
+        int w = img.GetWidth();
+        int mid = w / 2;
+        float leftMass = 0f, rightMass = 0f;
+        for (int y = 0; y < img.GetHeight(); y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                float a = img.GetPixel(x, y).A;
+                if (a < 0.1f) continue;
+                if (x < mid) leftMass += a;
+                else rightMass += a;
+            }
+        }
+        return leftMass > rightMass;
+    }
+
+    public static Texture2D FlipHorizontal(Texture2D tex)
+    {
+        var img = tex.GetImage();
+        if (img == null) return tex;
+        var flipped = FlipHorizontal(img);
+        return ImageTexture.CreateFromImage(flipped);
+    }
 }

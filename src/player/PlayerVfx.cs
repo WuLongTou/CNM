@@ -188,11 +188,27 @@ public partial class PlayerVfx : Node
             }
 
             // Load idle frames (idle_01 through idle_04, or single idle.png fallback)
+            Texture2D? firstIdle = null;
             for (int i = 1; i <= 4; i++)
             {
                 string path = $"{processedDir}/{charName}_idle_{i:D2}.png";
                 var frame = TextureUtils.LoadNormalizedSprite(path);
-                if (frame != null) idleOut = frame;
+                if (frame != null)
+                {
+                    if (firstIdle == null)
+                    {
+                        firstIdle = frame;
+                        idleOut = frame;
+                    }
+                    else
+                    {
+                        bool firstFacesLeft = Core.TextureUtils.FacesLeft(firstIdle);
+                        bool thisFacesLeft = Core.TextureUtils.FacesLeft(frame);
+                        if (firstFacesLeft != thisFacesLeft)
+                            frame = Core.TextureUtils.FlipHorizontal(frame);
+                        idleOut = frame;
+                    }
+                }
                 if (i == 1) baseOut = frame; // Use frame 1 as base
             }
 

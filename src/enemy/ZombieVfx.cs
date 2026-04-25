@@ -188,8 +188,8 @@ public partial class ZombieVfx : Node
             }
         }
 
-        // Only use cached walk frames if PNG loading failed
-        if (!_pngLoaded && _walkFramesCache.TryGetValue(_zombie.ZombieType, out var cachedFrames))
+        // Only use cached walk frames if PNG loading failed or frames are insufficient
+        if ((!_pngLoaded || _walkFrames.Count < 4) && _walkFramesCache.TryGetValue(_zombie.ZombieType, out var cachedFrames))
         {
             _walkFrames.Clear();
             _walkFrames.AddRange(cachedFrames);
