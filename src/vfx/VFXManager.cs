@@ -243,6 +243,49 @@ public partial class VFXManager : Node
 		tw.TweenCallback(Callable.From(ghost.QueueFree));
 	}
 
+	// ══ Paper Texture Overlay ══
+
+	public static void ApplyPaperTexture(Node target)
+	{
+		var overlay = new ColorRect();
+		overlay.Color = new Color(0.95f, 0.9f, 0.9f, 0.03f);
+		overlay.MouseFilter = Control.MouseFilterEnum.Ignore;
+		overlay.ZIndex = 1000;
+		overlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		overlay.SetMeta("paper_texture", true);
+		target.AddChild(overlay, forceReadableName: true);
+
+		var rng = new System.Random();
+		for (int i = 0; i < 12; i++)
+		{
+			var dot = new Line2D();
+			int segs = 8;
+			float dotR = (float)(rng.NextDouble() * 1.2 + 0.3);
+			for (int j = 0; j <= segs; j++)
+			{
+				float a = j * Mathf.Tau / segs;
+				dot.AddPoint(new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * dotR);
+			}
+			dot.Width = 0.5f;
+			dot.DefaultColor = new Color(0.12f, 0.06f, 0.06f, (float)(rng.NextDouble() * 0.08 + 0.02));
+			dot.Position = new Vector2(
+				(float)(rng.NextDouble() * 2000 - 1000),
+				(float)(rng.NextDouble() * 2000 - 1000));
+			dot.ZIndex = 1000;
+			dot.SetMeta("paper_texture", true);
+			target.AddChild(dot, forceReadableName: true);
+		}
+	}
+
+	public static void RemovePaperTexture(Node target)
+	{
+		foreach (var child in target.GetChildren())
+		{
+			if (child.HasMeta("paper_texture"))
+				child.QueueFree();
+		}
+	}
+
 	// ══ Auto-Free Utility ══
 
 	private static void _AutoFree(Node parent, Node target, float delay)

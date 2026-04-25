@@ -34,6 +34,7 @@ public partial class PlayerVfx : Node
     private Texture2D? _hurtFallback;
     private Texture2D? _dashFallback;
     private Texture2D? _attackFallback;
+    private Sprite2D? _outlineSprite;
 
     public void Setup(Player p)
     {
@@ -48,6 +49,28 @@ public partial class PlayerVfx : Node
         _CreateMeleeRangeIndicator();
         if (_baseTexture != null)
             CallDeferred(MethodName._GenerateStateVariantsDeferred);
+
+        _ApplySketchOutline();
+    }
+
+    private void _ApplySketchOutline()
+    {
+        if (Player?.Sprite == null) return;
+
+        _outlineSprite = new Sprite2D();
+        _outlineSprite.Texture = Player.Sprite.Texture;
+        _outlineSprite.Modulate = new Color(0.1f, 0.05f, 0.05f, 0.4f);
+        float ox = (float)GD.RandRange(-1.5f, 1.5f);
+        float oy = (float)GD.RandRange(-1.5f, 1.5f);
+        _outlineSprite.Position = new Vector2(ox, oy);
+        _outlineSprite.ZIndex = -1;
+        Player.Sprite.AddChild(_outlineSprite);
+    }
+
+    private void _SyncOutlineTexture()
+    {
+        if (_outlineSprite != null && Player?.Sprite != null)
+            _outlineSprite.Texture = Player.Sprite.Texture;
     }
 
     private void _GenerateStateVariantsDeferred()
@@ -830,6 +853,20 @@ public partial class PlayerVfx : Node
                 Player.Sprite.Texture = _walkFrames[0];
             }
             _animTimer = 0.0f;
+        }
+
+        // Sync outline texture
+        _SyncOutlineTexture();
+
+        // Subtle walk brightness pulse
+        if (_isMoving)
+        {
+            float b = 0.95f + Mathf.Abs(Mathf.Sin(_animTimer * 4.0f)) * 0.1f;
+            Player.Sprite.SelfModulate = new Color(b, b, b, 1.0f);
+        }
+        else
+        {
+            Player.Sprite.SelfModulate = Colors.White;
         }
 
         // Breathing animation for idle

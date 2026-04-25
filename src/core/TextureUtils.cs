@@ -434,6 +434,29 @@ public static class TextureUtils
     }
 
     /// <summary>
+    /// Shift sprite colors toward the blood-red palette:
+    /// boost red, reduce green and blue slightly for a warm/reddish tint.
+    /// </summary>
+    public static void TintToPalette(Image image)
+    {
+        int w = image.GetWidth();
+        int h = image.GetHeight();
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                var c = image.GetPixel(x, y);
+                if (c.A < 0.01f) continue;
+                image.SetPixel(x, y, new Color(
+                    Mathf.Clamp(c.R * 1.08f, 0f, 1f),
+                    Mathf.Clamp(c.G * 0.92f, 0f, 1f),
+                    Mathf.Clamp(c.B * 0.88f, 0f, 1f),
+                    c.A));
+            }
+        }
+    }
+
+    /// <summary>
     /// Clear all caches. Call this when changing scenes if memory is a concern.
     /// </summary>
     public static void ClearCache()

@@ -55,6 +55,7 @@ public partial class ZombieVfx : Node
     private Zombie _zombie = null!;
 
     private Sprite2D _sprite = null!;
+    private Sprite2D? _outlineSprite;
     private Sprite2D _shadow = null!;
     private Label _healthLabel = null!;
     private Label _attackLabel = null!;
@@ -73,6 +74,26 @@ public partial class ZombieVfx : Node
     public void Setup(Zombie z)
     {
         _zombie = z;
+    }
+
+    private void _ApplySketchOutline()
+    {
+        if (_sprite == null) return;
+
+        _outlineSprite = new Sprite2D();
+        _outlineSprite.Texture = _sprite.Texture;
+        _outlineSprite.Modulate = new Color(0.1f, 0.05f, 0.05f, 0.4f);
+        float ox = (float)GD.RandRange(-1.5f, 1.5f);
+        float oy = (float)GD.RandRange(-1.5f, 1.5f);
+        _outlineSprite.Position = new Vector2(ox, oy);
+        _outlineSprite.ZIndex = -1;
+        _sprite.AddChild(_outlineSprite);
+    }
+
+    private void _SyncOutlineTexture()
+    {
+        if (_outlineSprite != null)
+            _outlineSprite.Texture = _sprite.Texture;
     }
 
     private void _TryLoadPngSprite(ZombieType type)
@@ -190,6 +211,8 @@ public partial class ZombieVfx : Node
         {
             _zombie.Scale = GameConfig.ZombieEliteScale;
         }
+
+        _ApplySketchOutline();
     }
 
     private void _CreateShadow()
@@ -505,6 +528,20 @@ public partial class ZombieVfx : Node
                 _sprite.Texture = _walkFrames[0];
             }
             _animTimer = 0;
+        }
+
+        // Sync outline texture
+        _SyncOutlineTexture();
+
+        // Subtle walk brightness pulse
+        if (_isMoving)
+        {
+            float b = 0.95f + Mathf.Abs(Mathf.Sin(_animTimer * 4.0f)) * 0.1f;
+            _sprite.SelfModulate = new Color(b, b, b, 1.0f);
+        }
+        else
+        {
+            _sprite.SelfModulate = Colors.White;
         }
 
         // Handle facing direction
