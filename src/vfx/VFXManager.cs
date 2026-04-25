@@ -227,33 +227,20 @@ public partial class VFXManager : Node
 
 	public static void SpawnGhostTrail(Node parent, Sprite2D sourceSprite, Vector2 pos, Color color, float fadeTime = 0.25f)
 	{
-		if (sourceSprite == null) return;
-		var group = new Node2D
+		if (sourceSprite == null || sourceSprite.Texture == null) return;
+		var ghost = new Sprite2D
 		{
+			Texture = sourceSprite.Texture,
 			GlobalPosition = pos,
+			FlipH = sourceSprite.FlipH,
+			Modulate = color,
 			ZIndex = sourceSprite.ZIndex - 1
 		};
-		int lineCount = (int)GD.RandRange(3, 6);
-		for (int i = 0; i < lineCount; i++)
-		{
-			var line = new Line2D
-			{
-				Width = (float)GD.RandRange(1.0f, 2.5f),
-				DefaultColor = color
-			};
-			float len = (float)GD.RandRange(4.0f, 12.0f);
-			float angle = (float)(GD.Randf() * Mathf.Tau);
-			var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-			line.AddPoint(Vector2.Zero);
-			line.AddPoint(dir * len);
-			line.Position = new Vector2((float)GD.RandRange(-10f, 10f), (float)GD.RandRange(-10f, 10f));
-			group.AddChild(line);
-		}
-		parent.AddChild(group);
+		parent.AddChild(ghost);
 
-		var tw = group.CreateTween();
-		tw.TweenProperty(group, ModulateAPath, 0.0f, fadeTime);
-		tw.TweenCallback(Callable.From(group.QueueFree));
+		var tw = ghost.CreateTween();
+		tw.TweenProperty(ghost, ModulateAPath, 0.0f, fadeTime);
+		tw.TweenCallback(Callable.From(ghost.QueueFree));
 	}
 
 	// ══ Auto-Free Utility ══

@@ -426,7 +426,7 @@ public partial class UIManager : Control
 				HorizontalAlignment = HorizontalAlignment.Center
 			};
 			categoryLabel.AddThemeFontSizeOverride("font_size", 12);
-			categoryLabel.AddThemeColorOverride("font_color", PencilGray);
+			categoryLabel.AddThemeColorOverride("font_color", NoteText);
 			cardVbox.AddChild(categoryLabel);
 
 			// 2. Title
@@ -471,7 +471,7 @@ public partial class UIManager : Control
 				HorizontalAlignment = HorizontalAlignment.Center
 			};
 			typeLabel.AddThemeFontSizeOverride("font_size", 14);
-			typeLabel.AddThemeColorOverride("font_color", NoteTextDim);
+			typeLabel.AddThemeColorOverride("font_color", NoteText);
 			cardVbox.AddChild(typeLabel);
 
 			// 5. Description (keywords only)
@@ -483,7 +483,7 @@ public partial class UIManager : Control
 				AutowrapMode = TextServer.AutowrapMode.WordSmart
 			};
 			desc.AddThemeFontSizeOverride("font_size", 13);
-			desc.AddThemeColorOverride("font_color", NoteTextDim);
+			desc.AddThemeColorOverride("font_color", NoteText);
 			cardVbox.AddChild(desc);
 
 			// Spacer
@@ -1190,48 +1190,43 @@ public partial class UIManager : Control
 					iconNode.Text = wc.Icon;
 				}
 
-				Color baseColor;
+				Color baseColor = NoteBg;
 				Color borderColor;
 
 				switch (wc.Rarity)
 				{
 					case 1:
-						baseColor = new Color(RarityCommonBg, 0.95f);
 						borderColor = RarityCommon;
 						titleNode.AddThemeColorOverride("font_color", NoteText);
-						rarityNode.AddThemeColorOverride("font_color", PencilGray);
+						rarityNode.AddThemeColorOverride("font_color", NoteText);
 						break;
 					case 2:
-						baseColor = new Color(RarityRareBg, 0.95f);
-						borderColor = RarityRare;
-						titleNode.AddThemeColorOverride("font_color", BloodBright);
-						rarityNode.AddThemeColorOverride("font_color", RarityRare);
+						borderColor = new Color(BloodRed, 0.9f);
+						titleNode.AddThemeColorOverride("font_color", BloodRed);
+						rarityNode.AddThemeColorOverride("font_color", BloodRed);
 						break;
 					case 3:
-						baseColor = new Color(RarityEpicBg, 0.95f);
 						borderColor = RarityEpic;
-						titleNode.AddThemeColorOverride("font_color", RarityEpic);
+						titleNode.AddThemeColorOverride("font_color", new Color(0.82f, 0.55f, 0.08f));
 						rarityNode.AddThemeColorOverride("font_color", RarityEpic);
 						break;
 					case 4:
-						baseColor = new Color(0.82f, 0.66f, 0.31f, 0.95f);
 						borderColor = new Color(1f, 0.8f, 0.25f);
-						titleNode.AddThemeColorOverride("font_color", new Color(1.0f, 0.9f, 0.4f));
-						rarityNode.AddThemeColorOverride("font_color", Godot.Colors.Gold);
+						titleNode.AddThemeColorOverride("font_color", new Color(0.7f, 0.5f, 0.0f));
+						rarityNode.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.25f));
 						break;
 					default:
-						baseColor = new Color(RarityCommonBg, 0.95f);
 						borderColor = RarityCommon;
 						titleNode.AddThemeColorOverride("font_color", NoteText);
-						rarityNode.AddThemeColorOverride("font_color", PencilGray);
+						rarityNode.AddThemeColorOverride("font_color", NoteText);
 						break;
 				}
 
 				var cardStyle = MakeCardPanel(baseColor, borderColor);
 				button.AddThemeStyleboxOverride("normal", cardStyle);
 
-				var hoverBg = _Lighten(baseColor, 0.08f);
-				var hoverBorder = _Lighten(borderColor, 0.1f);
+				var hoverBg = _Lighten(baseColor, 0.04f);
+				var hoverBorder = _Lighten(borderColor, 0.15f);
 				var cardHoverStyle = MakeCardPanel(hoverBg, hoverBorder);
 				button.AddThemeStyleboxOverride("hover", cardHoverStyle);
 			}
