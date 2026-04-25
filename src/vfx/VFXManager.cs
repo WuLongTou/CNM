@@ -229,19 +229,30 @@ public partial class VFXManager : Node
 	{
 		if (sourceSprite == null || sourceSprite.Texture == null) return;
 
-		var ghostSprite = new Sprite2D
-		{
-			Texture = sourceSprite.Texture,
-			GlobalPosition = pos,
-			FlipH = sourceSprite.FlipH,
-			Modulate = new Color(0.85f, 0.82f, 0.80f, 0.45f),
-			ZIndex = sourceSprite.ZIndex - 1
-		};
-		parent.AddChild(ghostSprite);
+		int count = 5;
+		float interval = 0.045f;
+		float[] alphas = { 0.5f, 0.4f, 0.3f, 0.2f, 0.1f };
 
-		var tw = ghostSprite.CreateTween();
-		tw.TweenProperty(ghostSprite, ModulateAPath, 0.0f, fadeTime);
-		tw.TweenCallback(Callable.From(ghostSprite.QueueFree));
+		for (int i = 0; i < count; i++)
+		{
+			float delay = i * interval;
+			float alpha = alphas[i];
+
+			var ghost = new Sprite2D
+			{
+				Texture = sourceSprite.Texture,
+				GlobalPosition = pos,
+				FlipH = sourceSprite.FlipH,
+				Modulate = new Color(0.88f, 0.85f, 0.82f, alpha),
+				ZIndex = sourceSprite.ZIndex - 1
+			};
+			parent.AddChild(ghost);
+
+			var tw = ghost.CreateTween();
+			tw.TweenInterval(delay);
+			tw.TweenProperty(ghost, ModulateAPath, 0.0f, fadeTime);
+			tw.TweenCallback(Callable.From(ghost.QueueFree));
+		}
 	}
 
 	// ══ Paper Texture Overlay ══
