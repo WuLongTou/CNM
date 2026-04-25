@@ -2255,8 +2255,7 @@ public partial class UIManager : Control
 
 	private void _OnEffectIconExited()
 	{
-		if (_tooltipHideTimer != null)
-			_tooltipHideTimer.Start();
+		_HideTooltip();
 	}
 
 	// ═══════════════════════════════════════════════
