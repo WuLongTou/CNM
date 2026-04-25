@@ -512,7 +512,7 @@ public partial class UIManager : Control
 				HorizontalAlignment = HorizontalAlignment.Center
 			};
 			hintLabel.AddThemeFontSizeOverride("font_size", 11);
-			hintLabel.AddThemeColorOverride("font_color", PencilGray);
+			hintLabel.AddThemeColorOverride("font_color", NoteText);
 			cardVbox.AddChild(hintLabel);
 		}
 

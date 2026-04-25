@@ -225,22 +225,51 @@ public partial class VFXManager : Node
 
 	// ══ Ghost Trail ══
 
-	public static void SpawnGhostTrail(Node parent, Sprite2D sourceSprite, Vector2 pos, Color color, float fadeTime = 0.25f)
+	public static void SpawnGhostTrail(Node parent, Sprite2D? sourceSprite, Vector2 pos, Color color, float fadeTime = 0.25f)
 	{
-		if (sourceSprite == null || sourceSprite.Texture == null) return;
-		var ghost = new Sprite2D
+		if (sourceSprite == null) return;
+
+		var group = new Node2D
 		{
-			Texture = sourceSprite.Texture,
 			GlobalPosition = pos,
-			FlipH = sourceSprite.FlipH,
-			Modulate = color,
 			ZIndex = sourceSprite.ZIndex - 1
 		};
-		parent.AddChild(ghost);
 
-		var tw = ghost.CreateTween();
-		tw.TweenProperty(ghost, ModulateAPath, 0.0f, fadeTime);
-		tw.TweenCallback(Callable.From(ghost.QueueFree));
+		if (sourceSprite.Texture != null)
+		{
+			var ghost = new Sprite2D
+			{
+				Texture = sourceSprite.Texture,
+				FlipH = sourceSprite.FlipH,
+				Modulate = color,
+				ZIndex = 0
+			};
+			group.AddChild(ghost);
+		}
+
+		int lineCount = (int)GD.RandRange(3, 5);
+		for (int i = 0; i < lineCount; i++)
+		{
+			var line = new Line2D
+			{
+				Width = (float)GD.RandRange(1.5f, 3.0f),
+				DefaultColor = new Color(0.5f, 0.4f, 0.4f, 0.7f),
+				ZIndex = 1
+			};
+			float len = (float)GD.RandRange(16.0f, 28.0f);
+			float angle = (float)((i * 1.5f) + GD.RandRange(-0.4f, 0.4f));
+			var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+			line.AddPoint(Vector2.Zero);
+			line.AddPoint(dir * len * 0.6f);
+			line.AddPoint(dir * len);
+			line.Position = new Vector2((float)GD.RandRange(-8f, 8f), (float)GD.RandRange(-8f, 8f));
+			group.AddChild(line);
+		}
+		parent.AddChild(group);
+
+		var tw = group.CreateTween();
+		tw.TweenProperty(group, ModulateAPath, 0.0f, fadeTime);
+		tw.TweenCallback(Callable.From(group.QueueFree));
 	}
 
 	// ══ Paper Texture Overlay ══
