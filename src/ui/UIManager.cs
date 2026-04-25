@@ -1471,42 +1471,42 @@ public partial class UIManager : Control
 		var bb = "";
 		var targetName = upgrade.TargetRef?.CardName ?? "未知";
 		var count = upgrade.TargetRef?.UpgradeCount ?? 0;
-		bb += $"[center][b][color=#66ff99]{upgrade.DisplayName}[/color][/b][/center]\n";
-		bb += $"[center][color=#aaaaaa]强化目标: {targetName} · 已强化 {count} 次[/color][/center]\n";
+		bb += $"[center][b][color=#c0392b]{upgrade.DisplayName}[/color][/b][/center]\n";
+		bb += $"[center][color=#8a6060]强化目标: {targetName} · 已强化 {count} 次[/color][/center]\n";
 		bb += "[center]━━━━━━━━━━━━━━━━━━━━[/center]\n\n";
-		bb += "[color=#88ff88]【强化效果】[/color]\n";
+		bb += "[color=#d47a7a]【强化效果】[/color]\n";
 
 		if (upgrade.DamageDelta > 0)
-			bb += $"• 伤害 [color=#88ff88]+{Mathf.RoundToInt(upgrade.DamageDelta * 100)}%[/color]\n";
+			bb += $"• 伤害 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.DamageDelta * 100)}%[/color]\n";
 		if (upgrade.AttackSpeedDelta > 0)
-			bb += $"• 攻速 [color=#88ff88]+{Mathf.RoundToInt(upgrade.AttackSpeedDelta * 100)}%[/color]\n";
+			bb += $"• 攻速 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.AttackSpeedDelta * 100)}%[/color]\n";
 		if (upgrade.HealthDelta > 0)
-			bb += $"• 生命 [color=#88ff88]+{Mathf.RoundToInt(upgrade.HealthDelta)}[/color]\n";
+			bb += $"• 生命 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.HealthDelta)}[/color]\n";
 		if (upgrade.SpeedDelta > 0)
-			bb += $"• 速度 [color=#88ff88]+{Mathf.RoundToInt(upgrade.SpeedDelta)}[/color]\n";
+			bb += $"• 速度 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.SpeedDelta)}[/color]\n";
 		if (upgrade.CritDelta > 0)
-			bb += $"• 暴击 [color=#88ff88]+{Mathf.RoundToInt(upgrade.CritDelta)}%[/color]\n";
+			bb += $"• 暴击 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.CritDelta)}%[/color]\n";
 		if (upgrade.LifeStealDelta > 0)
-			bb += $"• 吸血 [color=#88ff88]+{Mathf.RoundToInt(upgrade.LifeStealDelta)}%[/color]\n";
+			bb += $"• 吸血 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.LifeStealDelta)}%[/color]\n";
 		if (upgrade.FreezeDelta > 0)
-			bb += $"• 冰冻 [color=#88ff88]+{Mathf.RoundToInt(upgrade.FreezeDelta)}%[/color]\n";
+			bb += $"• 冰冻 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.FreezeDelta)}%[/color]\n";
 		if (upgrade.PoisonDelta > 0)
-			bb += $"• 中毒 [color=#88ff88]+{Mathf.RoundToInt(upgrade.PoisonDelta)}%[/color]\n";
+			bb += $"• 中毒 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.PoisonDelta)}%[/color]\n";
 		if (upgrade.EffectUpgrades.Count > 0)
-			bb += "• [color=#88ff88]特效等级 +1[/color]\n";
+			bb += "• [color=#d47a7a]特效等级 +1[/color]\n";
 
 		var tradeoffKind = upgrade.TradeoffKind;
 		if (tradeoffKind != UpgradeCard.TradeoffType.None)
 		{
-			bb += "\n[color=#ff8888]【副作用】[/color]\n";
+			bb += "\n[color=#e74c3c]【副作用】[/color]\n";
 			if (tradeoffKind == UpgradeCard.TradeoffType.HealthCost)
-				bb += $"• 每次攻击额外消耗 [color=#ff8888]+{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color] 生命\n";
+				bb += $"• 每次攻击额外消耗 [color=#e74c3c]+{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color] 生命\n";
 			else if (tradeoffKind == UpgradeCard.TradeoffType.Speed)
-				bb += $"• 速度 [color=#ff8888]{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color]\n";
+				bb += $"• 速度 [color=#e74c3c]{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color]\n";
 			else if (tradeoffKind == UpgradeCard.TradeoffType.HealthMax)
-				bb += $"• 生命上限 [color=#ff8888]{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color]\n";
+				bb += $"• 生命上限 [color=#e74c3c]{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color]\n";
 		}
-		bb += "\n[color=#aaaaaa]选择后将直接强化你已有的装备。[/color]";
+		bb += "\n[color=#8a6060]选择后将直接强化你已有的装备。[/color]";
 		return bb;
 	}
 
@@ -1521,24 +1521,24 @@ public partial class UIManager : Control
 			? weapon.GetWeaponTypeText() + "武器"
 			: "装备";
 		typeText += $" · Lv.{weapon.Tier} · {_GetRarityText(weapon.Rarity)}";
-		bb += $"[center][color=#aaaaaa]{typeText}[/color][/center]\n";
+		bb += $"[center][color=#8a6060]{typeText}[/color][/center]\n";
 		bb += "[center]━━━━━━━━━━━━━━━━━━━━[/center]\n\n";
 
 		Player? player = _gameManager?.PlayerRef;
 
-		bb += "[color=#ffdd88]【属性效果】[/color]\n";
+		bb += "[color=#e0b060]【属性效果】[/color]\n";
 		bool hasStats = false;
 
 		if (!Mathf.IsEqualApprox(weapon.DamageModifier, 1.0f))
 		{
 			int mod = Mathf.RoundToInt((weapon.DamageModifier - 1.0f) * 100);
-			string color = mod > 0 ? "#88ff88" : "#ff8888";
+			string color = mod > 0 ? "#d47a7a" : "#e74c3c";
 			bb += $"  [color={color}]● 伤害: {(mod > 0 ? "+" : "")}{mod}%[/color]";
 			if (player != null)
 			{
 				int currentVal = Mathf.RoundToInt(player.CurrentDamage);
 				int newVal = Mathf.RoundToInt(player.CurrentDamage * weapon.DamageModifier);
-				bb += $"  [color=#888888]({currentVal} → {newVal})[/color]";
+				bb += $"  [color=#5a4040]({currentVal} → {newVal})[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1547,7 +1547,7 @@ public partial class UIManager : Control
 		if (!Mathf.IsEqualApprox(weapon.AttackSpeedModifier, 1.0f))
 		{
 			int mod = Mathf.RoundToInt((weapon.AttackSpeedModifier - 1.0f) * 100);
-			string color = mod > 0 ? "#88ff88" : "#ff8888";
+			string color = mod > 0 ? "#d47a7a" : "#e74c3c";
 			bb += $"  [color={color}]● 攻速: {(mod > 0 ? "+" : "")}{mod}%[/color]\n";
 			hasStats = true;
 		}
@@ -1557,22 +1557,22 @@ public partial class UIManager : Control
 			float attackInterval = 0.5f / weapon.AttackSpeedModifier;
 			if (weapon.Cooldown > 0)
 				attackInterval = Mathf.Max(attackInterval, (float)weapon.Cooldown);
-			bb += $"  [color=#88ccff]● 攻击间隔: {Mathf.Snapped(attackInterval, 0.01f)}秒[/color]";
+			bb += $"  [color=#d4a574]● 攻击间隔: {Mathf.Snapped(attackInterval, 0.01f)}秒[/color]";
 			if (player != null)
-				bb += $"  [color=#888888](当前: {Mathf.Snapped(player.AttackCooldown, 0.01f)}秒)[/color]";
+				bb += $"  [color=#5a4040](当前: {Mathf.Snapped(player.AttackCooldown, 0.01f)}秒)[/color]";
 			bb += "\n";
 			hasStats = true;
 		}
 
 		if (!Mathf.IsEqualApprox(weapon.HealthModifier, 0))
 		{
-			string color = weapon.HealthModifier > 0 ? "#88ff88" : "#ff8888";
+			string color = weapon.HealthModifier > 0 ? "#d47a7a" : "#e74c3c";
 			bb += $"  [color={color}]● 生命上限: {(weapon.HealthModifier > 0 ? "+" : "")}{Mathf.RoundToInt(weapon.HealthModifier)}[/color]";
 			if (player != null)
 			{
 				int currentVal = player.MaxHealth;
 				int newVal = currentVal + Mathf.RoundToInt(weapon.HealthModifier);
-				bb += $"  [color=#888888]({currentVal} → {newVal})[/color]";
+				bb += $"  [color=#5a4040]({currentVal} → {newVal})[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1580,13 +1580,13 @@ public partial class UIManager : Control
 
 		if (!Mathf.IsEqualApprox(weapon.SpeedModifier, 0))
 		{
-			string color = weapon.SpeedModifier > 0 ? "#88ff88" : "#ff8888";
+			string color = weapon.SpeedModifier > 0 ? "#d47a7a" : "#e74c3c";
 			bb += $"  [color={color}]● 移动速度: {(weapon.SpeedModifier > 0 ? "+" : "")}{Mathf.RoundToInt(weapon.SpeedModifier)}[/color]";
 			if (player != null)
 			{
 				int currentVal = Mathf.RoundToInt(player.CurrentSpeed);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.SpeedModifier);
-				bb += $"  [color=#888888]({currentVal} → {newVal})[/color]";
+				bb += $"  [color=#5a4040]({currentVal} → {newVal})[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1594,12 +1594,12 @@ public partial class UIManager : Control
 
 		if (weapon.CriticalBonus > 0)
 		{
-			bb += $"  [color=#ffaa44]● 暴击几率: +{Mathf.RoundToInt(weapon.CriticalBonus)}%[/color]";
+			bb += $"  [color=#e0a040]● 暴击几率: +{Mathf.RoundToInt(weapon.CriticalBonus)}%[/color]";
 			if (player != null)
 			{
 				int currentVal = Mathf.RoundToInt(player.CriticalChance);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.CriticalBonus);
-				bb += $"  [color=#888888]({currentVal}% → {newVal}%)[/color]";
+				bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1607,12 +1607,12 @@ public partial class UIManager : Control
 
 		if (weapon.LifeStealBonus > 0)
 		{
-			bb += $"  [color=#ff88cc]● 吸血比例: +{Mathf.RoundToInt(weapon.LifeStealBonus)}%[/color]";
+			bb += $"  [color=#c07979]● 吸血比例: +{Mathf.RoundToInt(weapon.LifeStealBonus)}%[/color]";
 			if (player != null)
 			{
 				int currentVal = Mathf.RoundToInt(player.LifeStealPercent);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.LifeStealBonus);
-				bb += $"  [color=#888888]({currentVal}% → {newVal}%)[/color]";
+				bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1620,12 +1620,12 @@ public partial class UIManager : Control
 
 		if (weapon.FreezeBonus > 0)
 		{
-			bb += $"  [color=#88ddff]● 冰冻几率: +{Mathf.RoundToInt(weapon.FreezeBonus)}%[/color]";
+			bb += $"  [color=#a08070]● 冰冻几率: +{Mathf.RoundToInt(weapon.FreezeBonus)}%[/color]";
 			if (player != null)
 			{
 				int currentVal = Mathf.RoundToInt(player.FreezeDuration);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.FreezeBonus);
-				bb += $"  [color=#888888]({currentVal}% → {newVal}%)[/color]";
+				bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1633,12 +1633,12 @@ public partial class UIManager : Control
 
 		if (weapon.PoisonBonus > 0)
 		{
-			bb += $"  [color=#88ff44]● 中毒几率: +{Mathf.RoundToInt(weapon.PoisonBonus)}%[/color]";
+			bb += $"  [color=#a09070]● 中毒几率: +{Mathf.RoundToInt(weapon.PoisonBonus)}%[/color]";
 			if (player != null)
 			{
 				int currentVal = Mathf.RoundToInt(player.PoisonDamage);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.PoisonBonus);
-				bb += $"  [color=#888888]({currentVal}% → {newVal}%)[/color]";
+				bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
 			}
 			bb += "\n";
 			hasStats = true;
@@ -1647,14 +1647,14 @@ public partial class UIManager : Control
 		if (weapon.GrantsAura)
 		{
 			if (player?.Aura != null && player.Aura.Active)
-				bb += "  [color=#aaddff]● 护盾领域: 升级 (伤害+3, 范围+15)[/color]\n";
+				bb += "  [color=#b09080]● 护盾领域: 升级 (伤害+3, 范围+15)[/color]\n";
 			else
-				bb += "  [color=#aaddff]● 护盾领域: 启用[/color]\n";
+				bb += "  [color=#b09080]● 护盾领域: 启用[/color]\n";
 			hasStats = true;
 		}
 
 		if (!hasStats)
-			bb += "  [color=#888888]● 无属性变化[/color]\n";
+			bb += "  [color=#5a4040]● 无属性变化[/color]\n";
 
 		bb += "\n";
 
@@ -1663,7 +1663,7 @@ public partial class UIManager : Control
 
 		if (hasEffects)
 		{
-			bb += "[b][color=#aa88ff]【特殊效果】[/color][/b]\n";
+			bb += "[b][color=#b09080]【特殊效果】[/color][/b]\n";
 			foreach (var effect in weapon.MeleeEffects)
 			{
 				int key = (int)effect;
@@ -1702,15 +1702,15 @@ public partial class UIManager : Control
 		{
 			bb += "[color=#ff6666]【⚠ 风险提示】[/color]\n";
 			if (weapon.HealthCost > 0)
-				bb += $"  [color=#ff8888]● 每次攻击消耗 {weapon.HealthCost} 点生命[/color]\n";
+				bb += $"  [color=#e74c3c]● 每次攻击消耗 {weapon.HealthCost} 点生命[/color]\n";
 			if (weapon.HealthModifier < 0)
-				bb += $"  [color=#ff8888]● 生命上限降低 {Mathf.Abs(Mathf.RoundToInt(weapon.HealthModifier))} 点[/color]\n";
+				bb += $"  [color=#e74c3c]● 生命上限降低 {Mathf.Abs(Mathf.RoundToInt(weapon.HealthModifier))} 点[/color]\n";
 			if (weapon.SpeedModifier < 0)
-				bb += $"  [color=#ff8888]● 移动速度降低 {Mathf.Abs(Mathf.RoundToInt(weapon.SpeedModifier))} 点[/color]\n";
+				bb += $"  [color=#e74c3c]● 移动速度降低 {Mathf.Abs(Mathf.RoundToInt(weapon.SpeedModifier))} 点[/color]\n";
 			if (weapon.DamageModifier < 1.0f)
-				bb += $"  [color=#ff8888]● 伤害降低 {Mathf.RoundToInt((1.0f - weapon.DamageModifier) * 100)}%[/color]\n";
+				bb += $"  [color=#e74c3c]● 伤害降低 {Mathf.RoundToInt((1.0f - weapon.DamageModifier) * 100)}%[/color]\n";
 			if (weapon.AttackSpeedModifier < 1.0f)
-				bb += $"  [color=#ff8888]● 攻击速度降低 {Mathf.RoundToInt((1.0f - weapon.AttackSpeedModifier) * 100)}%[/color]\n";
+				bb += $"  [color=#e74c3c]● 攻击速度降低 {Mathf.RoundToInt((1.0f - weapon.AttackSpeedModifier) * 100)}%[/color]\n";
 			bb += "\n";
 		}
 
@@ -1727,7 +1727,7 @@ public partial class UIManager : Control
 				}
 			}
 			if (!string.IsNullOrEmpty(currentWeaponName) && currentWeaponName != weapon.CardName)
-				bb += $"[color=#ffaa44]⚔ 将替换当前武器: {currentWeaponName}[/color]\n";
+				bb += $"[color=#e0a040]⚔ 将替换当前武器: {currentWeaponName}[/color]\n";
 		}
 
 		return bb;
