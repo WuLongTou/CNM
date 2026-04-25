@@ -6,7 +6,7 @@ using System;
 using System.Collections.Generic;
 using ZombieWars.Core;
 using ZombieWars.Weapons;
-using ZombieWars.Audio;
+
 using Player = ZombieWars.Player.Player;
 using static ZombieWars.Core.GameEnums;
 using static ZombieWars.UI.HandDrawnTheme;
@@ -1055,9 +1055,7 @@ public partial class UIManager : Control
 
 	private void _ToggleSound()
 	{
-		var sm = SoundManager.Instance;
-		if (sm == null) return;
-
+		var sm = GameServices.Audio;
 		sm.SfxEnabled = !sm.SfxEnabled;
 		if (_soundToggleButton != null)
 		{
@@ -1307,7 +1305,7 @@ public partial class UIManager : Control
 			HideWeaponSelection();
 			_HideTooltip();
 
-			ZombieWars.Audio.SoundManager.Instance?.PlayWeaponSelect();
+			GameServices.Audio.PlayWeaponSelect();
 		}
 	}
 

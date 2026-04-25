@@ -94,6 +94,8 @@ public partial class Main : Node2D
 		LogUtils.Print("每回合开始时选择一张武器卡牌来增强你的能力");
 		LogUtils.Print("消灭所有僵尸进入下一回合！");
 
+		GameServices.Audio.StartMusic();
+
 		var args = OS.GetCmdlineUserArgs();
 		if (Array.Exists(args, arg => arg == "--autotest"))
 		{

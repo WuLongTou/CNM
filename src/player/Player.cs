@@ -8,7 +8,6 @@ using ZombieWars.Enemy;
 using ZombieWars.Vfx;
 using ZombieWars.Weapons;
 using static ZombieWars.Core.GameEnums;
-using ZombieWars.Audio;
 
 /// <summary>
 /// 玩家角色 — 精简 Facade，核心逻辑委托给组件
@@ -342,7 +341,7 @@ public partial class Player : CharacterBody2D
             InvincibleTimer = InvincibleDuration;
             VFXManager.FlashHurt(this, Sprite!);
             Vfx?.PlayHurtAnim();
-            SoundManager.Instance?.PlayPlayerHurt();
+            GameServices.Audio.PlayPlayerHurt();
             Vfx?.UpdateStatusDisplays();
 
             // Counterattack: thorns-like damage when hit
@@ -423,7 +422,8 @@ public partial class Player : CharacterBody2D
         VFXManager.SpawnParticleBurst(GetParent(), GlobalPosition, new Color(0.8f, 0.15f, 0.1f, 0.9f),
             30, 0.8f, 40.0f, 120.0f, new Vector3(0, 150, 0), 1.5f, 3.5f);
 
-        SoundManager.Instance?.PlayGameOver();
+        GameServices.Audio.PlayPlayerDie();
+        GameServices.Audio.PlayGameOver();
 
         Died?.Invoke();
     }

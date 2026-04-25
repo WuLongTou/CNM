@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Godot;
 using Godot.Collections;
-using ZombieWars.Audio;
+
 using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Vfx;
@@ -164,7 +164,7 @@ public partial class PlayerCombat : Node
         Zombie? target = _FindTargetZombie(Core.GameConfig.MagicAttackRange);
         if (target != null)
         {
-            ZombieWars.Audio.SoundManager.Instance?.PlayMagicAttack();
+            GameServices.Audio.PlayMagicAttack();
             _PerformMagicAttack(target);
         }
         else
@@ -173,7 +173,7 @@ public partial class PlayerCombat : Node
             Vector2 mousePos = Player!.GetViewport().GetMousePosition();
             if (mousePos.Y > Core.GameConfig.TopUiMargin)
             {
-                ZombieWars.Audio.SoundManager.Instance?.PlayMagicAttack();
+                GameServices.Audio.PlayMagicAttack();
                 _FireMagicMissileToward(mousePos);
             }
         }
@@ -202,23 +202,23 @@ public partial class PlayerCombat : Node
         switch (Player!.CurrentAttackType)
         {
             case AttackType.Melee:
-                ZombieWars.Audio.SoundManager.Instance?.PlayMeleeAttack();
+                GameServices.Audio.PlayMeleeAttack();
                 _PerformMeleeAttack();
                 break;
             case AttackType.Ranged:
-                ZombieWars.Audio.SoundManager.Instance?.PlayRangedAttack();
+                GameServices.Audio.PlayRangedAttack();
                 _PerformRangedAttack();
                 break;
             case AttackType.Area:
-                ZombieWars.Audio.SoundManager.Instance?.PlayRangedAttack();
+                GameServices.Audio.PlayRangedAttack();
                 _PerformAreaAttack();
                 break;
             case AttackType.Magic:
-                ZombieWars.Audio.SoundManager.Instance?.PlayMagicAttack();
+                GameServices.Audio.PlayMagicAttack();
                 _TryMagicAttack();
                 break;
             case AttackType.Mine:
-                ZombieWars.Audio.SoundManager.Instance?.PlayMeleeAttack();
+                GameServices.Audio.PlayMeleeAttack();
                 _PerformMineAttack();
                 break;
         }
@@ -329,7 +329,7 @@ public partial class PlayerCombat : Node
         if (zombie.CurrentHealth <= 0)
             return;
 
-        ZombieWars.Audio.SoundManager.Instance?.PlayZombieHit();
+        GameServices.Audio.PlayZombieHit();
 
         if (Player.KnockbackForce > 0)
         {
@@ -364,7 +364,7 @@ public partial class PlayerCombat : Node
     private void _OnEnemyKilled(Vector2 pos, float damage = 0)
     {
         var p = Player!;
-        ZombieWars.Audio.SoundManager.Instance?.PlayZombieDie();
+        GameServices.Audio.PlayZombieDie();
         ZombieWars.Audio.SoundManager.Instance?.NotifyKill();
 
         if (p.KillExplosionDamage > 0)
@@ -711,6 +711,7 @@ public partial class PlayerCombat : Node
 
         target.EvolveName();
         RecalculateStats();
+        GameServices.Audio.PlayUpgrade();
         _ShowApplyFeedback("强化!" + target.CardName, target.CardName, new Color(0.3f, 1.0f, 0.5f));
     }
 

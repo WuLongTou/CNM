@@ -98,8 +98,7 @@ public partial class Mine : Area2D
             _SpawnClusterMines();
 
         _SpawnExplosionVfx();
-        var sm = GetNodeOrNull<Audio.SoundManager>("/root/Main/SoundManager");
-        sm?.PlayExplosion();
+        GameServices.Audio.PlayExplosion();
         QueueFree();
     }
 

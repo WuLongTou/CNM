@@ -2,7 +2,7 @@ namespace ZombieWars.UI;
 
 using Godot;
 using ZombieWars.Core;
-using ZombieWars.Audio;
+
 using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
 
@@ -197,7 +197,7 @@ public partial class GameOverUI : Control
 		titleTw.TweenProperty(title, Node2D.PropertyName.Modulate.ToString(), new Color(1, 1, 1), 1.2f)
 			.SetTrans(Tween.TransitionType.Sine);
 
-		SoundManager.Instance?.PlayGameOver();
+		GameServices.Audio.PlayGameOver();
 	}
 
 	private void _AddAchievementBadge(HBoxContainer parent, string icon, string text, Color color)
