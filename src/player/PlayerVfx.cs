@@ -420,6 +420,55 @@ public partial class PlayerVfx : Node
         }
     }
 
+    public void PlayDeathAnimation()
+    {
+        if (Player == null) return;
+        Node? parent = Player.GetParent();
+        if (parent == null) return;
+
+        var flash = new ColorRect();
+        flash.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        flash.Color = new Color(BloodRed, 0.3f);
+        flash.MouseFilter = Control.MouseFilterEnum.Ignore;
+        flash.ZIndex = 50;
+        Player.GetTree().CurrentScene.AddChild(flash);
+
+        var flashTw = flash.CreateTween();
+        flashTw.TweenProperty(flash, "color:a", 0.0f, 0.6f);
+        flashTw.TweenCallback(Callable.From(flash.QueueFree));
+
+        if (Player.Sprite != null)
+        {
+            float offsetX = (float)GD.RandRange(-6f, 6f);
+            float offsetY = (float)GD.RandRange(-6f, 6f);
+            var tw = Player.CreateTween();
+            tw.Parallel().TweenProperty(Player.Sprite, "modulate:a", 0.0f, 0.8f);
+            tw.Parallel().TweenProperty(Player.Sprite, "position", new Vector2(offsetX, offsetY), 0.8f)
+                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+        }
+
+        Vector2 center = Player.GlobalPosition;
+        int count = (int)GD.RandRange(8, 13);
+        for (int i = 0; i < count; i++)
+        {
+            float angle = (float)GD.RandRange(0, Mathf.Tau);
+            float length = (float)GD.RandRange(8, 28);
+            var ink = new Node2D();
+            ink.GlobalPosition = center;
+            var line = new Line2D();
+            line.Width = (float)GD.RandRange(0.3f, 0.7f);
+            line.DefaultColor = GD.Randf() > 0.5f ? BloodRed : BloodBright;
+            line.AddPoint(Vector2.Zero);
+            line.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * length);
+            ink.AddChild(line);
+            parent.AddChild(ink);
+
+            var inkTw = ink.CreateTween();
+            inkTw.TweenProperty(ink, "modulate:a", 0.0f, 0.6f);
+            inkTw.TweenCallback(Callable.From(ink.QueueFree));
+        }
+    }
+
     public void PlayAttackAnim()
     {
         _animState = AnimState.Attack;

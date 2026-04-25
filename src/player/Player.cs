@@ -390,7 +390,7 @@ public partial class Player : CharacterBody2D
             ApplyUpgradeCard(uc);
     }
 
-    public void Die()
+    public async void Die()
     {
         if (IsDead)
             return;
@@ -408,22 +408,15 @@ public partial class Player : CharacterBody2D
         if (MeleeRangeIndicator != null) MeleeRangeIndicator.Visible = false;
         if (Aura != null) Aura.Visible = false;
 
-        if (Sprite != null)
-        {
-            var tw = CreateTween();
-            tw.TweenProperty(Sprite, "modulate", new Color(1.0f, 0.2f, 0.2f, 1.0f), 0.15f);
-            tw.TweenProperty(Sprite, "modulate", new Color(0.5f, 0.1f, 0.1f, 0.5f), 0.4f);
-            tw.Parallel().TweenProperty(Sprite, "scale", new Vector2(0.3f, 0.3f), 0.4f)
-                .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.In);
-            tw.Parallel().TweenProperty(Sprite, "rotation", (float)GD.RandRange(-1.0, 1.0), 0.4f);
-            tw.TweenProperty(Sprite, "modulate:a", 0.0f, 0.3f);
-        }
+        Vfx?.PlayDeathAnimation();
 
         VFXManager.SpawnParticleBurst(GetParent(), GlobalPosition, new Color(0.8f, 0.15f, 0.1f, 0.9f),
             30, 0.8f, 40.0f, 120.0f, new Vector3(0, 150, 0), 1.5f, 3.5f);
 
         GameServices.Audio.PlayPlayerDie();
         GameServices.Audio.PlayGameOver();
+
+        await ToSignal(GetTree().CreateTimer(0.5f), "timeout");
 
         Died?.Invoke();
     }
