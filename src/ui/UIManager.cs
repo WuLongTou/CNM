@@ -519,7 +519,7 @@ public partial class UIManager : Control
 		// Keyboard hint label
 		var keyboardHintLabel = new Label
 		{
-			Text = "💡 按 [1] [2] [3] 选择 | 按 [S] 或 [空格] 跳过",
+			Text = "💡 按 [1] [2] [3] 选择 | 按 [S] 或 [Enter] 跳过",
 			HorizontalAlignment = HorizontalAlignment.Center
 		};
 		keyboardHintLabel.AddThemeFontSizeOverride("font_size", 14);
@@ -895,7 +895,6 @@ public partial class UIManager : Control
 					case Key.S:
 					case Key.Enter:
 					case Key.KpEnter:
-					case Key.Space:
 						_OnSkipPressed();
 						GetViewport().SetInputAsHandled();
 						return;
@@ -1188,43 +1187,50 @@ public partial class UIManager : Control
 					iconNode.Text = wc.Icon;
 				}
 
-				Color baseColor = NoteBg;
+				var cardBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
 				Color borderColor;
 
 				switch (wc.Rarity)
 				{
 					case 1:
 						borderColor = RarityCommon;
-						titleNode.AddThemeColorOverride("font_color", NoteText);
-						rarityNode.AddThemeColorOverride("font_color", NoteText);
+						titleNode.AddThemeColorOverride("font_color", RarityCommon);
+						rarityNode.AddThemeColorOverride("font_color", RarityCommon);
 						break;
 					case 2:
-						borderColor = new Color(BloodRed, 0.9f);
-						titleNode.AddThemeColorOverride("font_color", BloodRed);
-						rarityNode.AddThemeColorOverride("font_color", BloodRed);
+						borderColor = RarityRare;
+						titleNode.AddThemeColorOverride("font_color", RarityRare);
+						rarityNode.AddThemeColorOverride("font_color", RarityRare);
 						break;
 					case 3:
 						borderColor = RarityEpic;
-						titleNode.AddThemeColorOverride("font_color", new Color(0.82f, 0.55f, 0.08f));
+						titleNode.AddThemeColorOverride("font_color", RarityEpic);
 						rarityNode.AddThemeColorOverride("font_color", RarityEpic);
 						break;
 					case 4:
 						borderColor = new Color(1f, 0.8f, 0.25f);
-						titleNode.AddThemeColorOverride("font_color", new Color(0.7f, 0.5f, 0.0f));
+						titleNode.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.25f));
 						rarityNode.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.25f));
 						break;
 					default:
 						borderColor = RarityCommon;
-						titleNode.AddThemeColorOverride("font_color", NoteText);
-						rarityNode.AddThemeColorOverride("font_color", NoteText);
+						titleNode.AddThemeColorOverride("font_color", RarityCommon);
+						rarityNode.AddThemeColorOverride("font_color", RarityCommon);
 						break;
 				}
 
-				var cardStyle = MakeCardPanel(baseColor, borderColor);
+				var dimText = new Color(0.6f, 0.5f, 0.5f);
+				categoryNode.AddThemeColorOverride("font_color", dimText);
+				typeNode.AddThemeColorOverride("font_color", dimText);
+				descNode.AddThemeColorOverride("font_color", dimText);
+				var hintNode = (Label)vbox.GetNode("Hint");
+				hintNode.AddThemeColorOverride("font_color", new Color(0.45f, 0.38f, 0.38f));
+
+				var cardStyle = MakeCardPanel(cardBg, borderColor);
 				button.AddThemeStyleboxOverride("normal", cardStyle);
 
-				var hoverBg = _Lighten(baseColor, 0.04f);
-				var hoverBorder = _Lighten(borderColor, 0.15f);
+				var hoverBg = new Color(0.25f, 0.18f, 0.18f, 0.95f);
+				var hoverBorder = _Lighten(borderColor, 0.2f);
 				var cardHoverStyle = MakeCardPanel(hoverBg, hoverBorder);
 				button.AddThemeStyleboxOverride("hover", cardHoverStyle);
 			}
@@ -1330,8 +1336,7 @@ public partial class UIManager : Control
 
 	private void _OnCardMouseExited()
 	{
-		if (_tooltipHideTimer != null && !_tooltipHideTimer.IsStopped())
-			_tooltipHideTimer.Start();
+		_HideTooltip();
 	}
 
 	// ═══════════════════════════════════════════════
@@ -1445,13 +1450,17 @@ public partial class UIManager : Control
 		descNode.Text = upgrade.Description;
 		rarityNode.Text = "升级";
 
-		titleNode.AddThemeColorOverride("font_color", UpgradeTitle);
-		rarityNode.AddThemeColorOverride("font_color", UpgradeBorder);
+		var upBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
+		var upBorder = RarityRare;
+		titleNode.AddThemeColorOverride("font_color", RarityRare);
+		rarityNode.AddThemeColorOverride("font_color", RarityRare);
 
-		var style = MakeCardPanel(UpgradeBg, UpgradeBorder);
+		var style = MakeCardPanel(upBg, upBorder);
 		button.AddThemeStyleboxOverride("normal", style);
 
-		var hoverStyle = MakeCardPanel(_Lighten(UpgradeBg, 0.08f), _Lighten(UpgradeBorder, 0.1f));
+		var hoverBg = new Color(0.25f, 0.18f, 0.18f, 0.95f);
+		var hoverBorder = _Lighten(upBorder, 0.2f);
+		var hoverStyle = MakeCardPanel(hoverBg, hoverBorder);
 		button.AddThemeStyleboxOverride("hover", hoverStyle);
 	}
 
