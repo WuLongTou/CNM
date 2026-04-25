@@ -3,7 +3,9 @@ namespace ZombieWars.Enemy;
 using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.UI;
 using static ZombieWars.Core.GameEnums;
+using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 public partial class ZombieVfx : Node
 {
@@ -727,9 +729,51 @@ public partial class ZombieVfx : Node
 
     public void SpawnDeathEffects()
     {
-        _SpawnCorpse();
-        _SpawnDeathParticles();
+        if (_sprite != null)
+        {
+            var originalPos = _sprite.Position;
+            var tw = _zombie.CreateTween();
+            tw.SetParallel(true);
+            tw.TweenProperty(_sprite, "position", originalPos + new Vector2(
+                (float)GD.RandRange(-3f, 3f),
+                (float)GD.RandRange(-3f, 3f)), 0.2f)
+                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+            tw.TweenProperty(_sprite, "modulate:a", 0.0f, 0.4f);
+            tw.TweenProperty(_sprite, Node2D.PropertyName.Scale.ToString(), new Vector2(0.85f, 0.85f), 0.4f);
+            tw.SetParallel(false);
+            tw.TweenCallback(Callable.From(_SpawnDeathInkDots));
+        }
         _SpawnBloodStain();
+    }
+
+    private void _SpawnDeathInkDots()
+    {
+        var particles = new GpuParticles2D
+        {
+            GlobalPosition = _zombie.GlobalPosition,
+            Emitting = true,
+            Amount = 8,
+            Lifetime = 0.6f,
+            OneShot = true
+        };
+
+        var mat = new ParticleProcessMaterial
+        {
+            Direction = new Vector3(0, -1, 0),
+            InitialVelocityMin = 10.0f,
+            InitialVelocityMax = 40.0f,
+            Gravity = new Vector3(0, -20, 0),
+            ScaleMin = 0.5f,
+            ScaleMax = 1.5f,
+            Color = new Color(BloodRed, 0.8f)
+        };
+        particles.ProcessMaterial = mat;
+        _zombie.GetParent().AddChild(particles);
+
+        var timer = new Timer { WaitTime = 1.0f, OneShot = true };
+        timer.Timeout += () => particles.QueueFree();
+        particles.AddChild(timer);
+        timer.Start();
     }
 
     private void _SpawnCorpse()

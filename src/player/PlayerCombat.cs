@@ -324,7 +324,7 @@ public partial class PlayerCombat : Node
 
         float shake = isCritical ? 8.0f : 3.0f;
         GameServices.UI.ShakeScreen(shake);
-        VFXManager.FlashSprite(Player, Player.Sprite!, Colors.White);
+        VFXManager.FlashSprite(Player, Player.Sprite!, new Color(0.9f, 0.3f, 0.2f));
 
         if (zombie.CurrentHealth <= 0)
             return;

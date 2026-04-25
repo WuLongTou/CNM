@@ -2,8 +2,10 @@ namespace ZombieWars.Player;
 
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.UI;
 using ZombieWars.Vfx;
 using static ZombieWars.Core.GameEnums;
+using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 public partial class PlayerVfx : Node
 {
@@ -73,7 +75,7 @@ public partial class PlayerVfx : Node
         _hurtFrame = ImageTexture.CreateFromImage(hurtImg);
 
         var dashImg = img.Duplicate() as Image;
-        _TintImage(dashImg, new Color(0.5f, 0.8f, 1.3f, 0.7f));
+        _TintImage(dashImg, new Color(0.2f, 0.1f, 0.1f, 0.6f));
         _dashFrame = ImageTexture.CreateFromImage(dashImg);
     }
 
@@ -856,7 +858,7 @@ public partial class PlayerVfx : Node
         if (_trailTimer < Core.GameConfig.DashTrailInterval)
             return;
         _trailTimer -= Core.GameConfig.DashTrailInterval;
-        VFXManager.SpawnGhostTrail(Player!.GetParent(), Player.Sprite!, Player.GlobalPosition, new Color(0.5f, 0.8f, 1.0f, 0.5f));
+        VFXManager.SpawnGhostTrail(Player!.GetParent(), Player.Sprite!, Player.GlobalPosition, new Color(InkBlack, 0.5f));
     }
 
     public void ResetDashTrail()
@@ -872,20 +874,20 @@ public partial class PlayerVfx : Node
         switch (attackType)
         {
             case AttackType.Melee:
-                flashColor = new Color(1.0f, 0.6f, 0.2f);
+                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.5f);
                 _ShowMeleeSlash(targetPos);
                 doFlash = true;
                 break;
             case AttackType.Ranged:
-                flashColor = new Color(1.0f, 0.9f, 0.4f);
+                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.4f);
                 break;
             case AttackType.Area:
-                flashColor = new Color(1.0f, 0.4f, 0.1f);
+                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.5f);
                 _ShowAreaRings();
                 doFlash = true;
                 break;
             case AttackType.Magic:
-                flashColor = new Color(0.6f, 0.3f, 1.0f);
+                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.5f);
                 _ShowMagicCircle(targetPos);
                 doFlash = true;
                 break;
@@ -910,7 +912,7 @@ public partial class PlayerVfx : Node
                 line.AddPoint(Player.GlobalPosition + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * arcR);
             }
             line.Width = 6.0f - arc * 2.0f;
-            line.DefaultColor = new Color(1.0f, 0.8f - arc * 0.15f, 0.2f, 0.85f - arc * 0.2f);
+            line.DefaultColor = new Color(PencilGray, 0.75f - arc * 0.15f);
             line.JointMode = Line2D.LineJointMode.Round;
             line.BeginCapMode = Line2D.LineCapMode.Round;
             line.EndCapMode = Line2D.LineCapMode.Round;
@@ -921,7 +923,7 @@ public partial class PlayerVfx : Node
             tw.TweenCallback(Callable.From(line.QueueFree));
         }
 
-        VFXManager.SpawnImpactRing(parent, targetPos, 25.0f, Colors.Orange);
+        VFXManager.SpawnImpactRing(parent, targetPos, 25.0f, BloodRed);
         GameServices.UI.ShakeScreen(3.0f);
     }
 
@@ -938,8 +940,8 @@ public partial class PlayerVfx : Node
     private void _ShowMagicCircle(Vector2 targetPos)
     {
         Node? parent = Player!.GetParent();
-        var circle = _MakeCircleRing(Player!.GlobalPosition, 50.0f, Colors.Magenta, 2.0f);
-        var targetRing = _MakeCircleRing(targetPos, 35.0f, new Color(1.0f, 0.5f, 1.0f, 0.8f), 2.0f);
+        var circle = _MakeCircleRing(Player!.GlobalPosition, 50.0f, new Color(BloodRed, 0.7f), 2.0f);
+        var targetRing = _MakeCircleRing(targetPos, 35.0f, new Color(BloodBright, 0.7f), 2.0f);
         parent!.AddChild(circle);
         parent.AddChild(targetRing);
 
@@ -976,7 +978,7 @@ public partial class PlayerVfx : Node
             var ray = new Line2D
             {
                 Width = (float)GD.RandRange(2, 5),
-                DefaultColor = new Color(1.0f, 0.9f, 0.5f, (float)GD.RandRange(0.6, 1.0))
+                DefaultColor = new Color(BloodBright, (float)GD.RandRange(0.6, 1.0))
             };
             ray.AddPoint(Vector2.Zero);
             ray.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * rayLen);
@@ -992,7 +994,7 @@ public partial class PlayerVfx : Node
     {
         var flash = new ColorRect();
         flash.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        flash.Color = new Color(1.0f, 0.9f, 0.3f, 0.3f);
+        flash.Color = new Color(BloodRed, 0.3f);
         flash.MouseFilter = Control.MouseFilterEnum.Ignore;
         flash.ZIndex = 50;
         Player!.GetTree().CurrentScene.AddChild(flash);
@@ -1004,7 +1006,7 @@ public partial class PlayerVfx : Node
         if (Player.Sprite != null)
         {
             var glow = Player.CreateTween();
-            glow.TweenProperty(Player.Sprite, "modulate", new Color(1.5f, 1.5f, 1.0f), 0.2f);
+            glow.TweenProperty(Player.Sprite, "modulate", new Color(0.9f, 0.3f, 0.2f), 0.2f);
             glow.TweenProperty(Player.Sprite, "modulate", Colors.White, 0.3f);
         }
     }

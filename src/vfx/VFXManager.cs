@@ -3,6 +3,8 @@ namespace ZombieWars.Vfx;
 using Godot;
 using Godot.Collections;
 using ZombieWars.Core;
+using ZombieWars.UI;
+using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 /// <summary>
 /// Central VFX manager — eliminates duplicate effect creation across the codebase.
@@ -81,10 +83,14 @@ public partial class VFXManager : Node
 		for (int i = 0; i <= pts; i++)
 		{
 			float angle = i * Mathf.Tau / pts;
-			line.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius);
+			float jitter = 0.8f + (float)GD.Randf() * 0.5f;
+			line.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * radius * jitter);
 		}
 		line.Width = lineWidth;
 		line.DefaultColor = color;
+		line.JointMode = Line2D.LineJointMode.Round;
+		line.BeginCapMode = Line2D.LineCapMode.Round;
+		line.EndCapMode = Line2D.LineCapMode.Round;
 		ring.AddChild(line);
 
 		parent.AddChild(ring);
@@ -183,30 +189,20 @@ public partial class VFXManager : Node
 		int segments = Mathf.Max(4, (int)(dist / 15.0f));
 		var direction = to - from;
 
-		var line = new Line2D { Width = 3.0f, DefaultColor = color };
+		var line = new Line2D { Width = 2.0f, DefaultColor = color };
 		for (int i = 0; i <= segments; i++)
 		{
 			float t = (float)i / segments;
 			var basePoint = from + direction * t;
-			float jitter = (float)(GD.Randf() * 16 - 8) * (1.0f - Mathf.Abs(t - 0.5f) * 2);
+			float jitter = (float)(GD.Randf() * 24 - 12) * (1.0f - Mathf.Abs(t - 0.5f) * 2);
 			var perp = direction.Normalized().Rotated(Mathf.Pi / 2);
 			line.AddPoint(basePoint + perp * jitter);
 		}
 		parent.AddChild(line);
 
-		var glow = new Line2D
-		{
-			Points = line.Points,
-			Width = 8.0f,
-			DefaultColor = glowColor
-		};
-		parent.AddChild(glow);
-
 		var tw = line.CreateTween();
-		tw.Parallel().TweenProperty(line, ModulateAPath, 0.0f, 0.25f);
-		tw.Parallel().TweenProperty(glow, ModulateAPath, 0.0f, 0.25f);
+		tw.Parallel().TweenProperty(line, ModulateAPath, 0.0f, 0.3f);
 		tw.TweenCallback(Callable.From(line.QueueFree));
-		tw.TweenCallback(Callable.From(glow.QueueFree));
 	}
 
 	// ══ Sprite Flash ══
@@ -223,7 +219,7 @@ public partial class VFXManager : Node
 	{
 		if (sprite == null) return;
 		var tw = node.CreateTween();
-		tw.TweenProperty(sprite, ModulatePath, new Color(1.0f, 0.3f, 0.3f), 0.05f);
+		tw.TweenProperty(sprite, ModulatePath, new Color(0.9f, 0.3f, 0.2f), 0.05f);
 		tw.TweenProperty(sprite, ModulatePath, new Color(1, 1, 1, 0.6f), 0.1f);
 	}
 
@@ -231,20 +227,33 @@ public partial class VFXManager : Node
 
 	public static void SpawnGhostTrail(Node parent, Sprite2D sourceSprite, Vector2 pos, Color color, float fadeTime = 0.25f)
 	{
-		if (sourceSprite == null || sourceSprite.Texture == null) return;
-		var ghost = new Sprite2D
+		if (sourceSprite == null) return;
+		var group = new Node2D
 		{
-			Texture = sourceSprite.Texture,
 			GlobalPosition = pos,
-			FlipH = sourceSprite.FlipH,
-			Modulate = color,
 			ZIndex = sourceSprite.ZIndex - 1
 		};
-		parent.AddChild(ghost);
+		int lineCount = (int)GD.RandRange(3, 6);
+		for (int i = 0; i < lineCount; i++)
+		{
+			var line = new Line2D
+			{
+				Width = (float)GD.RandRange(1.0f, 2.5f),
+				DefaultColor = color
+			};
+			float len = (float)GD.RandRange(4.0f, 12.0f);
+			float angle = (float)(GD.Randf() * Mathf.Tau);
+			var dir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+			line.AddPoint(Vector2.Zero);
+			line.AddPoint(dir * len);
+			line.Position = new Vector2((float)GD.RandRange(-10f, 10f), (float)GD.RandRange(-10f, 10f));
+			group.AddChild(line);
+		}
+		parent.AddChild(group);
 
-		var tw = ghost.CreateTween();
-		tw.TweenProperty(ghost, ModulateAPath, 0.0f, fadeTime);
-		tw.TweenCallback(Callable.From(ghost.QueueFree));
+		var tw = group.CreateTween();
+		tw.TweenProperty(group, ModulateAPath, 0.0f, fadeTime);
+		tw.TweenCallback(Callable.From(group.QueueFree));
 	}
 
 	// ══ Auto-Free Utility ══
