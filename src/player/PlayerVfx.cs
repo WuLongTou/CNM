@@ -944,7 +944,7 @@ public partial class PlayerVfx : Node
         if (_trailTimer < Core.GameConfig.DashTrailInterval)
             return;
         _trailTimer -= Core.GameConfig.DashTrailInterval;
-        VFXManager.SpawnGhostTrail(Player!.GetParent(), Player.Sprite!, Player.GlobalPosition, new Color(0.5f, 0.4f, 0.4f, 0.4f), 0.3f);
+        VFXManager.SpawnGhostTrail(Player!.GetParent(), Player.Sprite!, Player.GlobalPosition, 0.3f);
     }
 
     public void ResetDashTrail()
