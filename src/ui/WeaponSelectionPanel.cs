@@ -388,7 +388,8 @@ public partial class WeaponSelectionPanel : Control
         categoryNode.Text = "【强化卡】";
         titleNode.Text = upgrade.DisplayName;
         typeNode.Text = "强化已有装备";
-        iconNode.Text = upgrade.Icon;
+        if (iconNode != null)
+            iconNode.Text = upgrade.Icon;
         descNode.Text = upgrade.Description;
         rarityNode.Text = "升级";
 
