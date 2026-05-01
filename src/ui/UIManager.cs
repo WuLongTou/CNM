@@ -15,6 +15,14 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 /// <summary>
 /// UI Manager — creates and manages all in-game UI elements.
 /// Handles HUD, weapon selection panel, tooltip, pause overlay, controls panel, and welcome screen.
+///
+/// REFACTORING IN PROGRESS: 部分功能已拆分到独立组件:
+/// - HudManager: HUD 元素管理
+/// - WeaponSelectionPanel: 武器选择面板
+/// - TooltipSystem: 提示信息显示
+///
+/// 这些组件作为子节点添加到场景中，当前 UIManager 保留所有功能以确保向后兼容。
+/// 未来计划：逐步将功能迁移到独立组件，减少 UIManager 的复杂度。
 /// </summary>
 public partial class UIManager : Control
 {
