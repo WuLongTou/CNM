@@ -63,19 +63,23 @@ public partial class Projectile : CharacterBody2D
 
     public override void _PhysicsProcess(double delta)
     {
-        var prevPos = Position;
-        Position += Velocity * (float)delta;
+        var prevPos = GlobalPosition;
+        GlobalPosition += Velocity * (float)delta;
 
         if (Velocity != Vector2.Zero)
             Rotation = Velocity.Angle();
 
         _HandleBoundsBounce();
 
-        // Distance-based hit-scan: checks every frame for zombies near the flight path
-        _CheckHitscan(prevPos, Position);
+        _CheckHitscan(prevPos, GlobalPosition);
 
         if (TrajectoryDamageRatio > 0.0f)
             _CheckTrajectoryCollision();
+
+        // Auto-cleanup if way off-screen
+        var screen = GetViewport().GetVisibleRect();
+        if (!screen.HasPoint(GlobalPosition))
+            QueueFree();
     }
 
     private void _CheckHitscan(Vector2 from, Vector2 to)

@@ -55,10 +55,15 @@ public partial class ZombieArrow : Area2D
             _velocity = _velocity.Lerp(desiredVel, fdelta * 4.0f);
         }
 
-        Position += _velocity * fdelta;
+        GlobalPosition += _velocity * fdelta;
 
         if (GetChildCount() > 0 && GetChild(0) is Sprite2D sprite)
             sprite.Rotation = _velocity.Angle();
+
+        // Auto-cleanup if off-screen
+        var screen = GetViewport().GetVisibleRect();
+        if (!screen.HasPoint(GlobalPosition))
+            QueueFree();
     }
 
     private void _OnBodyEntered(Node body)

@@ -26,8 +26,7 @@ public partial class MagicMissile : Area2D
 
     public override void _Ready()
     {
-        // Connect collision detection
-        BodyEntered += OnBodyEntered;
+        BodyEntered += _OnBodyEntered;
 
         var timer = new Timer
         {
@@ -53,24 +52,29 @@ public partial class MagicMissile : Area2D
 
             if (dist < 30.0f)
             {
-                Position += direction * Speed * fdelta;
+                GlobalPosition += direction * Speed * fdelta;
             }
             else
             {
                 Vector2 currentVelocity = new Vector2(Mathf.Cos(Rotation), Mathf.Sin(Rotation)) * Speed;
                 float blend = Mathf.Min(adaptiveStrength * fdelta, 1.0f);
                 Vector2 newVelocity = currentVelocity.Lerp(direction * Speed, blend);
-                Position += newVelocity * fdelta;
+                GlobalPosition += newVelocity * fdelta;
                 Rotation = newVelocity.Angle();
             }
         }
         else
         {
-            Position += new Vector2(Mathf.Cos(Rotation), Mathf.Sin(Rotation)) * Speed * fdelta;
+            GlobalPosition += new Vector2(Mathf.Cos(Rotation), Mathf.Sin(Rotation)) * Speed * fdelta;
         }
+
+        // Auto-cleanup if off-screen
+        var screen = GetViewport().GetVisibleRect();
+        if (!screen.HasPoint(GlobalPosition))
+            QueueFree();
     }
 
-    public void OnBodyEntered(Node body)
+    private void _OnBodyEntered(Node body)
     {
         if (body is not Zombie z || _chainTargets.Contains(z))
             return;
