@@ -165,25 +165,32 @@ public static class SpatialUtils
 
     /// <summary>
     /// Finds the zombie with most nearby zombies (densest cluster).
+    /// Uses spatial grid for O(n) average instead of O(n²).
     /// </summary>
     public static Zombie? FindDensestZombie(Vector2 position, float clusterRange = 200f)
     {
         Zombie? densest = null;
         int maxCount = 0;
+
+        // Use spatial grid to reduce candidate set
+        var candidates = GetZombiesInCells(position, clusterRange);
         float rangeSq = clusterRange * clusterRange;
 
-        foreach (var zombie in ZombieRegistry.All)
+        foreach (var zombie in candidates)
         {
             if (!IsValidZombie(zombie))
                 continue;
 
+            // Count only valid zombies within range
             int count = 0;
-            foreach (var other in ZombieRegistry.All)
+            var zombiePos = zombie.GlobalPosition;
+
+            foreach (var other in candidates)
             {
                 if (!IsValidZombie(other))
                     continue;
 
-                float distSq = zombie.GlobalPosition.DistanceSquaredTo(other.GlobalPosition);
+                float distSq = zombiePos.DistanceSquaredTo(other.GlobalPosition);
                 if (distSq <= rangeSq)
                     count++;
             }

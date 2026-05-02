@@ -393,38 +393,6 @@ public partial class Zombie : CharacterBody2D
         return _cachedPoisonTexture;
     }
 
-    // Static cache for arrow texture
-    private static ImageTexture? _cachedArrowTexture;
-    private static ImageTexture _GetCachedArrowTexture()
-    {
-        if (_cachedArrowTexture != null)
-            return _cachedArrowTexture;
-
-        int bw = 20;
-        int bh = 4;
-        using var img = Image.CreateEmpty(bw, bh, false, Image.Format.Rgba8);
-
-        for (int x = 0; x < bw; x++)
-        {
-            for (int y = 0; y < bh; y++)
-            {
-                // Arrow shaft
-                if (x < bw - 5)
-                {
-                    img.SetPixel(x, y, new Color(0.5f, 0.3f, 0.1f));
-                }
-                // Arrow head (brighter tip)
-                else
-                {
-                    img.SetPixel(x, y, new Color(0.8f, 0.6f, 0.2f));
-                }
-            }
-        }
-
-        _cachedArrowTexture = ImageTexture.CreateFromImage(img);
-        return _cachedArrowTexture;
-    }
-
     private void _HandleArcher(float delta)
     {
         _archerCooldown -= delta;
@@ -441,47 +409,22 @@ public partial class Zombie : CharacterBody2D
     private void _ShootArrow(Node target)
     {
         if (target == null) return;
-
-        // Use cached arrow texture for performance
-        var arrow = new Sprite2D
-        {
-            Texture = _GetCachedArrowTexture(),
-            GlobalPosition = GlobalPosition,
-            ZIndex = 10
-        };
-
-        // Calculate direction and rotate arrow
         Vector2 direction = ((Node2D)target).GlobalPosition - GlobalPosition;
-        arrow.Rotation = direction.Angle();
-
+        var arrow = new ZombieArrow(direction, Damage, this)
+        {
+            Target = (Node2D)target,
+            GlobalPosition = GlobalPosition
+        };
         GetParent().AddChild(arrow);
-
-        // Tween arrow to target
-        var tw = CreateTween();
-        tw.TweenProperty(arrow, "global_position", ((Node2D)target).GlobalPosition, 0.5f)
-            .SetTrans(Tween.TransitionType.Linear);
-        tw.TweenCallback(Callable.From(() => _CompleteArrowHit(arrow, target)));
     }
 
-    private void _CompleteArrowHit(Node arrow, Node target)
+    private void _HandleSummoner(float delta)
     {
-        if (IsInstanceValid(arrow))
-            arrow.QueueFree();
-
-        if (IsInstanceValid(target))
+        _summonerCooldown -= delta;
+        if (_summonerCooldown <= 0)
         {
-            // Direct damage on hit - pass attacker for counterattack
-            if (target is ZombieWars.Player.Player player)
-            {
-                player.TakeDamage(Damage, this);
-            }
-            else if (target.HasMethod("TakeDamage"))
-            {
-                target.Call("TakeDamage", Damage);
-            }
-
-            // Visual feedback
-            VFXManager.SpawnHitEffect(GetParent(), ((Node2D)target).GlobalPosition, new Color(0.8f, 0.6f, 0.3f));
+            _summonerCooldown = _summonerCooldownBase;
+            _SummonMinions();
         }
     }
 
@@ -515,16 +458,6 @@ public partial class Zombie : CharacterBody2D
         if (healedAny && _vfx != null)
         {
             _vfx.ShowHealPulse(_healerRange);
-        }
-    }
-
-    private void _HandleSummoner(float delta)
-    {
-        _summonerCooldown -= delta;
-        if (_summonerCooldown <= 0)
-        {
-            _summonerCooldown = _summonerCooldownBase;
-            _SummonMinions();
         }
     }
 
