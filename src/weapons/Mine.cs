@@ -77,8 +77,21 @@ public partial class Mine : Area2D
         _Detonate();
     }
 
+    private bool _ShouldDetonateOnZombie()
+    {
+        if (Shooter is Player p && IsInstanceValid(p))
+        {
+            float dist = GlobalPosition.DistanceTo(p.GlobalPosition);
+            if (dist < BlastRadius * 0.4f)
+                return false; // too close to shooter, don't detonate
+        }
+        return true;
+    }
+
     private void _Detonate()
     {
+        if (!_ShouldDetonateOnZombie())
+            return;
         foreach (var z in ZombieRegistry.All)
         {
             if (!IsInstanceValid(z) || _hitTargets.Contains(z)) continue;

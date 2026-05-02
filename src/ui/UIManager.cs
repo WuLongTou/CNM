@@ -105,6 +105,13 @@ public partial class UIManager : Control
 	private readonly Dictionary<string, Button> _effectIcons = new();
 
 	// ═══════════════════════════════════════════════
+	// Level Up / Milestone
+	// ═══════════════════════════════════════════════
+	private Panel? _levelUpPanel;
+	private Label? _levelUpLabel;
+	private Tween? _levelUpTween;
+
+	// ═══════════════════════════════════════════════
 	// Lifecycle
 	// ═══════════════════════════════════════════════
 
@@ -120,6 +127,10 @@ public partial class UIManager : Control
 		_gameOverUi = new GameOverUI();
 		_gameOverUi.Name = "GameOverUI";
 		AddChild(_gameOverUi);
+
+		// Setup achievement system callbacks
+		Core.AchievementSystem.OnAchievementUnlocked += _ShowAchievementNotification;
+		Core.AchievementSystem.OnMilestoneReached += _ShowMilestoneNotification;
 
 		_CreateUiElements();
 		_SetupConnections();
@@ -2325,6 +2336,80 @@ public partial class UIManager : Control
 	public void ShowOffscreenIndicator(Vector2 direction, float dangerLevel)
 	{
 		_screenFx?.ShowOffscreenIndicator(direction, dangerLevel);
+	}
+
+	/// <summary>显示升级/强化通知</summary>
+	public void ShowLevelUpNotification(string text, Color color)
+	{
+		if (_levelUpPanel == null)
+		{
+			_levelUpPanel = new Panel
+			{
+				Visible = true,
+				ZIndex = 60,
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			_levelUpPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
+			_levelUpPanel.OffsetTop = 90;
+			_levelUpPanel.OffsetBottom = 130;
+			var style = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0) };
+			_levelUpPanel.AddThemeStyleboxOverride("panel", style);
+			AddChild(_levelUpPanel);
+
+			var center = new CenterContainer();
+			center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+			_levelUpPanel.AddChild(center);
+
+			_levelUpLabel = new Label
+			{
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Center
+			};
+			_levelUpLabel.AddThemeFontSizeOverride("font_size", 22);
+			_levelUpLabel.AddThemeConstantOverride("outline_size", 4);
+			_levelUpLabel.AddThemeColorOverride("font_outline_color", InkBlack);
+			center.AddChild(_levelUpLabel);
+		}
+
+		if (_levelUpTween != null && _levelUpTween.IsRunning())
+			_levelUpTween.Kill();
+
+		_levelUpLabel!.Text = text;
+		_levelUpLabel.AddThemeColorOverride("font_color", color);
+		_levelUpPanel!.Visible = true;
+		_levelUpPanel.Modulate = _levelUpPanel.Modulate with { A = 0.0f };
+		_levelUpPanel.Scale = new Vector2(0.5f, 0.5f);
+
+		_levelUpTween = CreateTween();
+		_levelUpTween.SetParallel(true);
+		_levelUpTween.TweenProperty(_levelUpPanel, Control.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.2f);
+		_levelUpTween.TweenProperty(_levelUpPanel, "scale", new Vector2(1.1f, 1.1f), 0.2f)
+			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+		_levelUpTween.TweenProperty(_levelUpPanel, "scale", new Vector2(1.0f, 1.0f), 0.1f);
+		_levelUpTween.TweenInterval(1.2f);
+		_levelUpTween.SetParallel(true);
+		_levelUpTween.TweenProperty(_levelUpPanel, Control.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.4f);
+		_levelUpTween.TweenCallback(Callable.From(() =>
+		{
+			if (_levelUpPanel != null) _levelUpPanel.Visible = false;
+		}));
+	}
+
+	/// <summary>显示连击计数</summary>
+	public void ShowComboNotification(int comboCount)
+	{
+		if (comboCount < 3) return;
+		ShowLevelUpNotification($"连击 x{comboCount}", new Color(1.0f, 0.6f, 0.2f));
+	}
+
+	private void _ShowAchievementNotification(string text, Color color)
+	{
+		ShowLevelUpNotification(text, color);
+	}
+
+	private void _ShowMilestoneNotification(string text, Color color)
+	{
+		ShowLevelUpNotification(text, color);
 	}
 
 	public void TriggerBossAtmosphere()

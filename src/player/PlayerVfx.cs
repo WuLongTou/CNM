@@ -55,16 +55,8 @@ public partial class PlayerVfx : Node
 
     private void _ApplySketchOutline()
     {
-        if (Player?.Sprite == null) return;
-
-        _outlineSprite = new Sprite2D();
-        _outlineSprite.Texture = Player.Sprite.Texture;
-        _outlineSprite.Modulate = new Color(0.1f, 0.05f, 0.05f, 0.4f);
-        float ox = (float)GD.RandRange(-1.5f, 1.5f);
-        float oy = (float)GD.RandRange(-1.5f, 1.5f);
-        _outlineSprite.Position = new Vector2(ox, oy);
-        _outlineSprite.ZIndex = -1;
-        Player.Sprite.AddChild(_outlineSprite);
+        // Disabled: outline sprite caused rendering artifacts
+        // Re-enable if needed with proper ZIndex handling
     }
 
     private void _SyncOutlineTexture()
@@ -109,6 +101,9 @@ public partial class PlayerVfx : Node
     private static readonly Godot.Collections.Array<Texture2D> _warriorAttackFrames = new();
     private static readonly Godot.Collections.Array<Texture2D> _rangerAttackFrames = new();
     private static readonly Godot.Collections.Array<Texture2D> _mageAttackFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _warriorIdleFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _rangerIdleFrames = new();
+    private static readonly Godot.Collections.Array<Texture2D> _mageIdleFrames = new();
     private static Texture2D? _warriorIdle;
     private static Texture2D? _rangerIdle;
     private static Texture2D? _mageIdle;
@@ -125,6 +120,9 @@ public partial class PlayerVfx : Node
         _warriorAttackFrames.Clear();
         _rangerAttackFrames.Clear();
         _mageAttackFrames.Clear();
+        _warriorIdleFrames.Clear();
+        _rangerIdleFrames.Clear();
+        _mageIdleFrames.Clear();
         _warriorIdle = null;
         _rangerIdle = null;
         _mageIdle = null;
@@ -148,26 +146,28 @@ public partial class PlayerVfx : Node
             return;
 
         _allSpritesLoaded = true;
-        _LoadCharacterSprites("warrior", _warriorWalkFrames, _warriorAttackFrames,
+        _LoadCharacterSprites("warrior", _warriorWalkFrames, _warriorAttackFrames, _warriorIdleFrames,
             out _warriorIdle, out _warriorBase);
-        _LoadCharacterSprites("ranger", _rangerWalkFrames, _rangerAttackFrames,
+        _LoadCharacterSprites("ranger", _rangerWalkFrames, _rangerAttackFrames, _rangerIdleFrames,
             out _rangerIdle, out _rangerBase);
-        _LoadCharacterSprites("mage", _mageWalkFrames, _mageAttackFrames,
+        _LoadCharacterSprites("mage", _mageWalkFrames, _mageAttackFrames, _mageIdleFrames,
             out _mageIdle, out _mageBase);
     }
 
     private static void _LoadCharacterSprites(string charName,
         Godot.Collections.Array<Texture2D> walkOut,
         Godot.Collections.Array<Texture2D> attackOut,
-        out Texture2D? idleOut, out Texture2D? baseOut)
+        Godot.Collections.Array<Texture2D> idleOut,
+        out Texture2D? idleFirst, out Texture2D? baseOut)
     {
         walkOut.Clear();
         attackOut.Clear();
-        idleOut = null;
+        idleOut.Clear();
+        idleFirst = null;
         baseOut = null;
 
-        // Priority 1: Processed sprites (white bg stripped, centered, 96x96 individual PNGs)
-        // Layout: processed/{char}/warrior_walk_01.png ... warrior_walk_08.png, warrior_attack_01.png...06.png, warrior_idle.png
+        // Priority 1: Processed sprites (white bg stripped, centered, individual PNGs in subdirectory)
+        // Layout: processed/{charName}/warrior_idle_01.png ... warrior_walk_01.png ... warrior_attack_01.png
         string processedDir = $"res://assets/sprites/player/{charName}";
         bool hasProcessed = _HasProcessedSprites(processedDir, charName);
 
@@ -187,9 +187,10 @@ public partial class PlayerVfx : Node
                 if (frame != null) attackOut.Add(frame);
             }
 
-            // Load idle frames (idle_01 through idle_04, or single idle.png fallback)
+            // Load idle frames (idle_01 through idle_08, or fallback to less frames)
             Texture2D? firstIdle = null;
-            for (int i = 1; i <= 4; i++)
+            int maxIdleFrames = 8; // warrior has 8, others have 4
+            for (int i = 1; i <= maxIdleFrames; i++)
             {
                 string path = $"{processedDir}/{charName}_idle_{i:D2}.png";
                 var frame = TextureUtils.LoadNormalizedSprite(path);
@@ -198,7 +199,7 @@ public partial class PlayerVfx : Node
                     if (firstIdle == null)
                     {
                         firstIdle = frame;
-                        idleOut = frame;
+                        idleOut.Add(frame);
                     }
                     else
                     {
@@ -206,29 +207,31 @@ public partial class PlayerVfx : Node
                         bool thisFacesLeft = Core.TextureUtils.FacesLeft(frame);
                         if (firstFacesLeft != thisFacesLeft)
                             frame = Core.TextureUtils.FlipHorizontal(frame);
-                        idleOut = frame;
+                        idleOut.Add(frame);
                     }
                 }
                 if (i == 1) baseOut = frame; // Use frame 1 as base
             }
+            idleFirst = firstIdle;
 
             // Fallback: try single idle.png if no multi-frame
-            if (idleOut == null)
+            if (idleFirst == null)
             {
                 string singlePath = $"{processedDir}/{charName}_idle.png";
-                idleOut = TextureUtils.LoadNormalizedSprite(singlePath);
-                baseOut = idleOut;
+                idleFirst = TextureUtils.LoadNormalizedSprite(singlePath);
+                baseOut = idleFirst;
+                if (idleFirst != null) idleOut.Add(idleFirst);
             }
             return;
         }
 
         // Priority 2: Original individual frame files (may have white bg)
-        _LoadOriginalIndividualFrames(charName, walkOut, attackOut, out idleOut, out baseOut);
+        _LoadOriginalIndividualFrames(charName, walkOut, attackOut, idleOut, out idleFirst, out baseOut);
         if (walkOut.Count >= 8)
             return;
 
         // Priority 3: Atlas fallback (4x4 grid)
-        _LoadFromAtlas(charName, walkOut, attackOut, out idleOut, out baseOut);
+        _LoadFromAtlas(charName, walkOut, attackOut, idleOut, out idleFirst, out baseOut);
     }
 
     private static bool _HasProcessedSprites(string dir, string charName)
@@ -245,11 +248,13 @@ public partial class PlayerVfx : Node
     private static void _LoadOriginalIndividualFrames(string charName,
         Godot.Collections.Array<Texture2D> walkOut,
         Godot.Collections.Array<Texture2D> attackOut,
-        out Texture2D? idleOut, out Texture2D? baseOut)
+        Godot.Collections.Array<Texture2D> idleOut,
+        out Texture2D? idleFirst, out Texture2D? baseOut)
     {
         walkOut.Clear();
         attackOut.Clear();
-        idleOut = null;
+        idleOut.Clear();
+        idleFirst = null;
         baseOut = null;
 
         for (int i = 1; i <= 8; i++)
@@ -271,10 +276,20 @@ public partial class PlayerVfx : Node
         string idlePath = FileAccess.FileExists(idlePng) ? idlePng :
                           FileAccess.FileExists(idleJpg) ? idleJpg : "";
         if (!string.IsNullOrEmpty(idlePath))
-            idleOut = TextureUtils.LoadNormalizedSprite(idlePath);
+        {
+            idleFirst = TextureUtils.LoadNormalizedSprite(idlePath);
+            if (idleFirst != null)
+            {
+                idleOut.Add(idleFirst);
+                baseOut = idleFirst;
+            }
+        }
 
-        if (idleOut == null && walkOut.Count > 0)
-            idleOut = walkOut[0];
+        if (idleFirst == null && walkOut.Count > 0)
+        {
+            idleFirst = walkOut[0];
+            baseOut = idleFirst;
+        }
 
         for (int i = 1; i <= 6; i++)
         {
@@ -289,18 +304,18 @@ public partial class PlayerVfx : Node
             if (frame != null)
                 attackOut.Add(frame);
         }
-
-        baseOut = idleOut;
     }
 
     private static void _LoadFromAtlas(string charName,
         Godot.Collections.Array<Texture2D> walkOut,
         Godot.Collections.Array<Texture2D> attackOut,
-        out Texture2D? idleOut, out Texture2D? baseOut)
+        Godot.Collections.Array<Texture2D> idleOut,
+        out Texture2D? idleFirst, out Texture2D? baseOut)
     {
         walkOut.Clear();
         attackOut.Clear();
-        idleOut = null;
+        idleOut.Clear();
+        idleFirst = null;
         baseOut = null;
 
         string atlasPath = $"res://assets/sprites/player/{charName}_atlas.png";
@@ -315,14 +330,16 @@ public partial class PlayerVfx : Node
         // index 0-1: idle, 2-9: walk (8), 10-15: attack (6)
         int idx = 0;
         if (atlasFrames.Count > 0)
-            idleOut = atlasFrames[0];
+        {
+            idleFirst = atlasFrames[0];
+            idleOut.Add(idleFirst);
+            baseOut = idleFirst;
+        }
         idx = 2;
         for (int i = 0; i < 8 && idx < atlasFrames.Count; i++, idx++)
             walkOut.Add(atlasFrames[idx]);
         for (int i = 0; i < 6 && idx < atlasFrames.Count; i++, idx++)
             attackOut.Add(atlasFrames[idx]);
-
-        baseOut = idleOut;
     }
 
     /// Switch active sprites based on current weapon type. Call when weapon changes.
@@ -341,6 +358,7 @@ public partial class PlayerVfx : Node
 
         _walkFrames.Clear();
         _attackFrames.Clear();
+        _idleFrames.Clear();
         _idleFrame = null;
         _baseTexture = null;
 
@@ -349,6 +367,7 @@ public partial class PlayerVfx : Node
             case AttackType.Ranged:
                 _walkFrames.AddRange(_rangerWalkFrames);
                 _attackFrames.AddRange(_rangerAttackFrames);
+                _idleFrames.AddRange(_rangerIdleFrames);
                 _idleFrame = _rangerIdle;
                 _baseTexture = _rangerBase;
                 break;
@@ -356,12 +375,14 @@ public partial class PlayerVfx : Node
             case AttackType.Area:
                 _walkFrames.AddRange(_mageWalkFrames);
                 _attackFrames.AddRange(_mageAttackFrames);
+                _idleFrames.AddRange(_mageIdleFrames);
                 _idleFrame = _mageIdle;
                 _baseTexture = _mageBase;
                 break;
             default: // Melee, Mine
                 _walkFrames.AddRange(_warriorWalkFrames);
                 _attackFrames.AddRange(_warriorAttackFrames);
+                _idleFrames.AddRange(_warriorIdleFrames);
                 _idleFrame = _warriorIdle;
                 _baseTexture = _warriorBase;
                 break;
@@ -912,12 +933,24 @@ public partial class PlayerVfx : Node
         else if (!_isMoving)
         {
             _animState = AnimState.Idle;
-            if (_currentFrame != 0 && _walkFrames.Count > 0)
+            // Use idle frames if available, otherwise fall back to walk first frame
+            if (_idleFrames.Count > 0)
+            {
+                _animTimer += delta;
+                float frameInterval = Core.GameConfig.IdleBreathSpeed;
+                if (_animTimer >= frameInterval)
+                {
+                    _animTimer -= frameInterval;
+                    _currentFrame = (_currentFrame + 1) % _idleFrames.Count;
+                    Player.Sprite.Texture = _idleFrames[_currentFrame];
+                }
+            }
+            else if (_currentFrame != 0 && _walkFrames.Count > 0)
             {
                 _currentFrame = 0;
                 Player.Sprite.Texture = _walkFrames[0];
+                _animTimer = 0.0f;
             }
-            _animTimer = 0.0f;
         }
 
         // Sync outline texture

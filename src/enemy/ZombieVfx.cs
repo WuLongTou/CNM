@@ -78,16 +78,8 @@ public partial class ZombieVfx : Node
 
     private void _ApplySketchOutline()
     {
-        if (_sprite == null) return;
-
-        _outlineSprite = new Sprite2D();
-        _outlineSprite.Texture = _sprite.Texture;
-        _outlineSprite.Modulate = new Color(0.1f, 0.05f, 0.05f, 0.4f);
-        float ox = (float)GD.RandRange(-1.5f, 1.5f);
-        float oy = (float)GD.RandRange(-1.5f, 1.5f);
-        _outlineSprite.Position = new Vector2(ox, oy);
-        _outlineSprite.ZIndex = -1;
-        _sprite.AddChild(_outlineSprite);
+        // Disabled: outline sprite causes rendering artifacts
+        // Re-enable if needed with proper ZIndex handling
     }
 
     private void _SyncOutlineTexture()

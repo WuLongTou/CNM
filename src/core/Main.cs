@@ -41,6 +41,9 @@ public partial class Main : Node2D
 		var vfxManagerNode = new VFXManager { Name = "VFXManager" };
 		AddChild(vfxManagerNode);
 
+		var achievementSystemNode = new AchievementSystem { Name = "AchievementSystem" };
+		AddChild(achievementSystemNode);
+
 		// Weather system - start it now so timer begins
 		_weatherSystem = new WeatherSystem { Name = "WeatherSystem" };
 		AddChild(_weatherSystem);

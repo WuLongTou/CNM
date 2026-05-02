@@ -404,6 +404,38 @@ public static partial class WeaponFactory
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "buff" }, { "icon", "🩸" }, { "rarity", 3 },
             { "ls", 12f }, { "hp", 15f }
         },
+
+        // 穿甲弹 - NEW: 穿透效果增强
+        new GodotDictionary
+        {
+            { "name", "穿甲弹" }, { "desc", "提升穿透能力，子弹可贯穿更多敌人" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "💎" }, { "rarity", 3 },
+            { "dmg", 1.1f }, { "crit", 8f }
+        },
+
+        // 弹跳之刃 - NEW: 弹道跳跃能力
+        new GodotDictionary
+        {
+            { "name", "弹跳之刃" }, { "desc", "远程武器可弹跳攻击多个目标" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "🪃" }, { "rarity", 3 },
+            { "dmg", 1.05f }, { "asp", 1.1f }
+        },
+
+        // 毁灭之息 - NEW: 范围伤害提升
+        new GodotDictionary
+        {
+            { "name", "毁灭之息" }, { "desc", "大幅提升范围伤害效果" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 4 }, { "upcat", "buff" }, { "icon", "🔥" }, { "rarity", 4 },
+            { "dmg", 1.25f }, { "hp", -15f }
+        },
+
+        // 钢铁意志 - NEW: 减少负面效果
+        new GodotDictionary
+        {
+            { "name", "钢铁意志" }, { "desc", "提升生命上限并减少控制效果持续时间" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "护甲" }, { "icon", "🛡️" }, { "rarity", 3 },
+            { "hp", 25f }, { "frz", 5f }
+        },
     };
 
     // ═══════════════════════════════════════════════

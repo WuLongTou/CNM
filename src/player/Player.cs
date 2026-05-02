@@ -89,6 +89,15 @@ public partial class Player : CharacterBody2D
     public float InvincibleTimer { get; set; } = 0.0f;
     public float InvincibleDuration { get; set; } = Core.GameConfig.InvincibleDuration;
 
+    // Multi-hit tracking for achievements
+    public int ConsecutiveHits { get; set; } = 0;
+    public int MaxComboThisRound { get; set; } = 0;
+
+    // Stage/milestone tracking
+    public int TotalDamageDealt { get; set; } = 0;
+    public int TotalKills { get; set; } = 0;
+    public float TotalSurvivalTime { get; set; } = 0.0f;
+
     public float PoisonedTimer { get; set; } = 0.0f;
     public float PoisonedTickTimer { get; set; } = 0.0f;
     public float PoisonedDps { get; set; } = 0.0f;

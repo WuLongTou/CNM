@@ -57,6 +57,7 @@ public partial class PlayerCombat : Node
     public int CurrentCombo => _currentCombo;
     public float DamageBonusFromCombo => _damageBonusFromCombo;
     public int MaxComboThisRound => _maxComboThisRound;
+    public int MaxComboEver { get; private set; }
 
     public override void _Process(double delta)
     {
@@ -84,6 +85,13 @@ public partial class PlayerCombat : Node
 
         // Combo damage bonus: each combo level adds 5% damage (max 50%)
         _damageBonusFromCombo = Mathf.Min(_currentCombo * 0.05f, 0.5f);
+
+        // Track all-time max
+        if (_currentCombo > MaxComboEver)
+            MaxComboEver = _currentCombo;
+
+        // Notify achievement system
+        AchievementSystem.Instance?.OnComboAchieved(_currentCombo);
     }
 
     public void ResetComboStats()
@@ -366,6 +374,9 @@ public partial class PlayerCombat : Node
         var p = Player!;
         GameServices.Audio.PlayZombieDie();
         ZombieWars.Audio.SoundManager.Instance?.NotifyKill();
+
+        // Trigger combo reward
+        OnKill();
 
         if (p.KillExplosionDamage > 0)
         {

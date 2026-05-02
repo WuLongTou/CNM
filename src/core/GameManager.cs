@@ -438,6 +438,9 @@ public partial class GameManager : Node
         _roundKills++;
         _totalKills++;
 
+        // Notify achievement system
+        AchievementSystem.Instance?.OnZombieKilled(zombie.ZombieType, zombie.IsElite, zombie.IsBoss);
+
         var zombieType = (int)zombie.ZombieType;
         var basePts = TypeScore.TryGetValue(zombieType, out var s) ? s : 10;
         var pts = zombie.IsElite
@@ -459,6 +462,10 @@ public partial class GameManager : Node
         _uiManager?.UpdateScoreDisplay(Score);
         _uiManager?.AddCombo();
         _uiManager?.ShowKillEffect(zombie.GlobalPosition, pts);
+
+        // Track combo in UI
+        if (_player?.Combat != null)
+            _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
     }
 
     private void _OnPlayerDied()
