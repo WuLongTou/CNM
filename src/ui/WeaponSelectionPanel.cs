@@ -251,17 +251,17 @@ public partial class WeaponSelectionPanel : Control
                 foreach (var m in effect.MeleeEffects)
                 {
                     var level = effect.MeleeEffectLevels.TryGetValue((int)m, out var l) ? l.AsInt32() : 1;
-                    effects.Add(effect.GetMeleeEffectDesc((MeleeEffect)(int)m, level));
+                    effects.Add(WeaponCard.GetMeleeEffectDesc((MeleeEffect)(int)m, level));
                 }
                 foreach (var r in effect.RangedEffects)
                 {
                     var level = effect.RangedEffectLevels.TryGetValue((int)r, out var l) ? l.AsInt32() : 1;
-                    effects.Add(effect.GetRangedEffectDesc((RangedEffect)(int)r, level));
+                    effects.Add(WeaponCard.GetRangedEffectDesc((RangedEffect)(int)r, level));
                 }
                 foreach (var g in effect.MagicEffects)
                 {
                     var level = effect.MagicEffectLevels.TryGetValue((int)g, out var l) ? l.AsInt32() : 1;
-                    effects.Add(effect.GetMagicEffectDesc((MagicEffect)(int)g, level));
+                    effects.Add(WeaponCard.GetMagicEffectDesc((MagicEffect)(int)g, level));
                 }
                 break;
             }

@@ -1289,17 +1289,17 @@ public partial class UIManager : Control
 				foreach (var m in effect.MeleeEffects)
 				{
 					var level = effect.MeleeEffectLevels.TryGetValue((int)m, out var l) ? l.AsInt32() : 1;
-					effects.Add(effect.GetMeleeEffectDesc((MeleeEffect)(int)m, level));
+					effects.Add(WeaponCard.GetMeleeEffectDesc((MeleeEffect)(int)m, level));
 				}
 				foreach (var r in effect.RangedEffects)
 				{
 					var level = effect.RangedEffectLevels.TryGetValue((int)r, out var l) ? l.AsInt32() : 1;
-					effects.Add(effect.GetRangedEffectDesc((RangedEffect)(int)r, level));
+					effects.Add(WeaponCard.GetRangedEffectDesc((RangedEffect)(int)r, level));
 				}
 				foreach (var g in effect.MagicEffects)
 				{
 					var level = effect.MagicEffectLevels.TryGetValue((int)g, out var l) ? l.AsInt32() : 1;
-					effects.Add(effect.GetMagicEffectDesc((MagicEffect)(int)g, level));
+					effects.Add(WeaponCard.GetMagicEffectDesc((MagicEffect)(int)g, level));
 				}
 				break;
 			}
@@ -1699,7 +1699,7 @@ public partial class UIManager : Control
 			{
 				int key = (int)effect;
 				int level = weapon.MeleeEffectLevels.TryGetValue(key, out var l) ? l.AsInt32() : 1;
-				bb += $"  [color=#ddaaff]★ {weapon.GetMeleeEffectDesc((MeleeEffect)key, level)}[/color]\n";
+				bb += $"  [color=#ddaaff]★ {WeaponCard.GetMeleeEffectDesc((MeleeEffect)key, level)}[/color]\n";
 				string detail = weapon.GetEffectDetail(((MeleeEffect)key).ToString(), "melee", level);
 				if (!string.IsNullOrEmpty(detail))
 					bb += $"     [color=#999999]{detail}[/color]\n";
@@ -1708,7 +1708,7 @@ public partial class UIManager : Control
 			{
 				int key = (int)effect;
 				int level = weapon.RangedEffectLevels.TryGetValue(key, out var l) ? l.AsInt32() : 1;
-				bb += $"  [color=#ddaaff]★ {weapon.GetRangedEffectDesc((RangedEffect)key, level)}[/color]\n";
+				bb += $"  [color=#ddaaff]★ {WeaponCard.GetRangedEffectDesc((RangedEffect)key, level)}[/color]\n";
 				string detail = weapon.GetEffectDetail(((RangedEffect)key).ToString(), "ranged", level);
 				if (!string.IsNullOrEmpty(detail))
 					bb += $"     [color=#999999]{detail}[/color]\n";
@@ -1717,7 +1717,7 @@ public partial class UIManager : Control
 			{
 				int key = (int)effect;
 				int level = weapon.MagicEffectLevels.TryGetValue(key, out var l) ? l.AsInt32() : 1;
-				bb += $"  [color=#ddaaff]★ {weapon.GetMagicEffectDesc((MagicEffect)key, level)}[/color]\n";
+				bb += $"  [color=#ddaaff]★ {WeaponCard.GetMagicEffectDesc((MagicEffect)key, level)}[/color]\n";
 				string detail = weapon.GetEffectDetail(((MagicEffect)key).ToString(), "magic", level);
 				if (!string.IsNullOrEmpty(detail))
 					bb += $"     [color=#999999]{detail}[/color]\n";

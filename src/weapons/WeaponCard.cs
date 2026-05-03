@@ -208,7 +208,7 @@ public partial class WeaponCard : Resource
         return details;
     }
 
-    public string GetMeleeEffectDesc(MeleeEffect effect, int level)
+    public static string GetMeleeEffectDesc(MeleeEffect effect, int level)
     {
         switch (effect)
         {
@@ -227,7 +227,7 @@ public partial class WeaponCard : Resource
         }
     }
 
-    public string GetMeleeEffectDetail(MeleeEffect effect, int level)
+    public static string GetMeleeEffectDetail(MeleeEffect effect, int level)
     {
         switch (effect)
         {
@@ -246,7 +246,7 @@ public partial class WeaponCard : Resource
         }
     }
 
-    public string GetRangedEffectDesc(RangedEffect effect, int level)
+    public static string GetRangedEffectDesc(RangedEffect effect, int level)
     {
         switch (effect)
         {
@@ -263,7 +263,7 @@ public partial class WeaponCard : Resource
         }
     }
 
-    public string GetRangedEffectDetail(RangedEffect effect, int level)
+    public static string GetRangedEffectDetail(RangedEffect effect, int level)
     {
         switch (effect)
         {
@@ -280,7 +280,7 @@ public partial class WeaponCard : Resource
         }
     }
 
-    public string GetMagicEffectDesc(MagicEffect effect, int level)
+    public static string GetMagicEffectDesc(MagicEffect effect, int level)
     {
         switch (effect)
         {
@@ -299,7 +299,7 @@ public partial class WeaponCard : Resource
         }
     }
 
-    public string GetMagicEffectDetail(MagicEffect effect, int level)
+    public static string GetMagicEffectDetail(MagicEffect effect, int level)
     {
         switch (effect)
         {

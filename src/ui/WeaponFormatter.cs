@@ -95,14 +95,13 @@ public static partial class WeaponFormatter
         }
 
         var result = new Array<string>();
-        var tempCard = new WeaponCard();
 
         foreach (int effectKey in meleeLevels.Keys)
-            result.Add(tempCard.GetMeleeEffectDesc((MeleeEffect)effectKey, meleeLevels[effectKey]));
+            result.Add(WeaponCard.GetMeleeEffectDesc((MeleeEffect)effectKey, meleeLevels[effectKey]));
         foreach (int effectKey in rangedLevels.Keys)
-            result.Add(tempCard.GetRangedEffectDesc((RangedEffect)effectKey, rangedLevels[effectKey]));
+            result.Add(WeaponCard.GetRangedEffectDesc((RangedEffect)effectKey, rangedLevels[effectKey]));
         foreach (int effectKey in magicLevels.Keys)
-            result.Add(tempCard.GetMagicEffectDesc((MagicEffect)effectKey, magicLevels[effectKey]));
+            result.Add(WeaponCard.GetMagicEffectDesc((MagicEffect)effectKey, magicLevels[effectKey]));
 
         return result;
     }
@@ -251,24 +250,23 @@ public static partial class WeaponFormatter
         }
 
         var effectLines = new Array<string>();
-        var tempCard = new WeaponCard();
 
         if (player.CurrentAttackType == AttackType.Melee)
         {
             foreach (int effectKey in meleeLevels.Keys)
-                effectLines.Add("• " + tempCard.GetMeleeEffectDesc((MeleeEffect)effectKey, meleeLevels[effectKey]));
+                effectLines.Add("• " + WeaponCard.GetMeleeEffectDesc((MeleeEffect)effectKey, meleeLevels[effectKey]));
         }
         else if (player.CurrentAttackType == AttackType.Ranged)
         {
             foreach (int effectKey in rangedLevels.Keys)
-                effectLines.Add("• " + tempCard.GetRangedEffectDesc((RangedEffect)effectKey, rangedLevels[effectKey]));
+                effectLines.Add("• " + WeaponCard.GetRangedEffectDesc((RangedEffect)effectKey, rangedLevels[effectKey]));
             if (player.ReturningProjectiles && player.BounceCount > 0)
                 effectLines.Add("• 反弹次数: " + player.BounceCount);
         }
         else if (player.CurrentAttackType == AttackType.Magic)
         {
             foreach (int effectKey in magicLevels.Keys)
-                effectLines.Add("• " + tempCard.GetMagicEffectDesc((MagicEffect)effectKey, magicLevels[effectKey]));
+                effectLines.Add("• " + WeaponCard.GetMagicEffectDesc((MagicEffect)effectKey, magicLevels[effectKey]));
         }
         else if (player.CurrentAttackType == AttackType.Area)
         {
