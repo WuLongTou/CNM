@@ -2,7 +2,6 @@ namespace ZombieWars.Player;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Godot;
 using Godot.Collections;
 
@@ -239,9 +238,10 @@ public partial class PlayerCombat : Node
 
         // Use SpatialUtils for cleaner, consistent distance-based detection
         float range = Core.GameConfig.BaseAttackRange * Math.Max(Core.GameConfig.MinRangeMult, Player!.WeaponRangeModifier);
-        var targets = SpatialUtils.GetZombiesInRange(Player.GlobalPosition, range)
-            .Take(Player.MeleeTargetCount)
-            .ToList();
+        var candidates = SpatialUtils.GetZombiesInRange(Player.GlobalPosition, range);
+        var targets = new List<Zombie>(Player.MeleeTargetCount);
+        for (int i = 0; i < Math.Min(candidates.Count, Player.MeleeTargetCount); i++)
+            targets.Add(candidates[i]);
 
         // Always trigger cooldown — even a whiffed swing should cost the cooldown.
         // This prevents the bug where attacking with no targets in range leaves
@@ -414,7 +414,10 @@ public partial class PlayerCombat : Node
         inRange.Sort((a, b) =>
             Player.GlobalPosition.DistanceSquaredTo(a.GlobalPosition)
                 .CompareTo(Player.GlobalPosition.DistanceSquaredTo(b.GlobalPosition)));
-        return inRange.Take(count).ToList();
+        var result = new List<Zombie>(count);
+        for (int i = 0; i < Math.Min(inRange.Count, count); i++)
+            result.Add(inRange[i]);
+        return result;
     }
 
     private void _FireProjectile(Vector2 targetPos)
