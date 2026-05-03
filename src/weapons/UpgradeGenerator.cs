@@ -219,6 +219,6 @@ public static partial class UpgradeGenerator
             if (roll <= cumulative)
                 return (item.Stat, item.Min, item.Max);
         }
-        return (items[^1].Stat, items[^1].Min, items[^1].Max);
+        return (items[items.Count - 1].Stat, items[items.Count - 1].Min, items[items.Count - 1].Max);
     }
 }
