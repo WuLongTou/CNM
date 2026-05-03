@@ -36,3 +36,6 @@ builds/
 exports/# Auto-generated
 .superpowers/
 
+
+# Claude Code worktree metadata
+.claude/
