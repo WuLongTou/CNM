@@ -2,7 +2,6 @@ namespace ZombieWars.Core;
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Godot;
 using static ZombieWars.Core.GameEnums;
@@ -10,6 +9,7 @@ using Player = ZombieWars.Player.Player;
 using Zombie = ZombieWars.Enemy.Zombie;
 using WeaponDeck = ZombieWars.Weapons.WeaponDeck;
 using UIManager = ZombieWars.UI.UIManager;
+using Background = ZombieWars.World.Background;
 
 /// <summary>
 /// Game Manager — orchestrates game state, round flow, zombie spawning, and difficulty scaling.
@@ -118,13 +118,9 @@ public partial class GameManager : Node
             }
         }
 
-        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
-        if (saveManager != null)
-        {
-            HighScore = _GetHighScore(saveManager);
-            _AddGamePlayed(saveManager);
-            LogUtils.Print($"最高分: {HighScore}");
-        }
+        HighScore = SaveManager.GetHighScore();
+        SaveManager.AddGamePlayed();
+        LogUtils.Print($"最高分: {HighScore}");
 
         StartNewRound();
     }
@@ -235,9 +231,10 @@ public partial class GameManager : Node
 
         var currentScene = GetTree().CurrentScene;
         var bg = currentScene?.GetNodeOrNull("Background");
-        if (bg != null && bg.HasMethod("set_tension"))
+        if (bg != null)
         {
-            bg.Call("set_tension", Mathf.Clamp((float)(CurrentRound - 1) / 15.0f, 0.0f, 1.0f));
+            if (bg is Background background)
+                background.SetTension(Mathf.Clamp((float)(CurrentRound - 1) / 15.0f, 0.0f, 1.0f));
         }
 
         if (CurrentRound % 5 == 0 && _uiManager != null)
@@ -456,8 +453,7 @@ public partial class GameManager : Node
 
         Score += pts;
 
-        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
-        if (saveManager != null) _AddKill(saveManager);
+        SaveManager.AddKill();
 
         _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
         _uiManager?.UpdateScoreDisplay(Score);
@@ -490,12 +486,8 @@ public partial class GameManager : Node
 
         LogUtils.Print($"游戏结束！坚持了 {CurrentRound} 回合，得分: {Score}");
 
-        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
-        if (saveManager != null)
-        {
-            _SaveHighScore(saveManager, Score);
-            _AddRoundsSurvived(saveManager, CurrentRound);
-        }
+        SaveManager.SaveHighScore(Score);
+        SaveManager.AddRoundsSurvived(CurrentRound);
     }
 
     private void _UpdateSpawnPoints()
@@ -607,18 +599,11 @@ public partial class GameManager : Node
         _totalKills++;
         Score += 5;
 
-        var saveManager = GetNodeOrNull("/root/Main/SaveManager");
-        if (saveManager != null) _AddKill(saveManager);
+        SaveManager.AddKill();
 
         _uiManager?.UpdateScoreDisplay(Score);
         _uiManager?.AddCombo();
     }
-
-    private static int _GetHighScore(Node sm) => sm.HasMethod("get_high_score") ? (int)sm.Call("get_high_score") : 0;
-    private static void _AddGamePlayed(Node sm) { if (sm.HasMethod("add_game_played")) sm.Call("add_game_played"); }
-    private static void _AddKill(Node sm) { if (sm.HasMethod("add_kill")) sm.Call("add_kill"); }
-    private static void _SaveHighScore(Node sm, int score) { if (sm.HasMethod("save_high_score")) sm.Call("save_high_score", score); }
-    private static void _AddRoundsSurvived(Node sm, int rounds) { if (sm.HasMethod("add_rounds_survived")) sm.Call("add_rounds_survived", rounds); }
 
     public void SetUIManager(UIManager ui)
     {
