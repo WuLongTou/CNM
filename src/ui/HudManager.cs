@@ -9,6 +9,8 @@ using Player = ZombieWars.Player.Player;
 using WeaponCategory = ZombieWars.Core.GameEnums.WeaponCategory;
 using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
+using Main = ZombieWars.Main;
+using GameServices = ZombieWars.Core.GameServices;
 
 /// <summary>
 /// Manages the HUD (heads-up display) shown during combat.
@@ -38,6 +40,10 @@ public partial class HudManager : Control
     private bool _bossUiVisible;
     private int _bossUiHealth = -1;
     private int _bossUiMaxHealth = -1;
+    private TooltipSystem? _tooltipSystem;
+    private Main? _mainRef;
+
+    public Main? MainRef { get => _mainRef; set => _mainRef = value; }
 
     public override void _Ready()
     {
@@ -180,7 +186,7 @@ public partial class HudManager : Control
             CustomMinimumSize = new Vector2(20, 20),
             FocusMode = Control.FocusModeEnum.None
         };
-        helpBtn.Pressed += () => GetTree().Root.GetNodeOrNull("Main")?.Call("toggle_help");
+        helpBtn.Pressed += () => _mainRef?.ToggleHelp();
         row2.AddChild(helpBtn);
     }
 
@@ -551,13 +557,12 @@ public partial class HudManager : Control
 
     private void ShowEffectTooltip(string text)
     {
-        // Delegate to UIManager's tooltip system
-        GetNode("/root/Main/UILayer/UIManager")?.Call("show_tooltip", text);
+        GameServices.UI.ShowTooltip(text);
     }
 
     private void HideEffectTooltip()
     {
-        GetNode("/root/Main/UILayer/UIManager")?.Call("hide_tooltip");
+        GameServices.UI.HideTooltip();
     }
 
     private void _ToggleSound()

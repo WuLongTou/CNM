@@ -141,4 +141,10 @@ public partial class Main : Node2D
 		if (_background != null)
 			_background.UpdateBackgroundSize();
 	}
+
+	public void ToggleHelp()
+	{
+		// Placeholder — help panel UI not yet implemented
+		LogUtils.Print("帮助面板切换 (TODO)");
+	}
 }

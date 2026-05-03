@@ -1370,6 +1370,16 @@ public partial class UIManager : Control
 			_tooltipHideTimer.Stop();
 	}
 
+	public void ShowTooltip(string text)
+	{
+		_ShowTooltip(text);
+	}
+
+	public void HideTooltip()
+	{
+		_HideTooltip();
+	}
+
 	private void _ShowTooltip(string text)
 	{
 		if (_tooltipPanel == null || _tooltipLabel == null) return;
