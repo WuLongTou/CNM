@@ -184,10 +184,10 @@ public partial class PlayerVfx : Node
     };
 
     private static readonly string[] _MAGE_WALK = {
-        "mage_idle_02", "mage_idle_02",
-        "mage_walk_01", "mage_walk_01",
-        "mage_idle_02", "mage_idle_02",
-        "mage_walk_01", "mage_walk_01",
+        "mage_walk_01", "mage_walk_02",
+        "mage_walk_03", "mage_walk_04",
+        "mage_walk_05", "mage_walk_06",
+        "mage_walk_07", "mage_walk_08",
     };
     private static readonly string[] _MAGE_ATTACK = {
         "mage_idle_02", "mage_idle_02",
@@ -203,21 +203,21 @@ public partial class PlayerVfx : Node
     {
         _LoadSpritesFromFiles("warrior", _WARRIOR_WALK, _WARRIOR_ATTACK, _WARRIOR_IDLE,
             _warriorWalkFrames, _warriorAttackFrames, _warriorIdleFrames,
-            out _warriorIdle, out _warriorBase);
+            out _warriorBase, out _warriorIdle);
     }
 
     private static void _LoadRangerSprites()
     {
         _LoadSpritesFromFiles("ranger", _RANGER_WALK, _RANGER_ATTACK, _RANGER_IDLE,
             _rangerWalkFrames, _rangerAttackFrames, _rangerIdleFrames,
-            out _rangerIdle, out _rangerBase);
+            out _rangerBase, out _rangerIdle);
     }
 
     private static void _LoadMageSprites()
     {
         _LoadSpritesFromFiles("mage", _MAGE_WALK, _MAGE_ATTACK, _MAGE_IDLE,
             _mageWalkFrames, _mageAttackFrames, _mageIdleFrames,
-            out _mageIdle, out _mageBase);
+            out _mageBase, out _mageIdle);
     }
 
     private static void _LoadSpritesFromFiles(string charName,
