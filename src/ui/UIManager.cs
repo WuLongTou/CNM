@@ -2412,6 +2412,12 @@ public partial class UIManager : Control
 		ShowLevelUpNotification(text, color);
 	}
 
+	/// <summary>显示天气变化通知 (由 WeatherSystem 调用)</summary>
+	public void ShowWeatherNotification(string weatherName, Color weatherColor)
+	{
+		ShowLevelUpNotification($"天气: {weatherName}", weatherColor);
+	}
+
 	public void TriggerBossAtmosphere()
 	{
 		_screenFx?.TriggerBossAtmosphere();

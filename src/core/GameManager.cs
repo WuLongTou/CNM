@@ -565,6 +565,33 @@ public partial class GameManager : Node
         _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
     }
 
+    /// <summary>Called by WeatherSystem during storm to spawn an extra zombie.</summary>
+    public void SpawnExtraZombie()
+    {
+        if (_zombieScene == null || CurrentState != GameState.Combat) return;
+        if (_zombiesAlive >= ZombiesMaxPerRound + 10) return;
+
+        var zombieInstance = _zombieScene.Instantiate() as Zombie;
+        if (zombieInstance == null) return;
+
+        // Spawn type based on current round progression
+        zombieInstance.ZombieType = _PickZombieType();
+        zombieInstance.SetPlayerTarget(_player);
+        zombieInstance.Died += _OnMinionDied;
+
+        // Use center spawn
+        zombieInstance.GlobalPosition = new Vector2(
+            GameConfig.WorldSize.X / 2.0f + (float)GD.RandRange(-100, 100),
+            GameConfig.WorldSize.Y / 2.0f + (float)GD.RandRange(-100, 100)
+        );
+
+        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 1.5f;
+        zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
+
+        GetTree().CurrentScene.AddChild(zombieInstance);
+        _zombiesAlive++;
+    }
+
     private void _OnMinionDied(Zombie zombie)
     {
         _zombiesAlive--;

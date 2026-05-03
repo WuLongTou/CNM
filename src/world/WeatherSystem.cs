@@ -416,7 +416,7 @@ void fragment() {
         {
             if (GD.Randf() < 0.15f)
             {
-                GetTree().CallGroup("game_manager", "spawn_storm_zombie");
+                GetTree().CallGroup("game_manager", "spawn_extra_zombie");
             }
         }
     }
