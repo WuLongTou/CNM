@@ -130,6 +130,8 @@ public partial class PlayerVfx : Node
         _rangerBase = null;
         _mageBase = null;
         _allSpritesLoaded = false;
+        // Also clear the global texture cache so re-loaded PNGs get fresh processing
+        Core.TextureUtils.ClearCache();
     }
 
     private AttackType _lastAttackType = AttackType.Melee;
@@ -145,6 +147,8 @@ public partial class PlayerVfx : Node
         if (_allSpritesLoaded && _warriorIdle != null)
             return;
 
+        // Invalidate texture cache so re-loaded PNGs get fresh processing
+        Core.TextureUtils.ClearCache();
         _allSpritesLoaded = true;
         _LoadWarriorSprites();
         _LoadRangerSprites();

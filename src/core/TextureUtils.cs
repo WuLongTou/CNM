@@ -25,7 +25,7 @@ public static class TextureUtils
     /// </summary>
     public static Texture2D? LoadNormalizedSprite(string path)
     {
-        // Check cache first
+        // Check cache first — early exit avoids re-processing and reference aliasing
         if (_textureCache.TryGetValue(path, out var cached))
             return cached;
 
@@ -45,7 +45,7 @@ public static class TextureUtils
         // Strip white background
         _StripWhiteBackground(img, 0.85f);
 
-        // Resize to normalized size
+        // Resize to normalized size (always duplicate to avoid aliasing the original)
         img = _ResizeToFit(img, NormalSpriteSize);
 
         var result = ImageTexture.CreateFromImage(img);
