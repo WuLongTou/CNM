@@ -483,21 +483,18 @@ public static class TextureUtils
     {
         int w = img.GetWidth();
         int h = img.GetHeight();
-
-        if (w <= maxSize && h <= maxSize)
-            return img;
-
         float ratio = Mathf.Min((float)maxSize / w, (float)maxSize / h);
         int newW = (int)(w * ratio);
         int newH = (int)(h * ratio);
 
-        var resized = img.Duplicate() as Image;
-        if (resized != null)
-        {
-            resized.Resize(newW, newH, Image.Interpolation.Nearest);
-            return resized;
-        }
-        return img;
+        // Always duplicate to ensure the returned Image is owned exclusively
+        // (avoids shared buffer issues when the original texture is reused)
+        var copy = img.Duplicate() as Image;
+        if (copy == null) return img;
+
+        if (copy.GetWidth() != newW || copy.GetHeight() != newH)
+            copy.Resize(newW, newH, Image.Interpolation.Nearest);
+        return copy;
     }
 
     /// <summary>

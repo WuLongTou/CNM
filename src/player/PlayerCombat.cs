@@ -31,11 +31,15 @@ public static class TextureCache
     {
         if (!_cache.TryGetValue(key, out var tex))
         {
+            // Always duplicate the image from the factory so the cached texture
+            // owns its buffer — avoids shared-image aliasing bugs
             tex = factory();
             _cache[key] = tex;
         }
         return tex;
     }
+
+    public static void Clear() => _cache.Clear();
 }
 
 public partial class PlayerCombat : Node

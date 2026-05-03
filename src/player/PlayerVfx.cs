@@ -520,7 +520,10 @@ public partial class PlayerVfx : Node
 
         if (_baseTexture != null && Player?.Sprite != null)
         {
-            Player.Sprite.Texture = _baseTexture;
+            // Use _idleFrame (a processed single-frame texture) as the sprite base,
+            // not the raw walk frame from _LoadSpritesFromFiles — avoids aliasing
+            // the shared Image buffer that _GenerateStateVariantsDeferred modifies.
+            Player.Sprite.Texture = _idleFrame ?? _baseTexture;
             CallDeferred(MethodName._GenerateStateVariantsDeferred);
         }
 
@@ -534,6 +537,8 @@ public partial class PlayerVfx : Node
         if (tex == null) return null;
         var img = tex.GetImage();
         if (img == null) return tex;
+        // Duplicate before mutating — tex.GetImage() returns a shared reference
+        img = img.Duplicate() as Image ?? img;
         if (img.GetFormat() != Image.Format.Rgba8)
             img.Convert(Image.Format.Rgba8);
         _StripWhiteBackground(img, 0.82f);
