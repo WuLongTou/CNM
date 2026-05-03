@@ -6,7 +6,6 @@ using ZombieWars.Core;
 using static ZombieWars.Core.GameEnums;
 using ZombieWars.Player;
 using ZombieWars.Weapons;
-using ZombieWars.UI;
 using Array = Godot.Collections.Array;
 using Godot.Collections;
 
