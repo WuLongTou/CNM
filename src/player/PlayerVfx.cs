@@ -972,7 +972,7 @@ public partial class PlayerVfx : Node
         {
             _animTimer += delta;
             float breathe = Mathf.Sin(_animTimer * Mathf.Tau / Core.GameConfig.IdleBreathSpeed) * 0.02f;
-            Player.Sprite.Scale = new Vector2(1.0f + breathe, 1.0f - breathe * 0.5f);
+            Player.Sprite.Scale = new Vector2(1.0f + breathe * 0.8f, 1.0f - breathe * 0.8f);
         }
 
         if (Player!.Velocity.X < -10)

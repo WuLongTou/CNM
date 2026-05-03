@@ -160,7 +160,7 @@ public partial class ZombieVfx : Node
     public void CreateVisuals()
     {
         _CreateShadow();
-        _sprite = new Sprite2D();
+        _sprite = new Sprite2D { TextureFilter = CanvasItem.TextureFilterEnum.Nearest };
         _zombie.AddChild(_sprite);
 
         // Priority: PNG assets > cached generated sprites > generate on the fly

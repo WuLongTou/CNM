@@ -488,7 +488,7 @@ public static class TextureUtils
         var resized = img.Duplicate() as Image;
         if (resized != null)
         {
-            resized.Resize(newW, newH);
+            resized.Resize(newW, newH, Image.Interpolation.Nearest);
             return resized;
         }
         return img;
@@ -502,16 +502,48 @@ public static class TextureUtils
         int w = img.GetWidth();
         int h = img.GetHeight();
 
+        // 统计背景颜色倾向（排除全透明像素）
+        int darkPixels = 0, brightPixels = 0;
+        for (int x = 0; x < w; x++)
+        {
+            for (int y = 0; y < h; y++)
+            {
+                var c = img.GetPixel(x, y);
+                if (c.A < 0.01f) continue;
+                float brightness = (c.R + c.G + c.B) / 3.0f;
+                if (brightness > threshold)
+                    brightPixels++;
+                else if (brightness < (1.0f - threshold))
+                    darkPixels++;
+            }
+        }
+
+        // 根据背景倾向选择处理模式
+        bool stripBright = brightPixels > darkPixels;
+
         for (int x = 0; x < w; x++)
         {
             for (int y = 0; y < h; y++)
             {
                 var c = img.GetPixel(x, y);
                 float brightness = (c.R + c.G + c.B) / 3.0f;
-                if (brightness > threshold && c.R > threshold && c.G > threshold && c.B > threshold)
+
+                if (stripBright)
                 {
-                    float alpha = Mathf.Clamp((1.0f - brightness) / (1.0f - threshold), 0.0f, 1.0f);
-                    img.SetPixel(x, y, new Color(c.R, c.G, c.B, alpha * c.A));
+                    // 处理白色/亮色背景
+                    if (brightness > threshold && c.R > threshold && c.G > threshold && c.B > threshold)
+                    {
+                        float alpha = Mathf.Clamp((1.0f - brightness) / (1.0f - threshold), 0.0f, 1.0f);
+                        img.SetPixel(x, y, new Color(c.R, c.G, c.B, alpha * c.A));
+                    }
+                }
+                else
+                {
+                    // 处理黑色/暗色背景：检测纯黑背景像素并设为透明
+                    if (c.R < 0.12f && c.G < 0.12f && c.B < 0.12f)
+                    {
+                        img.SetPixel(x, y, new Color(c.R, c.G, c.B, 0.0f));
+                    }
                 }
             }
         }
