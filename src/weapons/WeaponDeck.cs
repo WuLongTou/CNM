@@ -4,7 +4,6 @@ using Godot;
 using Godot.Collections;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using static ZombieWars.Core.GameEnums;
 using Player = ZombieWars.Player.Player;
 
