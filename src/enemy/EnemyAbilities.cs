@@ -435,8 +435,6 @@ public partial class ZombieAbilitySystem : Node
         {
             if (_player is Player p)
                 p.TakeDamage(damage, self);
-            else
-                _player.Call("TakeDamage", damage);
         }
 
         // Damage zombies

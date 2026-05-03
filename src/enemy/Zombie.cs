@@ -773,13 +773,16 @@ public partial class Zombie : CharacterBody2D
     {
         if (IsInstanceValid(target))
         {
-            // Deal direct damage plus poison
-            if (target.HasMethod("TakeDamage"))
+            if (target is Player player)
+            {
+                player.TakeDamage(Damage);
+                player.ApplyPoison(GameConfig.SpitterPoisonDps, GameConfig.SpitterPoisonDuration);
+                player.ApplyBuffFromZombie(BuffType.Poison, GameConfig.SpitterPoisonDuration, GameConfig.SpitterPoisonDps);
+            }
+            else if (target.HasMethod("TakeDamage"))
             {
                 target.Call("TakeDamage", Damage);
             }
-            target.Call("apply_poison", GameConfig.SpitterPoisonDps, GameConfig.SpitterPoisonDuration);
-            target.Call("apply_buff_from_zombie", (int)BuffType.Poison, GameConfig.SpitterPoisonDuration, GameConfig.SpitterPoisonDps);
         }
         if (IsInstanceValid(projectile))
         {
