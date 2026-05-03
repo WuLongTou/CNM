@@ -45,8 +45,14 @@ public static class TextureUtils
         // Strip white background
         _StripWhiteBackground(img, 0.85f);
 
-        // Resize to normalized size (always duplicate to avoid aliasing the original)
+        // Resize to normalized size — always duplicate so the cached ImageTexture
+        // owns its own Image buffer and no external GetImage() caller can mutate it
         img = _ResizeToFit(img, NormalSpriteSize);
+        if (img != null)
+        {
+            var copy = img.Duplicate() as Image;
+            if (copy != null) img = copy;
+        }
 
         var result = ImageTexture.CreateFromImage(img);
         _textureCache[path] = result;
