@@ -592,6 +592,14 @@ public partial class GameManager : Node
         _zombiesAlive++;
     }
 
+    /// <summary>Called by WeatherSystem when weather changes.</summary>
+    public void OnWeatherChanged(int weatherType, int intensity)
+    {
+        LogUtils.Print($"天气效果变化: 类型={weatherType}, 强度={intensity}");
+        // Apply weather modifiers to zombie speed/damage if needed
+        // For now, WeatherSystem handles modifiers directly
+    }
+
     private void _OnMinionDied(Zombie zombie)
     {
         _zombiesAlive--;

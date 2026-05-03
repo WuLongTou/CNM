@@ -397,15 +397,15 @@ void fragment() {
         // Acid rain: damage player over time
         if (CurrentWeather == WeatherType.AcidRain)
         {
-            var player = GetTree().GetFirstNodeInGroup("player");
+            var player = GetTree().GetFirstNodeInGroup("player") as Player;
             if (player != null)
             {
                 float dmg = GetAcidRainDamagePerTick();
                 if (dmg > 0)
                 {
-                    player.Call("take_damage", (int)dmg);
+                    player.TakeDamage((int)dmg);
                     VFXManager.SpawnFloatingLabel(
-                        player.GetParent(), player is Node2D n2 ? n2.GlobalPosition : Vector2.Zero,
+                        player.GetParent(), player.GlobalPosition,
                         $"-{dmg:F0}", new Color(0.8f, 1.0f, 0.1f), 12);
                 }
             }
@@ -557,10 +557,10 @@ void fragment() {
         }
 
         // Also deal damage to player if nearby
-        var player = GetTree().GetFirstNodeInGroup("player") as Node2D;
+        var player = GetTree().GetFirstNodeInGroup("player") as Player;
         if (player != null && strikePos.DistanceTo(player.GlobalPosition) <= blastRadius)
         {
-            player.Call("take_damage", damage / 2);
+            player.TakeDamage(damage / 2);
         }
 
         // Sound
