@@ -19,6 +19,7 @@ public partial class Projectile : CharacterBody2D
     public int BouncesLeft { get; set; } = 0;
     public float BoundsPadding { get; set; } = 8.0f;
     public float TopUiMargin { get; set; } = 110.0f;
+    public string? SpritePath { get; set; }
 
     private readonly HashSet<Node> _damagedEnemies = new();
     private Area2D _hitArea = null!;
@@ -40,7 +41,37 @@ public partial class Projectile : CharacterBody2D
         _hitArea.BodyEntered += OnBodyEntered;
         _hitArea.AreaEntered += OnAreaEntered;
 
-        // Visual: small arrow/bullet sprite
+        // Visual: use sprite if provided, otherwise fallback to Line2D
+        if (!string.IsNullOrEmpty(SpritePath))
+        {
+            var tex = TextureUtils.LoadNormalizedSprite(SpritePath);
+            if (tex != null)
+            {
+                var sprite = new Sprite2D
+                {
+                    Texture = tex,
+                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+                };
+                AddChild(sprite);
+            }
+            else
+            {
+                _AddLine2dVisual();
+            }
+        }
+        else
+        {
+            _AddLine2dVisual();
+        }
+
+        var timer = new Timer { WaitTime = Lifetime, OneShot = true };
+        timer.Timeout += () => QueueFree();
+        AddChild(timer);
+        timer.Start();
+    }
+
+    private void _AddLine2dVisual()
+    {
         var vis = new Line2D();
         vis.AddPoint(new Vector2(-8, 0));
         vis.AddPoint(new Vector2(8, 0));
@@ -54,11 +85,6 @@ public partial class Projectile : CharacterBody2D
         glow.Width = 7.0f;
         glow.DefaultColor = new Color(1.0f, 0.95f, 0.5f, 0.35f);
         AddChild(glow);
-
-        var timer = new Timer { WaitTime = Lifetime, OneShot = true };
-        timer.Timeout += () => QueueFree();
-        AddChild(timer);
-        timer.Start();
     }
 
     public override void _PhysicsProcess(double delta)

@@ -71,13 +71,15 @@ public partial class GameManager : Node
     private static readonly Dictionary<int, string> TypeNames = new()
     {
         { 0, "基础" }, { 1, "快速" }, { 2, "坦克" }, { 3, "爆炸" },
-        { 4, "隐身" }, { 5, "喷毒" }, { 6, "治疗" }, { 7, "召唤师" }, { 8, "射手" }
+        { 4, "隐身" }, { 5, "喷毒" }, { 6, "治疗" }, { 7, "召唤师" }, { 8, "射手" },
+        { 9, "飞船" }, { 10, "机甲" }, { 11, "骑士" }, { 12, "飞龙" }, { 13, "虫群" }
     };
 
     private static readonly Dictionary<int, int> TypeScore = new()
     {
         { 0, 10 }, { 1, 15 }, { 2, 25 }, { 3, 30 },
-        { 4, 35 }, { 5, 40 }, { 6, 50 }, { 7, 60 }, { 8, 45 }
+        { 4, 35 }, { 5, 40 }, { 6, 50 }, { 7, 60 }, { 8, 45 },
+        { 9, 55 }, { 10, 65 }, { 11, 50 }, { 12, 70 }, { 13, 20 }
     };
 
     private struct SpawnEntry
@@ -93,7 +95,8 @@ public partial class GameManager : Node
         new() { MaxRound = 6,  Weights = new() { { 0, 0.45f }, { 1, 0.30f }, { 2, 0.15f }, { 3, 0.10f } } },
         new() { MaxRound = 10, Weights = new() { { 0, 0.25f }, { 1, 0.20f }, { 2, 0.20f }, { 3, 0.15f }, { 4, 0.10f }, { 5, 0.10f } } },
         new() { MaxRound = 14, Weights = new() { { 0, 0.08f }, { 1, 0.10f }, { 2, 0.18f }, { 3, 0.12f }, { 4, 0.10f }, { 5, 0.10f }, { 6, 0.08f }, { 7, 0.06f }, { 8, 0.08f } } },
-        new() { MaxRound = 9999, Weights = new() { { 0, 0.06f }, { 1, 0.08f }, { 2, 0.15f }, { 3, 0.12f }, { 4, 0.10f }, { 5, 0.12f }, { 6, 0.10f }, { 7, 0.07f }, { 8, 0.10f } } },
+        new() { MaxRound = 18, Weights = new() { { 0, 0.05f }, { 1, 0.08f }, { 2, 0.12f }, { 3, 0.10f }, { 4, 0.08f }, { 5, 0.10f }, { 6, 0.08f }, { 7, 0.07f }, { 8, 0.08f }, { 9, 0.08f }, { 10, 0.05f }, { 11, 0.05f } } },
+        new() { MaxRound = 9999, Weights = new() { { 0, 0.04f }, { 1, 0.06f }, { 2, 0.10f }, { 3, 0.08f }, { 4, 0.07f }, { 5, 0.08f }, { 6, 0.07f }, { 7, 0.06f }, { 8, 0.07f }, { 9, 0.10f }, { 10, 0.07f }, { 11, 0.06f }, { 12, 0.08f }, { 13, 0.06f } } },
     };
 
     public override async void _Ready()
@@ -430,6 +433,31 @@ public partial class GameManager : Node
         return ZombieType.Basic;
     }
 
+    private void _TrySpawnSwarmGroup(Vector2 centerPos)
+    {
+        if (_zombieScene == null) return;
+        // Spawn 3-5 swarm creatures around the center
+        int count = (int)GD.RandRange(3, 6);
+        for (int i = 0; i < count; i++)
+        {
+            var offset = new Vector2(
+                (float)GD.RandRange(-40, 40),
+                (float)GD.RandRange(-40, 40)
+            );
+            var swarm = _zombieScene.Instantiate() as Zombie;
+            if (swarm == null) continue;
+            swarm.ZombieType = ZombieType.Swarm;
+            swarm.GlobalPosition = centerPos + offset;
+            swarm.SetPlayerTarget(_player);
+            swarm.Died += _OnMinionDied;
+            GetTree().CurrentScene.AddChild(swarm);
+
+            var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.8f;
+            swarm.ApplyRoundScaling(CurrentRound, roundMult);
+            _zombiesAlive++;
+        }
+    }
+
     private void _OnZombieDied(Zombie zombie)
     {
         _zombiesAlive--;
@@ -463,6 +491,9 @@ public partial class GameManager : Node
         // Track combo in UI
         if (_player?.Combat != null)
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
+
+        // Try to drop a pickup
+        _TryDropPickup(zombie);
     }
 
     private void _OnPlayerDied()
@@ -603,6 +634,113 @@ public partial class GameManager : Node
 
         _uiManager?.UpdateScoreDisplay(Score);
         _uiManager?.AddCombo();
+    }
+
+    public void SpawnSwarmGroup(Vector2 pos)
+    {
+        _TrySpawnSwarmGroup(pos);
+    }
+
+    public void SpawnShipGroup(Vector2 pos)
+    {
+        if (_zombieScene == null || _zombiesAlive >= ZombiesMaxPerRound + 5) return;
+
+        int count = (int)GD.RandRange(2, 4);
+        for (int i = 0; i < count; i++)
+        {
+            var offset = new Vector2(
+                (float)GD.RandRange(-60, 60),
+                (float)GD.RandRange(-40, 40)
+            );
+            var ship = _zombieScene.Instantiate() as Zombie;
+            if (ship == null) continue;
+            ship.ZombieType = ZombieType.Ship;
+            ship.GlobalPosition = pos + offset;
+            ship.SetPlayerTarget(_player);
+            ship.Died += _OnMinionDied;
+            GetTree().CurrentScene.AddChild(ship);
+
+            var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.7f;
+            ship.ApplyRoundScaling(CurrentRound, roundMult);
+            _zombiesAlive++;
+        }
+    }
+
+    /// <summary>Spawn a pickup at the given position. Called when a zombie dies.</summary>
+    public void SpawnPickup(Vector2 pos, string type)
+    {
+        if (CurrentState != GameState.Combat) return;
+
+        PackedScene? scene = null;
+        if (type == "health_potion")
+        {
+            if (ResourceLoader.Exists("res://scenes/Pickups/HealthPotion.tscn"))
+                scene = GD.Load<PackedScene>("res://scenes/Pickups/HealthPotion.tscn");
+        }
+        else if (type == "skill_book")
+        {
+            if (ResourceLoader.Exists("res://scenes/Pickups/SkillBook.tscn"))
+                scene = GD.Load<PackedScene>("res://scenes/Pickups/SkillBook.tscn");
+        }
+
+        if (scene == null)
+        {
+            // Create programmatically as fallback
+            var pickup = _CreatePickupNode(type, pos);
+            if (pickup != null)
+                GetTree().CurrentScene.AddChild(pickup);
+        }
+        else
+        {
+            var inst = scene.Instantiate();
+            if (inst is Node2D n)
+            {
+                n.GlobalPosition = pos;
+                GetTree().CurrentScene.AddChild(n);
+            }
+        }
+    }
+
+    private Node? _CreatePickupNode(string type, Vector2 pos)
+    {
+        try
+        {
+            Node? pickup = null;
+            if (type == "health_potion")
+            {
+                pickup = new ZombieWars.Pickups.HealthPotion { GlobalPosition = pos };
+            }
+            else if (type == "skill_book")
+            {
+                pickup = new ZombieWars.Pickups.SkillBook { GlobalPosition = pos };
+            }
+            return pickup;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private void _TryDropPickup(Zombie zombie)
+    {
+        if (CurrentRound < 3) return; // No drops in early rounds
+
+        var roll = GD.Randf();
+        float dropChance = 0.12f;
+
+        // Higher tier enemies drop better items
+        if (zombie.IsElite || zombie.IsBoss)
+            dropChance = 0.35f;
+        else if (zombie.ZombieType == ZombieType.Tank || zombie.ZombieType == ZombieType.Mech)
+            dropChance = 0.20f;
+        else if (zombie.ZombieType == ZombieType.Swarm || zombie.ZombieType == ZombieType.Fast)
+            dropChance = 0.08f;
+
+        if (roll > dropChance) return;
+
+        string pickupType = roll < dropChance * 0.6f ? "health_potion" : "skill_book";
+        SpawnPickup(zombie.GlobalPosition, pickupType);
     }
 
     public void SetUIManager(UIManager ui)

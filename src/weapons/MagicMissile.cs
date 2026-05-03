@@ -21,12 +21,36 @@ public partial class MagicMissile : Area2D
     public float StunDuration { get; set; } = 0.0f;
     public float DotDamage { get; set; } = 0.0f;
     public int ChainCount { get; set; } = 0;
+    public string? SpritePath { get; set; }
 
     private readonly HashSet<Node> _chainTargets = new();
 
     public override void _Ready()
     {
         BodyEntered += _OnBodyEntered;
+
+        // Visual: use sprite if provided, otherwise generate orb
+        if (!string.IsNullOrEmpty(SpritePath))
+        {
+            var tex = TextureUtils.LoadNormalizedSprite(SpritePath);
+            if (tex != null)
+            {
+                var sprite = new Sprite2D
+                {
+                    Texture = tex,
+                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+                };
+                AddChild(sprite);
+            }
+            else
+            {
+                _AddOrbVisual();
+            }
+        }
+        else
+        {
+            _AddOrbVisual();
+        }
 
         var timer = new Timer
         {
@@ -36,6 +60,55 @@ public partial class MagicMissile : Area2D
         timer.Timeout += () => QueueFree();
         AddChild(timer);
         timer.Start();
+    }
+
+    private void _AddOrbVisual()
+    {
+        int size = 12;
+        using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+
+        for (int x = 0; x < size; x++)
+        {
+            for (int y = 0; y < size; y++)
+            {
+                float dist = new Vector2(x - size / 2.0f, y - size / 2.0f).Length();
+                if (dist < 2)
+                    img.SetPixel(x, y, new Color(1.0f, 1.0f, 1.0f, 0.95f));
+                else if (dist < 4)
+                {
+                    float t = (dist - 2) / 2.0f;
+                    img.SetPixel(x, y, new Color(0.8f - t * 0.3f, 0.5f - t * 0.2f, 1.0f, 0.9f - t * 0.3f));
+                }
+                else if (dist < 6)
+                {
+                    float t = (dist - 4) / 2.0f;
+                    img.SetPixel(x, y, new Color(0.4f, 0.2f, 0.8f, 0.4f * (1.0f - t)));
+                }
+            }
+        }
+
+        var tex = ImageTexture.CreateFromImage(img);
+        var sprite = new Sprite2D { Texture = tex };
+        AddChild(sprite);
+
+        var trail = new GpuParticles2D
+        {
+            Emitting = true,
+            Amount = 12,
+            Lifetime = 0.4f
+        };
+        var tmat = new ParticleProcessMaterial
+        {
+            Direction = Vector3.Zero,
+            InitialVelocityMin = 5.0f,
+            InitialVelocityMax = 20.0f,
+            Gravity = Vector3.Zero,
+            ScaleMin = 1.0f,
+            ScaleMax = 2.5f,
+            Color = new Color(0.6f, 0.3f, 1.0f, 0.5f)
+        };
+        trail.ProcessMaterial = tmat;
+        AddChild(trail);
     }
 
     public override void _PhysicsProcess(double delta)

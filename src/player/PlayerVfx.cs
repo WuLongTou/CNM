@@ -146,12 +146,130 @@ public partial class PlayerVfx : Node
             return;
 
         _allSpritesLoaded = true;
-        _LoadCharacterSprites("warrior", _warriorWalkFrames, _warriorAttackFrames, _warriorIdleFrames,
+        _LoadWarriorSprites();
+        _LoadRangerSprites();
+        _LoadMageSprites();
+    }
+
+    private static readonly string[] _WARRIOR_WALK = {
+        "warrior_walk_06", "warrior_walk_07",
+        "warrior_idle_02", "warrior_idle_02",
+        "warrior_idle_04", "warrior_idle_04",
+        "warrior_idle_06", "warrior_idle_06",
+    };
+    private static readonly string[] _WARRIOR_ATTACK = {
+        "warrior_attack_01", "warrior_attack_03",
+        "warrior_attack_04", "warrior_attack_04",
+        "warrior_attack_06", "warrior_attack_05",
+    };
+    private static readonly string[] _WARRIOR_IDLE = {
+        "warrior_idle_02", "warrior_idle_04",
+        "warrior_idle_06", "warrior_idle_08",
+    };
+
+    private static readonly string[] _RANGER_WALK = {
+        "ranger_walk_02", "ranger_walk_07",
+        "ranger_idle_01", "ranger_idle_01",
+        "ranger_idle_04", "ranger_idle_04",
+        "ranger_walk_07", "ranger_walk_02",
+    };
+    private static readonly string[] _RANGER_ATTACK = {
+        "ranger_attack_03", "ranger_attack_03",
+        "ranger_attack_05", "ranger_attack_05",
+        "ranger_attack_03", "ranger_attack_05",
+    };
+    private static readonly string[] _RANGER_IDLE = {
+        "ranger_idle_01", "ranger_idle_04",
+        "ranger_idle_01", "ranger_idle_04",
+    };
+
+    private static readonly string[] _MAGE_WALK = {
+        "mage_idle_02", "mage_idle_02",
+        "mage_walk_01", "mage_walk_01",
+        "mage_idle_02", "mage_idle_02",
+        "mage_walk_01", "mage_walk_01",
+    };
+    private static readonly string[] _MAGE_ATTACK = {
+        "mage_idle_02", "mage_idle_02",
+        "mage_idle_02", "mage_idle_02",
+        "mage_idle_02", "mage_idle_02",
+    };
+    private static readonly string[] _MAGE_IDLE = {
+        "mage_idle_01", "mage_idle_02",
+        "mage_idle_03", "mage_idle_04",
+    };
+
+    private static void _LoadWarriorSprites()
+    {
+        _LoadSpritesFromFiles("warrior", _WARRIOR_WALK, _WARRIOR_ATTACK, _WARRIOR_IDLE,
+            _warriorWalkFrames, _warriorAttackFrames, _warriorIdleFrames,
             out _warriorIdle, out _warriorBase);
-        _LoadCharacterSprites("ranger", _rangerWalkFrames, _rangerAttackFrames, _rangerIdleFrames,
+    }
+
+    private static void _LoadRangerSprites()
+    {
+        _LoadSpritesFromFiles("ranger", _RANGER_WALK, _RANGER_ATTACK, _RANGER_IDLE,
+            _rangerWalkFrames, _rangerAttackFrames, _rangerIdleFrames,
             out _rangerIdle, out _rangerBase);
-        _LoadCharacterSprites("mage", _mageWalkFrames, _mageAttackFrames, _mageIdleFrames,
+    }
+
+    private static void _LoadMageSprites()
+    {
+        _LoadSpritesFromFiles("mage", _MAGE_WALK, _MAGE_ATTACK, _MAGE_IDLE,
+            _mageWalkFrames, _mageAttackFrames, _mageIdleFrames,
             out _mageIdle, out _mageBase);
+    }
+
+    private static void _LoadSpritesFromFiles(string charName,
+        string[] walkFiles, string[] attackFiles, string[] idleFiles,
+        Godot.Collections.Array<Texture2D> walkOut,
+        Godot.Collections.Array<Texture2D> attackOut,
+        Godot.Collections.Array<Texture2D> idleOut,
+        out Texture2D? idleFirst, out Texture2D? baseOut)
+    {
+        walkOut.Clear();
+        attackOut.Clear();
+        idleOut.Clear();
+        idleFirst = null;
+        baseOut = null;
+
+        string dir = $"res://assets/sprites/player/{charName}";
+        Texture2D? firstWalk = null;
+        Texture2D? firstAtk = null;
+        Texture2D? firstIdle = null;
+
+        foreach (string f in walkFiles)
+        {
+            var frame = TextureUtils.LoadNormalizedSprite($"{dir}/{f}.png");
+            if (frame != null)
+            {
+                walkOut.Add(frame);
+                if (firstWalk == null) firstWalk = frame;
+            }
+        }
+
+        foreach (string f in attackFiles)
+        {
+            var frame = TextureUtils.LoadNormalizedSprite($"{dir}/{f}.png");
+            if (frame != null)
+            {
+                attackOut.Add(frame);
+                if (firstAtk == null) firstAtk = frame;
+            }
+        }
+
+        foreach (string f in idleFiles)
+        {
+            var frame = TextureUtils.LoadNormalizedSprite($"{dir}/{f}.png");
+            if (frame != null)
+            {
+                idleOut.Add(frame);
+                if (firstIdle == null) firstIdle = frame;
+            }
+        }
+
+        idleFirst = firstIdle;
+        baseOut = firstWalk ?? firstAtk ?? firstIdle;
     }
 
     private static void _LoadCharacterSprites(string charName,

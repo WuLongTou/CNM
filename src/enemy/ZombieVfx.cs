@@ -20,6 +20,11 @@ public partial class ZombieVfx : Node
         { ZombieType.Healer,    new Color(0.25f, 0.80f, 0.40f) },
         { ZombieType.Summoner,  new Color(0.55f, 0.15f, 0.55f) },
         { ZombieType.Archer,    new Color(0.60f, 0.45f, 0.30f) }, // Tan/brown for archer
+        { ZombieType.Ship,     new Color(0.20f, 0.40f, 0.70f) }, // Deep blue for spaceship
+        { ZombieType.Mech,     new Color(0.35f, 0.35f, 0.40f) }, // Gunmetal for mech
+        { ZombieType.Knight,   new Color(0.15f, 0.25f, 0.55f) }, // Royal blue for knight
+        { ZombieType.Dragon,   new Color(0.50f, 0.15f, 0.60f) }, // Purple for dragon
+        { ZombieType.Swarm,    new Color(0.60f, 0.30f, 0.15f) }, // Amber for swarm
     };
 
     private static readonly Dictionary<ZombieType, int> TypeSizes = new()
@@ -33,6 +38,11 @@ public partial class ZombieVfx : Node
         { ZombieType.Healer,    38 },
         { ZombieType.Summoner,  40 },
         { ZombieType.Archer,    36 },
+        { ZombieType.Ship,     44 },
+        { ZombieType.Mech,     54 },
+        { ZombieType.Knight,   42 },
+        { ZombieType.Dragon,   48 },
+        { ZombieType.Swarm,    26 },
     };
 
     private static readonly Dictionary<ZombieType, Color> DeathColors = new()
@@ -46,6 +56,11 @@ public partial class ZombieVfx : Node
         { ZombieType.Healer,    new Color(0.3f, 0.9f, 0.5f) },
         { ZombieType.Summoner,  new Color(0.6f, 0.2f, 0.6f) },
         { ZombieType.Archer,    new Color(0.7f, 0.5f, 0.3f) },
+        { ZombieType.Ship,     new Color(0.3f, 0.6f, 0.9f) },
+        { ZombieType.Mech,     new Color(0.5f, 0.5f, 0.6f) },
+        { ZombieType.Knight,   new Color(0.3f, 0.4f, 0.8f) },
+        { ZombieType.Dragon,   new Color(0.7f, 0.3f, 0.8f) },
+        { ZombieType.Swarm,    new Color(0.8f, 0.5f, 0.3f) },
     };
 
     // Static texture cache to avoid regenerating sprites on every spawn
@@ -154,6 +169,11 @@ public partial class ZombieVfx : Node
         ZombieType.Healer => "zombie_healer",
         ZombieType.Summoner => "zombie_summoner",
         ZombieType.Archer => "zombie_archer",
+        ZombieType.Ship => "ship_01",
+        ZombieType.Mech => "mech_01",
+        ZombieType.Knight => "knight_01",
+        ZombieType.Dragon => "flyer_01",
+        ZombieType.Swarm => "creature_01",
         _ => "zombie_basic"
     };
 
@@ -429,6 +449,33 @@ public partial class ZombieVfx : Node
                     color = new Color(0.2f, 0.9f, 0.2f);
                 }
                 break;
+
+            case ZombieType.Ship:
+                // Engine glow on right side
+                if (x > cx && y >= cy * 0.85f && y <= cy * 1.15f && Mathf.Abs(x - cx) <= size * 0.1f)
+                {
+                    color = new Color(0.2f, 0.5f, 1.0f);
+                }
+                break;
+
+            case ZombieType.Mech:
+                // Heavy armor lines
+                if (color.A > 0 && (y % 6 == 0 || x % 6 == 0))
+                {
+                    color = new Color(0.25f, 0.28f, 0.32f);
+                }
+                break;
+
+            case ZombieType.Dragon:
+                // Wing pattern
+                if (color.A > 0 && (x < cx - size * 0.3f || x > cx + size * 0.3f))
+                {
+                    if (y < cy * 0.75f || y > cy * 1.15f)
+                    {
+                        color = new Color(0.4f, 0.1f, 0.5f);
+                    }
+                }
+                break;
         }
 
         return color;
@@ -471,6 +518,24 @@ public partial class ZombieVfx : Node
                 // Flickering alpha
                 tw.TweenProperty(_sprite, "modulate:a", 0.5f, 1.0f).SetTrans(Tween.TransitionType.Sine);
                 tw.TweenProperty(_sprite, "modulate:a", 0.3f, 1.0f).SetTrans(Tween.TransitionType.Sine);
+                break;
+
+            case ZombieType.Ship:
+                // Gentle hover bob
+                tw.TweenProperty(_sprite, "position:y", -3.0f, 1.8f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "position:y", 3.0f, 1.8f).SetTrans(Tween.TransitionType.Sine);
+                break;
+
+            case ZombieType.Dragon:
+                // Wing flutter
+                tw.TweenProperty(_sprite, "scale:x", 1.05f, 0.6f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale:x", 0.95f, 0.6f).SetTrans(Tween.TransitionType.Sine);
+                break;
+
+            case ZombieType.Mech:
+                // Heavy rumble
+                tw.TweenProperty(_sprite, "position:y", 1.0f, 3.0f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "position:y", -1.0f, 3.0f).SetTrans(Tween.TransitionType.Sine);
                 break;
 
             default:
@@ -950,6 +1015,62 @@ public partial class ZombieVfx : Node
         tw.Parallel().TweenProperty(ring, "scale", new Vector2(healRange / 20.0f, healRange / 20.0f), 0.4f);
         tw.Parallel().TweenProperty(ring, "modulate:a", 0.0f, 0.4f);
         tw.TweenCallback(Callable.From(ring.QueueFree));
+    }
+
+    public void ShowStompShockwave()
+    {
+        var ring = new Node2D();
+        ring.GlobalPosition = _zombie.GlobalPosition;
+
+        var line = new Line2D();
+        int pts = 32;
+        for (int i = 0; i <= pts; i++)
+        {
+            float angle = i * 2.0f * Mathf.Pi / pts;
+            line.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 15.0f);
+        }
+        line.Width = 4.0f;
+        line.DefaultColor = new Color(0.6f, 0.6f, 0.7f, 0.9f);
+        ring.AddChild(line);
+        _zombie.GetParent().AddChild(ring);
+
+        var tw = ring.CreateTween();
+        tw.Parallel().TweenProperty(ring, "scale", new Vector2(5, 5), 0.5f)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        tw.Parallel().TweenProperty(ring, "modulate:a", 0.0f, 0.5f);
+        tw.TweenCallback(Callable.From(ring.QueueFree));
+
+        // Deal damage in area
+        foreach (var p in _zombie.GetTree().GetNodesInGroup("player"))
+        {
+            if (p is Node2D player && _zombie.GlobalPosition.DistanceTo(player.GlobalPosition) <= 80.0f)
+            {
+                if (p.HasMethod("TakeDamage"))
+                    p.Call("TakeDamage", (int)(_zombie.Damage * 0.5f));
+            }
+        }
+    }
+
+    public void ShowChargeEffect()
+    {
+        if (_sprite == null) return;
+        var tw = _zombie.CreateTween();
+        tw.TweenProperty(_sprite, "self_modulate:g", 1.5f, 0.2f);
+        tw.TweenProperty(_sprite, "self_modulate:b", 1.5f, 0.2f);
+        tw.TweenProperty(_sprite, "self_modulate", Colors.White, 0.4f);
+    }
+
+    public void ShowDiveEffect()
+    {
+        if (_sprite == null) return;
+        _sprite.Modulate = new Color(0.8f, 0.3f, 0.3f);
+        var tw = _zombie.CreateTween();
+        tw.TweenProperty(_sprite, "modulate", Colors.White, 0.3f).SetDelay(0.5f);
+    }
+
+    public void ShowFlyUpEffect()
+    {
+        _SpawnStatusParticles(new Color(0.5f, 0.15f, 0.6f), 6, 0.4f);
     }
 
     private Texture2D _MakeEllipseTexture(int width, int height, Color color)

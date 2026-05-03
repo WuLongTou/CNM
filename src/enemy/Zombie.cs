@@ -47,6 +47,11 @@ public partial class Zombie : CharacterBody2D
         { ZombieType.Healer,    (45,  5,  30.0f) },
         { ZombieType.Summoner,  (40,  5,  28.0f) },
         { ZombieType.Archer,    (20,  10, 30.0f) }, // Ranged zombie - shoots arrows
+        { ZombieType.Ship,      (40,  12,  55.0f) }, // Flying spaceship enemy - strafing
+        { ZombieType.Mech,      (80,  20,  35.0f) }, // Heavy mechanical vehicle - slow but tanky
+        { ZombieType.Knight,   (55,  15,  40.0f) }, // Armored knight - dash attack + block
+        { ZombieType.Dragon,    (60,  18,  65.0f) }, // Flying dragon - swoop dive attack
+        { ZombieType.Swarm,    (12,  5,   85.0f) }, // Small swarm creatures - fast group spawn
     };
 
     // ═══════════════════════════════════════════════
@@ -91,6 +96,38 @@ public partial class Zombie : CharacterBody2D
     // Summoner
     private float _summonerCooldown;
     private float _summonerCooldownBase = GameConfig.SummonerCooldown;
+
+    // Ship (flying spaceship)
+    private float _shipStrafeTimer;
+    private float _shipStrafeDir = 1.0f;
+    private Vector2 _shipHomePos;
+    private float _shipOrbitRadius = 120.0f;
+    private float _shipAngle = 0.0f;
+
+    // Mech (heavy vehicle)
+    private float _mechStompTimer;
+    private float _mechStompCooldown = 3.0f;
+    private bool _mechStomping = false;
+    private Vector2 _mechStompTarget;
+
+    // Knight (armored warrior)
+    private float _knightChargeTimer;
+    private bool _knightCharging = false;
+    private Vector2 _knightChargeDir;
+    private float _knightBlockTimer;
+    private bool _knightBlocking = false;
+
+    // Dragon (flying creature)
+    private float _dragonDiveTimer;
+    private float _dragonDiveCooldown = 4.0f;
+    private bool _dragonDiving = false;
+    private Vector2 _diveTarget;
+    private float _dragonHeight = 150.0f;
+    private bool _dragonFlying = false;
+
+    // Swarm
+    private float _swarmWanderTimer;
+    private Vector2 _swarmWanderDir;
 
     // Boss / Elite
     public bool IsBoss { get; private set; }
@@ -293,6 +330,21 @@ public partial class Zombie : CharacterBody2D
             case ZombieType.Summoner:
                 _HandleSummoner(d);
                 break;
+            case ZombieType.Ship:
+                _HandleShip(d);
+                break;
+            case ZombieType.Mech:
+                _HandleMech(d);
+                break;
+            case ZombieType.Knight:
+                _HandleKnight(d);
+                break;
+            case ZombieType.Dragon:
+                _HandleDragon(d);
+                break;
+            case ZombieType.Swarm:
+                _HandleSwarm(d);
+                break;
         }
 
         // Elite affix logic
@@ -458,6 +510,172 @@ public partial class Zombie : CharacterBody2D
         if (healedAny && _vfx != null)
         {
             _vfx.ShowHealPulse(_healerRange);
+        }
+    }
+
+    private void _HandleShip(float delta)
+    {
+        // Flying spaceship: orbits player and strafes horizontally
+        _shipStrafeTimer -= delta;
+        if (_shipStrafeTimer <= 0)
+        {
+            _shipStrafeDir *= -1.0f;
+            _shipStrafeTimer = (float)GD.RandRange(1.5f, 3.0f);
+        }
+
+        // Orbit around player while strafing
+        _shipAngle += delta * 0.8f * _shipStrafeDir;
+        if (Player != null)
+        {
+            Vector2 target = Player.GlobalPosition + new Vector2(
+                Mathf.Cos(_shipAngle) * _shipOrbitRadius,
+                Mathf.Sin(_shipAngle) * _shipOrbitRadius * 0.6f // elliptical orbit
+            );
+            Velocity = (target - GlobalPosition).Normalized() * Speed * _slowMultiplier;
+            MoveAndSlide();
+        }
+    }
+
+    private void _HandleMech(float delta)
+    {
+        // Heavy mechanical vehicle: slow advance, periodic stomp shockwave
+        _mechStompTimer -= delta;
+        if (_mechStompTimer <= 0)
+        {
+            _mechStompTimer = _mechStompCooldown;
+            _mechStomping = true;
+            _mechStompTarget = GlobalPosition;
+            _vfx?.ShowStompShockwave();
+        }
+
+        if (_mechStomping)
+        {
+            // Slow during stomp animation
+            Velocity = Velocity * 0.3f;
+            MoveAndSlide();
+            _mechStomping = false;
+        }
+        else if (Player != null)
+        {
+            Velocity = (Player.GlobalPosition - GlobalPosition).Normalized() * Speed * _slowMultiplier;
+            MoveAndSlide();
+        }
+    }
+
+    private void _HandleKnight(float delta)
+    {
+        // Armored knight: approaches, charges, and briefly blocks
+        if (_knightCharging)
+        {
+            _knightChargeTimer -= delta;
+            Velocity = _knightChargeDir * Speed * 2.5f * _slowMultiplier;
+            MoveAndSlide();
+
+            if (_knightChargeTimer <= 0)
+            {
+                _knightCharging = false;
+                _knightBlockTimer = (float)GD.RandRange(1.5f, 2.5f);
+            }
+        }
+        else if (_knightBlocking)
+        {
+            _knightBlockTimer -= delta;
+            Velocity = Vector2.Zero;
+            if (_knightBlockTimer <= 0)
+                _knightBlocking = false;
+        }
+        else
+        {
+            if (Player != null)
+            {
+                float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
+                if (dist <= AttackRange * 1.5f && GD.Randf() < 0.02f)
+                {
+                    // Start charge
+                    _knightCharging = true;
+                    _knightChargeTimer = 0.6f;
+                    _knightChargeDir = (Player.GlobalPosition - GlobalPosition).Normalized();
+                    _vfx?.ShowChargeEffect();
+                }
+                else
+                {
+                    Velocity = (Player.GlobalPosition - GlobalPosition).Normalized() * Speed * _slowMultiplier;
+                    MoveAndSlide();
+                }
+            }
+        }
+    }
+
+    private void _HandleDragon(float delta)
+    {
+        // Flying dragon: swoops down to attack, then retreats up
+        _dragonDiveTimer -= delta;
+        if (_dragonDiving)
+        {
+            // Diving towards target
+            Velocity = (_diveTarget - GlobalPosition).Normalized() * Speed * 2.0f * _slowMultiplier;
+            MoveAndSlide();
+
+            if (GlobalPosition.DistanceTo(_diveTarget) < 20.0f)
+            {
+                _dragonDiving = false;
+                _dragonFlying = true;
+                _vfx?.ShowFlyUpEffect();
+            }
+        }
+        else if (_dragonFlying)
+        {
+            // Retreating upward
+            Velocity = -Velocity.Normalized() * Speed * 0.5f * _slowMultiplier;
+            MoveAndSlide();
+            if (GlobalPosition.Y < _diveTarget.Y - _dragonHeight)
+            {
+                _dragonFlying = false;
+            }
+        }
+        else
+        {
+            if (Player != null)
+            {
+                float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
+                if (dist <= 350.0f && _dragonDiveTimer <= 0)
+                {
+                    _dragonDiving = true;
+                    _diveTarget = Player.GlobalPosition;
+                    _dragonDiveTimer = _dragonDiveCooldown;
+                    _vfx?.ShowDiveEffect();
+                }
+                else
+                {
+                    // Hover near player
+                    _shipAngle += delta * 0.5f;
+                    Vector2 hover = Player.GlobalPosition + new Vector2(
+                        Mathf.Cos(_shipAngle) * 100.0f,
+                        -_dragonHeight + Mathf.Sin(_shipAngle * 0.3f) * 20.0f
+                    );
+                    Velocity = (hover - GlobalPosition).Normalized() * Speed * 0.6f * _slowMultiplier;
+                    MoveAndSlide();
+                }
+            }
+        }
+    }
+
+    private void _HandleSwarm(float delta)
+    {
+        // Small fast creature: wanders erratically, rarely stops
+        _swarmWanderTimer -= delta;
+        if (_swarmWanderTimer <= 0)
+        {
+            _swarmWanderTimer = (float)GD.RandRange(0.5f, 1.5f);
+            float angle = (float)GD.RandRange(0, Mathf.Pi * 2);
+            _swarmWanderDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+        }
+
+        if (Player != null)
+        {
+            Vector2 toPlayer = (Player.GlobalPosition - GlobalPosition).Normalized();
+            Velocity = (toPlayer * 0.7f + _swarmWanderDir * 0.3f).Normalized() * Speed * _slowMultiplier;
+            MoveAndSlide();
         }
     }
 

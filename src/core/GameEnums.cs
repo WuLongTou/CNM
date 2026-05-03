@@ -10,7 +10,7 @@ public static class GameEnums
     public enum MagicEffect { None, Charm, Push, Stun, Chain, Dot }
     public enum MineEffect { None, BiggerBlast, Cluster, StunBlast }
     public enum AttackType { Melee, Ranged, Area, Magic, Mine }
-    public enum ZombieType { Basic, Fast, Tank, Exploder, Invisible, Spitter, Healer, Summoner, Archer }
+    public enum ZombieType { Basic, Fast, Tank, Exploder, Invisible, Spitter, Healer, Summoner, Archer, Ship, Mech, Knight, Dragon, Swarm }
     public enum EliteAffix { None, Regenerating, Swift, Explosive }
     public enum GameState { WeaponSelection, Combat, RoundTransition, GetReady, GameOver }
     public enum BuffType { Poison, Burn, Frozen, Stunned, Charmed, Invincible, SpeedBoost, DamageBoost }
