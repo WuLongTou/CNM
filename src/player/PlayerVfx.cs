@@ -156,15 +156,15 @@ public partial class PlayerVfx : Node
     }
 
     private static readonly string[] _WARRIOR_WALK = {
-        "warrior_walk_06", "warrior_walk_07",
-        "warrior_idle_02", "warrior_idle_02",
-        "warrior_idle_04", "warrior_idle_04",
-        "warrior_idle_06", "warrior_idle_06",
+        "warrior_walk_01", "warrior_walk_02",
+        "warrior_walk_03", "warrior_walk_04",
+        "warrior_walk_05", "warrior_walk_06",
+        "warrior_walk_07", "warrior_walk_08",
     };
     private static readonly string[] _WARRIOR_ATTACK = {
         "warrior_attack_01", "warrior_attack_03",
-        "warrior_attack_04", "warrior_attack_04",
-        "warrior_attack_06", "warrior_attack_05",
+        "warrior_attack_04", "warrior_attack_05",
+        "warrior_attack_06", "warrior_attack_01",
     };
     private static readonly string[] _WARRIOR_IDLE = {
         "warrior_idle_02", "warrior_idle_04",
@@ -172,15 +172,15 @@ public partial class PlayerVfx : Node
     };
 
     private static readonly string[] _RANGER_WALK = {
-        "ranger_walk_02", "ranger_walk_07",
-        "ranger_idle_01", "ranger_idle_01",
-        "ranger_idle_04", "ranger_idle_04",
-        "ranger_walk_07", "ranger_walk_02",
+        "ranger_walk_01", "ranger_walk_02",
+        "ranger_walk_03", "ranger_walk_04",
+        "ranger_walk_05", "ranger_walk_06",
+        "ranger_walk_07", "ranger_walk_08",
     };
     private static readonly string[] _RANGER_ATTACK = {
-        "ranger_attack_03", "ranger_attack_03",
-        "ranger_attack_05", "ranger_attack_05",
-        "ranger_attack_03", "ranger_attack_05",
+        "ranger_attack_01", "ranger_attack_02",
+        "ranger_attack_03", "ranger_attack_04",
+        "ranger_attack_06", "ranger_attack_03",
     };
     private static readonly string[] _RANGER_IDLE = {
         "ranger_idle_01", "ranger_idle_04",
@@ -188,15 +188,15 @@ public partial class PlayerVfx : Node
     };
 
     private static readonly string[] _MAGE_WALK = {
-        "mage_walk_01", "mage_walk_02",
-        "mage_walk_03", "mage_walk_04",
-        "mage_walk_05", "mage_walk_06",
-        "mage_walk_07", "mage_walk_08",
+        "mage_walk_02", "mage_walk_03",
+        "mage_walk_04", "mage_walk_05",
+        "mage_walk_06", "mage_walk_07",
+        "mage_walk_08", "mage_walk_02",
     };
     private static readonly string[] _MAGE_ATTACK = {
-        "mage_idle_02", "mage_idle_02",
-        "mage_idle_02", "mage_idle_02",
-        "mage_idle_02", "mage_idle_02",
+        "mage_attack_01", "mage_attack_02",
+        "mage_attack_03", "mage_attack_04",
+        "mage_attack_05", "mage_attack_06",
     };
     private static readonly string[] _MAGE_IDLE = {
         "mage_idle_01", "mage_idle_02",
