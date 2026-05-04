@@ -439,6 +439,14 @@ public partial class Zombie : CharacterBody2D
         if (_cachedPoisonTexture != null)
             return _cachedPoisonTexture;
 
+        var tex = Core.TextureUtils.LoadNormalizedSprite("res://assets/sprites/effects/effect_poison.jpg");
+        if (tex != null)
+        {
+            _cachedPoisonTexture = (ImageTexture)tex;
+            return _cachedPoisonTexture;
+        }
+
+        // Fallback: programmatic green square
         var img = Image.CreateEmpty(10, 10, false, Image.Format.Rgba8);
         img.Fill(Colors.Green);
         _cachedPoisonTexture = ImageTexture.CreateFromImage(img);
