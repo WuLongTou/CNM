@@ -205,23 +205,65 @@ public partial class PlayerVfx : Node
 
     private static void _LoadWarriorSprites()
     {
-        _LoadSpritesFromFiles("warrior", _WARRIOR_WALK, _WARRIOR_ATTACK, _WARRIOR_IDLE,
-            _warriorWalkFrames, _warriorAttackFrames, _warriorIdleFrames,
-            out _warriorBase, out _warriorIdle);
+        _warriorWalkFrames.Clear();
+        _warriorAttackFrames.Clear();
+        _warriorIdleFrames.Clear();
+
+        // Load from spritesheets: warrior_walk (3x4 grid=12 cells, use 8),
+        // warrior_attack (3x3 grid=9 cells, use 6), warrior_idle (2x2=4 cells)
+        var allWalk = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/warrior_walk.png", 4, 3);
+        for (int i = 0; i < 8 && i < allWalk.Count; i++) _warriorWalkFrames.Add(allWalk[i]);
+
+        var allAttack = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/warrior_attack.png", 3, 3);
+        for (int i = 0; i < 6 && i < allAttack.Count; i++) _warriorAttackFrames.Add(allAttack[i]);
+
+        var allIdle = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/warrior_idle.png", 2, 2);
+        for (int i = 0; i < 4 && i < allIdle.Count; i++) _warriorIdleFrames.Add(allIdle[i]);
+
+        _warriorIdle = _warriorIdleFrames.Count > 0 ? _warriorIdleFrames[0] : null;
+        _warriorBase = _warriorWalkFrames.Count > 0 ? _warriorWalkFrames[0] : null;
     }
 
     private static void _LoadRangerSprites()
     {
-        _LoadSpritesFromFiles("ranger", _RANGER_WALK, _RANGER_ATTACK, _RANGER_IDLE,
-            _rangerWalkFrames, _rangerAttackFrames, _rangerIdleFrames,
-            out _rangerBase, out _rangerIdle);
+        _rangerWalkFrames.Clear();
+        _rangerAttackFrames.Clear();
+        _rangerIdleFrames.Clear();
+
+        // Load from spritesheets: ranger_walk (3x4 grid, use 8),
+        // ranger_attack (2x3 grid, use 6), ranger_idle (2x2=4 cells)
+        var allWalk = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/ranger_walk.png", 4, 3);
+        for (int i = 0; i < 8 && i < allWalk.Count; i++) _rangerWalkFrames.Add(allWalk[i]);
+
+        var allAttack = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/ranger_attack.png", 3, 2);
+        for (int i = 0; i < 6 && i < allAttack.Count; i++) _rangerAttackFrames.Add(allAttack[i]);
+
+        var allIdle = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/ranger_idle.png", 2, 2);
+        for (int i = 0; i < 4 && i < allIdle.Count; i++) _rangerIdleFrames.Add(allIdle[i]);
+
+        _rangerIdle = _rangerIdleFrames.Count > 0 ? _rangerIdleFrames[0] : null;
+        _rangerBase = _rangerWalkFrames.Count > 0 ? _rangerWalkFrames[0] : null;
     }
 
     private static void _LoadMageSprites()
     {
-        _LoadSpritesFromFiles("mage", _MAGE_WALK, _MAGE_ATTACK, _MAGE_IDLE,
-            _mageWalkFrames, _mageAttackFrames, _mageIdleFrames,
-            out _mageBase, out _mageIdle);
+        _mageWalkFrames.Clear();
+        _mageAttackFrames.Clear();
+        _mageIdleFrames.Clear();
+
+        // Load from spritesheets: mage_walk (2x4 grid=8 cells),
+        // mage_attack (2x3 grid=6 cells), mage_idle (2x2=4 cells)
+        var allWalk = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/mage_walk.png", 4, 2);
+        for (int i = 0; i < 8 && i < allWalk.Count; i++) _mageWalkFrames.Add(allWalk[i]);
+
+        var allAttack = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/mage_attack.png", 3, 2);
+        for (int i = 0; i < 6 && i < allAttack.Count; i++) _mageAttackFrames.Add(allAttack[i]);
+
+        var allIdle = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/mage_idle.png", 2, 2);
+        for (int i = 0; i < 4 && i < allIdle.Count; i++) _mageIdleFrames.Add(allIdle[i]);
+
+        _mageIdle = _mageIdleFrames.Count > 0 ? _mageIdleFrames[0] : null;
+        _mageBase = _mageWalkFrames.Count > 0 ? _mageWalkFrames[0] : null;
     }
 
     private static void _LoadSpritesFromFiles(string charName,

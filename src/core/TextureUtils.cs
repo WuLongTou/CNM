@@ -179,6 +179,7 @@ public static class TextureUtils
                     continue;
 
                 _StripWhiteBackground(region, 0.85f);
+                region = _TrimTransparent(region);
                 region = _ResizeToFit(region, NormalSpriteSize);
                 frames.Add(ImageTexture.CreateFromImage(region));
             }
@@ -261,6 +262,7 @@ public static class TextureUtils
                     continue;
 
                 _StripWhiteBackground(region, 0.85f);
+                region = _TrimTransparent(region);
                 region = _ResizeToFit(region, NormalSpriteSize);
                 frames.Add(ImageTexture.CreateFromImage(region));
             }
