@@ -45,6 +45,9 @@ public static class TextureUtils
         // Strip white background
         _StripWhiteBackground(img, 0.85f);
 
+        // Trim transparent borders so the character fills the frame consistently
+        img = _TrimTransparent(img);
+
         // Resize to normalized size — always duplicate so the cached ImageTexture
         // owns its own Image buffer and no external GetImage() caller can mutate it
         img = _ResizeToFit(img, NormalSpriteSize);
@@ -495,6 +498,49 @@ public static class TextureUtils
         if (copy.GetWidth() != newW || copy.GetHeight() != newH)
             copy.Resize(newW, newH, Image.Interpolation.Nearest);
         return copy;
+    }
+
+    /// <summary>
+    /// Crop transparent borders, keeping only the bounding box of non-transparent pixels.
+    /// Ensures sprites from different sources are sized consistently after resize.
+    /// </summary>
+    private static Image _TrimTransparent(Image img)
+    {
+        int w = img.GetWidth();
+        int h = img.GetHeight();
+        int minX = w, minY = h, maxX = 0, maxY = 0;
+
+        for (int y = 0; y < h; y++)
+        {
+            for (int x = 0; x < w; x++)
+            {
+                if (img.GetPixel(x, y).A >= 0.01f)
+                {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+
+        if (maxX < minX || maxY < minY)
+            return img;
+
+        // Add a small margin (2px) to avoid clipping edges
+        int margin = 2;
+        minX = Mathf.Max(0, minX - margin);
+        minY = Mathf.Max(0, minY - margin);
+        maxX = Mathf.Min(w - 1, maxX + margin);
+        maxY = Mathf.Min(h - 1, maxY + margin);
+
+        int cropW = maxX - minX + 1;
+        int cropH = maxY - minY + 1;
+
+        if (cropW == w && cropH == h)
+            return img;
+
+        return img.GetRegion(new Rect2I(minX, minY, cropW, cropH));
     }
 
     /// <summary>
