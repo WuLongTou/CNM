@@ -188,10 +188,10 @@ public partial class PlayerVfx : Node
     };
 
     private static readonly string[] _MAGE_WALK = {
-        "mage_walk_02", "mage_walk_03",
-        "mage_walk_04", "mage_walk_05",
-        "mage_walk_06", "mage_walk_07",
-        "mage_walk_08", "mage_walk_02",
+        "mage_walk_01", "mage_walk_02",
+        "mage_walk_03", "mage_walk_04",
+        "mage_walk_05", "mage_walk_06",
+        "mage_walk_07", "mage_walk_08",
     };
     private static readonly string[] _MAGE_ATTACK = {
         "mage_attack_01", "mage_attack_02",
