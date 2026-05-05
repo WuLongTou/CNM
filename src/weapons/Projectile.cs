@@ -102,9 +102,10 @@ public partial class Projectile : CharacterBody2D
         if (TrajectoryDamageRatio > 0.0f)
             _CheckTrajectoryCollision();
 
-        // Auto-cleanup if way off-screen
-        var screen = GetViewport().GetVisibleRect();
-        if (!screen.HasPoint(GlobalPosition))
+        // Auto-cleanup if way off-screen (convert to viewport coords for camera)
+        var vp = GetViewport();
+        Vector2 vpPos = vp.CanvasTransform * GlobalPosition;
+        if (!vp.GetVisibleRect().Grow(400).HasPoint(vpPos))
             QueueFree();
     }
 

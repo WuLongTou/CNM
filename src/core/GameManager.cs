@@ -256,16 +256,10 @@ public partial class GameManager : Node
         LogUtils.Print($"第 {CurrentRound} 回合结束！");
 
         _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
-        _uiManager?.ShowRoundBanner("回合完成");
 
         await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
 
-        // Get ready phase - show countdown before weapon selection
-        CurrentState = GameState.GetReady;
         _uiManager?.HideRoundSummary();
-        await _ShowGetReadyCountdown();
-
-        // Now start the new round with weapon selection
         StartNewRound();
     }
 
@@ -282,7 +276,7 @@ public partial class GameManager : Node
         _uiManager?.HideRoundBanner();
     }
 
-    public void OnWeaponSelected(object? card)
+    public async void OnWeaponSelected(object? card)
     {
         if (CurrentState != GameState.WeaponSelection) return;
 
@@ -300,21 +294,27 @@ public partial class GameManager : Node
             _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
         }
 
+        _uiManager?.HideWeaponSelection();
+        _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
+        await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
+
         CurrentState = GameState.Combat;
         WeaponSelectionEnded?.Invoke();
-        _uiManager?.HideWeaponSelection();
 
         var cardName = card != null ? card.GetType().Name : "null";
         LogUtils.Print($"选择了: {cardName}，效果已生效！");
     }
 
-    public void OnUpgradeSkipped()
+    public async void OnUpgradeSkipped()
     {
         if (CurrentState != GameState.WeaponSelection) return;
 
+        _uiManager?.HideWeaponSelection();
+        _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
+        await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
+
         CurrentState = GameState.Combat;
         WeaponSelectionEnded?.Invoke();
-        _uiManager?.HideWeaponSelection();
 
         LogUtils.Print("跳过升级！直接战斗！");
     }

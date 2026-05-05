@@ -105,6 +105,11 @@ public partial class ZombieVfx : Node
 
     private void _TryLoadPngSprite(ZombieType type)
     {
+        // Priority 1: spritesheet (cute cartoon chibi style)
+        if (_TryLoadSpritesheet(type))
+            return;
+
+        // Priority 2: individual PNG/JPG files
         string[] paths;
         string baseName;
 
@@ -128,8 +133,7 @@ public partial class ZombieVfx : Node
             };
         }
 
-        // Load walk frames if available
-        _LoadWalkFrames(baseName);
+        _LoadWalkFramesLegacy(baseName);
 
         foreach (string p in paths)
         {
@@ -145,9 +149,57 @@ public partial class ZombieVfx : Node
         }
     }
 
-    private void _LoadWalkFrames(string baseName)
+    private bool _TryLoadSpritesheet(ZombieType type)
     {
-        // Pattern 1: zombie_basic_walk_1 (type-specific, matches actual file names)
+        string sheetName = _GetSpritesheetName(type);
+        string sheetPath = $"res://assets/sprites/enemies/sheets/{sheetName}_walk.png";
+
+        if (!FileAccess.FileExists(sheetPath))
+            return false;
+
+        var frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
+        if (frames == null || frames.Count == 0)
+            return false;
+
+        // Ensure all sprites face right
+        if (TextureUtils.FacesLeft(frames[0]))
+        {
+            for (int i = 0; i < frames.Count; i++)
+                frames[i] = TextureUtils.FlipHorizontal(frames[i]);
+        }
+
+        _sprite.Texture = frames[0];
+        _pngLoaded = true;
+
+        _walkFrames.Clear();
+        int walkCount = Mathf.Min(8, frames.Count);
+        for (int i = 0; i < walkCount; i++)
+            _walkFrames.Add(frames[i]);
+
+        return true;
+    }
+
+    private string _GetSpritesheetName(ZombieType type) => type switch
+    {
+        ZombieType.Basic => "zombie_basic",
+        ZombieType.Fast => "zombie_fast",
+        ZombieType.Tank => "zombie_tank",
+        ZombieType.Exploder => "zombie_exploder",
+        ZombieType.Invisible => "zombie_invisible",
+        ZombieType.Spitter => "zombie_spitter",
+        ZombieType.Healer => "zombie_healer",
+        ZombieType.Summoner => "zombie_summoner",
+        ZombieType.Archer => "zombie_archer",
+        ZombieType.Ship => "ship",
+        ZombieType.Mech => "mech",
+        ZombieType.Knight => "knight",
+        ZombieType.Dragon => "dragon",
+        ZombieType.Swarm => "swarm",
+        _ => "zombie_basic"
+    };
+
+    private void _LoadWalkFramesLegacy(string baseName)
+    {
         for (int i = 1; i <= 6; i++)
         {
             var tex = TextureUtils.LoadNormalizedSprite($"res://assets/sprites/zombies/{baseName}_walk_{i}.png");

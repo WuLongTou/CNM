@@ -42,7 +42,7 @@ public partial class PlayerVfx : Node
         _TryLoadPngSprites();
         if (_idleFrame == null)
         {
-            _CreatePlayerSprite();
+            _CreatePlayerSprite(AttackType.Melee);
         }
         _CreateShadow();
         _CreateStatusDisplays();
@@ -512,45 +512,20 @@ public partial class PlayerVfx : Node
         if (attackType == _lastAttackType) return;
         _lastAttackType = attackType;
         _ApplyWeaponSprites();
+        UpdateStatusDisplays();
+        GameServices.UI.UpdatePlayerStatus(Player!);
     }
 
     private void _ApplyWeaponSprites()
     {
-        // Re-load from disk if static caches were cleared (e.g. scene reload)
-        if (!_allSpritesLoaded || _warriorIdle == null)
-            _ReloadStaticSprites();
-
         _walkFrames.Clear();
         _attackFrames.Clear();
         _idleFrames.Clear();
         _idleFrame = null;
         _baseTexture = null;
 
-        switch (_lastAttackType)
-        {
-            case AttackType.Ranged:
-                _walkFrames.AddRange(_rangerWalkFrames);
-                _attackFrames.AddRange(_rangerAttackFrames);
-                _idleFrames.AddRange(_rangerIdleFrames);
-                _idleFrame = _rangerIdle;
-                _baseTexture = _rangerBase;
-                break;
-            case AttackType.Magic:
-            case AttackType.Area:
-                _walkFrames.AddRange(_mageWalkFrames);
-                _attackFrames.AddRange(_mageAttackFrames);
-                _idleFrames.AddRange(_mageIdleFrames);
-                _idleFrame = _mageIdle;
-                _baseTexture = _mageBase;
-                break;
-            default: // Melee, Mine
-                _walkFrames.AddRange(_warriorWalkFrames);
-                _attackFrames.AddRange(_warriorAttackFrames);
-                _idleFrames.AddRange(_warriorIdleFrames);
-                _idleFrame = _warriorIdle;
-                _baseTexture = _warriorBase;
-                break;
-        }
+        // Always use procedural stick figure, class-specific per weapon type
+        _CreatePlayerSprite(_lastAttackType);
 
         if (_idleFrame != null && Player?.Sprite != null)
             Player.Sprite.Texture = _idleFrame;
@@ -560,17 +535,8 @@ public partial class PlayerVfx : Node
         if (Player?.Sprite != null)
             Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
 
-        if (_baseTexture != null && Player?.Sprite != null)
-        {
-            // Use _idleFrame (a processed single-frame texture) as the sprite base,
-            // not the raw walk frame from _LoadSpritesFromFiles — avoids aliasing
-            // the shared Image buffer that _GenerateStateVariantsDeferred modifies.
-            Player.Sprite.Texture = _idleFrame ?? _baseTexture;
+        if (_walkFrames.Count > 0 && Player?.Sprite != null)
             CallDeferred(MethodName._GenerateStateVariantsDeferred);
-        }
-
-        if (_walkFrames.Count == 0 && _idleFrame == null && _baseTexture == null)
-            _CreatePlayerSprite();
     }
 
     private static Texture2D? _LoadWithAlpha(string path)
@@ -754,317 +720,493 @@ public partial class PlayerVfx : Node
         return ImageTexture.CreateFromImage(img);
     }
 
-    private void _CreatePlayerSprite()
+    // Color palette per class type
+    private readonly record struct StickPalette(
+        Color Body, Color BodyDark, Color Head, Color Hair,
+        Color Limb, Color Weapon, Color WeaponAccent, Color Eye);
+
+    private static readonly StickPalette MeleePalette = new(
+        Body:     new Color(0.45f, 0.38f, 0.30f), // brown leather armor
+        BodyDark: new Color(0.30f, 0.25f, 0.20f),
+        Head:     new Color(0.78f, 0.62f, 0.52f),
+        Hair:     new Color(0.30f, 0.22f, 0.12f),  // dark brown hair
+        Limb:     new Color(0.35f, 0.30f, 0.25f),
+        Weapon:   new Color(0.85f, 0.85f, 0.90f),  // silver blade
+        WeaponAccent: new Color(0.60f, 0.50f, 0.30f), // wooden handle
+        Eye:      new Color(0.10f, 0.10f, 0.10f)
+    );
+
+    private static readonly StickPalette RangerPalette = new(
+        Body:     new Color(0.25f, 0.40f, 0.25f), // forest green tunic
+        BodyDark: new Color(0.18f, 0.30f, 0.18f),
+        Head:     new Color(0.78f, 0.62f, 0.52f),
+        Hair:     new Color(0.55f, 0.40f, 0.20f),  // auburn
+        Limb:     new Color(0.22f, 0.32f, 0.22f),
+        Weapon:   new Color(0.65f, 0.45f, 0.25f),  // wooden bow
+        WeaponAccent: new Color(0.90f, 0.90f, 0.85f), // arrow/string
+        Eye:      new Color(0.10f, 0.10f, 0.10f)
+    );
+
+    private static readonly StickPalette MagicPalette = new(
+        Body:     new Color(0.35f, 0.25f, 0.55f), // purple robe
+        BodyDark: new Color(0.25f, 0.18f, 0.40f),
+        Head:     new Color(0.78f, 0.62f, 0.52f),
+        Hair:     new Color(0.65f, 0.60f, 0.55f),  // silver-white
+        Limb:     new Color(0.30f, 0.22f, 0.45f),
+        Weapon:   new Color(0.50f, 0.35f, 0.70f),  // magical staff
+        WeaponAccent: new Color(0.70f, 0.50f, 1.0f), // glowing orb
+        Eye:      new Color(0.40f, 0.25f, 0.70f)   // purple glowing eyes
+    );
+
+    private void _CreatePlayerSprite(AttackType type)
     {
-        int size = 48;
-        var framesData = new Godot.Collections.Array<Image>();
-
-        // Generate 16 walk frames for smooth animation
-        for (int frameIdx = 0; frameIdx < 16; frameIdx++)
+        var p = type switch
         {
-            using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
-            float cx = size / 2.0f;
-            float cy = size / 2.0f;
+            AttackType.Ranged => RangerPalette,
+            AttackType.Magic or AttackType.Area => MagicPalette,
+            _ => MeleePalette
+        };
 
-            float walkPhase = frameIdx / 16.0f;
-            float legSwing = Mathf.Sin(walkPhase * Mathf.Tau) * 4.0f;
-            float bodyBob = -Mathf.Abs(Mathf.Sin(walkPhase * Mathf.Tau)) * 2.0f;
-            float armSwing = Mathf.Sin(walkPhase * Mathf.Tau) * 3.0f;
-
-            // Shadow under feet
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float shadowY = size * 0.88f;
-                    float shadowDist = Mathf.Abs(y - shadowY);
-                    if (shadowDist < 3 && Mathf.Abs(x - cx) < 10)
-                    {
-                        img.SetPixel(x, y, new Color(0, 0, 0, 0.15f));
-                    }
-                }
-            }
-
-            // Body
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float bodyTop = cy * 0.48f + bodyBob;
-                    float bodyBot = cy * 1.35f + bodyBob;
-                    if (y >= bodyTop && y <= bodyBot)
-                    {
-                        float bodyW = size * 0.18f - Mathf.Abs(y - cy - bodyBob) * 0.03f;
-                        if (Mathf.Abs(x - cx) < bodyW)
-                        {
-                            float shade = 0.25f + (y - bodyTop) / (bodyBot - bodyTop) * 0.05f;
-                            img.SetPixel(x, y, new Color(shade * 0.8f, shade * 0.9f, shade * 0.7f));
-                        }
-                    }
-                }
-            }
-
-            // Head
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float headR = size * 0.16f;
-                    float headCy = cy * 0.38f + bodyBob;
-                    float hd = new Vector2(x - cx, y - headCy).Length();
-                    if (hd < headR)
-                    {
-                        if (hd > headR * 0.7f)
-                            img.SetPixel(x, y, new Color(0.28f, 0.32f, 0.22f));
-                        else if (hd > headR * 0.3f)
-                            img.SetPixel(x, y, new Color(0.72f, 0.58f, 0.48f));
-                        else
-                            img.SetPixel(x, y, new Color(0.78f, 0.62f, 0.52f));
-                    }
-                }
-            }
-
-            // Eyes
-            int eyeY = (int)(cy * 0.34f + bodyBob);
-            foreach (int dx in new[] { -1, 1 })
-            {
-                int ex = (int)(cx + dx * size * 0.055f);
-                if (ex >= 0 && ex < size && eyeY >= 0 && eyeY < size)
-                {
-                    img.SetPixel(ex, eyeY, new Color(0.1f, 0.1f, 0.1f));
-                    if (eyeY - 1 >= 0) img.SetPixel(ex, eyeY - 1, new Color(0.95f, 0.95f, 0.95f));
-                    if (eyeY + 1 < size) img.SetPixel(ex, eyeY + 1, new Color(0.2f, 0.2f, 0.2f));
-                }
-            }
-
-            // Arms
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float armTop = cy * 0.5f + bodyBob;
-                    float armBot = cy * 1.1f + bodyBob;
-                    if (y >= armTop && y <= armBot)
-                    {
-                        foreach (int side in new[] { -1, 1 })
-                        {
-                            float armCenterX = cx + side * (size * 0.22f + side * armSwing);
-                            if (Mathf.Abs(x - armCenterX) < 2.5f)
-                            {
-                                img.SetPixel(x, y, new Color(0.28f, 0.32f, 0.22f));
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Legs with walking animation
-            for (int y = (int)(cy * 1.2f + bodyBob); y <= (int)(cy * 1.75f + bodyBob); y++)
-            {
-                foreach (int side in new[] { -1, 1 })
-                {
-                    float legOffsetX = side * legSwing;
-                    int lx = (int)(cx + side * size * 0.08f + legOffsetX);
-                    if (lx >= 0 && lx < size && y >= 0 && y < size)
-                    {
-                        img.SetPixel(lx, y, new Color(0.18f, 0.2f, 0.15f));
-                        if (lx + 1 < size) img.SetPixel(lx + 1, y, new Color(0.18f, 0.2f, 0.15f));
-                    }
-                }
-            }
-
-            framesData.Add(img);
-        }
+        int size = 48;
+        float cx = size / 2.0f;
+        float cy = size / 2.0f;
 
         _walkFrames.Clear();
-        foreach (var img in framesData)
-            _walkFrames.Add(ImageTexture.CreateFromImage(img));
-
-        // Generate idle frame with subtle breathing
-        using var idleImg = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
-        float idleCx = size / 2.0f;
-        float idleCy = size / 2.0f;
-        // Mid-breath position (unused in static idle frame)
-
-        // Shadow
-        for (int x = 0; x < size; x++)
-        {
-            for (int y = 0; y < size; y++)
-            {
-                float shadowY = size * 0.88f;
-                if (Mathf.Abs(y - shadowY) < 3 && Mathf.Abs(x - idleCx) < 10)
-                {
-                    idleImg.SetPixel(x, y, new Color(0, 0, 0, 0.18f));
-                }
-            }
-        }
-
-        // Body
-        for (int x = 0; x < size; x++)
-        {
-            for (int y = 0; y < size; y++)
-            {
-                float bodyTop = idleCy * 0.48f;
-                float bodyBot = idleCy * 1.35f;
-                if (y >= bodyTop && y <= bodyBot)
-                {
-                    float bodyW = size * 0.18f - Mathf.Abs(y - idleCy) * 0.03f;
-                    if (Mathf.Abs(x - idleCx) < bodyW)
-                    {
-                        float shade = 0.25f + (y - bodyTop) / (bodyBot - bodyTop) * 0.05f;
-                        idleImg.SetPixel(x, y, new Color(shade * 0.8f, shade * 0.9f, shade * 0.7f));
-                    }
-                }
-            }
-        }
-
-        // Head
-        for (int x = 0; x < size; x++)
-        {
-            for (int y = 0; y < size; y++)
-            {
-                float headR = size * 0.16f;
-                float headCy = idleCy * 0.38f;
-                float hd = new Vector2(x - idleCx, y - headCy).Length();
-                if (hd < headR)
-                {
-                    if (hd > headR * 0.7f)
-                        idleImg.SetPixel(x, y, new Color(0.28f, 0.32f, 0.22f));
-                    else if (hd > headR * 0.3f)
-                        idleImg.SetPixel(x, y, new Color(0.72f, 0.58f, 0.48f));
-                    else
-                        idleImg.SetPixel(x, y, new Color(0.78f, 0.62f, 0.52f));
-                }
-            }
-        }
-
-        // Eyes
-        int idleEyeY = (int)(idleCy * 0.34f);
-        foreach (int dx in new[] { -1, 1 })
-        {
-            int ex = (int)(idleCx + dx * size * 0.055f);
-            if (ex >= 0 && ex < size && idleEyeY >= 0 && idleEyeY < size)
-            {
-                idleImg.SetPixel(ex, idleEyeY, new Color(0.1f, 0.1f, 0.1f));
-                if (idleEyeY - 1 >= 0) idleImg.SetPixel(ex, idleEyeY - 1, new Color(0.95f, 0.95f, 0.95f));
-            }
-        }
-
-        _idleFrame = ImageTexture.CreateFromImage(idleImg);
-
-        // Generate attack frames (8 frames showing weapon swing)
+        _idleFrames.Clear();
         _attackFrames.Clear();
-        for (int attackFrame = 0; attackFrame < 8; attackFrame++)
+
+        // --- Walk frames (16) ---
+        for (int fi = 0; fi < 16; fi++)
         {
-            using var attackImg = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
-            float attackCx = size / 2.0f;
-            float attackCy = size / 2.0f;
-            float attackPhase = attackFrame / 8.0f;
-            float weaponAngle = Mathf.Lerp(-0.8f, 0.8f, attackPhase);
-            float bodyLean = Mathf.Sin(attackPhase * Mathf.Pi) * 1.5f;
+            using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+            float phase = fi / 16.0f;
+            float bob = -Mathf.Abs(Mathf.Sin(phase * Mathf.Tau)) * 2.0f;
+            float legSwing = Mathf.Sin(phase * Mathf.Tau) * 4.0f;
+            float armSwing = Mathf.Sin(phase * Mathf.Tau) * 3.0f;
 
-            // Shadow
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float shadowY = size * 0.88f;
-                    if (Mathf.Abs(y - shadowY) < 3 && Mathf.Abs(x - attackCx) < 10)
-                    {
-                        attackImg.SetPixel(x, y, new Color(0, 0, 0, 0.15f));
-                    }
-                }
-            }
+            _DrawShadow(img, cx, size);
+            _DrawBody(img, cx, cy, bob, p);
+            _DrawHead(img, cx, cy, bob, p, type);
+            _DrawEyes(img, cx, cy, bob, p);
+            _DrawArms(img, cx, cy, bob, armSwing, p);
+            _DrawLegs(img, cx, cy, bob, legSwing, p);
+            _DrawClassAccessory(img, cx, cy, bob, type, p);
+            _walkFrames.Add(ImageTexture.CreateFromImage(img));
+        }
 
-            // Body with lean
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float leanOffset = bodyLean * (y - attackCy * 0.5f) / (size * 0.5f);
-                    float bodyTop = attackCy * 0.48f;
-                    float bodyBot = attackCy * 1.35f;
-                    if (y >= bodyTop && y <= bodyBot)
-                    {
-                        float bodyW = size * 0.18f - Mathf.Abs(y - attackCy) * 0.03f;
-                        if (Mathf.Abs(x - attackCx - leanOffset) < bodyW)
-                        {
-                            float shade = 0.25f + (y - bodyTop) / (bodyBot - bodyTop) * 0.05f;
-                            attackImg.SetPixel(x, y, new Color(shade * 0.9f, shade * 0.8f, shade * 0.6f));
-                        }
-                    }
-                }
-            }
+        // --- Idle frames (4, breathing) ---
+        for (int fi = 0; fi < 4; fi++)
+        {
+            using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+            float breathBob = Mathf.Sin(fi / 4.0f * Mathf.Tau) * 0.8f;
 
-            // Head
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float leanOffset = bodyLean * (y - attackCy * 0.3f) / (size * 0.3f);
-                    float headR = size * 0.16f;
-                    float headCy = attackCy * 0.38f;
-                    float hd = new Vector2(x - attackCx - leanOffset, y - headCy).Length();
-                    if (hd < headR)
-                    {
-                        if (hd > headR * 0.7f)
-                            attackImg.SetPixel(x, y, new Color(0.3f, 0.34f, 0.24f));
-                        else if (hd > headR * 0.3f)
-                            attackImg.SetPixel(x, y, new Color(0.72f, 0.58f, 0.48f));
-                        else
-                            attackImg.SetPixel(x, y, new Color(0.78f, 0.62f, 0.52f));
-                    }
-                }
-            }
+            _DrawShadow(img, cx, size);
+            _DrawBody(img, cx, cy, breathBob, p);
+            _DrawHead(img, cx, cy, breathBob, p, type);
+            _DrawEyes(img, cx, cy, breathBob, p);
+            _DrawArms(img, cx, cy, breathBob, 0, p);
+            _DrawLegs(img, cx, cy, breathBob, 0, p);
+            _DrawClassAccessory(img, cx, cy, breathBob, type, p);
+            _idleFrames.Add(ImageTexture.CreateFromImage(img));
+        }
+        _idleFrame = _idleFrames.Count > 0 ? _idleFrames[0] : null;
 
-            // Weapon (sword)
-            for (int x = 0; x < size; x++)
-            {
-                for (int y = 0; y < size; y++)
-                {
-                    float weaponOriginX = attackCx + size * 0.2f;
-                    float weaponOriginY = attackCy * 0.6f;
-                    float weaponLen = size * 0.45f;
-                    float weaponWidth = 2.5f;
+        // --- Attack frames (8) ---
+        for (int fi = 0; fi < 8; fi++)
+        {
+            using var img = Image.CreateEmpty(size, size, false, Image.Format.Rgba8);
+            float atkPhase = fi / 8.0f;
+            float lean = Mathf.Sin(atkPhase * Mathf.Pi) * 1.5f;
 
-                    // Rotate point around origin
-                    float cos = Mathf.Cos(weaponAngle);
-                    float sin = Mathf.Sin(weaponAngle);
-                    float dx = x - weaponOriginX;
-                    float dy = y - weaponOriginY;
-                    float rotX = dx * cos - dy * sin;
-                    float rotY = dx * sin + dy * cos;
-
-                    if (rotX >= 0 && rotX <= weaponLen && Mathf.Abs(rotY) < weaponWidth)
-                    {
-                        float t = rotX / weaponLen;
-                        if (t < 0.15f)
-                            attackImg.SetPixel(x, y, new Color(0.6f, 0.5f, 0.3f)); // Handle
-                        else
-                            attackImg.SetPixel(x, y, new Color(0.85f, 0.85f, 0.9f)); // Blade
-                    }
-                }
-            }
-
-            // Legs (stable stance)
-            for (int y = (int)(attackCy * 1.2f); y <= (int)(attackCy * 1.75f); y++)
-            {
-                foreach (int side in new[] { -1, 1 })
-                {
-                    int lx = (int)(attackCx + side * size * 0.1f);
-                    if (lx >= 0 && lx < size && y >= 0 && y < size)
-                    {
-                        attackImg.SetPixel(lx, y, new Color(0.18f, 0.2f, 0.15f));
-                        if (lx + 1 < size) attackImg.SetPixel(lx + 1, y, new Color(0.18f, 0.2f, 0.15f));
-                    }
-                }
-            }
-
-            _attackFrames.Add(ImageTexture.CreateFromImage(attackImg));
+            _DrawShadow(img, cx, size);
+            _DrawBodyLean(img, cx, cy, lean, p);
+            _DrawHeadLean(img, cx, cy, lean, p, type);
+            _DrawEyesLean(img, cx, cy, lean, p);
+            _DrawLegsStable(img, cx, cy, p);
+            _DrawWeaponAttack(img, cx, cy, atkPhase, type, p);
+            _attackFrames.Add(ImageTexture.CreateFromImage(img));
         }
 
         if (Player!.Sprite != null && _idleFrame != null)
             Player.Sprite.Texture = _idleFrame;
+    }
+
+    // --- Common drawing primitives ---
+
+    private static void _DrawShadow(Image img, float cx, int size)
+    {
+        for (int x = 0; x < size; x++)
+            for (int y = 0; y < size; y++)
+                if (Mathf.Abs(y - size * 0.88f) < 3 && Mathf.Abs(x - cx) < 10)
+                    img.SetPixel(x, y, new Color(0, 0, 0, 0.15f));
+    }
+
+    private static void _DrawBody(Image img, float cx, float cy, float bob, StickPalette p)
+    {
+        float top = cy * 0.48f + bob, bot = cy * 1.35f + bob;
+        int w = img.GetWidth();
+        for (int x = 0; x < w; x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+                if (y >= top && y <= bot)
+                {
+                    float bw = w * 0.18f - Mathf.Abs(y - cy - bob) * 0.03f;
+                    if (Mathf.Abs(x - cx) < bw)
+                        img.SetPixel(x, y, y < top + (bot - top) * 0.3f ? p.Body : p.BodyDark);
+                }
+    }
+
+    private static void _DrawBodyLean(Image img, float cx, float cy, float lean, StickPalette p)
+    {
+        int w = img.GetWidth();
+        float top = cy * 0.48f, bot = cy * 1.35f;
+        for (int x = 0; x < w; x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+                if (y >= top && y <= bot)
+                {
+                    float lo = lean * (y - cy * 0.5f) / (w * 0.5f);
+                    float bw = w * 0.18f - Mathf.Abs(y - cy) * 0.03f;
+                    if (Mathf.Abs(x - cx - lo) < bw)
+                        img.SetPixel(x, y, y < top + (bot - top) * 0.3f ? p.Body : p.BodyDark);
+                }
+    }
+
+    private static void _DrawHead(Image img, float cx, float cy, float bob, StickPalette p, AttackType type)
+    {
+        float headR = 48 * 0.16f;
+        float headCy = cy * 0.38f + bob;
+        for (int x = 0; x < img.GetWidth(); x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+            {
+                float hd = new Vector2(x - cx, y - headCy).Length();
+                if (hd < headR)
+                    img.SetPixel(x, y, hd > headR * 0.65f ? p.Hair : p.Head);
+            }
+
+        // Mage: pointed wizard hat
+        if (type == AttackType.Magic || type == AttackType.Area)
+        {
+            float hatBaseY = headCy - headR * 0.5f;
+            float hatTipY = hatBaseY - headR * 1.8f;
+            for (int y = (int)hatTipY; y <= (int)hatBaseY; y++)
+            {
+                float t = (hatBaseY - y) / (hatBaseY - hatTipY);
+                float halfW = headR * 0.7f * (1.0f - t * 0.85f);
+                for (int x = 0; x < img.GetWidth(); x++)
+                    if (Mathf.Abs(x - cx) < halfW && y >= 0 && y < img.GetHeight())
+                        img.SetPixel(x, y, new Color(p.BodyDark.R * 0.7f, p.BodyDark.G * 0.7f, p.BodyDark.B * 0.7f));
+            }
+            // Hat brim
+            int brimY = (int)hatBaseY;
+            if (brimY >= 0 && brimY < img.GetHeight())
+                for (int x = 0; x < img.GetWidth(); x++)
+                    if (Mathf.Abs(x - cx) < headR * 0.9f)
+                        img.SetPixel(x, brimY, new Color(p.BodyDark.R * 0.8f, p.BodyDark.G * 0.8f, p.BodyDark.B * 0.8f));
+        }
+
+        // Ranger: hood
+        if (type == AttackType.Ranged)
+        {
+            float hoodCy = headCy - headR * 0.15f;
+            float hoodR = headR * 1.25f;
+            for (int x = 0; x < img.GetWidth(); x++)
+                for (int y = 0; y < img.GetHeight(); y++)
+                {
+                    float d = new Vector2(x - cx, y - hoodCy).Length();
+                    if (d < hoodR && d > headR * 0.7f && y < headCy + headR * 0.2f)
+                        img.SetPixel(x, y, p.Body);
+                }
+        }
+
+        // Melee: small helmet crest
+        if (type == AttackType.Melee || type == AttackType.Mine)
+        {
+            int crestY = (int)(headCy - headR * 0.9f);
+            for (int dx = -1; dx <= 1; dx++)
+            {
+                int px = (int)(cx + dx);
+                if (px >= 0 && px < img.GetWidth() && crestY >= 0 && crestY < img.GetHeight())
+                    img.SetPixel(px, crestY, new Color(0.75f, 0.65f, 0.25f)); // gold accent
+            }
+        }
+    }
+
+    private static void _DrawHeadLean(Image img, float cx, float cy, float lean, StickPalette p, AttackType type)
+    {
+        float headR = 48 * 0.16f;
+        float headCy = cy * 0.38f;
+        for (int x = 0; x < img.GetWidth(); x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+            {
+                float lo = lean * (y - cy * 0.3f) / (48 * 0.3f);
+                float hd = new Vector2(x - cx - lo, y - headCy).Length();
+                if (hd < headR)
+                    img.SetPixel(x, y, hd > headR * 0.65f ? p.Hair : p.Head);
+            }
+
+        if (type == AttackType.Magic || type == AttackType.Area)
+        {
+            float hatBaseY = headCy - headR * 0.5f;
+            float hatTipY = hatBaseY - headR * 1.8f;
+            for (int y = (int)hatTipY; y <= (int)hatBaseY; y++)
+            {
+                float t = (hatBaseY - y) / (hatBaseY - hatTipY);
+                float halfW = headR * 0.7f * (1.0f - t * 0.85f);
+                for (int x = 0; x < img.GetWidth(); x++)
+                    if (Mathf.Abs(x - cx) < halfW && y >= 0 && y < img.GetHeight())
+                        img.SetPixel(x, y, new Color(p.BodyDark.R * 0.7f, p.BodyDark.G * 0.7f, p.BodyDark.B * 0.7f));
+            }
+        }
+    }
+
+    private static void _DrawEyes(Image img, float cx, float cy, float bob, StickPalette p)
+    {
+        int eyeY = (int)(cy * 0.34f + bob);
+        foreach (int dx in new[] { -1, 1 })
+        {
+            int ex = (int)(cx + dx * 48 * 0.055f);
+            if (ex >= 0 && ex < img.GetWidth() && eyeY >= 0 && eyeY < img.GetHeight())
+            {
+                img.SetPixel(ex, eyeY, p.Eye);
+                if (eyeY - 1 >= 0) img.SetPixel(ex, eyeY - 1, new Color(0.95f, 0.95f, 0.95f));
+            }
+        }
+    }
+
+    private static void _DrawEyesLean(Image img, float cx, float cy, float lean, StickPalette p)
+    {
+        int eyeY = (int)(cy * 0.34f);
+        foreach (int dx in new[] { -1, 1 })
+        {
+            int ex = (int)(cx + dx * 48 * 0.055f + lean);
+            if (ex >= 0 && ex < img.GetWidth() && eyeY >= 0 && eyeY < img.GetHeight())
+            {
+                img.SetPixel(ex, eyeY, p.Eye);
+                if (eyeY - 1 >= 0) img.SetPixel(ex, eyeY - 1, new Color(0.95f, 0.95f, 0.95f));
+            }
+        }
+    }
+
+    private static void _DrawArms(Image img, float cx, float cy, float bob, float armSwing, StickPalette p)
+    {
+        float top = cy * 0.5f + bob, bot = cy * 1.1f + bob;
+        for (int x = 0; x < img.GetWidth(); x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+                if (y >= top && y <= bot)
+                    foreach (int side in new[] { -1, 1 })
+                    {
+                        float armX = cx + side * (48 * 0.22f + side * armSwing);
+                        if (Mathf.Abs(x - armX) < 2.5f)
+                            img.SetPixel(x, y, p.Limb);
+                    }
+    }
+
+    private static void _DrawLegs(Image img, float cx, float cy, float bob, float legSwing, StickPalette p)
+    {
+        for (int y = (int)(cy * 1.2f + bob); y <= (int)(cy * 1.75f + bob); y++)
+            foreach (int side in new[] { -1, 1 })
+            {
+                int lx = (int)(cx + side * 48 * 0.08f + side * legSwing);
+                if (lx >= 0 && lx < img.GetWidth() && y >= 0 && y < img.GetHeight())
+                {
+                    img.SetPixel(lx, y, p.Limb);
+                    if (lx + 1 < img.GetWidth()) img.SetPixel(lx + 1, y, p.Limb);
+                }
+            }
+    }
+
+    private static void _DrawLegsStable(Image img, float cx, float cy, StickPalette p)
+    {
+        for (int y = (int)(cy * 1.2f); y <= (int)(cy * 1.75f); y++)
+            foreach (int side in new[] { -1, 1 })
+            {
+                int lx = (int)(cx + side * 48 * 0.1f);
+                if (lx >= 0 && lx < img.GetWidth() && y >= 0 && y < img.GetHeight())
+                {
+                    img.SetPixel(lx, y, p.Limb);
+                    if (lx + 1 < img.GetWidth()) img.SetPixel(lx + 1, y, p.Limb);
+                }
+            }
+    }
+
+    /// Class-specific accessory on walk/idle frames (weapon on back, quiver, staff, etc.)
+    private static void _DrawClassAccessory(Image img, float cx, float cy, float bob, AttackType type, StickPalette p)
+    {
+        if (type == AttackType.Ranged)
+        {
+            // Quiver on back (left side)
+            float qX = cx - 48 * 0.28f;
+            for (int y = (int)(cy * 0.45f + bob); y <= (int)(cy * 0.95f + bob); y++)
+            {
+                if (y >= 0 && y < img.GetHeight())
+                {
+                    int px = (int)qX;
+                    if (px >= 0 && px < img.GetWidth()) img.SetPixel(px, y, new Color(0.55f, 0.40f, 0.25f));
+                    if (px + 1 < img.GetWidth()) img.SetPixel(px + 1, y, new Color(0.55f, 0.40f, 0.25f));
+                }
+            }
+            // Arrow tips
+            for (int i = 0; i < 2; i++)
+            {
+                int tipY = (int)(cy * 0.42f + bob) - i * 3;
+                if (tipY >= 0 && tipY < img.GetHeight())
+                {
+                    int px = (int)qX;
+                    if (px >= 0 && px < img.GetWidth())
+                        img.SetPixel(px, tipY, new Color(0.85f, 0.85f, 0.80f));
+                }
+            }
+        }
+
+        if (type == AttackType.Magic || type == AttackType.Area)
+        {
+            // Glowing orb floating near right hand
+            float orbX = cx + 48 * 0.32f;
+            float orbY = cy * 0.75f + bob;
+            for (int x = 0; x < img.GetWidth(); x++)
+                for (int y = 0; y < img.GetHeight(); y++)
+                {
+                    float d = new Vector2(x - orbX, y - orbY).Length();
+                    if (d < 3.0f)
+                        img.SetPixel(x, y, d < 1.5f ? p.WeaponAccent : new Color(p.WeaponAccent.R, p.WeaponAccent.G, p.WeaponAccent.B, 0.6f));
+                }
+        }
+
+        if (type == AttackType.Melee || type == AttackType.Mine)
+        {
+            // Sword hilt visible at hip
+            float hiltX = cx + 48 * 0.18f;
+            for (int y = (int)(cy * 0.8f + bob); y <= (int)(cy * 1.1f + bob); y++)
+            {
+                if (y >= 0 && y < img.GetHeight())
+                {
+                    int px = (int)hiltX;
+                    if (px >= 0 && px < img.GetWidth())
+                        img.SetPixel(px, y, p.WeaponAccent);
+                }
+            }
+            // Crossguard
+            int guardY = (int)(cy * 0.78f + bob);
+            if (guardY >= 0 && guardY < img.GetHeight())
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int px = (int)hiltX + dx;
+                    if (px >= 0 && px < img.GetWidth())
+                        img.SetPixel(px, guardY, new Color(0.75f, 0.65f, 0.25f));
+                }
+        }
+    }
+
+    /// Draw weapon animation during attack frames, class-specific.
+    private static void _DrawWeaponAttack(Image img, float cx, float cy, float phase, AttackType type, StickPalette p)
+    {
+        switch (type)
+        {
+            case AttackType.Ranged:
+                _DrawBowAttack(img, cx, cy, phase, p);
+                break;
+            case AttackType.Magic:
+            case AttackType.Area:
+                _DrawStaffAttack(img, cx, cy, phase, p);
+                break;
+            default:
+                _DrawSwordAttack(img, cx, cy, phase, p);
+                break;
+        }
+    }
+
+    private static void _DrawSwordAttack(Image img, float cx, float cy, float phase, StickPalette p)
+    {
+        float angle = Mathf.Lerp(-0.8f, 0.8f, phase);
+        float ox = cx + 48 * 0.2f;
+        float oy = cy * 0.6f;
+        float len = 48 * 0.45f;
+        float cos = Mathf.Cos(angle), sin = Mathf.Sin(angle);
+        for (int x = 0; x < img.GetWidth(); x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+            {
+                float dx = x - ox, dy = y - oy;
+                float rx = dx * cos - dy * sin, ry = dx * sin + dy * cos;
+                if (rx >= 0 && rx <= len && Mathf.Abs(ry) < 2.5f)
+                    img.SetPixel(x, y, rx / len < 0.15f ? p.WeaponAccent : p.Weapon);
+            }
+    }
+
+    private static void _DrawBowAttack(Image img, float cx, float cy, float phase, StickPalette p)
+    {
+        float drawBack = Mathf.Sin(phase * Mathf.Pi) * 6.0f;
+        float bowX = cx + 48 * 0.22f;
+        float bowTop = cy * 0.3f;
+        float bowBot = cy * 1.0f;
+
+        // Bow arc
+        for (int y = (int)bowTop; y <= (int)bowBot; y++)
+        {
+            float t = (float)(y - bowTop) / (bowBot - bowTop);
+            float curve = Mathf.Sin(t * Mathf.Pi) * 5.0f;
+            int px = (int)(bowX + curve);
+            if (px >= 0 && px < img.GetWidth() && y >= 0 && y < img.GetHeight())
+            {
+                img.SetPixel(px, y, p.Weapon);
+                if (px + 1 < img.GetWidth()) img.SetPixel(px + 1, y, p.Weapon);
+            }
+        }
+
+        // Bowstring
+        float stringX = bowX - drawBack;
+        for (int y = (int)bowTop; y <= (int)bowBot; y++)
+        {
+            int px = (int)(stringX);
+            if (px >= 0 && px < img.GetWidth() && y >= 0 && y < img.GetHeight())
+                img.SetPixel(px, y, p.WeaponAccent);
+        }
+
+        // Arrow (appears mid-animation)
+        if (phase > 0.2f && phase < 0.7f)
+        {
+            float arrowX = stringX + 2;
+            float arrowY = (bowTop + bowBot) / 2;
+            for (int i = 0; i < 8; i++)
+            {
+                int px = (int)(arrowX + i);
+                if (px >= 0 && px < img.GetWidth() && (int)arrowY >= 0 && (int)arrowY < img.GetHeight())
+                    img.SetPixel(px, (int)arrowY, p.WeaponAccent);
+            }
+        }
+    }
+
+    private static void _DrawStaffAttack(Image img, float cx, float cy, float phase, StickPalette p)
+    {
+        float angle = Mathf.Lerp(-0.5f, 0.5f, phase);
+        float ox = cx + 48 * 0.15f;
+        float oy = cy * 0.3f;
+        float len = 48 * 0.5f;
+        float cos = Mathf.Cos(angle), sin = Mathf.Sin(angle);
+
+        // Staff body
+        for (int x = 0; x < img.GetWidth(); x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+            {
+                float dx = x - ox, dy = y - oy;
+                float rx = dx * cos - dy * sin, ry = dx * sin + dy * cos;
+                if (rx >= 0 && rx <= len && Mathf.Abs(ry) < 2.0f)
+                    img.SetPixel(x, y, p.Weapon);
+            }
+
+        // Glowing orb at tip, pulsing with attack phase
+        float glow = 0.5f + Mathf.Sin(phase * Mathf.Pi) * 0.5f;
+        float tipX = ox + cos * len;
+        float tipY = oy + sin * len;
+        for (int x = 0; x < img.GetWidth(); x++)
+            for (int y = 0; y < img.GetHeight(); y++)
+            {
+                float d = new Vector2(x - tipX, y - tipY).Length();
+                if (d < 5.0f * glow + 2.0f)
+                {
+                    float intensity = 1.0f - d / (5.0f * glow + 2.0f);
+                    var c = p.WeaponAccent;
+                    img.SetPixel(x, y, new Color(c.R, c.G, c.B, intensity * 0.9f));
+                }
+            }
     }
 
     public void UpdateWalkAnimation(float delta)

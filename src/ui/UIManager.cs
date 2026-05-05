@@ -94,7 +94,10 @@ public partial class UIManager : Control
 	private bool _userPaused;
 	private Label _currentWeaponLabel = null!;
 
+		private Panel _roundBannerPanel = null!;
 		private Label _roundBanner = null!;
+		private Label _roundBannerSub = null!;
+		private ColorRect _roundBannerGlow = null!;
 		private Panel? _roundSummaryPanel;
 		private Tween? _lowHealthTween;
 
@@ -663,28 +666,72 @@ public partial class UIManager : Control
 
 	private void _CreateRoundBanner()
 	{
+		var bannerSize = new Vector2(460.0f, 100.0f);
+
+		// CenterContainer fills the screen — centers children automatically
+		var wrapper = new CenterContainer
+		{
+			ZIndex = 48,
+			MouseFilter = Control.MouseFilterEnum.Ignore
+		};
+		wrapper.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		AddChild(wrapper);
+
+		// Glow background
+		_roundBannerGlow = new ColorRect
+		{
+			Visible = false,
+			Color = new Color(BloodBright, 0.0f),
+			CustomMinimumSize = bannerSize,
+			PivotOffset = bannerSize / 2.0f
+		};
+		wrapper.AddChild(_roundBannerGlow);
+
+		// Panel background
+		_roundBannerPanel = new Panel
+		{
+			Visible = false,
+			ZIndex = 49,
+			CustomMinimumSize = bannerSize,
+			PivotOffset = bannerSize / 2.0f
+		};
+		var panelStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 12f);
+		panelStyle.BgColor = new Color(BattlefieldBg, 0.92f);
+		panelStyle.BorderColor = new Color(BloodBright, 0.8f);
+		panelStyle.BorderWidthTop = 2;
+		panelStyle.BorderWidthBottom = 2;
+		panelStyle.BorderWidthLeft = 2;
+		panelStyle.BorderWidthRight = 2;
+		panelStyle.ShadowColor = new Color(BloodBright, 0.25f);
+		panelStyle.ShadowOffset = new Vector2(4, 4);
+		_roundBannerPanel.AddThemeStyleboxOverride("panel", panelStyle);
+		wrapper.AddChild(_roundBannerPanel);
+
+		// Main title label
 		_roundBanner = new Label
 		{
-			Text = "",
-			Visible = false,
-			ZIndex = 50,
 			HorizontalAlignment = HorizontalAlignment.Center,
 			VerticalAlignment = VerticalAlignment.Center
 		};
-		// Use Center preset for centering, then position at screen center
-		_roundBanner.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
-		var viewportSize = GetViewport().GetVisibleRect().Size;
-		// Position at screen center
-		_roundBanner.Position = new Vector2(
-			(viewportSize.X - 400.0f) / 2.0f,
-			(viewportSize.Y - 80.0f) / 2.0f
-		);
-		_roundBanner.CustomMinimumSize = new Vector2(400.0f, 80);
-		_roundBanner.AddThemeFontSizeOverride("font_size", 32);
+		_roundBanner.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_roundBanner.AddThemeFontSizeOverride("font_size", 36);
 		_roundBanner.AddThemeColorOverride("font_color", BloodBright);
 		_roundBanner.AddThemeConstantOverride("outline_size", 6);
 		_roundBanner.AddThemeColorOverride("font_outline_color", InkBlack);
-		AddChild(_roundBanner);
+		_roundBannerPanel.AddChild(_roundBanner);
+
+		// Subtitle label
+		_roundBannerSub = new Label
+		{
+			HorizontalAlignment = HorizontalAlignment.Center,
+			VerticalAlignment = VerticalAlignment.Bottom
+		};
+		_roundBannerSub.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		_roundBannerSub.AddThemeFontSizeOverride("font_size", 14);
+		_roundBannerSub.AddThemeColorOverride("font_color", new Color(NoteText, 0.7f));
+		_roundBannerSub.AddThemeConstantOverride("outline_size", 2);
+		_roundBannerSub.AddThemeColorOverride("font_outline_color", InkBlack);
+		_roundBannerPanel.AddChild(_roundBannerSub);
 	}
 
 	private void _CreateControlsPanel()
@@ -1781,8 +1828,17 @@ public partial class UIManager : Control
 			);
 			_controlsPanel.Position = new Vector2(-_controlsPanel.Size.X - 20.0f, 20.0f);
 		}
-		if (_roundBanner != null)
-			_roundBanner.CustomMinimumSize = new Vector2(Mathf.Min(720.0f, viewportSize.X - 40.0f), 80);
+		var bannerSize = new Vector2(Mathf.Min(460.0f, viewportSize.X - 40.0f), 100.0f);
+		if (_roundBannerPanel != null)
+		{
+			_roundBannerPanel.CustomMinimumSize = bannerSize;
+			_roundBannerPanel.PivotOffset = bannerSize / 2.0f;
+		}
+		if (_roundBannerGlow != null)
+		{
+			_roundBannerGlow.CustomMinimumSize = bannerSize;
+			_roundBannerGlow.PivotOffset = bannerSize / 2.0f;
+		}
 	}
 
 	// ═══════════════════════════════════════════════
@@ -1794,7 +1850,6 @@ public partial class UIManager : Control
 	private void _OnRoundStarted(int roundNumber)
 	{
 		UpdateRoundDisplay(roundNumber);
-		ShowRoundBanner($"第 {roundNumber} 回合开始");
 	}
 
 	public void UpdateRoundDisplay(int roundNumber)
@@ -1805,46 +1860,82 @@ public partial class UIManager : Control
 
 	public void ShowRoundBanner(string text, bool persistent = false)
 	{
-		if (_roundBanner == null) return;
+		if (_roundBanner == null || _roundBannerPanel == null) return;
 		_roundBanner.Text = text;
-		_roundBanner.Visible = true;
-		_roundBanner.Modulate = _roundBanner.Modulate with { A = 0.0f };
-		_roundBanner.Scale = new Vector2(0.8f, 0.8f);
+		_roundBannerSub.Text = "";
+		_roundBannerPanel.Visible = true;
+		_roundBannerPanel.Modulate = new Color(1, 1, 1, 0);
+		_roundBannerPanel.Scale = new Vector2(0.3f, 0.3f);
+		_roundBannerGlow.Visible = true;
+		_roundBannerGlow.Color = new Color(BloodBright, 0.0f);
+		_roundBannerGlow.Scale = new Vector2(0.3f, 0.3f);
 
+		// Entrance: quick scale up with overshoot + glow pulse
 		var tween = CreateTween();
-		tween.Parallel().TweenProperty(_roundBanner, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.3f)
-			.SetTrans(Tween.TransitionType.Cubic);
-		tween.Parallel().TweenProperty(_roundBanner, "scale", new Vector2(1.1f, 1.1f), 0.3f)
+		tween.SetParallel(true);
+		tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.05f, 1.05f), 0.35f)
 			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(_roundBanner, "scale", new Vector2(1.0f, 1.0f), 0.15f);
+		tween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.25f)
+			.SetTrans(Tween.TransitionType.Cubic);
+		tween.TweenProperty(_roundBannerGlow, "scale", new Vector2(1.6f, 1.6f), 0.35f)
+			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
+		tween.TweenProperty(_roundBannerGlow, "color:a", 0.4f, 0.2f)
+			.SetTrans(Tween.TransitionType.Cubic);
+
+		// Settle
+		tween.SetParallel(false);
+		tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.0f, 1.0f), 0.15f)
+			.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+		// Glow fade
+		tween.Parallel().TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.3f);
 
 		if (!persistent)
 		{
-			tween.TweenInterval(0.8f);
-			tween.Parallel().TweenProperty(_roundBanner, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.4f);
-			tween.Parallel().TweenProperty(_roundBanner, "scale", new Vector2(1.15f, 1.15f), 0.4f);
-			tween.TweenCallback(Callable.From(() => _roundBanner.Visible = false));
+			// Hold then dramatic exit
+			tween.TweenInterval(1.0f);
+			// Scale up + fade out simultaneously
+			tween.SetParallel(true);
+			tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.8f, 1.8f), 0.5f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+			tween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.5f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+			tween.TweenProperty(_roundBannerGlow, "scale", new Vector2(2.5f, 2.5f), 0.5f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+			tween.TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.5f)
+				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
+			tween.SetParallel(false);
+			tween.TweenCallback(Callable.From(() =>
+			{
+				_roundBannerPanel.Visible = false;
+				_roundBannerGlow.Visible = false;
+			}));
 		}
 	}
 
 	public void UpdateCountdown(int seconds)
 	{
-		if (_roundBanner == null) return;
+		if (_roundBanner == null || _roundBannerPanel == null) return;
 		_roundBanner.Text = $"准备! {seconds}";
-		_roundBanner.Scale = new Vector2(1.3f, 1.3f);
+		_roundBannerPanel.Visible = true;
+		_roundBannerPanel.Modulate = new Color(1, 1, 1, 1);
+		_roundBannerPanel.Scale = new Vector2(1.3f, 1.3f);
 
 		var tween = CreateTween();
-		tween.TweenProperty(_roundBanner, "scale", new Vector2(1.0f, 1.0f), 0.3f)
+		tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.0f, 1.0f), 0.3f)
 			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
 	}
 
 	public void HideRoundBanner()
 	{
-		if (_roundBanner == null) return;
-		_roundBanner.Visible = false;
+		if (_roundBannerPanel == null) return;
+		_roundBannerPanel.Visible = false;
+		if (_roundBannerGlow != null)
+			_roundBannerGlow.Visible = false;
 	}
 	public void ShowRoundSummary(int round, int kills, int totalKills, int score)
 	{
+		HideRoundBanner();
+
 		if (_roundSummaryPanel != null && IsInstanceValid(_roundSummaryPanel))
 			_roundSummaryPanel.QueueFree();
 

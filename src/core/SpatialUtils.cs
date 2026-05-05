@@ -13,19 +13,10 @@ public static class SpatialUtils
     // Spatial hash grid for efficient range queries
     private const float GridCellSize = 100.0f;
     private static readonly Dictionary<Vector2I, List<Zombie>> _spatialGrid = new();
-    private static bool _gridDirty = true;
-
-    /// <summary>
-    /// Marks the spatial grid as dirty and needing rebuild.
-    /// Call this when zombies spawn or die.
-    /// </summary>
-    public static void InvalidateGrid()
-    {
-        _gridDirty = true;
-    }
 
     /// <summary>
     /// Rebuilds the spatial hash grid.
+    /// Called on every query to ensure zombie movement is reflected.
     /// </summary>
     private static void RebuildGrid()
     {
@@ -43,8 +34,13 @@ public static class SpatialUtils
             }
             list.Add(zombie);
         }
-        _gridDirty = false;
     }
+
+    /// <summary>
+    /// Marks the spatial grid as needing rebuild.
+    /// No-op since grid is now rebuilt on every query.
+    /// </summary>
+    public static void InvalidateGrid() { }
 
     private static Vector2I GetCell(Vector2 pos)
     {
@@ -57,11 +53,11 @@ public static class SpatialUtils
     /// <summary>
     /// Gets all zombies in cells that could be within range of a position.
     /// Uses spatial hashing for faster queries.
+    /// Always rebuilds grid because zombies move every frame.
     /// </summary>
     private static List<Zombie> GetZombiesInCells(Vector2 position, float range)
     {
-        if (_gridDirty)
-            RebuildGrid();
+        RebuildGrid();
 
         var result = new List<Zombie>();
         int cellRange = (int)(range / GridCellSize) + 1;
@@ -235,7 +231,6 @@ public static class SpatialUtils
     public static void Clear()
     {
         _spatialGrid.Clear();
-        _gridDirty = true;
     }
 
     /// <summary>

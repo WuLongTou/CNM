@@ -25,31 +25,34 @@ public partial class MagicMissile : Area2D
 
     private readonly HashSet<Node> _chainTargets = new();
 
+    private bool _visualCreated = false;
+
+    public void MarkVisualCreated() => _visualCreated = true;
+
     public override void _Ready()
     {
         BodyEntered += _OnBodyEntered;
 
-        // Visual: use sprite if provided, otherwise generate orb
-        if (!string.IsNullOrEmpty(SpritePath))
+        // Only create visual here if it wasn't already created by the caller
+        if (!_visualCreated)
         {
-            var tex = TextureUtils.LoadNormalizedSprite(SpritePath);
-            if (tex != null)
+            if (!string.IsNullOrEmpty(SpritePath))
             {
-                var sprite = new Sprite2D
+                var tex = TextureUtils.LoadNormalizedSprite(SpritePath);
+                if (tex != null)
                 {
-                    Texture = tex,
-                    TextureFilter = CanvasItem.TextureFilterEnum.Nearest
-                };
-                AddChild(sprite);
+                    var sprite = new Sprite2D
+                    {
+                        Texture = tex,
+                        TextureFilter = CanvasItem.TextureFilterEnum.Nearest
+                    };
+                    AddChild(sprite);
+                    _visualCreated = true;
+                }
             }
-            else
-            {
+
+            if (!_visualCreated)
                 _AddOrbVisual();
-            }
-        }
-        else
-        {
-            _AddOrbVisual();
         }
 
         var timer = new Timer
@@ -141,9 +144,10 @@ public partial class MagicMissile : Area2D
             GlobalPosition += new Vector2(Mathf.Cos(Rotation), Mathf.Sin(Rotation)) * Speed * fdelta;
         }
 
-        // Auto-cleanup if off-screen
-        var screen = GetViewport().GetVisibleRect();
-        if (!screen.HasPoint(GlobalPosition))
+        // Auto-cleanup if off-screen (convert to viewport coords for camera)
+        var vp = GetViewport();
+        Vector2 vpPos = vp.CanvasTransform * GlobalPosition;
+        if (!vp.GetVisibleRect().Grow(400).HasPoint(vpPos))
             QueueFree();
     }
 

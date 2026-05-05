@@ -579,6 +579,7 @@ public partial class PlayerCombat : Node
         };
         trail.ProcessMaterial = tmat;
         missile.AddChild(trail);
+        missile.MarkVisualCreated();
         return missile;
     }
 
@@ -595,15 +596,13 @@ public partial class PlayerCombat : Node
     private void _CreateAreaExplosion()
     {
         Vector2 pos = Player!.GlobalPosition;
-        var bodies = _attackArea.GetOverlappingBodies();
-        foreach (var body in bodies)
+        float range = Core.GameConfig.BaseAttackRange * Math.Max(Core.GameConfig.MinRangeMult, Player.WeaponRangeModifier);
+        var zombies = Core.SpatialUtils.GetZombiesInRange(pos, range);
+        foreach (var zombie in zombies)
         {
-            if (body is Zombie zombie)
-            {
-                float damage = Player.CurrentDamage * Core.GameConfig.AreaDamageMult;
-                zombie.TakeDamage((int)damage);
-                RegisterDamageDealt(zombie, damage);
-            }
+            float damage = Player.CurrentDamage * Core.GameConfig.AreaDamageMult;
+            zombie.TakeDamage((int)damage);
+            RegisterDamageDealt(zombie, damage);
         }
 
         VFXManager.SpawnParticleBurst(Player.GetParent(), pos, new Color(1.0f, 0.5f, 0.0f),

@@ -14,6 +14,11 @@ public partial class GameOverUI : Control
 {
 	private GameManager? _gameManager;
 
+	public GameOverUI()
+	{
+		SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+	}
+
 	public void Setup(GameManager? gm)
 	{
 		_gameManager = gm;

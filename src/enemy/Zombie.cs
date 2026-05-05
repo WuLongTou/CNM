@@ -785,15 +785,25 @@ public partial class Zombie : CharacterBody2D
             return;
         }
 
-        if (Player == null) return;
-
-        // Check if player is within touch range
-        float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
-        if (dist <= GameConfig.ZombieMeleeTouchRange)
+        if (_isCharmed)
         {
-            // Deal touch damage
-            AttackPlayer();
-            _touchDamageCooldown = TouchDamageInterval;
+            var nearest = _FindNearestZombie(GameConfig.ZombieMeleeTouchRange);
+            if (nearest != null)
+            {
+                AttackZombie(nearest);
+                _touchDamageCooldown = TouchDamageInterval;
+            }
+        }
+        else
+        {
+            if (Player == null) return;
+
+            float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
+            if (dist <= GameConfig.ZombieMeleeTouchRange)
+            {
+                AttackPlayer();
+                _touchDamageCooldown = TouchDamageInterval;
+            }
         }
     }
 
@@ -852,8 +862,7 @@ public partial class Zombie : CharacterBody2D
             _Explode();
             GameServices.Audio.PlayExplosion();
         }
-
-        if (IsElite && _eliteAffix == EliteAffix.Explosive)
+        else if (IsElite && _eliteAffix == EliteAffix.Explosive)
         {
             _EliteExplosiveDeath();
         }
