@@ -98,6 +98,7 @@ public partial class UIManager : Control
 		private Label _roundBanner = null!;
 		private Label _roundBannerSub = null!;
 		private ColorRect _roundBannerGlow = null!;
+		private Tween? _bannerTween;
 		private Panel? _roundSummaryPanel;
 		private Tween? _lowHealthTween;
 
@@ -1861,6 +1862,11 @@ public partial class UIManager : Control
 	public void ShowRoundBanner(string text, bool persistent = false)
 	{
 		if (_roundBanner == null || _roundBannerPanel == null) return;
+
+		// Kill any running banner tween
+		if (_bannerTween != null && _bannerTween.IsValid())
+			_bannerTween.Kill();
+
 		_roundBanner.Text = text;
 		_roundBannerSub.Text = "";
 		_roundBannerPanel.Visible = true;
@@ -1871,40 +1877,40 @@ public partial class UIManager : Control
 		_roundBannerGlow.Scale = new Vector2(0.3f, 0.3f);
 
 		// Entrance: quick scale up with overshoot + glow pulse
-		var tween = CreateTween();
-		tween.SetParallel(true);
-		tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.05f, 1.05f), 0.35f)
+		_bannerTween = CreateTween();
+		_bannerTween.SetParallel(true);
+		_bannerTween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.05f, 1.05f), 0.3f)
 			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.25f)
+		_bannerTween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.2f)
 			.SetTrans(Tween.TransitionType.Cubic);
-		tween.TweenProperty(_roundBannerGlow, "scale", new Vector2(1.6f, 1.6f), 0.35f)
+		_bannerTween.TweenProperty(_roundBannerGlow, "scale", new Vector2(1.6f, 1.6f), 0.3f)
 			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-		tween.TweenProperty(_roundBannerGlow, "color:a", 0.4f, 0.2f)
+		_bannerTween.TweenProperty(_roundBannerGlow, "color:a", 0.4f, 0.2f)
 			.SetTrans(Tween.TransitionType.Cubic);
 
 		// Settle
-		tween.SetParallel(false);
-		tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.0f, 1.0f), 0.15f)
+		_bannerTween.SetParallel(false);
+		_bannerTween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.0f, 1.0f), 0.1f)
 			.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
 		// Glow fade
-		tween.Parallel().TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.3f);
+		_bannerTween.Parallel().TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.2f);
 
 		if (!persistent)
 		{
 			// Hold then dramatic exit
-			tween.TweenInterval(1.0f);
+			_bannerTween.TweenInterval(0.6f);
 			// Scale up + fade out simultaneously
-			tween.SetParallel(true);
-			tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.8f, 1.8f), 0.5f)
+			_bannerTween.SetParallel(true);
+			_bannerTween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.8f, 1.8f), 0.3f)
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-			tween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.5f)
+			_bannerTween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.3f)
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-			tween.TweenProperty(_roundBannerGlow, "scale", new Vector2(2.5f, 2.5f), 0.5f)
+			_bannerTween.TweenProperty(_roundBannerGlow, "scale", new Vector2(2.5f, 2.5f), 0.3f)
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-			tween.TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.5f)
+			_bannerTween.TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.3f)
 				.SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-			tween.SetParallel(false);
-			tween.TweenCallback(Callable.From(() =>
+			_bannerTween.SetParallel(false);
+			_bannerTween.TweenCallback(Callable.From(() =>
 			{
 				_roundBannerPanel.Visible = false;
 				_roundBannerGlow.Visible = false;
@@ -1912,22 +1918,10 @@ public partial class UIManager : Control
 		}
 	}
 
-	public void UpdateCountdown(int seconds)
-	{
-		if (_roundBanner == null || _roundBannerPanel == null) return;
-		_roundBanner.Text = $"准备! {seconds}";
-		_roundBannerPanel.Visible = true;
-		_roundBannerPanel.Modulate = new Color(1, 1, 1, 1);
-		_roundBannerPanel.Scale = new Vector2(1.3f, 1.3f);
-
-		var tween = CreateTween();
-		tween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.0f, 1.0f), 0.3f)
-			.SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-	}
-
 	public void HideRoundBanner()
 	{
 		if (_roundBannerPanel == null) return;
+
 		_roundBannerPanel.Visible = false;
 		if (_roundBannerGlow != null)
 			_roundBannerGlow.Visible = false;
@@ -2392,6 +2386,11 @@ public partial class UIManager : Control
 
 	public void ShowGameOver()
 	{
+		HideRoundBanner();
+		HideRoundSummary();
+		if (_weaponSelectionPanel != null && _weaponSelectionPanel.Visible)
+			HideWeaponSelection();
+
 		// Pause game to prevent input during transition
 		GetTree().Paused = true;
 
@@ -2490,6 +2489,7 @@ public partial class UIManager : Control
 		_levelUpTween.TweenInterval(1.2f);
 		_levelUpTween.SetParallel(true);
 		_levelUpTween.TweenProperty(_levelUpPanel, Control.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.4f);
+		_levelUpTween.SetParallel(false);
 		_levelUpTween.TweenCallback(Callable.From(() =>
 		{
 			if (_levelUpPanel != null) _levelUpPanel.Visible = false;

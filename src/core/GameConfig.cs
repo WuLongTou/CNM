@@ -26,7 +26,6 @@ public static class GameConfig
     public const float DashDuration = 0.25f;
 
     // Game flow
-    public const float GetReadyDuration = 2.0f; // Delay before weapon selection after round ends
     public const float DashCooldown = 0.8f;
     public const float DashTrailInterval = 0.04f;
 

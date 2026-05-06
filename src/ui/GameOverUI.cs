@@ -112,7 +112,7 @@ public partial class GameOverUI : Control
 
 		int roundCount = _gameManager?.GetCurrentRound() ?? 0;
 		int totalScore = _gameManager?.Score ?? 0;
-		int kills = _gameManager?.Score ?? 0;
+		int kills = _gameManager?.TotalKills ?? 0;
 
 		_AddStatRow(statsBox, "存活波数", roundCount.ToString(), BloodBright);
 		_AddStatRow(statsBox, "消灭敌人", kills.ToString(), NoteText);

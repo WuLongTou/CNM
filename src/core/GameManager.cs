@@ -65,6 +65,7 @@ public partial class GameManager : Node
 
     public int Score { get; private set; }
     public int HighScore { get; private set; }
+    public int TotalKills => _totalKills;
 
     private float _edgeIndicatorTimer;
 
@@ -248,8 +249,13 @@ public partial class GameManager : Node
         LogUtils.Print($"第 {CurrentRound} 回合开始！需要消灭 {_zombiesToSpawn} 只僵尸");
     }
 
+    private bool _endingRound;
+
     public async void EndRound()
     {
+        if (_endingRound) return;
+        _endingRound = true;
+
         CurrentState = GameState.RoundTransition;
         RoundEnded?.Invoke(CurrentRound);
 
@@ -260,25 +266,18 @@ public partial class GameManager : Node
         await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
 
         _uiManager?.HideRoundSummary();
+        await ToSignal(GetTree().CreateTimer(0.4f), Timer.SignalName.Timeout);
+
+        _endingRound = false;
         StartNewRound();
     }
 
-    private async Task _ShowGetReadyCountdown()
-    {
-        _uiManager?.ShowRoundBanner("准备!", true); // true = show as countdown style
-
-        for (int i = (int)GameConfig.GetReadyDuration; i > 0; i--)
-        {
-            _uiManager?.UpdateCountdown(i);
-            await ToSignal(GetTree().CreateTimer(1.0f), Timer.SignalName.Timeout);
-        }
-
-        _uiManager?.HideRoundBanner();
-    }
+    private bool _transitioningToCombat;
 
     public async void OnWeaponSelected(object? card)
     {
-        if (CurrentState != GameState.WeaponSelection) return;
+        if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
+        _transitioningToCombat = true;
 
         if (_player != null)
         {
@@ -298,6 +297,7 @@ public partial class GameManager : Node
         _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
+        _transitioningToCombat = false;
         CurrentState = GameState.Combat;
         WeaponSelectionEnded?.Invoke();
 
@@ -307,12 +307,14 @@ public partial class GameManager : Node
 
     public async void OnUpgradeSkipped()
     {
-        if (CurrentState != GameState.WeaponSelection) return;
+        if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
+        _transitioningToCombat = true;
 
         _uiManager?.HideWeaponSelection();
         _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
+        _transitioningToCombat = false;
         CurrentState = GameState.Combat;
         WeaponSelectionEnded?.Invoke();
 

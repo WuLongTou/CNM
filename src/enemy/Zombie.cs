@@ -297,7 +297,9 @@ public partial class Zombie : CharacterBody2D
             if (_charmTimer <= 0)
             {
                 _isCharmed = false;
-                Player = _originalPlayer!;
+                if (_originalPlayer != null && IsInstanceValid(_originalPlayer))
+                    Player = _originalPlayer;
+                _originalPlayer = null;
             }
         }
 
@@ -787,7 +789,7 @@ public partial class Zombie : CharacterBody2D
 
         if (_isCharmed)
         {
-            var nearest = _FindNearestZombie(GameConfig.ZombieMeleeTouchRange);
+            var nearest = _FindNearestZombie(GameConfig.CharmSearchRange);
             if (nearest != null)
             {
                 AttackZombie(nearest);
