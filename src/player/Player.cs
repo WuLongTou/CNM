@@ -283,18 +283,7 @@ public partial class Player : CharacterBody2D
 
     private void _HandleStatusEffects(float delta)
     {
-        if (PoisonedTimer > 0)
-        {
-            PoisonedTimer -= delta;
-            PoisonedTickTimer -= delta;
-            if (PoisonedTickTimer <= 0)
-            {
-                PoisonedTickTimer = Core.GameConfig.ZombiePoisonTick;
-                int dmg = (int)PoisonedDps;
-                if (dmg > 0)
-                    TakeDamage(dmg);
-            }
-        }
+        // Poison damage is handled by PlayerBuffSystem._ProcessBuffTick
     }
 
     private void _HandleInvincibility(float delta)

@@ -22,6 +22,9 @@ public partial class Mine : Area2D
 
     public override void _Ready()
     {
+        CollisionLayer = 0;
+        CollisionMask = 0b010; // layer 2 — detect zombies
+
         var col = new CollisionShape2D
         {
             Shape = new CircleShape2D { Radius = 16.0f },

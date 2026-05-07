@@ -817,7 +817,7 @@ public partial class PlayerCombat : Node
         if (weapon.DamageModifier != 1.0f)
             Player!.DamageBonus += (weapon.DamageModifier - 1.0f);
 
-        Player!.CurrentSpeed = Player.BaseSpeed + weapon.SpeedModifier;
+        Player!.CurrentSpeed += weapon.SpeedModifier;
 
         if (weapon.HealthModifier != 0)
         {

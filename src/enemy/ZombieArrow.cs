@@ -70,8 +70,9 @@ public partial class ZombieArrow : Area2D
     {
         if (body is Player player)
         {
-            player.TakeDamage(Damage, Shooter);
-            VFXManager.SpawnHitEffect(Shooter.GetParent(), GlobalPosition, new Color(0.8f, 0.6f, 0.3f));
+            player.TakeDamage(Damage, IsInstanceValid(Shooter) ? Shooter : null);
+            if (IsInstanceValid(Shooter))
+                VFXManager.SpawnHitEffect(Shooter.GetParent(), GlobalPosition, new Color(0.8f, 0.6f, 0.3f));
         }
         else if (body.HasMethod("TakeDamage"))
         {

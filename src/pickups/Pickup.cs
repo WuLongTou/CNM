@@ -68,8 +68,9 @@ public abstract partial class Pickup : Area2D
     private void _OnExpire()
     {
         if (_collected) return;
-        _PlayExpireEffect();
-        QueueFree();
+        var tw = CreateTween();
+        tw.TweenProperty(this, "modulate:a", 0.0f, 0.3f);
+        tw.TweenCallback(Callable.From(QueueFree));
     }
 
     private void _StartFade()
@@ -134,12 +135,6 @@ public abstract partial class Pickup : Area2D
         t.Timeout += () => particles.QueueFree();
         particles.AddChild(t);
         t.Start();
-    }
-
-    private void _PlayExpireEffect()
-    {
-        var fade = CreateTween();
-        fade.TweenProperty(this, "modulate:a", 0.0f, 0.3f);
     }
 
     protected abstract void _CreateSprite();

@@ -875,21 +875,17 @@ public partial class ZombieVfx : Node
 
     public void SpawnDeathEffects()
     {
-        if (_sprite != null)
-        {
-            var originalPos = _sprite.Position;
-            var tw = _zombie.CreateTween();
-            tw.SetParallel(true);
-            tw.TweenProperty(_sprite, "position", originalPos + new Vector2(
-                (float)GD.RandRange(-3f, 3f),
-                (float)GD.RandRange(-3f, 3f)), 0.2f)
-                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
-            tw.TweenProperty(_sprite, "modulate:a", 0.0f, 0.4f);
-            tw.TweenProperty(_sprite, Node2D.PropertyName.Scale.ToString(), new Vector2(0.85f, 0.85f), 0.4f);
-            tw.SetParallel(false);
-            tw.TweenCallback(Callable.From(_SpawnDeathInkDots));
-        }
+        // Use parent node for effects since zombie will be QueueFree'd
+        var parent = _zombie.GetParent();
+        if (parent == null) return;
+
+        // Spawn blood stain directly
         _SpawnBloodStain();
+
+        // Spawn corpse and death particles directly (not via tween, since zombie is about to be freed)
+        _SpawnCorpse();
+        _SpawnDeathParticles();
+        _SpawnDeathInkDots();
     }
 
     private void _SpawnDeathInkDots()

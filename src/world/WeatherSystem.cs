@@ -575,12 +575,17 @@ void fragment() {
     {
         if (_vignetteRect == null) return;
 
-        var origAlpha = ((ShaderMaterial)_vignetteRect.Material).GetShaderParameter("intensity");
         var mat = (ShaderMaterial)_vignetteRect.Material;
+        var origAlpha = mat.GetShaderParameter("intensity");
         mat.SetShaderParameter("intensity", 1.0f);
 
         var tw = CreateTween();
-        tw.TweenCallback(Callable.From(() => mat.SetShaderParameter("intensity", origAlpha)));
+        tw.TweenInterval(0.15f);
+        tw.TweenCallback(Callable.From(() =>
+        {
+            if (IsInstanceValid(_vignetteRect))
+                mat.SetShaderParameter("intensity", origAlpha);
+        }));
     }
 
     private void _SpawnLightningBolt(Vector2 pos)

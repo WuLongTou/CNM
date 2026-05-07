@@ -18,7 +18,6 @@ public partial class Projectile : CharacterBody2D
     public Node? Shooter { get; set; }
     public int BouncesLeft { get; set; } = 0;
     public float BoundsPadding { get; set; } = 8.0f;
-    public float TopUiMargin { get; set; } = 110.0f;
     public string? SpritePath { get; set; }
 
     private readonly HashSet<Node> _damagedEnemies = new();
@@ -162,7 +161,7 @@ public partial class Projectile : CharacterBody2D
             if (!IsInstanceValid(zombie) || _damagedEnemies.Contains(zombie))
                 continue;
 
-            float dist = Position.DistanceTo(zombie.GlobalPosition);
+            float dist = GlobalPosition.DistanceTo(zombie.GlobalPosition);
             if (dist < 30.0f)
             {
                 int trajDmg = (int)(Damage * TrajectoryDamageRatio);
@@ -221,9 +220,9 @@ public partial class Projectile : CharacterBody2D
     {
         if (!IsReturning) return;
 
-        Vector2 screenSize = GetViewport().GetVisibleRect().Size;
-        Vector2 minPos = new(BoundsPadding, TopUiMargin + BoundsPadding);
-        Vector2 maxPos = new(screenSize.X - BoundsPadding, screenSize.Y - BoundsPadding);
+        Vector2 worldSize = Core.GameConfig.WorldSize;
+        Vector2 minPos = new(BoundsPadding, BoundsPadding);
+        Vector2 maxPos = new(worldSize.X - BoundsPadding, worldSize.Y - BoundsPadding);
         bool bounced = false;
 
         if (Position.X <= minPos.X || Position.X >= maxPos.X)

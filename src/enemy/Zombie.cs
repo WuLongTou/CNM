@@ -873,6 +873,7 @@ public partial class Zombie : CharacterBody2D
         _abilitySystem?.OnDeath();
 
         Died?.Invoke(this);
+        Died = delegate {};
         ZombieRegistry.Unregister(this);
         QueueFree();
     }
