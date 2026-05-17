@@ -8,6 +8,7 @@ using Godot.Collections;
 using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Vfx;
+using ZombieWars.World;
 using ZombieWars.Weapons;
 using static ZombieWars.Core.GameEnums;
 using Zombie = ZombieWars.Enemy.Zombie;
@@ -89,6 +90,10 @@ public partial class PlayerCombat : Node
         // Combo damage bonus: each combo level adds 5% damage (max 50%)
         _damageBonusFromCombo = Mathf.Min(_currentCombo * 0.05f, 0.5f);
 
+        // Apply combo bonus to current damage immediately
+        float baseDmg = Player!.BaseDamage * Math.Max(Core.GameConfig.MinDamageMult, 1.0f + Player.DamageBonus + _damageBonusFromCombo);
+        Player.CurrentDamage = baseDmg;
+
         // Track all-time max
         if (_currentCombo > MaxComboEver)
             MaxComboEver = _currentCombo;
@@ -100,6 +105,18 @@ public partial class PlayerCombat : Node
     public void ResetComboStats()
     {
         _maxComboThisRound = 0;
+    }
+
+    /// <summary>
+    /// Called when player dies — stops attack timer and prevents post-mortem callbacks.
+    /// </summary>
+    public void OnPlayerDied()
+    {
+        _comboTimer = -1f;
+        _currentCombo = 0;
+        _damageBonusFromCombo = 0.0f;
+        CanAttack = false;
+        _attackTimer?.Stop();
     }
 
     public void Setup(Player p)
@@ -145,9 +162,8 @@ public partial class PlayerCombat : Node
             if (Input.IsActionPressed("attack"))
             {
                 _TryMagicAttack();
-                return;
             }
-            if (Input.IsMouseButtonPressed(MouseButton.Left))
+            else if (Input.IsMouseButtonPressed(MouseButton.Left))
             {
                 Vector2 mousePos = Player.GetViewport().GetMousePosition();
                 if (mousePos.Y > Core.GameConfig.TopUiMargin)
@@ -159,10 +175,8 @@ public partial class PlayerCombat : Node
         if (Input.IsActionPressed("attack") && CanAttack)
         {
             PerformAttack();
-            return;
         }
-
-        if (Input.IsMouseButtonPressed(MouseButton.Left))
+        else if (Input.IsMouseButtonPressed(MouseButton.Left))
         {
             Vector2 mousePos = Player.GetViewport().GetMousePosition();
             if (mousePos.Y > Core.GameConfig.TopUiMargin && CanAttack)

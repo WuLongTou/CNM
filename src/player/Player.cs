@@ -398,9 +398,7 @@ public partial class Player : CharacterBody2D
         if (Collision != null) Collision.Disabled = true;
         _dashTimer?.Stop();
         _dashCooldownTimer?.Stop();
-        Combat?.AttackTimer.Stop();
-        if (Combat != null)
-            Combat.CanAttack = true;
+        Combat?.OnPlayerDied();
         if (HealthDisplay != null) HealthDisplay.Visible = false;
         if (AttackTypeDisplay != null) AttackTypeDisplay.Visible = false;
         if (MeleeRangeIndicator != null) MeleeRangeIndicator.Visible = false;

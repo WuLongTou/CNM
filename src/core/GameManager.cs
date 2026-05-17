@@ -162,7 +162,7 @@ public partial class GameManager : Node
             _UpdateEdgeIndicators();
         }
 
-        if (_zombiesSpawned >= _zombiesToSpawn && _zombiesAlive <= 0)
+        if (!_endingRound && _zombiesSpawned >= _zombiesToSpawn && _zombiesAlive <= 0)
         {
             EndRound();
         }
@@ -186,11 +186,16 @@ public partial class GameManager : Node
             }
         }
 
-        if (offscreenCount > GameConfig.EdgeIndicatorMinCount && offscreenDir.Length() > 0.5f)
+        if (offscreenCount > GameConfig.EdgeIndicatorMinCount)
         {
-            var danger = Mathf.Clamp((float)offscreenCount / 10.0f, 0.0f, 1.0f);
-            _uiManager.ShowOffscreenIndicator(offscreenDir.Normalized(), danger);
+            offscreenDir /= offscreenCount;
+            if (offscreenDir.Length() > 0.5f)
+            {
+                var danger = Mathf.Clamp((float)offscreenCount / 10.0f, 0.0f, 1.0f);
+                _uiManager.ShowOffscreenIndicator(offscreenDir.Normalized(), danger);
+            }
         }
+
     }
 
     public void StartNewRound()
