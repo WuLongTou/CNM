@@ -550,7 +550,9 @@ void fragment() {
 
         foreach (var z in ZombieRegistry.All)
         {
-            if (IsInstanceValid(z) && strikePos.DistanceTo(z.GlobalPosition) <= blastRadius)
+            if (z == null || !IsInstanceValid(z))
+                continue;
+            if (strikePos.DistanceTo(z.GlobalPosition) <= blastRadius)
             {
                 z.TakeDamage(damage);
             }
@@ -583,7 +585,7 @@ void fragment() {
         tw.TweenInterval(0.15f);
         tw.TweenCallback(Callable.From(() =>
         {
-            if (IsInstanceValid(_vignetteRect))
+            if (_vignetteRect == null || !IsInstanceValid(_vignetteRect))
                 mat.SetShaderParameter("intensity", origAlpha);
         }));
     }

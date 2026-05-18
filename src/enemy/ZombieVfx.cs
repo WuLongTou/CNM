@@ -847,7 +847,7 @@ public partial class ZombieVfx : Node
             tw.TweenProperty(star, "position:y", star.Position.Y, 0.3f);
             tw.TweenCallback(Callable.From(() =>
             {
-                if (IsInstanceValid(star))
+                if (star == null || !IsInstanceValid(star))
                     star.QueueFree();
             }));
 
@@ -855,7 +855,7 @@ public partial class ZombieVfx : Node
             var autoFree = new Timer { WaitTime = 2.0f, OneShot = true };
             autoFree.Timeout += () =>
             {
-                if (IsInstanceValid(star))
+                if (star == null || !IsInstanceValid(star))
                     star.QueueFree();
             };
             _zombie.AddChild(autoFree);

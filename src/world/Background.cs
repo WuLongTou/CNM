@@ -473,7 +473,7 @@ public partial class Background : Node2D
         Tension = Mathf.Clamp(value, 0.0f, 1.0f);
         foreach (TextureRect fog in _fogLayers)
         {
-            if (IsInstanceValid(fog))
+            if (fog == null || !IsInstanceValid(fog))
                 fog.Modulate = fog.Modulate with { A = Mathf.Lerp(0.7f, 1.5f, Tension) };
         }
     }
@@ -485,7 +485,7 @@ public partial class Background : Node2D
 
         foreach (TextureRect fog in _fogLayers)
         {
-            if (IsInstanceValid(fog))
+            if (fog == null || !IsInstanceValid(fog))
                 fog.Modulate = fog.Modulate with
                 {
                     R = Mathf.Lerp(fog.Modulate.R, r, fogBrightMult),

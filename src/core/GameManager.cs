@@ -177,7 +177,7 @@ public partial class GameManager : Node
 
         foreach (var zombie in ZombieRegistry.All)
         {
-            if (!IsInstanceValid(zombie))
+            if (zombie == null || !IsInstanceValid(zombie))
                 continue;
             if (!screenRect.HasPoint(zombie.GlobalPosition))
             {
@@ -510,11 +510,10 @@ public partial class GameManager : Node
 
         foreach (var zombie in ZombieRegistry.All)
         {
-            if (IsInstanceValid(zombie))
-            {
-                zombie.SetPhysicsProcess(false);
-                zombie.SetProcess(false);
-            }
+            if (zombie == null || !IsInstanceValid(zombie))
+                continue;
+            zombie.SetPhysicsProcess(false);
+            zombie.SetProcess(false);
         }
 
         _spawnTimer = 999999.0f;

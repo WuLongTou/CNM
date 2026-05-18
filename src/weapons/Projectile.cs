@@ -124,7 +124,7 @@ public partial class Projectile : CharacterBody2D
             var checkPos = from + dir * t;
             foreach (var zombie in zombies)
             {
-                if (!IsInstanceValid(zombie) || _damagedEnemies.Contains(zombie)) continue;
+                if (zombie == null || !IsInstanceValid(zombie) || _damagedEnemies.Contains(zombie)) continue;
                 if (checkPos.DistanceTo(zombie.GlobalPosition) < 20.0f)
                 {
                     _HitZombie(zombie);
@@ -158,7 +158,7 @@ public partial class Projectile : CharacterBody2D
     {
         foreach (var zombie in ZombieRegistry.All)
         {
-            if (!IsInstanceValid(zombie) || _damagedEnemies.Contains(zombie))
+            if (zombie == null || !IsInstanceValid(zombie) || _damagedEnemies.Contains(zombie))
                 continue;
 
             float dist = GlobalPosition.DistanceTo(zombie.GlobalPosition);

@@ -305,7 +305,7 @@ public partial class VFXManager : Node
 		var timer = parent.GetTree().CreateTimer(delay);
 		timer.Timeout += () =>
 		{
-			if (IsInstanceValid(target))
+			if (target == null || !IsInstanceValid(target))
 				target.QueueFree();
 		};
 	}
