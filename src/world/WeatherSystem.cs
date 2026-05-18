@@ -259,6 +259,7 @@ void fragment() {
         // Notify game systems
         GetTree().CallGroup("game_manager", "on_weather_changed", (int)type, (int)intensity);
         GetTree().CallGroup("ui_manager", "show_weather_notification", _GetWeatherName(type), _GetWeatherColor(type));
+        GetTree().CallGroup("ui_manager", "update_weather_indicator", _GetWeatherName(type), _GetWeatherColor(type));
 
         LogUtils.Print($"天气变化: {_GetWeatherName(CurrentWeather)} → {_GetWeatherName(type)} (强度: {intensity})");
 

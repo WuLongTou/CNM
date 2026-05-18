@@ -644,7 +644,7 @@ public partial class PlayerVfx : Node
     public void PlayAttackAnim()
     {
         _animState = AnimState.Attack;
-        _stateTimer = 0.12f;
+        _stateTimer = 0.36f; // Attack animation plays for 3 frames at 0.1s each (0.3s total)
         _attackFrameIdx = 0;
         _ApplyStateFrame();
     }
@@ -1315,6 +1315,18 @@ public partial class PlayerVfx : Node
     public void ShowAttackEffect(Vector2 targetPos, AttackType attackType)
     {
         PlayAttackAnim();
+
+        // 攻击时朝向目标方向（而非行走方向）
+        if (attackType == AttackType.Melee || attackType == AttackType.Magic)
+        {
+            Vector2 dir = targetPos - Player!.GlobalPosition;
+            if (dir.Length() > 5.0f && Player.Sprite != null)
+            {
+                _facingLeft = dir.X < 0;
+                Player.Sprite.FlipH = _facingLeft;
+            }
+        }
+
         Color flashColor = Colors.White;
         bool doFlash = false;
         switch (attackType)

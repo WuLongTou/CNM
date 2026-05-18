@@ -56,6 +56,7 @@ public partial class UIManager : Control
 	private Label _targetPriorityLabel = null!;
 	private Label _dashCooldownLabel = null!;
 	private Label _speedLabel = null!;
+	private Label _weatherLabel = null!;
 	private Panel _controlsPanel = null!;
 	private bool _controlsVisible;
 	private Panel _welcomePanel = null!;
@@ -276,6 +277,15 @@ public partial class UIManager : Control
 		row2.AddChild(_dashCooldownLabel);
 		_speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f));
 		row2.AddChild(_speedLabel);
+
+		// Weather indicator (visible when non-clear weather)
+		_weatherLabel = new Label { Text = "" };
+		_weatherLabel.AddThemeFontSizeOverride("font_size", 11);
+		_weatherLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.75f, 0.9f));
+		_weatherLabel.AddThemeConstantOverride("outline_size", 2);
+		_weatherLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
+		_weatherLabel.CustomMinimumSize = new Vector2(70, 0);
+		row2.AddChild(_weatherLabel);
 
 		// Effect icons container
 		_effectsContainer = new HBoxContainer();
@@ -2517,6 +2527,15 @@ public partial class UIManager : Control
 	public void ShowWeatherNotification(string weatherName, Color weatherColor)
 	{
 		ShowLevelUpNotification($"天气: {weatherName}", weatherColor);
+	}
+
+	/// <summary>更新 HUD 天气指示器</summary>
+	public void UpdateWeatherIndicator(string weatherName, Color weatherColor)
+	{
+		if (_weatherLabel == null) return;
+		_weatherLabel.Text = weatherName;
+		_weatherLabel.AddThemeColorOverride("font_color", weatherColor);
+		_weatherLabel.Visible = !string.IsNullOrEmpty(weatherName) && weatherName != "晴朗";
 	}
 
 	public void TriggerBossAtmosphere()
