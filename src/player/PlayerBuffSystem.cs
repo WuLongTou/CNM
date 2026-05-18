@@ -3,6 +3,7 @@ namespace ZombieWars.Player;
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using ZombieWars.Core;
 using static ZombieWars.Core.GameEnums;
 using ZombieWars.Vfx;
@@ -127,12 +128,13 @@ public partial class PlayerBuffSystem : Node
     /// <summary>Clear all active buffs (e.g. on death).</summary>
     public void ClearAllBuffs()
     {
-        foreach (var buff in _activeBuffs.Values)
+        var buffsToExpire = _activeBuffs.Values.ToList();
+        _activeBuffs.Clear();
+        foreach (var buff in buffsToExpire)
         {
             _RevertBuffEffects(buff);
             BuffExpired?.Invoke(buff);
         }
-        _activeBuffs.Clear();
         _ClearAllVisualOverlays();
     }
 

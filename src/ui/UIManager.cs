@@ -1098,10 +1098,11 @@ public partial class UIManager : Control
 		var intervalText = Mathf.Snapped(player.AttackCooldown, 0.1f).ToString("F1") + "s";
 		string cooldownText;
 		if (player.Combat == null) return;
-		if (player.Combat.AttackTimer.TimeLeft < 0.05f)
+		var timer = player.Combat.AttackTimer;
+		if (timer == null || timer.TimeLeft < 0.05f)
 			cooldownText = "就绪";
 		else
-			cooldownText = ((float)player.Combat.AttackTimer.TimeLeft).ToString("F1") + "s";
+			cooldownText = ((float)timer.TimeLeft).ToString("F1") + "s";
 		_attackIntervalLabel.Text = $"间隔 {intervalText} | 冷却 {cooldownText}";
 		_attackIntervalLabel.TooltipText = $"攻击间隔: {intervalText}\n下次可攻击: {cooldownText}";
 	}

@@ -559,11 +559,12 @@ void fragment() {
             }
         }
 
-        // Also deal damage to player if nearby
+        // Also deal damage to player if nearby (reduced to prevent one-shot)
         var player = GetTree().GetFirstNodeInGroup("player") as Player;
         if (player != null && strikePos.DistanceTo(player.GlobalPosition) <= blastRadius)
         {
-            player.TakeDamage(damage / 2);
+            int playerDmg = Mathf.Min(damage / 3, player.MaxHealth / 4); // 最高33%最大生命
+            player.TakeDamage(playerDmg);
         }
 
         // Sound
@@ -579,7 +580,7 @@ void fragment() {
         if (_vignetteRect == null) return;
 
         var mat = (ShaderMaterial)_vignetteRect.Material;
-        var origAlpha = mat.GetShaderParameter("intensity");
+        float origAlpha = _vignetteRect.Modulate.A;
         mat.SetShaderParameter("intensity", 1.0f);
 
         var tw = CreateTween();
