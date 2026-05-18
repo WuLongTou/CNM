@@ -59,6 +59,7 @@ public static partial class WeaponFactory
     // 武器图标纹理映射
     private static readonly Dictionary<string, string> _WeaponIconTextures = new()
     {
+        // 武器
         { "铁剑", "res://assets/sprites/weapons/sword_basic.jpg" },
         { "战斧", "res://assets/sprites/weapons/axe_battle.jpg" },
         { "双刀", "res://assets/sprites/weapons/dagger_twin.jpg" },
@@ -79,6 +80,27 @@ public static partial class WeaponFactory
         { "雷电法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
         { "死神法杖", "res://assets/sprites/weapons/sword_fire.jpg" },
         { "力场法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+        // 装备 - 药水
+        { "生命药水", "res://assets/sprites/generated/potion_health.png" },
+        { "敏捷靴", "res://assets/sprites/generated/boots_speed.png" },
+        // 装备 - 宝石
+        { "攻击宝石", "res://assets/sprites/generated/gem_damage.png" },
+        { "暴击指环", "res://assets/sprites/generated/ring_crit.png" },
+        // 装备 - 护符
+        { "吸血护符", "res://assets/sprites/generated/amulet_lifesteal.png" },
+        // 装备 - 徽章
+        { "寒霜徽章", "res://assets/sprites/generated/badge_frost.png" },
+        { "猎人印记", "res://assets/sprites/generated/badge_hunter.png" },
+        // 装备 - 护甲
+        { "冰霜护盾", "res://assets/sprites/generated/shield_frost.png" },
+        { "铁盔", "res://assets/sprites/generated/helmet_iron.png" },
+        { "皮甲", "res://assets/sprites/generated/armor_leather.png" },
+        // 装备 - 戒指
+        { "剧毒之戒", "res://assets/sprites/generated/ring_poison.png" },
+        { "再生戒指", "res://assets/sprites/generated/ring_regen.png" },
+        // 装备 - 其他
+        { "疾风护符", "res://assets/sprites/generated/potion_speed.png" },
+        { "狂战士护腕", "res://assets/sprites/generated/gem_crit.png" },
     };
 
     private static readonly GodotArray _WEAPON_DATA = new GodotArray
