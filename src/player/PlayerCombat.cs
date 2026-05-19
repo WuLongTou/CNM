@@ -821,6 +821,7 @@ public partial class PlayerCombat : Node
         Player.AttackCooldown = Math.Max(Player.AttackCooldown, Player.WeaponCooldown);
         _attackTimer.WaitTime = Player.AttackCooldown;
         _attackTimer.Stop();
+        _attackTimer.Start(); // 重置计时器，确保冷却时间正确
         CanAttack = true;
         _UpdateAttackRange(Player.WeaponRangeModifier);
         Player.CurrentHealth = Math.Clamp(Player.CurrentHealth, 0, Player.MaxHealth);
