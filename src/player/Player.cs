@@ -353,6 +353,34 @@ public partial class Player : CharacterBody2D
         }
     }
 
+    /// <summary>
+    /// Passive damage from buffs (poison, burn) — minimal effects, just health reduction.
+    /// Does NOT trigger invincibility frames, screen shake, flash, sound, or counterattack.
+    /// </summary>
+    public void TakePassiveDamage(int amount)
+    {
+        if (IsDead || amount <= 0)
+            return;
+
+        if (ShieldAmount > 0)
+        {
+            int blocked = Math.Min(ShieldAmount, amount);
+            ShieldAmount -= blocked;
+            amount -= blocked;
+            GameServices.UI.ShowDamageNumber(GlobalPosition, -blocked, false);
+            VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "护盾吸收", Colors.Cyan);
+        }
+
+        if (amount > 0)
+        {
+            CurrentHealth = Math.Max(0, CurrentHealth - amount);
+            HealthChanged?.Invoke(CurrentHealth);
+
+            if (CurrentHealth <= 0)
+                Die();
+        }
+    }
+
     private void _TryCounterattack(Zombie? attacker)
     {
         // Check if player has any thorns/counterattack ability

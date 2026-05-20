@@ -222,13 +222,13 @@ public partial class PlayerBuffSystem : Node
         switch (buff.Type)
         {
             case BuffType.Poison:
-                _player.TakeDamage((int)buff.Value);
+                _player.TakePassiveDamage((int)buff.Value);
                 VFXManager.SpawnFloatingLabel(_player.GetParent(), _player.GlobalPosition,
                     $"-{buff.Value:F0}", new Color(0.3f, 0.9f, 0.2f), 12);
                 break;
 
             case BuffType.Burn:
-                _player.TakeDamage((int)buff.Value);
+                _player.TakePassiveDamage((int)buff.Value);
                 VFXManager.SpawnFloatingLabel(_player.GetParent(), _player.GlobalPosition,
                     $"-{buff.Value:F0}", new Color(1.0f, 0.4f, 0.1f), 12);
                 break;
