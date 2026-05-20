@@ -561,7 +561,7 @@ void fragment() {
 
         // Also deal damage to player if nearby (reduced to prevent one-shot)
         var player = GetTree().GetFirstNodeInGroup("player") as Player;
-        if (player != null && strikePos.DistanceTo(player.GlobalPosition) <= blastRadius)
+        if (player != null && IsInstanceValid(player) && !player.IsDead && strikePos.DistanceTo(player.GlobalPosition) <= blastRadius)
         {
             int playerDmg = Mathf.Min(damage / 3, player.MaxHealth / 4); // 最高33%最大生命
             player.TakeDamage(playerDmg);
