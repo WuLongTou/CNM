@@ -880,7 +880,9 @@ public partial class Zombie : CharacterBody2D
 
     private void _Explode()
     {
-        if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.ExploderRange)
+        if (Player == null || !IsInstanceValid(Player))
+            return;
+        if (GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.ExploderRange)
         {
             if (Player is Player p)
                 p.TakeDamage((int)(Damage * GameConfig.ExploderDamageMult), this);
@@ -890,7 +892,7 @@ public partial class Zombie : CharacterBody2D
     private void _EliteExplosiveDeath()
     {
         // Damage player
-        if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.EliteExplosiveRange)
+        if (Player != null && IsInstanceValid(Player) && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.EliteExplosiveRange)
         {
             if (Player is Player p)
                 p.TakeDamage((int)(Damage * GameConfig.EliteExplosiveMult), this);
