@@ -114,7 +114,6 @@ public partial class Projectile : CharacterBody2D
         var dir = to - from;
         float totalDist = dir.Length();
         if (totalDist < 1.0f) return;
-        var norm = dir / totalDist;
         int steps = Mathf.Max(1, (int)(totalDist / stepLen));
 
         var zombies = ZombieRegistry.All;
