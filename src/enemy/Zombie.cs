@@ -414,7 +414,7 @@ public partial class Zombie : CharacterBody2D
         if (_spitterCooldown <= 0)
         {
             _spitterCooldown = _spitterCooldownBase;
-            if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.SpitterRange)
+            if (Player != null && IsInstanceValid(Player) && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.SpitterRange)
             {
                 _SpitPoison(Player);
             }
@@ -461,7 +461,7 @@ public partial class Zombie : CharacterBody2D
         if (_archerCooldown <= 0)
         {
             _archerCooldown = _archerCooldownBase;
-            if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= ArcherRange)
+            if (Player != null && IsInstanceValid(Player) && GlobalPosition.DistanceTo(Player.GlobalPosition) <= ArcherRange)
             {
                 _ShootArrow(Player);
             }
