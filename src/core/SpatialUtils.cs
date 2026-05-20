@@ -141,7 +141,8 @@ public static class SpatialUtils
     {
         Zombie? farthest = null;
         float farthestDistSq = 0;
-        float maxRangeSq = maxRange * maxRange;
+        float maxRangeSq = maxRange < float.MaxValue ? maxRange * maxRange : float.MaxValue;
+        bool hasRangeLimit = maxRange < float.MaxValue;
 
         foreach (var zombie in ZombieRegistry.All)
         {
@@ -149,7 +150,7 @@ public static class SpatialUtils
                 continue;
 
             float distSq = position.DistanceSquaredTo(zombie.GlobalPosition);
-            if (distSq > farthestDistSq && distSq <= maxRangeSq)
+            if (distSq > farthestDistSq && (!hasRangeLimit || distSq <= maxRangeSq))
             {
                 farthestDistSq = distSq;
                 farthest = zombie;

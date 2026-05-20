@@ -66,6 +66,7 @@ public partial class WeaponCard : Resource
         RangedEffectLevels = new Godot.Collections.Dictionary();
         MagicEffectLevels = new Godot.Collections.Dictionary();
         Tags = cardTags ?? new Godot.Collections.Array();
+        UpgradeHistory = new Godot.Collections.Dictionary();
         return this;
     }
 
