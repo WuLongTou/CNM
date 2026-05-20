@@ -764,7 +764,7 @@ public partial class Zombie : CharacterBody2D
                 _attackTimer?.Start();
             }
         }
-        else if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= AttackRange)
+        else if (Player != null && IsInstanceValid(Player) && GlobalPosition.DistanceTo(Player.GlobalPosition) <= AttackRange)
         {
             if (_attackTimer == null || _attackTimer.IsStopped())
             {
