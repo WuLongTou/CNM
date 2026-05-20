@@ -214,7 +214,7 @@ public partial class ZombieAbilitySystem : Node
 
     private void _TriggerTeleport()
     {
-        if (_zombie == null || _player == null) return;
+        if (_zombie == null || _player == null || !IsInstanceValid(_player)) return;
 
         Vector2 from = _zombie.GlobalPosition;
         Vector2 toPlayer = _player.GlobalPosition;
@@ -340,7 +340,7 @@ public partial class ZombieAbilitySystem : Node
         clone.Scale = new Vector2(0.6f, 0.6f);
 
         // Inherit player target
-        if (_player != null)
+        if (_player != null && IsInstanceValid(_player))
             clone.SetPlayerTarget(_player);
 
         clone.Died += _OnCloneDeath;
@@ -431,7 +431,7 @@ public partial class ZombieAbilitySystem : Node
         int damage = (int)(self.Damage * GameConfig.ExploderDamageMult * 1.5f);
 
         // Damage player
-        if (_player != null && self.GlobalPosition.DistanceTo(_player.GlobalPosition) <= range)
+        if (_player != null && IsInstanceValid(_player) && self.GlobalPosition.DistanceTo(_player.GlobalPosition) <= range)
         {
             if (_player is Player p)
                 p.TakeDamage(damage, self);
@@ -559,7 +559,7 @@ public partial class ZombieAbilitySystem : Node
         _isControllingPlayer = false;
         _abilityTimer = _abilityCooldown;
 
-        if (_player != null)
+        if (_player != null && IsInstanceValid(_player))
         {
             VFXManager.SpawnFloatingLabel(_player.GetParent(), _player.GlobalPosition,
                 "精神控制解除!", new Color(0.5f, 0.8f, 1.0f), 14);
