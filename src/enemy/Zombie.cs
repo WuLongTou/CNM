@@ -386,7 +386,7 @@ public partial class Zombie : CharacterBody2D
                 Velocity = Vector2.Zero;
             }
         }
-        else
+        else if (Player != null && IsInstanceValid(Player))
         {
             Velocity = (Player.GlobalPosition - GlobalPosition).Normalized() * Speed * _slowMultiplier;
         }
@@ -798,7 +798,7 @@ public partial class Zombie : CharacterBody2D
         }
         else
         {
-            if (Player == null) return;
+            if (Player == null || !IsInstanceValid(Player)) return;
 
             float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
             if (dist <= GameConfig.ZombieMeleeTouchRange)
@@ -817,7 +817,7 @@ public partial class Zombie : CharacterBody2D
             if (nearest != null)
                 AttackZombie(nearest);
         }
-        else if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= AttackRange)
+        else if (Player != null && IsInstanceValid(Player) && GlobalPosition.DistanceTo(Player.GlobalPosition) <= AttackRange)
         {
             AttackPlayer();
         }
