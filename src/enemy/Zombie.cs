@@ -535,7 +535,7 @@ public partial class Zombie : CharacterBody2D
 
         // Orbit around player while strafing
         _shipAngle += delta * 0.8f * _shipStrafeDir;
-        if (Player != null)
+        if (Player != null && IsInstanceValid(Player))
         {
             Vector2 target = Player.GlobalPosition + new Vector2(
                 Mathf.Cos(_shipAngle) * _shipOrbitRadius,
@@ -565,7 +565,7 @@ public partial class Zombie : CharacterBody2D
             MoveAndSlide();
             _mechStomping = false;
         }
-        else if (Player != null)
+        else if (Player != null && IsInstanceValid(Player))
         {
             Velocity = (Player.GlobalPosition - GlobalPosition).Normalized() * Speed * _slowMultiplier;
             MoveAndSlide();
@@ -596,7 +596,7 @@ public partial class Zombie : CharacterBody2D
         }
         else
         {
-            if (Player != null)
+            if (Player != null && IsInstanceValid(Player))
             {
                 float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
                 if (dist <= AttackRange * 1.5f && GD.Randf() < 0.02f)
@@ -645,7 +645,7 @@ public partial class Zombie : CharacterBody2D
         }
         else
         {
-            if (Player != null)
+            if (Player != null && IsInstanceValid(Player))
             {
                 float dist = GlobalPosition.DistanceTo(Player.GlobalPosition);
                 if (dist <= 350.0f && _dragonDiveTimer <= 0)
@@ -681,7 +681,7 @@ public partial class Zombie : CharacterBody2D
             _swarmWanderDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
         }
 
-        if (Player != null)
+        if (Player != null && IsInstanceValid(Player))
         {
             Vector2 toPlayer = (Player.GlobalPosition - GlobalPosition).Normalized();
             Velocity = (toPlayer * 0.7f + _swarmWanderDir * 0.3f).Normalized() * Speed * _slowMultiplier;
