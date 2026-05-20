@@ -660,7 +660,8 @@ public partial class PlayerVfx : Node
             case AnimState.Attack:
                 if (_attackFrames.Count > 0)
                 {
-                    tex = _attackFrames[_attackFrameIdx % _attackFrames.Count];
+                    int safeIdx = _attackFrameIdx % _attackFrames.Count;
+                    tex = _attackFrames[safeIdx];
                 }
                 else
                 {
@@ -1320,7 +1321,7 @@ public partial class PlayerVfx : Node
         if (attackType == AttackType.Melee || attackType == AttackType.Magic)
         {
             Vector2 dir = targetPos - Player!.GlobalPosition;
-            if (dir.Length() > 5.0f && Player.Sprite != null)
+            if (dir.Length() > 1.0f && Player?.Sprite != null)
             {
                 _facingLeft = dir.X < 0;
                 Player.Sprite.FlipH = _facingLeft;

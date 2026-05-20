@@ -484,6 +484,7 @@ public partial class GameManager : Node
         {
             pts = (int)(pts * GameConfig.BossScoreMult);
             BossZombie = null;
+            // Boss UI will hide on next UpdateBossHealth call
         }
 
         Score += pts;
@@ -497,7 +498,7 @@ public partial class GameManager : Node
 
         // Track combo in UI
         if (_player?.Combat != null)
-            _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
+            _uiManager?.ShowComboNotification(_player.Combat?.CurrentCombo ?? 0);
 
         // Try to drop a pickup
         _TryDropPickup(zombie);
