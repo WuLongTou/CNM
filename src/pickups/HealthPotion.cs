@@ -2,12 +2,17 @@ namespace ZombieWars.Pickups;
 
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.Player;
 using static ZombieWars.Core.GameEnums;
 using Player = ZombieWars.Player.Player;
 
+/// <summary>
+/// A ground pickup that awards one health potion to the player's consumable inventory.
+/// If the inventory is full, the pickup is silently destroyed with no effect.
+/// </summary>
 public partial class HealthPotion : Pickup
 {
-    public int HealAmount { get; set; } = 20;
+    public int HealAmount { get; set; } = 25;
 
     protected override void _CreateSprite()
     {
@@ -51,12 +56,18 @@ public partial class HealthPotion : Pickup
     protected override void _Collect(Player? player)
     {
         if (player == null) return;
-        int before = player.CurrentHealth;
-        player.Heal(HealAmount);
-        int actualHeal = player.CurrentHealth - before;
-        GameServices.UI?.ShowDamageNumber(player.GlobalPosition, -actualHeal, false);
 
-        player.ApplyBuffFromZombie(BuffType.DamageBoost, 5.0f, 1.15f);
-        LogUtils.Print($"拾取生命药水，回复 {actualHeal} HP");
+        var item = new HealthPotionItem { HealAmount = HealAmount };
+        bool accepted = player.Inventory?.AddItem(item) ?? false;
+
+        if (accepted)
+        {
+            LogUtils.Print($"拾取生命药水，当前剩余: {player.Inventory?.SlotCount} 格");
+        }
+        else
+        {
+            // Inventory full — silently destroy the pickup
+            LogUtils.Print("背包已满，无法拾取生命药水");
+        }
     }
 }

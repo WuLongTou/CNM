@@ -44,6 +44,7 @@ public static class GameConfig
     public const float SplashDamageMult = 0.5f;
     public const float MinAttackCooldown = 0.12f;
     public const float MinDamageMult = 0.2f;
+    public const float MinSpeedMult = 0.1f;
     public const float MinRangeMult = 0.6f;
     public const float BulletVelocity = 500.0f;
 

@@ -225,11 +225,18 @@ public partial class GameManager : Node
             _uiManager?.ShowDamageNumber(_player.GlobalPosition, -healAmount, false);
         }
 
+        if (_player != null)
+        {
+            _player.ResetForNewRound();
+            _player.Combat?.OnNewRound();
+        }
+
         RoundStarted?.Invoke(CurrentRound);
         WeaponSelectionStarted?.Invoke();
 
         if (_uiManager != null)
         {
+            _uiManager.ResetRoundStats();
             _uiManager.UpdateRoundDisplay(CurrentRound);
             _uiManager.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
             if (_player != null)
@@ -237,6 +244,17 @@ public partial class GameManager : Node
                 _uiManager.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
             }
         }
+
+        // Show wave announcement with zombie count before weapon selection
+        var difficultyHint = CurrentRound switch
+        {
+            1 => "第一波热身",
+            <= 3 => "普通难度",
+            <= 6 => "困难模式",
+            <= 10 => "噩梦模式",
+            _ => "地狱挑战"
+        };
+        _uiManager?.ShowRoundBanner($"第 {CurrentRound} 波 · {_zombiesToSpawn} 只僵尸 · {difficultyHint}", persistent: true);
 
         var currentScene = GetTree().CurrentScene;
         var bg = currentScene?.GetNodeOrNull("Background");
@@ -684,6 +702,11 @@ public partial class GameManager : Node
             if (ResourceLoader.Exists("res://scenes/Pickups/HealthPotion.tscn"))
                 scene = GD.Load<PackedScene>("res://scenes/Pickups/HealthPotion.tscn");
         }
+        else if (type == "speed_potion")
+        {
+            if (ResourceLoader.Exists("res://scenes/Pickups/SpeedPotion.tscn"))
+                scene = GD.Load<PackedScene>("res://scenes/Pickups/SpeedPotion.tscn");
+        }
         else if (type == "skill_book")
         {
             if (ResourceLoader.Exists("res://scenes/Pickups/SkillBook.tscn"))
@@ -717,6 +740,10 @@ public partial class GameManager : Node
             {
                 pickup = new ZombieWars.Pickups.HealthPotion { GlobalPosition = pos };
             }
+            else if (type == "speed_potion")
+            {
+                pickup = new ZombieWars.Pickups.SpeedPotion { GlobalPosition = pos };
+            }
             else if (type == "skill_book")
             {
                 pickup = new ZombieWars.Pickups.SkillBook { GlobalPosition = pos };
@@ -746,7 +773,16 @@ public partial class GameManager : Node
 
         if (roll > dropChance) return;
 
-        string pickupType = roll < dropChance * 0.6f ? "health_potion" : "skill_book";
+        // 50% health potion, 35% speed potion, 15% skill book
+        float potionRoll = GD.Randf();
+        string pickupType;
+        if (potionRoll < 0.50f)
+            pickupType = "health_potion";
+        else if (potionRoll < 0.85f)
+            pickupType = "speed_potion";
+        else
+            pickupType = "skill_book";
+
         SpawnPickup(zombie.GlobalPosition, pickupType);
     }
 

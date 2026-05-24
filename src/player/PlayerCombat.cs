@@ -91,21 +91,22 @@ public partial class PlayerCombat : Node
         _damageBonusFromCombo = Mathf.Min(_currentCombo * 0.05f, 0.5f);
 
         // Apply combo bonus to current damage immediately
-        float baseDmg = Player!.BaseDamage * Math.Max(Core.GameConfig.MinDamageMult, 1.0f + Player.DamageBonus + _damageBonusFromCombo);
+        float baseDmg = Player!.BaseDamage * Mathf.Max(Core.GameConfig.MinDamageMult, 1.0f + Player.DamageBonus + _damageBonusFromCombo);
         Player.CurrentDamage = baseDmg;
 
         // Track all-time max
         if (_currentCombo > MaxComboEver)
             MaxComboEver = _currentCombo;
 
+        // Notify UI of kill for stats
+        GameServices.UI?.RecordKill();
+
         // Notify achievement system
         AchievementSystem.Instance?.OnComboAchieved(_currentCombo);
     }
 
-    public void ResetComboStats()
-    {
-        _maxComboThisRound = 0;
-    }
+    /// <summary>Stub — max combo tracking is reset by OnNewRound().</summary>
+    public void ResetComboStats() { }
 
     /// <summary>
     /// Called when player dies — stops attack timer and prevents post-mortem callbacks.
@@ -150,6 +151,10 @@ public partial class PlayerCombat : Node
 
     public void HandleManualAttack()
     {
+        // Stunned: cannot attack
+        if (Player!.StunDuration > 0)
+            return;
+
         // Safety: recover CanAttack if timer finished but callback didn't fire
         if (!CanAttack && _attackTimer != null && _attackTimer.IsStopped())
             CanAttack = true;
@@ -363,12 +368,12 @@ public partial class PlayerCombat : Node
             zombie.Velocity += pushDir * Player.KnockbackForce;
         }
 
-        if (Player.FreezeDuration > 0 && GD.Randf() < (Player.FreezeDuration / 100.0f))
+        if (Player.FreezeChance > 0 && GD.Randf() < Player.FreezeChance / 100.0f)
             zombie.ApplyFreeze(Core.GameConfig.FreezeDurationDefault);
 
-        if (Player.PoisonDamage > 0 && GD.Randf() < (Player.PoisonDamage / 100.0f))
+        if (Player.PoisonChance > 0 && GD.Randf() < Player.PoisonChance / 100.0f)
         {
-            float dps = 3.0f + Player.PoisonDamage * 0.2f;
+            float dps = 3.0f + Player.PoisonChance * 0.2f;
             zombie.ApplyPoison(dps, Core.GameConfig.PoisonDurationDefault);
         }
 
@@ -755,8 +760,8 @@ public partial class PlayerCombat : Node
         Player.PiercingCount = 0;
         Player.LifeStealPercent = 0.0f;
         Player.CriticalChance = 0.0f;
-        Player.FreezeDuration = 0.0f;
-        Player.PoisonDamage = 0.0f;
+        Player.FreezeChance = 0.0f;
+        Player.PoisonChance = 0.0f;
         Player.BounceCount = 0;
         Player.HealthCostPerAttack = 0;
         Player.AttackSpeedMultiplier = 1.0f;
@@ -811,10 +816,12 @@ public partial class PlayerCombat : Node
         }
         Player.Vfx?.SwitchWeaponSprites(Player.CurrentAttackType);
 
+        Player!.WeaponSpeedBonus = 0.0f;
         foreach (var effect in Player.ActiveEffects)
             _ApplyEffectValues(effect);
 
-        Player.CurrentDamage = Player.BaseDamage * Math.Max(Core.GameConfig.MinDamageMult, 1.0f + Player.DamageBonus);
+        Player!.BuffSystem?.RecalculateDamage();
+        Player!.BuffSystem?.RecalculateSpeed();
         float totalSpeed = Math.Max(0.1f, Player.WeaponAttackSpeedModifier * Player.AttackSpeedMultiplier);
         Player.AttackCooldown = Math.Max(Core.GameConfig.MinAttackCooldown,
             Core.GameConfig.BaseAttackCooldown / totalSpeed);
@@ -832,7 +839,7 @@ public partial class PlayerCombat : Node
         if (weapon.DamageModifier != 1.0f)
             Player!.DamageBonus += (weapon.DamageModifier - 1.0f);
 
-        Player!.CurrentSpeed += weapon.SpeedModifier;
+        Player!.WeaponSpeedBonus += weapon.SpeedModifier;
 
         if (weapon.HealthModifier != 0)
         {
@@ -847,9 +854,9 @@ public partial class PlayerCombat : Node
         if (weapon.LifeStealBonus > 0)
             Player.LifeStealPercent += weapon.LifeStealBonus;
         if (weapon.FreezeBonus > 0)
-            Player.FreezeDuration = Math.Max(Player.FreezeDuration, weapon.FreezeBonus);
+            Player.FreezeChance = Math.Max(Player.FreezeChance, weapon.FreezeBonus);
         if (weapon.PoisonBonus > 0)
-            Player.PoisonDamage = Math.Max(Player.PoisonDamage, weapon.PoisonBonus);
+            Player.PoisonChance = Math.Max(Player.PoisonChance, weapon.PoisonBonus);
         if (weapon.GrantsAura)
         {
             if (Player.Aura!.Active)
@@ -1002,7 +1009,7 @@ public partial class PlayerCombat : Node
         if (Player!.LifeStealPercent <= 0 || damage <= 0)
             return;
 
-        int healAmt = (int)(damage * Player.LifeStealPercent / 100.0f);
+        int healAmt = (int)Mathf.Floor(damage * Player.LifeStealPercent / 100.0f);
         if (healAmt > 0)
             Player.Heal(healAmt);
     }
@@ -1019,6 +1026,7 @@ public partial class PlayerCombat : Node
     public void RegisterDamageDealt(Zombie zombie, float damage)
     {
         ApplyLifesteal(damage);
+        GameServices.UI?.AccumulateDamage(damage);
         if (zombie != null && zombie.CurrentHealth <= 0 && !zombie.HasMeta("player_kill_processed"))
         {
             zombie.SetMeta("player_kill_processed", true);
@@ -1043,6 +1051,15 @@ public partial class PlayerCombat : Node
             4 => new Color(1.0f, 0.8f, 0.2f),
             _ => Colors.Gold
         };
+    }
+
+    /// <summary>Called when a new round starts — resets combo and other per-round state.</summary>
+    public void OnNewRound()
+    {
+        _currentCombo = 0;
+        _maxComboThisRound = 0;
+        _comboTimer = 0.0f;
+        _damageBonusFromCombo = 0.0f;
     }
 
     private void _NotifyUiStatus()

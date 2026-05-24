@@ -78,10 +78,14 @@ public partial class Player : CharacterBody2D
     public float DotDamage { get; set; } = 0.0f;
 
     public float DamageBonus { get; set; } = 0.0f;
+    public float SpeedBoostModifier { get; set; } = 0.0f;  // additive speed buff from SpeedBoost
+    public float DamageBoostModifier { get; set; } = 0.0f; // additive damage buff from DamageBoost
+    public float WeaponSpeedBonus { get; set; } = 0.0f;   // cumulative additive speed from weapon SpeedModifier fields
     public float LifeStealPercent { get; set; } = 0.0f;
     public float CriticalChance { get; set; } = 0.0f;
-    public float FreezeDuration { get; set; } = 0.0f;
-    public float PoisonDamage { get; set; } = 0.0f;
+    public float FreezeChance { get; set; } = 0.0f;  // freeze proc chance in percent (e.g. 15 = 15%)
+    public float PoisonChance { get; set; } = 0.0f;   // poison proc chance in percent (e.g. 20 = 20%)
+    public float FreezeDebuffDuration { get; set; } = 0.0f; // active freeze debuff duration on this player (seconds)
     public float CritMultiplier { get; set; } = Core.GameConfig.CritMultiplier;
     public int HealthCostPerAttack { get; set; } = 0;
 
@@ -115,6 +119,7 @@ public partial class Player : CharacterBody2D
     public PlayerAura? Aura { get; set; }
     public PlayerVfx? Vfx { get; set; }
     public PlayerBuffSystem? BuffSystem { get; set; }
+    public ConsumableInventory? Inventory { get; set; }
 
     public override void _Ready()
     {
@@ -155,6 +160,10 @@ public partial class Player : CharacterBody2D
         BuffSystem = new PlayerBuffSystem { Name = "BuffSystem" };
         AddChild(BuffSystem);
         BuffSystem.Setup(this);
+
+        Inventory = new ConsumableInventory { Name = "Inventory" };
+        AddChild(Inventory);
+        Inventory.Setup(this);
 
         _SetupDash();
     }
@@ -402,6 +411,7 @@ public partial class Player : CharacterBody2D
     {
         CurrentHealth = Math.Min(MaxHealth, CurrentHealth + amount);
         HealthChanged?.Invoke(CurrentHealth);
+        GameServices.UI?.UpdateHealthDisplay(CurrentHealth, MaxHealth);
     }
 
     public void ApplyWeaponEffect(object? card)
@@ -427,6 +437,7 @@ public partial class Player : CharacterBody2D
         _dashTimer?.Stop();
         _dashCooldownTimer?.Stop();
         Combat?.OnPlayerDied();
+        Inventory?.OnPlayerDied();
         if (HealthDisplay != null) HealthDisplay.Visible = false;
         if (AttackTypeDisplay != null) AttackTypeDisplay.Visible = false;
         if (MeleeRangeIndicator != null) MeleeRangeIndicator.Visible = false;
@@ -480,5 +491,6 @@ public partial class Player : CharacterBody2D
         }
         ActiveEffects = permanent;
         Combat?.RecalculateStats();
+        FireHealthChanged(CurrentHealth);
     }
 }

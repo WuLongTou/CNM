@@ -247,10 +247,10 @@ public partial class Projectile : CharacterBody2D
         if (target is not Zombie z) return;
 
         player.RegisterDamageDealt(z, Damage);
-        if (player.FreezeDuration > 0 && GD.Randf() < player.FreezeDuration / 100.0f)
+        if (player.FreezeChance > 0 && GD.Randf() < player.FreezeChance / 100.0f)
             z.ApplyFreeze(0.8f);
-        if (player.PoisonDamage > 0 && GD.Randf() < player.PoisonDamage / 100.0f)
-            z.ApplyPoison(3.0f + player.PoisonDamage * 0.2f, 3.0f);
+        if (player.PoisonChance > 0 && GD.Randf() < player.PoisonChance / 100.0f)
+            z.ApplyPoison(3.0f + player.PoisonChance * 0.2f, 3.0f);
     }
 
     private void _CreateHitEffect()

@@ -11,8 +11,9 @@ using Player = ZombieWars.Player.Player;
 using static ZombieWars.Core.GameEnums;
 using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
-
-/// <summary>
+using Main = ZombieWars.Main;
+using GameServices = ZombieWars.Core.GameServices;
+using ConsumableInventory = ZombieWars.Player.ConsumableInventory;
 /// UI Manager — creates and manages all in-game UI elements.
 /// Handles HUD, weapon selection panel, tooltip, pause overlay, controls panel, and welcome screen.
 ///
@@ -57,6 +58,12 @@ public partial class UIManager : Control
 	private Label _dashCooldownLabel = null!;
 	private Label _speedLabel = null!;
 	private Label _weatherLabel = null!;
+	private Label _dpsLabel = null!;
+	private Label _killStreakLabel = null!;
+	private int _roundKills;
+	private float _damageAccumulator;
+	private float _dpsUpdateTimer;
+	private float _dpsValue;
 	private Panel _controlsPanel = null!;
 	private bool _controlsVisible;
 	private Panel _welcomePanel = null!;
@@ -69,6 +76,13 @@ public partial class UIManager : Control
 	private int _bossUiHealth = -1;
 	private int _bossUiMaxHealth = -1;
 	private Button _soundToggleButton = null!;
+
+	// ═══════════════════════════════════════════════
+	// Consumable Inventory
+	// ═══════════════════════════════════════════════
+	private HBoxContainer _consumableContainer = null!;
+	private readonly Label[] _consumableSlotLabels = new Label[ConsumableInventory.MaxSlots];
+	private readonly Label[] _consumableCooldownLabels = new Label[ConsumableInventory.MaxSlots];
 
 	// ═══════════════════════════════════════════════
 	// Weapon Selection
@@ -287,6 +301,26 @@ public partial class UIManager : Control
 		_weatherLabel.CustomMinimumSize = new Vector2(70, 0);
 		row2.AddChild(_weatherLabel);
 
+		// DPS indicator
+		_dpsLabel = new Label { Text = "DPS 0" };
+		_dpsLabel.AddThemeFontSizeOverride("font_size", 11);
+		_dpsLabel.AddThemeColorOverride("font_color", new Color(0.9f, 0.8f, 0.4f));
+		_dpsLabel.AddThemeConstantOverride("outline_size", 2);
+		_dpsLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
+		_dpsLabel.CustomMinimumSize = new Vector2(70, 0);
+		_dpsLabel.TooltipText = "每秒伤害计算 (本回合统计)";
+		row2.AddChild(_dpsLabel);
+
+		// Kill streak indicator
+		_killStreakLabel = new Label { Text = "击杀 0" };
+		_killStreakLabel.AddThemeFontSizeOverride("font_size", 11);
+		_killStreakLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.55f, 0.75f));
+		_killStreakLabel.AddThemeConstantOverride("outline_size", 2);
+		_killStreakLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
+		_killStreakLabel.CustomMinimumSize = new Vector2(70, 0);
+		_killStreakLabel.TooltipText = "本回合击杀数";
+		row2.AddChild(_killStreakLabel);
+
 		// Effect icons container
 		_effectsContainer = new HBoxContainer();
 		_effectsContainer.AddThemeConstantOverride("separation", 3);
@@ -346,6 +380,107 @@ public partial class UIManager : Control
 		_bossHealthLabel.Visible = false;
 		_bossHealthLabel.ZIndex = 6;
 		AddChild(_bossHealthLabel);
+
+		_CreateConsumablePanel();
+	}
+
+	private void _CreateConsumablePanel()
+	{
+		// Dedicated consumable panel anchored bottom-right, above the HUD
+		var panel = new Panel
+		{
+			Name = "ConsumablePanel",
+			CustomMinimumSize = new Vector2(136, 44)
+		};
+		panel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomRight);
+		panel.OffsetLeft = -144;
+		panel.OffsetBottom = 52;
+		panel.ZIndex = 10;
+
+		var panelStyle = MakeDarkPanel(0.9f);
+		panelStyle.BorderWidthBottom = 2;
+		panelStyle.BorderColor = new Color(0.4f, 0.35f, 0.3f, 0.8f);
+		panel.AddThemeStyleboxOverride("panel", panelStyle);
+		AddChild(panel);
+
+		var hbox = new HBoxContainer();
+		hbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+		hbox.AddThemeConstantOverride("separation", 4);
+		hbox.AddThemeConstantOverride("margin_left", 4);
+		hbox.AddThemeConstantOverride("margin_right", 4);
+		hbox.AddThemeConstantOverride("margin_top", 4);
+		hbox.AddThemeConstantOverride("margin_bottom", 4);
+		panel.AddChild(hbox);
+
+		_consumableContainer = hbox;
+
+		for (int i = 0; i < ConsumableInventory.MaxSlots; i++)
+		{
+			var slotContainer = new VBoxContainer
+			{
+				CustomMinimumSize = new Vector2(40, 36)
+			};
+			slotContainer.AddThemeConstantOverride("separation", 0);
+			slotContainer.AddThemeConstantOverride("alignment", (int)BoxContainer.AlignmentMode.Center);
+			hbox.AddChild(slotContainer);
+
+			// Hotkey badge
+			var hotkeyLbl = new Label
+			{
+				Text = $"[{i + 1}]",
+				HorizontalAlignment = HorizontalAlignment.Center
+			};
+			hotkeyLbl.AddThemeFontSizeOverride("font_size", 9);
+			hotkeyLbl.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.5f, 1.0f));
+			slotContainer.AddChild(hotkeyLbl);
+
+			// Icon + count
+			var iconLbl = new Label
+			{
+				Text = "—",
+				HorizontalAlignment = HorizontalAlignment.Center,
+				VerticalAlignment = VerticalAlignment.Center
+			};
+			iconLbl.AddThemeFontSizeOverride("font_size", 18);
+			iconLbl.AddThemeColorOverride("font_color", new Color(0.75f, 0.7f, 0.65f));
+			slotContainer.AddChild(iconLbl);
+			_consumableSlotLabels[i] = iconLbl;
+
+			// Cooldown
+			var cdLbl = new Label
+			{
+				Text = "",
+				HorizontalAlignment = HorizontalAlignment.Center
+			};
+			cdLbl.AddThemeFontSizeOverride("font_size", 8);
+			cdLbl.AddThemeColorOverride("font_color", new Color(0.9f, 0.5f, 0.3f, 0.9f));
+			slotContainer.AddChild(cdLbl);
+			_consumableCooldownLabels[i] = cdLbl;
+		}
+	}
+
+	public void UpdateConsumableDisplay(Player player)
+	{
+		if (player.Inventory == null) return;
+
+		for (int i = 0; i < ConsumableInventory.MaxSlots; i++)
+		{
+			var slot = player.Inventory.GetSlot(i);
+			if (slot == null || slot.IsEmpty)
+			{
+				_consumableSlotLabels[i].Text = "—";
+				_consumableSlotLabels[i].AddThemeColorOverride("font_color", new Color(0.35f, 0.3f, 0.3f));
+				_consumableCooldownLabels[i].Text = "";
+			}
+			else
+			{
+				_consumableSlotLabels[i].Text = slot.Count > 1 ? $"{slot.Item.Icon}×{slot.Count}" : slot.Item.Icon;
+				_consumableSlotLabels[i].AddThemeColorOverride("font_color", new Color(0.9f, 0.85f, 0.8f));
+
+				float cd = player.Inventory.GetCooldown(i);
+				_consumableCooldownLabels[i].Text = cd > 0 ? $"{cd:F0}s" : "";
+			}
+		}
 	}
 
 	private Label _MakeStatLabel(string text, Color color)
@@ -429,6 +564,7 @@ public partial class UIManager : Control
 			};
 			button.MouseEntered += () => _OnCardMouseEntered(cardIndex);
 			button.MouseExited += _OnCardMouseExited;
+			button.Pressed += () => _OnWeaponButtonPressed(cardIndex);
 			buttonContainer.AddChild(button);
 			_weaponButtons.Add(button);
 
@@ -666,12 +802,43 @@ public partial class UIManager : Control
 
 		_pauseLabel = new Label
 		{
-			Text = "⏸ 暂停中\n按 ESC 继续",
+			Text = "⏸ 暂停中",
 			HorizontalAlignment = HorizontalAlignment.Center
 		};
 		_pauseLabel.AddThemeFontSizeOverride("font_size", 28);
 		_pauseLabel.AddThemeColorOverride("font_color", NoteText);
 		pauseMargin.AddChild(_pauseLabel);
+
+		var resumeBtn = new Button
+		{
+			Text = "继续游戏",
+			CustomMinimumSize = new Vector2(160, 36)
+		};
+		resumeBtn.AddThemeFontSizeOverride("font_size", 16);
+		resumeBtn.Pressed += () => SetUserPaused(false);
+		pauseVbox.AddChild(resumeBtn);
+
+		var hintLbl = new Label
+		{
+			Text = "按 ESC 继续",
+			HorizontalAlignment = HorizontalAlignment.Center
+		};
+		hintLbl.AddThemeFontSizeOverride("font_size", 12);
+		hintLbl.AddThemeColorOverride("font_color", NoteTextDim);
+		pauseVbox.AddChild(hintLbl);
+
+		var quitBtn = new Button
+		{
+			Text = "退出游戏",
+			CustomMinimumSize = new Vector2(160, 36)
+		};
+		quitBtn.AddThemeFontSizeOverride("font_size", 14);
+		quitBtn.Pressed += () =>
+		{
+			GetTree().Paused = false;
+			GetTree().ChangeSceneToFile("res://scenes/ui/MainMenu.tscn");
+		};
+		pauseVbox.AddChild(quitBtn);
 		center.AddChild(pauseCard);
 	}
 
@@ -1063,6 +1230,19 @@ public partial class UIManager : Control
 			}
 		}
 
+		// Update DPS counter (every 0.5s for smooth display)
+		_dpsUpdateTimer += (float)delta;
+		if (_dpsUpdateTimer >= 0.5f)
+		{
+			_dpsUpdateTimer = 0.0f;
+			if (_damageAccumulator > 0 && _gameManager != null)
+			{
+				var roundTime = _gameManager.CurrentRound > 0 ? _gameManager.CurrentRound * 1.0f : 1.0f;
+				_dpsValue = _damageAccumulator / Mathf.Max(roundTime, 1.0f);
+				_dpsLabel.Text = $"DPS {(int)_dpsValue}";
+			}
+		}
+
 		if (_screenFx != null)
 			_screenFx.ProcessEffects((float)delta);
 	}
@@ -1237,33 +1417,75 @@ public partial class UIManager : Control
 				descNode.Text = keywords.Count > 0 ? string.Join(" ", keywords) : "基础";
 				rarityNode.Text = WeaponFormatter.GetRarityText(wc.Rarity);
 
-				// 使用真实武器图片替代 emoji 图标
-				if (wc.IconTexture != null && iconNode != null)
+				// Add rarity glow effect for epic+ items
+				if (wc.Rarity >= 3 && iconNode != null)
 				{
-					// Check if we already have a TextureRect (avoid duplicates on reuse)
-					var existingTex = iconNode.GetParent()?.GetNodeOrNull<TextureRect>("IconTex");
-					if (existingTex != null)
+					var glowPulse = new ColorRect
 					{
-						existingTex.Texture = wc.IconTexture;
-					}
-					else
-					{
-						var texRect = new TextureRect
-						{
-							Name = "IconTex",
-							Texture = wc.IconTexture,
-							ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-							StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-							CustomMinimumSize = new Vector2(60, 60)
-						};
-						iconNode.GetParent()?.RemoveChild(iconNode);
-						iconNode.GetParent()?.AddChild(texRect);
-					}
+						Name = "RarityGlow",
+						Color = wc.Rarity >= 4
+							? new Color(1f, 0.8f, 0.25f, 0.3f)
+							: new Color(0.8f, 0.4f, 1f, 0.25f),
+						ZIndex = -1
+					};
+					glowPulse.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+					glowPulse.AddThemeConstantOverride("margin_top", -4);
+					glowPulse.AddThemeConstantOverride("margin_bottom", -4);
+					glowPulse.AddThemeConstantOverride("margin_left", -4);
+					glowPulse.AddThemeConstantOverride("margin_right", -4);
+					var parent = iconNode.GetParent();
+					parent?.AddChild(glowPulse);
+					parent?.MoveChild(glowPulse, 0); // Send to back
 				}
-				else if (iconNode != null)
+
+				// Add tier indicator (stars or pips)
+				if (wc.Tier > 1)
 				{
-					iconNode.Text = wc.Icon;
+					var tierStars = new string('★', Mathf.Min(wc.Tier, 5));
+					var tierLabel = new Label
+					{
+						Name = "TierStars",
+						Text = tierStars,
+						HorizontalAlignment = HorizontalAlignment.Center
+					};
+					tierLabel.AddThemeFontSizeOverride("font_size", 10);
+					tierLabel.AddThemeColorOverride("font_color", new Color(1f, 0.85f, 0.4f));
+					vbox.AddChild(tierLabel);
 				}
+
+// Use real weapon image instead of emoji icon
+			if (wc.IconTexture != null && iconNode != null)
+			{
+				// Replace the emoji Label with a TextureRect inside iconPlaceholder
+				var iconPlaceholder = iconNode.GetParent();
+				if (iconPlaceholder != null)
+				{
+					// Give the placeholder an explicit size so centering works
+					if (iconPlaceholder is Control ctrl)
+						ctrl.CustomMinimumSize = new Vector2(70, 70);
+
+					// Remove the old emoji label and replace with texture
+					iconPlaceholder.RemoveChild(iconNode);
+					iconNode.QueueFree();
+
+					var texRect = new TextureRect
+					{
+						Name = "IconTex",
+						Texture = wc.IconTexture,
+						ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+						StretchMode = TextureRect.StretchModeEnum.KeepAspect,
+						CustomMinimumSize = new Vector2(60, 60),
+						SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter,
+						SizeFlagsVertical = Control.SizeFlags.ShrinkCenter
+					};
+					texRect.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
+					iconPlaceholder.AddChild(texRect);
+				}
+			}
+			else if (iconNode != null)
+			{
+				iconNode.Text = string.IsNullOrEmpty(wc.Icon) ? "⚔️" : wc.Icon;
+			}
 
 				var cardBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
 				Color borderColor;
@@ -1400,8 +1622,11 @@ public partial class UIManager : Control
 		_HideTooltip();
 	}
 
+	private int _lastHoveredIndex = -1;
+
 	private void _OnCardMouseEntered(int index)
 	{
+		_lastHoveredIndex = index;
 		if (index < _currentWeaponOptions.Count)
 		{
 			var weapon = _currentWeaponOptions[index];
@@ -1409,12 +1634,113 @@ public partial class UIManager : Control
 				_ShowTooltip(_GetUpgradeTooltipText(upgrade));
 			else if (weapon is WeaponCard wc)
 				_ShowTooltip(_GetWeaponTooltipText(wc));
+
+			// Show enhanced preview for weapon cards
+			if (weapon is WeaponCard wCard)
+				_ShowWeaponPreview(wCard);
 		}
 	}
 
 	private void _OnCardMouseExited()
 	{
+		_lastHoveredIndex = -1;
 		_HideTooltip();
+		_HideWeaponPreview();
+	}
+
+	// Enhanced weapon preview panel on hover
+	private Panel? _weaponPreviewPanel;
+	private Label? _weaponPreviewLabel;
+
+	private void _ShowWeaponPreview(WeaponCard wc)
+	{
+		if (_weaponPreviewPanel == null)
+		{
+			_weaponPreviewPanel = new Panel
+			{
+				ZIndex = 50,
+				MouseFilter = Control.MouseFilterEnum.Ignore
+			};
+			var style = MakeNotePanel(borderRadius: 6f);
+			_weaponPreviewPanel.AddThemeStyleboxOverride("panel", style);
+			AddChild(_weaponPreviewPanel);
+
+			_weaponPreviewLabel = new Label
+			{
+				MouseFilter = Control.MouseFilterEnum.Ignore,
+				AutowrapMode = TextServer.AutowrapMode.WordSmart
+			};
+			_weaponPreviewLabel.AddThemeFontSizeOverride("font_size", 13);
+			_weaponPreviewLabel.AddThemeColorOverride("font_color", NoteText);
+			_weaponPreviewPanel.AddChild(_weaponPreviewLabel);
+		}
+
+		// Build preview text with more details
+		var sb = "";
+		var rarityColor = _GetRarityColor(wc.Rarity);
+		sb += $"[color={rarityColor}]{wc.CardName}[/color]\n";
+		sb += $"[color=#8a6060]{wc.GetWeaponTypeText()} · Lv.{wc.Tier} · {_GetRarityText(wc.Rarity)}[/color]\n";
+		sb += "[color=#6a5050]━━━━━━━━━━━━━━━[/color]\n\n";
+
+		// Current stats display
+		Player? player = _gameManager?.PlayerRef;
+		if (player != null)
+		{
+			sb += $"[color=#c08060]当前属性[/color]\n";
+			sb += $"  伤害: [color=#d4a574]{Mathf.RoundToInt(player.CurrentDamage)}[/color]\n";
+			sb += $"  攻速: [color=#d4a574]{Mathf.Snapped(player.AttackCooldown, 0.01f)}秒[/color]\n";
+			sb += $"  暴击: [color=#d4a574]{Mathf.RoundToInt(player.CriticalChance)}%[/color]\n\n";
+		}
+
+		// Preview after acquisition
+		sb += $"[color=#80c080]获得后属性[/color]\n";
+		if (!Mathf.IsEqualApprox(wc.DamageModifier, 1.0f))
+		{
+			int mod = Mathf.RoundToInt((wc.DamageModifier - 1.0f) * 100);
+			string sign = mod > 0 ? "+" : "";
+			sb += $"  伤害: [color=#a0e0a0]{sign}{mod}%[/color]\n";
+		}
+		if (!Mathf.IsEqualApprox(wc.AttackSpeedModifier, 1.0f))
+		{
+			int mod = Mathf.RoundToInt((wc.AttackSpeedModifier - 1.0f) * 100);
+			string sign = mod > 0 ? "+" : "";
+			sb += $"  攻速: [color=#a0e0a0]{sign}{mod}%[/color]\n";
+		}
+		if (wc.CriticalBonus > 0)
+			sb += $"  暴击: [color=#a0e0a0]+{wc.CriticalBonus}%[/color]\n";
+		if (wc.LifeStealBonus > 0)
+			sb += $"  吸血: [color=#a0e0a0]+{wc.LifeStealBonus}%[/color]\n";
+
+		_weaponPreviewLabel.Text = sb;
+		_weaponPreviewLabel.ResetSize();
+		_weaponPreviewLabel.CustomMinimumSize = new Vector2(220, 0);
+
+		var contentH = _weaponPreviewLabel.GetCombinedMinimumSize().Y;
+		_weaponPreviewPanel.CustomMinimumSize = new Vector2(260, contentH + 28);
+		_PositionWeaponPreview();
+		_weaponPreviewPanel!.Visible = true;
+	}
+
+	private void _PositionWeaponPreview()
+	{
+		if (_weaponPreviewPanel == null) return;
+		var screenSize = GetViewport().GetVisibleRect().Size;
+		var panelSize = _weaponPreviewPanel.GetCombinedMinimumSize();
+		var mousePos = GetViewport().GetMousePosition();
+
+		float x = mousePos.X + 20;
+		float y = Mathf.Max(60, mousePos.Y - panelSize.Y / 2);
+
+		if (x + panelSize.X > screenSize.X - 10)
+			x = mousePos.X - panelSize.X - 20;
+
+		_weaponPreviewPanel.SetPosition(new Vector2(x, y));
+	}
+
+	private void _HideWeaponPreview()
+	{
+		if (_weaponPreviewPanel != null)
+			_weaponPreviewPanel.Visible = false;
 	}
 
 	// ═══════════════════════════════════════════════
@@ -1713,7 +2039,7 @@ public partial class UIManager : Control
 			bb += $"  [color=#a08070]● 冰冻几率: +{Mathf.RoundToInt(weapon.FreezeBonus)}%[/color]";
 			if (player != null)
 			{
-				int currentVal = Mathf.RoundToInt(player.FreezeDuration);
+				int currentVal = Mathf.RoundToInt(player.FreezeChance);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.FreezeBonus);
 				bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
 			}
@@ -1726,7 +2052,7 @@ public partial class UIManager : Control
 			bb += $"  [color=#a09070]● 中毒几率: +{Mathf.RoundToInt(weapon.PoisonBonus)}%[/color]";
 			if (player != null)
 			{
-				int currentVal = Mathf.RoundToInt(player.PoisonDamage);
+				int currentVal = Mathf.RoundToInt(player.PoisonChance);
 				int newVal = currentVal + Mathf.RoundToInt(weapon.PoisonBonus);
 				bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
 			}
@@ -2023,6 +2349,15 @@ public partial class UIManager : Control
 		_AddStatRow(vbox, "累计击杀", totalKills.ToString(), BloodRed);
 		_AddStatRow(vbox, "当前得分", score.ToString(), new Color(0.85f, 0.6f, 0.45f));
 
+		// Enhanced stats from DPS tracker
+		if (_damageAccumulator > 0 && _dpsValue > 0)
+		{
+			var sp3 = new Control { CustomMinimumSize = new Vector2(0, 4), MouseFilter = Control.MouseFilterEnum.Ignore };
+			vbox.AddChild(sp3);
+			_AddStatRow(vbox, "本波伤害", Mathf.RoundToInt(_damageAccumulator).ToString(), new Color(0.75f, 0.4f, 0.35f));
+			_AddStatRow(vbox, "本波DPS", Mathf.RoundToInt(_dpsValue).ToString(), new Color(0.9f, 0.75f, 0.4f));
+		}
+
 		// Spacer
 		var sp2 = new Control { CustomMinimumSize = new Vector2(0, 6), MouseFilter = Control.MouseFilterEnum.Ignore };
 		vbox.AddChild(sp2);
@@ -2146,6 +2481,31 @@ public partial class UIManager : Control
 			_zombiesLabel.Text = $"剩余: {zombiesRemaining}/{totalZombies}";
 	}
 
+	/// <summary>累加本回合造成的伤害 (用于 DPS 计算)</summary>
+	public void AccumulateDamage(float damage)
+	{
+		_damageAccumulator += damage;
+	}
+
+	/// <summary>记录一次击杀</summary>
+	public void RecordKill(int killCount = 1)
+	{
+		_roundKills += killCount;
+		if (_killStreakLabel != null)
+			_killStreakLabel.Text = $"击杀 {_roundKills}";
+	}
+
+	/// <summary>重置回合统计 (新回合开始时调用)</summary>
+	public void ResetRoundStats()
+	{
+		_damageAccumulator = 0.0f;
+		_roundKills = 0;
+		_dpsValue = 0.0f;
+		_dpsUpdateTimer = 0.0f;
+		if (_dpsLabel != null) _dpsLabel.Text = "DPS 0";
+		if (_killStreakLabel != null) _killStreakLabel.Text = "击杀 0";
+	}
+
 	public void UpdatePlayerStatus(Player player)
 	{
 		if (_damageLabel != null)
@@ -2181,6 +2541,7 @@ public partial class UIManager : Control
 
 		_UpdateEffectsDisplay(player);
 		_UpdateStatusTooltips(player);
+		UpdateConsumableDisplay(player);
 	}
 
 	private void _UpdateStatusTooltips(Player player)
@@ -2288,7 +2649,7 @@ public partial class UIManager : Control
 			});
 		}
 
-		if (player.FreezeDuration > 0)
+		if (player.FreezeChance > 0)
 		{
 			activeItems.Add(new Godot.Collections.Dictionary
 			{
@@ -2296,11 +2657,11 @@ public partial class UIManager : Control
 				["name"] = "冰冻",
 				["type"] = "stat",
 				["color"] = new Color(0.4f, 0.8f, 1.0f),
-				["tooltip"] = $"【冰冻】\n几率: {Mathf.RoundToInt(player.FreezeDuration)}%\n效果: 攻击有几率冻结敌人"
+				["tooltip"] = $"【冰冻】\n几率: {Mathf.RoundToInt(player.FreezeChance)}%\n效果: 攻击有几率冻结敌人"
 			});
 		}
 
-		if (player.PoisonDamage > 0)
+		if (player.PoisonChance > 0)
 		{
 			activeItems.Add(new Godot.Collections.Dictionary
 			{
@@ -2308,7 +2669,7 @@ public partial class UIManager : Control
 				["name"] = "中毒",
 				["type"] = "stat",
 				["color"] = new Color(0.4f, 0.9f, 0.3f),
-				["tooltip"] = $"【中毒】\n几率: {Mathf.RoundToInt(player.PoisonDamage)}%\n效果: 攻击有几率使敌人中毒"
+				["tooltip"] = $"【中毒】\n几率: {Mathf.RoundToInt(player.PoisonChance)}%\n效果: 攻击有几率使敌人中毒"
 			});
 		}
 
@@ -2527,16 +2888,52 @@ public partial class UIManager : Control
 	/// <summary>显示天气变化通知 (由 WeatherSystem 调用)</summary>
 	public void ShowWeatherNotification(string weatherName, Color weatherColor)
 	{
-		ShowLevelUpNotification($"天气: {weatherName}", weatherColor);
+		// 构建详细天气警告信息
+		string warningTitle = $"天气: {weatherName}";
+		string warningEffect = _GetWeatherEffectDescription(weatherName);
+		string fullWarning = string.IsNullOrEmpty(warningEffect) ? warningTitle : $"{warningTitle}\n{warningEffect}";
+		ShowLevelUpNotification(fullWarning, weatherColor);
+	}
+
+	/// <summary>根据天气名称返回效果描述，用于警告玩家</summary>
+	private string _GetWeatherEffectDescription(string weatherName)
+	{
+		return weatherName switch
+		{
+			"酸雨" => "⚠ 持续腐蚀伤害！寻找掩护",
+			"暴风雨" => "⚠ 闪电随机打击！保持移动",
+			"夜晚" => "⚠ 视野受限，僵尸更具隐蔽性",
+			"血月" => "⚠ 僵尸攻速和移速大幅提升",
+			"大雾" => "⚠ 视野降低，僵尸更容易接近",
+			"下雨" => "僵尸移速 -20%",
+			_ => ""
+		};
 	}
 
 	/// <summary>更新 HUD 天气指示器</summary>
 	public void UpdateWeatherIndicator(string weatherName, Color weatherColor)
 	{
 		if (_weatherLabel == null) return;
-		_weatherLabel.Text = weatherName;
+		// 显示天气名称和效果描述
+		string effectDesc = _GetWeatherIndicatorEffect(weatherName);
+		_weatherLabel.Text = string.IsNullOrEmpty(effectDesc) ? $"天气 {weatherName}" : $"天气 {weatherName} {effectDesc}";
 		_weatherLabel.AddThemeColorOverride("font_color", weatherColor);
 		_weatherLabel.Visible = !string.IsNullOrEmpty(weatherName) && weatherName != "晴朗";
+	}
+
+	/// <summary>获取天气指示器中显示的效果简述</summary>
+	private string _GetWeatherIndicatorEffect(string weatherName)
+	{
+		return weatherName switch
+		{
+			"酸雨" => "⚠-HP",
+			"暴风雨" => "⚠闪电",
+			"夜晚" => "⚠视野",
+			"血月" => "⚠强化",
+			"大雾" => "⚠隐蔽",
+			"下雨" => "-移速",
+			_ => ""
+		};
 	}
 
 	public void TriggerBossAtmosphere()

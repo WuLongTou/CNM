@@ -169,6 +169,12 @@ public partial class PlayerBuffSystem : Node
         return mod;
     }
 
+    /// <summary>Recalculate damage from weapons + active buffs.</summary>
+    public void RecalculateDamage() => _RecalculateDamage();
+
+    /// <summary>Recalculate speed from base + weapons + active buffs.</summary>
+    public void RecalculateSpeed() => _RecalculateSpeed();
+
     // ═══════════════════════════════════════════════════
     // Process Loop
     // ═══════════════════════════════════════════════════
@@ -279,7 +285,7 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.Frozen:
-                _player.FreezeDuration = Mathf.Max(_player.FreezeDuration, buff.Duration);
+                _player.FreezeDebuffDuration = Mathf.Max(_player.FreezeDebuffDuration, buff.Duration);
                 break;
 
             case BuffType.Stunned:
@@ -297,11 +303,21 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.SpeedBoost:
-                _player.CurrentSpeed = _player.BaseSpeed * buff.Value;
+                // Only apply from first stack; refresh does not reapply
+                // Check whether any buff of this type is still pending (after this one was added)
+                if (!_activeBuffs.Any(kvp => kvp.Key == BuffType.SpeedBoost && kvp.Value != buff))
+                {
+                    _player.SpeedBoostModifier = Mathf.Max(_player.SpeedBoostModifier, buff.Value - 1.0f);
+                    _player.CurrentSpeed = _player.BaseSpeed * (1.0f + _player.SpeedBoostModifier);
+                }
                 break;
 
             case BuffType.DamageBoost:
-                _player.CurrentDamage = _player.BaseDamage * buff.Value;
+                if (!_activeBuffs.Any(kvp => kvp.Key == BuffType.DamageBoost && kvp.Value != buff))
+                {
+                    _player.DamageBoostModifier = Mathf.Max(_player.DamageBoostModifier, buff.Value - 1.0f);
+                    _RecalculateDamage();
+                }
                 break;
         }
     }
@@ -315,17 +331,15 @@ public partial class PlayerBuffSystem : Node
             case BuffType.Poison:
                 _player.PoisonedDps = 0;
                 _player.PoisonedTimer = 0;
-                if (_player.Sprite != null && !_activeBuffs.ContainsKey(BuffType.Burn))
-                    _player.Sprite.Modulate = Colors.White;
+                // Sprite Modulate will be recalculated by _ClearVisualOverlay
                 break;
 
             case BuffType.Burn:
-                if (!_activeBuffs.ContainsKey(BuffType.Poison) && _player.Sprite != null)
-                    _player.Sprite.Modulate = Colors.White;
+                // Sprite Modulate will be recalculated by _ClearVisualOverlay
                 break;
 
             case BuffType.Frozen:
-                _player.FreezeDuration = 0;
+                _player.FreezeDebuffDuration = 0;
                 break;
 
             case BuffType.Stunned:
@@ -343,10 +357,12 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.SpeedBoost:
+                _player.SpeedBoostModifier = 0.0f;
                 _RecalculateSpeed();
                 break;
 
             case BuffType.DamageBoost:
+                _player.DamageBoostModifier = 0.0f;
                 _RecalculateDamage();
                 break;
         }
@@ -356,7 +372,9 @@ public partial class PlayerBuffSystem : Node
     {
         if (_player == null) return;
         float mod = 1.0f + GetSpeedModifier();
-        _player.CurrentSpeed = _player.BaseSpeed * Mathf.Max(0.1f, mod);
+        mod *= _player.WeaponAttackSpeedModifier; // multiply by weapon speed modifier
+        float weaponBonus = _player.WeaponSpeedBonus;
+        _player.CurrentSpeed = (_player.BaseSpeed + weaponBonus) * Mathf.Max(Core.GameConfig.MinSpeedMult, mod);
     }
 
     private void _RecalculateDamage()

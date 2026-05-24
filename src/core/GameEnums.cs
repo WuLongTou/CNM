@@ -17,6 +17,10 @@ public static class GameEnums
     public enum BuffSource { ZombieSpitter, ZombieHealer, PlayerItem, WeaponEffect }
     public enum AbilityType { GhostPhase, Teleport, Cloner, Bomber, MindController }
 
+    // ══ Consumable Items ══
+    public enum ConsumableType { HealthPotion, SpeedPotion }
+    public enum ConsumableCategory { Instant, Timed }
+
     // ══ Achievement / Milestone System ══
     public enum AchievementType
     {

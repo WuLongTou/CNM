@@ -277,10 +277,10 @@ public static partial class WeaponFormatter
             effectLines.Add("• 暴击率 +" + (int)player.CriticalChance + "%");
         if (player.LifeStealPercent > 0)
             effectLines.Add("• 吸血 +" + (int)player.LifeStealPercent + "%");
-        if (player.FreezeDuration > 0)
-            effectLines.Add("• 冰冻几率 +" + (int)player.FreezeDuration + "%");
-        if (player.PoisonDamage > 0)
-            effectLines.Add("• 中毒几率 +" + (int)player.PoisonDamage + "%");
+        if (player.FreezeChance > 0)
+            effectLines.Add("• 冰冻几率 +" + (int)player.FreezeChance + "%");
+        if (player.PoisonChance > 0)
+            effectLines.Add("• 中毒几率 +" + (int)player.PoisonChance + "%");
 
         if (effectLines.Count == 0)
             effectLines.Add("• 无特效");

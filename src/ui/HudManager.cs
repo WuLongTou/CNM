@@ -473,7 +473,7 @@ public partial class HudManager : Control
                 ["tooltip"] = $"【吸血】\n比例: {Mathf.RoundToInt(player.LifeStealPercent)}%\n效果: 造成伤害时回复生命"
             });
         }
-        if (player.FreezeDuration > 0)
+        if (player.FreezeDebuffDuration > 0)
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
@@ -481,10 +481,10 @@ public partial class HudManager : Control
                 ["name"] = "冰冻",
                 ["type"] = "stat",
                 ["color"] = new Color(0.4f, 0.8f, 1.0f),
-                ["tooltip"] = $"【冰冻】\n几率: {Mathf.RoundToInt(player.FreezeDuration)}%\n效果: 攻击有几率冻结敌人"
+                ["tooltip"] = $"【冰冻】\n几率: {Mathf.RoundToInt(player.FreezeChance)}%\n效果: 攻击有几率冻结敌人"
             });
         }
-        if (player.PoisonDamage > 0)
+        if (player.PoisonChance > 0)
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
@@ -492,7 +492,7 @@ public partial class HudManager : Control
                 ["name"] = "中毒",
                 ["type"] = "stat",
                 ["color"] = new Color(0.4f, 0.9f, 0.3f),
-                ["tooltip"] = $"【中毒】\n几率: {Mathf.RoundToInt(player.PoisonDamage)}%\n效果: 攻击有几率使敌人中毒"
+                ["tooltip"] = $"【中毒】\n几率: {Mathf.RoundToInt(player.PoisonChance)}%\n效果: 攻击有几率使敌人中毒"
             });
         }
         if (player.ShieldAmount > 0)
@@ -503,7 +503,7 @@ public partial class HudManager : Control
                 ["name"] = "护盾",
                 ["type"] = "buff",
                 ["color"] = new Color(0.6f, 0.8f, 1.0f),
-                ["tooltip"] = $"【护盾】\n剩余: {player.ShieldAmount}\n效果: 吸收伤害"
+                ["tooltip"] = $"【护盾】\n剩余: {player.ShieldAmount}\n效果: 优先吸收即将受到的伤害\n来源: 击杀敌人时获得"
             });
         }
 
