@@ -46,15 +46,15 @@ public partial class PlayerInput : Node
     // Input action names — mirror project.godot [input] section
     // ─────────────────────────────────────────────────────────────────────────
 
-    private const string ACTION_MOVE_LEFT     = "move_left";
-    private const string ACTION_MOVE_RIGHT    = "move_right";
-    private const string ACTION_MOVE_UP      = "move_up";
-    private const string ACTION_MOVE_DOWN    = "move_down";
-    private const string ACTION_ATTACK       = "attack";
-    private const string ACTION_DASH          = "dash";
-    private const string ACTION_CYCLE_TARGET  = "cycle_target";
-    private const string ACTION_PAUSE         = "pause";
-    private const string ACTION_TOGGLE_HELP   = "toggle_help";
+    private const string ACTION_MOVE_LEFT = "move_left";
+    private const string ACTION_MOVE_RIGHT = "move_right";
+    private const string ACTION_MOVE_UP = "move_up";
+    private const string ACTION_MOVE_DOWN = "move_down";
+    private const string ACTION_ATTACK = "attack";
+    private const string ACTION_DASH = "dash";
+    private const string ACTION_CYCLE_TARGET = "cycle_target";
+    private const string ACTION_PAUSE = "pause";
+    private const string ACTION_TOGGLE_HELP = "toggle_help";
 
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
@@ -75,7 +75,7 @@ public partial class PlayerInput : Node
     {
         // ── Movement axis ──────────────────────────────────────────────────
         float horizontal = Input.GetAxis(ACTION_MOVE_LEFT, ACTION_MOVE_RIGHT);
-        float vertical   = Input.GetAxis(ACTION_MOVE_UP,   ACTION_MOVE_DOWN);
+        float vertical = Input.GetAxis(ACTION_MOVE_UP, ACTION_MOVE_DOWN);
         MoveDirection = new Vector2(horizontal, vertical);
 
         if (MoveDirection.Length() > 1.0f)
@@ -121,11 +121,11 @@ public partial class PlayerInput : Node
     /// <summary>Reset all state to zero. Call when the player dies.</summary>
     public void Reset()
     {
-        MoveDirection    = Vector2.Zero;
-        IsAttackPressed   = false;
-        IsDashPressed     = false;
+        MoveDirection = Vector2.Zero;
+        IsAttackPressed = false;
+        IsDashPressed = false;
         IsCycleTargetPressed = false;
-        IsPausePressed    = false;
-        IsHelpToggled     = false;
+        IsPausePressed = false;
+        IsHelpToggled = false;
     }
 }

@@ -726,36 +726,36 @@ public partial class PlayerVfx : Node
         Color Limb, Color Weapon, Color WeaponAccent, Color Eye);
 
     private static readonly StickPalette MeleePalette = new(
-        Body:     new Color(0.45f, 0.38f, 0.30f), // brown leather armor
+        Body: new Color(0.45f, 0.38f, 0.30f), // brown leather armor
         BodyDark: new Color(0.30f, 0.25f, 0.20f),
-        Head:     new Color(0.78f, 0.62f, 0.52f),
-        Hair:     new Color(0.30f, 0.22f, 0.12f),  // dark brown hair
-        Limb:     new Color(0.35f, 0.30f, 0.25f),
-        Weapon:   new Color(0.85f, 0.85f, 0.90f),  // silver blade
+        Head: new Color(0.78f, 0.62f, 0.52f),
+        Hair: new Color(0.30f, 0.22f, 0.12f),  // dark brown hair
+        Limb: new Color(0.35f, 0.30f, 0.25f),
+        Weapon: new Color(0.85f, 0.85f, 0.90f),  // silver blade
         WeaponAccent: new Color(0.60f, 0.50f, 0.30f), // wooden handle
-        Eye:      new Color(0.10f, 0.10f, 0.10f)
+        Eye: new Color(0.10f, 0.10f, 0.10f)
     );
 
     private static readonly StickPalette RangerPalette = new(
-        Body:     new Color(0.25f, 0.40f, 0.25f), // forest green tunic
+        Body: new Color(0.25f, 0.40f, 0.25f), // forest green tunic
         BodyDark: new Color(0.18f, 0.30f, 0.18f),
-        Head:     new Color(0.78f, 0.62f, 0.52f),
-        Hair:     new Color(0.55f, 0.40f, 0.20f),  // auburn
-        Limb:     new Color(0.22f, 0.32f, 0.22f),
-        Weapon:   new Color(0.65f, 0.45f, 0.25f),  // wooden bow
+        Head: new Color(0.78f, 0.62f, 0.52f),
+        Hair: new Color(0.55f, 0.40f, 0.20f),  // auburn
+        Limb: new Color(0.22f, 0.32f, 0.22f),
+        Weapon: new Color(0.65f, 0.45f, 0.25f),  // wooden bow
         WeaponAccent: new Color(0.90f, 0.90f, 0.85f), // arrow/string
-        Eye:      new Color(0.10f, 0.10f, 0.10f)
+        Eye: new Color(0.10f, 0.10f, 0.10f)
     );
 
     private static readonly StickPalette MagicPalette = new(
-        Body:     new Color(0.35f, 0.25f, 0.55f), // purple robe
+        Body: new Color(0.35f, 0.25f, 0.55f), // purple robe
         BodyDark: new Color(0.25f, 0.18f, 0.40f),
-        Head:     new Color(0.78f, 0.62f, 0.52f),
-        Hair:     new Color(0.65f, 0.60f, 0.55f),  // silver-white
-        Limb:     new Color(0.30f, 0.22f, 0.45f),
-        Weapon:   new Color(0.50f, 0.35f, 0.70f),  // magical staff
+        Head: new Color(0.78f, 0.62f, 0.52f),
+        Hair: new Color(0.65f, 0.60f, 0.55f),  // silver-white
+        Limb: new Color(0.30f, 0.22f, 0.45f),
+        Weapon: new Color(0.50f, 0.35f, 0.70f),  // magical staff
         WeaponAccent: new Color(0.70f, 0.50f, 1.0f), // glowing orb
-        Eye:      new Color(0.40f, 0.25f, 0.70f)   // purple glowing eyes
+        Eye: new Color(0.40f, 0.25f, 0.70f)   // purple glowing eyes
     );
 
     private void _CreatePlayerSprite(AttackType type)
@@ -1485,10 +1485,10 @@ public partial class PlayerVfx : Node
         {
             Player.AttackTypeDisplay.Text = Player.CurrentAttackType switch
             {
-                AttackType.Melee  => "近战",
+                AttackType.Melee => "近战",
                 AttackType.Ranged => "远程",
-                AttackType.Area   => "范围",
-                AttackType.Magic  => "魔法",
+                AttackType.Area => "范围",
+                AttackType.Magic => "魔法",
                 _ => ""
             };
         }

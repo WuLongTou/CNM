@@ -17,15 +17,15 @@ public static partial class AssemblyTools
     // by Main._Ready() / Main.cs — they won't exist until that point.
     // ─────────────────────────────────────────────────────────────────────────
 
-    private const string ROOT_PATH          = "/root/Main";
-    private const string PLAYER_PATH        = "/root/Main/Player";
-    private const string GAME_MANAGER_PATH  = "/root/Main/GameManager";
-    private const string WEAPON_DECK_PATH   = "/root/Main/WeaponDeck";
-    private const string UI_MANAGER_PATH    = "/root/Main/UILayer/UIManager";
+    private const string ROOT_PATH = "/root/Main";
+    private const string PLAYER_PATH = "/root/Main/Player";
+    private const string GAME_MANAGER_PATH = "/root/Main/GameManager";
+    private const string WEAPON_DECK_PATH = "/root/Main/WeaponDeck";
+    private const string UI_MANAGER_PATH = "/root/Main/UILayer/UIManager";
     private const string SOUND_MANAGER_PATH = "/root/Main/SoundManager";
-    private const string SAVE_MANAGER_PATH  = "/root/Main/SaveManager";
-    private const string VFX_MANAGER_PATH   = "/root/Main/VFXManager";
-    private const string BACKGROUND_PATH    = "/root/Main/Background";
+    private const string SAVE_MANAGER_PATH = "/root/Main/SaveManager";
+    private const string VFX_MANAGER_PATH = "/root/Main/VFXManager";
+    private const string BACKGROUND_PATH = "/root/Main/Background";
 
     // ─────────────────────────────────────────────────────────────────────────
     // Scene singletons — lazily resolved on first access

@@ -33,8 +33,13 @@ Thumbs.db
 
 # Build artifacts
 builds/
-exports/# Auto-generated
+exports/
+
+# Auto-generated
 .superpowers/
+
+# Browser data (runtime artifact)
+browser-data/
 
 
 # Claude Code worktree metadata

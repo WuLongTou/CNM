@@ -376,7 +376,7 @@ public partial class PlayerBuffSystem : Node
         Color overlay = Colors.White;
         bool hasPoison = _activeBuffs.ContainsKey(BuffType.Poison);
         bool hasBurn = _activeBuffs.ContainsKey(BuffType.Burn);
-                bool hasInvincible = _activeBuffs.ContainsKey(BuffType.Invincible);
+        bool hasInvincible = _activeBuffs.ContainsKey(BuffType.Invincible);
 
         if (hasInvincible)
             overlay = new Color(1.0f, 0.9f, 0.4f, 0.7f);
@@ -399,7 +399,7 @@ public partial class PlayerBuffSystem : Node
             {
                 bool hasPoison = _activeBuffs.ContainsKey(BuffType.Poison);
                 bool hasBurn = _activeBuffs.ContainsKey(BuffType.Burn);
-        bool hasInvincible = _activeBuffs.ContainsKey(BuffType.Invincible);
+                bool hasInvincible = _activeBuffs.ContainsKey(BuffType.Invincible);
 
                 if (hasInvincible)
                     _player.Sprite.Modulate = new Color(1.0f, 0.9f, 0.4f, 0.7f);
@@ -488,15 +488,15 @@ public partial class PlayerBuffSystem : Node
     private static string _GetDefaultDescription(BuffType type, float value) =>
         type switch
         {
-            BuffType.Poison       => $"每跳中毒 {value:F0} 伤害",
-            BuffType.Burn         => $"每跳燃烧 {value:F0} 伤害",
-            BuffType.Frozen       => "移动速度大幅降低",
-            BuffType.Stunned      => "无法移动或攻击",
-            BuffType.Charmed      => "控制方向反转",
-            BuffType.Invincible  => "免疫所有伤害",
-            BuffType.SpeedBoost  => $"速度 +{(value - 1.0f) * 100:F0}%",
+            BuffType.Poison => $"每跳中毒 {value:F0} 伤害",
+            BuffType.Burn => $"每跳燃烧 {value:F0} 伤害",
+            BuffType.Frozen => "移动速度大幅降低",
+            BuffType.Stunned => "无法移动或攻击",
+            BuffType.Charmed => "控制方向反转",
+            BuffType.Invincible => "免疫所有伤害",
+            BuffType.SpeedBoost => $"速度 +{(value - 1.0f) * 100:F0}%",
             BuffType.DamageBoost => $"伤害 +{(value - 1.0f) * 100:F0}%",
-            _                       => type.ToString()
+            _ => type.ToString()
         };
 }
 

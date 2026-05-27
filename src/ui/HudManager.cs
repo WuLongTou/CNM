@@ -524,8 +524,10 @@ public partial class HudManager : Control
                 BgColor = _Darken(itemColor, 0.6f) with { A = 0.7f },
                 BorderWidthBottom = 2,
                 BorderColor = itemColor,
-                CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4,
-                CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4
+                CornerRadiusTopLeft = 4,
+                CornerRadiusTopRight = 4,
+                CornerRadiusBottomLeft = 4,
+                CornerRadiusBottomRight = 4
             };
             btn.AddThemeStyleboxOverride("normal", style);
 
@@ -534,8 +536,10 @@ public partial class HudManager : Control
                 BgColor = _Darken(itemColor, 0.4f),
                 BorderWidthBottom = 2,
                 BorderColor = itemColor,
-                CornerRadiusTopLeft = 4, CornerRadiusTopRight = 4,
-                CornerRadiusBottomLeft = 4, CornerRadiusBottomRight = 4
+                CornerRadiusTopLeft = 4,
+                CornerRadiusTopRight = 4,
+                CornerRadiusBottomLeft = 4,
+                CornerRadiusBottomRight = 4
             };
             btn.AddThemeStyleboxOverride("hover", hoverStyle);
 

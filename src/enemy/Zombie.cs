@@ -20,7 +20,7 @@ public partial class Zombie : CharacterBody2D
     // Signals & Events
     // ═══════════════════════════════════════════════
 
-    public event Action<Zombie> Died = delegate {};
+    public event Action<Zombie> Died = delegate { };
 
     // ═══════════════════════════════════════════════
     // Exported Properties
@@ -217,10 +217,10 @@ public partial class Zombie : CharacterBody2D
         AbilityType? ability = ZombieType switch
         {
             ZombieType.Invisible => AbilityType.GhostPhase,
-            ZombieType.Fast     => AbilityType.Teleport,
+            ZombieType.Fast => AbilityType.Teleport,
             ZombieType.Summoner => AbilityType.Cloner,
             ZombieType.Exploder => AbilityType.Bomber,
-            _                   => null
+            _ => null
         };
 
         if (ability.HasValue)
@@ -873,7 +873,7 @@ public partial class Zombie : CharacterBody2D
         _abilitySystem?.OnDeath();
 
         Died?.Invoke(this);
-        Died = delegate {};
+        Died = delegate { };
         ZombieRegistry.Unregister(this);
         QueueFree();
     }

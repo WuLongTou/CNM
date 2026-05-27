@@ -78,13 +78,13 @@ public partial class WeatherSystem : CanvasLayer
         float Strength
     );
 
-    private static readonly Atmosphere ClearAtmosphere    = new(1, 1, 1, 1, 1, 1, 1);
-    private static readonly Atmosphere RainAtmosphere     = new(0.88f, 0.90f, 1.0f, 0.88f, 0.85f, 0.7f, 1);
-    private static readonly Atmosphere AcidAtmosphere     = new(0.9f, 1.0f, 0.7f, 0.85f, 0.80f, 0.6f, 1);
-    private static readonly Atmosphere FogAtmosphere      = new(0.82f, 0.85f, 0.88f, 0.75f, 0.60f, 0.5f, 1);
-    private static readonly Atmosphere NightAtmosphere    = new(0.70f, 0.72f, 0.85f, 0.65f, 0.40f, 0.3f, 1);
-    private static readonly Atmosphere BloodMoonAtmosphere= new(1.1f, 0.78f, 0.72f, 0.90f, 0.85f, 0.8f, 1);
-    private static readonly Atmosphere StormAtmosphere    = new(0.75f, 0.78f, 0.90f, 0.70f, 0.50f, 0.4f, 1);
+    private static readonly Atmosphere ClearAtmosphere = new(1, 1, 1, 1, 1, 1, 1);
+    private static readonly Atmosphere RainAtmosphere = new(0.88f, 0.90f, 1.0f, 0.88f, 0.85f, 0.7f, 1);
+    private static readonly Atmosphere AcidAtmosphere = new(0.9f, 1.0f, 0.7f, 0.85f, 0.80f, 0.6f, 1);
+    private static readonly Atmosphere FogAtmosphere = new(0.82f, 0.85f, 0.88f, 0.75f, 0.60f, 0.5f, 1);
+    private static readonly Atmosphere NightAtmosphere = new(0.70f, 0.72f, 0.85f, 0.65f, 0.40f, 0.3f, 1);
+    private static readonly Atmosphere BloodMoonAtmosphere = new(1.1f, 0.78f, 0.72f, 0.90f, 0.85f, 0.8f, 1);
+    private static readonly Atmosphere StormAtmosphere = new(0.75f, 0.78f, 0.90f, 0.70f, 0.50f, 0.4f, 1);
 
     private Atmosphere _currentAtmosphere = ClearAtmosphere;
     private float _targetAtmosphereStrength = 1.0f;
@@ -279,8 +279,8 @@ void fragment() {
         type switch
         {
             WeatherType.BloodMoon => 20.0f,
-            WeatherType.Storm     => 15.0f,
-            _                     => 25.0f + (float)GD.RandRange(0, 20)
+            WeatherType.Storm => 15.0f,
+            _ => 25.0f + (float)GD.RandRange(0, 20)
         };
 
     /// <summary>Immediately clear all weather effects.</summary>
@@ -299,13 +299,13 @@ void fragment() {
         int i = (int)Intensity;
         return CurrentWeather switch
         {
-            WeatherType.Rain      => ZombieSpeedModForWeather[i],
-            WeatherType.AcidRain  => ZombieSpeedModForWeather[i] * 0.8f,
-            WeatherType.Fog       => ZombieSpeedModForWeather[i] * 0.9f,
-            WeatherType.Night     => 1.15f * IntensityMultipliers[i],
+            WeatherType.Rain => ZombieSpeedModForWeather[i],
+            WeatherType.AcidRain => ZombieSpeedModForWeather[i] * 0.8f,
+            WeatherType.Fog => ZombieSpeedModForWeather[i] * 0.9f,
+            WeatherType.Night => 1.15f * IntensityMultipliers[i],
             WeatherType.BloodMoon => 1.25f,
-            WeatherType.Storm     => ZombieSpeedModForWeather[i],
-            _                     => 1.0f
+            WeatherType.Storm => ZombieSpeedModForWeather[i],
+            _ => 1.0f
         };
     }
 
@@ -314,10 +314,10 @@ void fragment() {
         int i = (int)Intensity;
         return CurrentWeather switch
         {
-            WeatherType.Night     => 1.5f,
+            WeatherType.Night => 1.5f,
             WeatherType.BloodMoon => 1.2f,
-            WeatherType.AcidRain  => 1.0f - IntensityMultipliers[i] * 0.1f, // slightly less due to hazard
-            _                     => 1.0f
+            WeatherType.AcidRain => 1.0f - IntensityMultipliers[i] * 0.1f, // slightly less due to hazard
+            _ => 1.0f
         };
     }
 
@@ -325,9 +325,9 @@ void fragment() {
     {
         return CurrentWeather switch
         {
-            WeatherType.Fog  => ZombieStealthModForWeather[(int)Intensity],
+            WeatherType.Fog => ZombieStealthModForWeather[(int)Intensity],
             WeatherType.Night => 0.1f,
-            _                => 0.0f
+            _ => 0.0f
         };
     }
 
@@ -335,10 +335,10 @@ void fragment() {
     {
         return CurrentWeather switch
         {
-            WeatherType.Fog  => VisibilityModForWeather[(int)Intensity],
+            WeatherType.Fog => VisibilityModForWeather[(int)Intensity],
             WeatherType.Night => 0.7f,
             WeatherType.Storm => 0.8f,
-            _                => 1.0f
+            _ => 1.0f
         };
     }
 
@@ -347,11 +347,11 @@ void fragment() {
     public float GetAcidRainDamagePerTick() =>
         Intensity switch
         {
-            WeatherIntensity.Light    => 1.0f,
+            WeatherIntensity.Light => 1.0f,
             WeatherIntensity.Moderate => 2.0f,
-            WeatherIntensity.Heavy     => 4.0f,
-            WeatherIntensity.Extreme   => 8.0f,
-            _                         => 0.0f
+            WeatherIntensity.Heavy => 4.0f,
+            WeatherIntensity.Extreme => 8.0f,
+            _ => 0.0f
         };
 
     // ═══════════════════════════════════════════════════
@@ -676,26 +676,26 @@ void fragment() {
     private static string _GetWeatherName(WeatherType type) =>
         type switch
         {
-            WeatherType.Clear     => "晴朗",
-            WeatherType.Rain      => "下雨",
-            WeatherType.AcidRain  => "酸雨",
-            WeatherType.Fog       => "大雾",
-            WeatherType.Night     => "夜晚",
+            WeatherType.Clear => "晴朗",
+            WeatherType.Rain => "下雨",
+            WeatherType.AcidRain => "酸雨",
+            WeatherType.Fog => "大雾",
+            WeatherType.Night => "夜晚",
             WeatherType.BloodMoon => "血月",
-            WeatherType.Storm     => "暴风雨",
-            _                     => "未知"
+            WeatherType.Storm => "暴风雨",
+            _ => "未知"
         };
 
     private static Color _GetWeatherColor(WeatherType type) =>
         type switch
         {
-            WeatherType.Clear    => new Color(1.0f, 0.9f, 0.5f),
-            WeatherType.Rain     => new Color(0.5f, 0.6f, 0.9f),
+            WeatherType.Clear => new Color(1.0f, 0.9f, 0.5f),
+            WeatherType.Rain => new Color(0.5f, 0.6f, 0.9f),
             WeatherType.AcidRain => new Color(0.6f, 1.0f, 0.1f),
-            WeatherType.Fog      => new Color(0.7f, 0.7f, 0.75f),
-            WeatherType.Night    => new Color(0.2f, 0.2f, 0.5f),
+            WeatherType.Fog => new Color(0.7f, 0.7f, 0.75f),
+            WeatherType.Night => new Color(0.2f, 0.2f, 0.5f),
             WeatherType.BloodMoon => new Color(0.9f, 0.1f, 0.1f),
-            WeatherType.Storm    => new Color(0.3f, 0.3f, 0.8f),
-            _                     => Colors.White
+            WeatherType.Storm => new Color(0.3f, 0.3f, 0.8f),
+            _ => Colors.White
         };
 }

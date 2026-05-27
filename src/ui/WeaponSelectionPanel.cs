@@ -26,8 +26,8 @@ public partial class WeaponSelectionPanel : Control
     private WeaponDeck? _weaponDeck;
     private GameManager? _gameManager;
 
-    public event Action<object?> CardSelected = delegate {};
-    public event Action Skipped = delegate {};
+    public event Action<object?> CardSelected = delegate { };
+    public event Action Skipped = delegate { };
 
     public override void _Ready()
     {

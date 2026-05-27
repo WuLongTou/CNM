@@ -197,9 +197,9 @@ public partial class Player : CharacterBody2D
     {
         Vector2 inputVec = Vector2.Zero;
         if (Input.IsActionPressed("move_right")) inputVec.X += 1;
-        if (Input.IsActionPressed("move_left"))  inputVec.X -= 1;
-        if (Input.IsActionPressed("move_down"))   inputVec.Y += 1;
-        if (Input.IsActionPressed("move_up"))     inputVec.Y -= 1;
+        if (Input.IsActionPressed("move_left")) inputVec.X -= 1;
+        if (Input.IsActionPressed("move_down")) inputVec.Y += 1;
+        if (Input.IsActionPressed("move_up")) inputVec.Y -= 1;
 
         Velocity = inputVec != Vector2.Zero ? inputVec.Normalized() * CurrentSpeed : Vector2.Zero;
     }

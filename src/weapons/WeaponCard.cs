@@ -122,10 +122,10 @@ public partial class WeaponCard : Resource
     {
         switch (WeaponType)
         {
-            case WeaponType.Melee:  return "近战";
+            case WeaponType.Melee: return "近战";
             case WeaponType.Ranged: return "远程";
-            case WeaponType.Magic:  return "魔法";
-            default:                          return "未知";
+            case WeaponType.Magic: return "魔法";
+            default: return "未知";
         }
     }
 
@@ -133,9 +133,9 @@ public partial class WeaponCard : Resource
     {
         switch (Category)
         {
-            case WeaponCategory.Weapon:    return "武器";
+            case WeaponCategory.Weapon: return "武器";
             case WeaponCategory.Equipment: return "装备";
-            default:                                  return "未知";
+            default: return "未知";
         }
     }
 
@@ -327,30 +327,30 @@ public partial class WeaponCard : Resource
             case "melee":
                 switch (effectName)
                 {
-                    case "SPLASH":         detail = GetMeleeEffectDetail(MeleeEffect.Splash, level); break;
-                    case "MULTI_TARGET":   detail = GetMeleeEffectDetail(MeleeEffect.MultiTarget, level); break;
+                    case "SPLASH": detail = GetMeleeEffectDetail(MeleeEffect.Splash, level); break;
+                    case "MULTI_TARGET": detail = GetMeleeEffectDetail(MeleeEffect.MultiTarget, level); break;
                     case "KILL_EXPLOSION": detail = GetMeleeEffectDetail(MeleeEffect.KillExplosion, level); break;
-                    case "KILL_SHIELD":    detail = GetMeleeEffectDetail(MeleeEffect.KillShield, level); break;
-                    case "KNOCKBACK":      detail = GetMeleeEffectDetail(MeleeEffect.Knockback, level); break;
+                    case "KILL_SHIELD": detail = GetMeleeEffectDetail(MeleeEffect.KillShield, level); break;
+                    case "KNOCKBACK": detail = GetMeleeEffectDetail(MeleeEffect.Knockback, level); break;
                 }
                 break;
             case "ranged":
                 switch (effectName)
                 {
-                    case "MULTI_SHOT":        detail = GetRangedEffectDetail(RangedEffect.MultiShot, level); break;
+                    case "MULTI_SHOT": detail = GetRangedEffectDetail(RangedEffect.MultiShot, level); break;
                     case "TRAJECTORY_DAMAGE": detail = GetRangedEffectDetail(RangedEffect.TrajectoryDamage, level); break;
-                    case "RETURNING":        detail = GetRangedEffectDetail(RangedEffect.Returning, level); break;
-                    case "PIERCING":         detail = GetRangedEffectDetail(RangedEffect.Piercing, level); break;
+                    case "RETURNING": detail = GetRangedEffectDetail(RangedEffect.Returning, level); break;
+                    case "PIERCING": detail = GetRangedEffectDetail(RangedEffect.Piercing, level); break;
                 }
                 break;
             case "magic":
                 switch (effectName)
                 {
-                    case "CHARM":  detail = GetMagicEffectDetail(MagicEffect.Charm, level); break;
-                    case "PUSH":   detail = GetMagicEffectDetail(MagicEffect.Push, level); break;
-                    case "STUN":   detail = GetMagicEffectDetail(MagicEffect.Stun, level); break;
-                    case "CHAIN":  detail = GetMagicEffectDetail(MagicEffect.Chain, level); break;
-                    case "DOT":    detail = GetMagicEffectDetail(MagicEffect.Dot, level); break;
+                    case "CHARM": detail = GetMagicEffectDetail(MagicEffect.Charm, level); break;
+                    case "PUSH": detail = GetMagicEffectDetail(MagicEffect.Push, level); break;
+                    case "STUN": detail = GetMagicEffectDetail(MagicEffect.Stun, level); break;
+                    case "CHAIN": detail = GetMagicEffectDetail(MagicEffect.Chain, level); break;
+                    case "DOT": detail = GetMagicEffectDetail(MagicEffect.Dot, level); break;
                 }
                 break;
         }

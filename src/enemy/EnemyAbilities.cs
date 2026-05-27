@@ -84,12 +84,12 @@ public partial class ZombieAbilitySystem : Node
     private float _GetAbilityCooldown(AbilityType ability) =>
         ability switch
         {
-            AbilityType.GhostPhase     => GhostPhaseInterval,
-            AbilityType.Teleport       => TeleportCooldown,
-            AbilityType.Cloner         => 9999.0f, // one-shot on death
-            AbilityType.Bomber         => 10.0f,
+            AbilityType.GhostPhase => GhostPhaseInterval,
+            AbilityType.Teleport => TeleportCooldown,
+            AbilityType.Cloner => 9999.0f, // one-shot on death
+            AbilityType.Bomber => 10.0f,
             AbilityType.MindController => _controlCooldown,
-            _                           => 5.0f
+            _ => 5.0f
         };
 
     // ═══════════════════════════════════════════════════

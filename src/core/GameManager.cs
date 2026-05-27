@@ -16,11 +16,11 @@ using Background = ZombieWars.World.Background;
 /// </summary>
 public partial class GameManager : Node
 {
-    public event Action<int> RoundStarted = delegate {};
-    public event Action<int> RoundEnded = delegate {};
-    public event Action WeaponSelectionStarted = delegate {};
-    public event Action WeaponSelectionEnded = delegate {};
-    public event Action GameOver = delegate {};
+    public event Action<int> RoundStarted = delegate { };
+    public event Action<int> RoundEnded = delegate { };
+    public event Action WeaponSelectionStarted = delegate { };
+    public event Action WeaponSelectionEnded = delegate { };
+    public event Action GameOver = delegate { };
 
     [Export] public int ZombiesPerRoundBase = 3;
     [Export] public int ZombiesIncreasePerRound = 1;
