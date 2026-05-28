@@ -277,6 +277,7 @@ public partial class GameManager : Node
         LogUtils.Print($"第 {CurrentRound} 回合结束！");
 
         _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
+        GameServices.Audio.ResetKillStreak();
 
         await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
 

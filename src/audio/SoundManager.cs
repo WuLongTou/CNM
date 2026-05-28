@@ -135,7 +135,21 @@ public partial class SoundManager : Node
     public void PlayExplosion() => _PlaySfx("explosion");
     public void PlayLightning() => _PlaySfx("lightning");
     public void PlayCharm() => _PlaySfx("charm");
-    public void NotifyKill() { }
+
+    private int _killStreak;
+    public void NotifyKill()
+    {
+        _killStreak++;
+        if (_killStreak >= 5)
+            _PlaySfx("combo_5");
+        else if (_killStreak >= 3)
+            _PlaySfx("combo_3");
+    }
+
+    public void ResetKillStreak()
+    {
+        _killStreak = 0;
+    }
 
     public void StartMusic()
     {
