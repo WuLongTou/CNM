@@ -390,6 +390,7 @@ public partial class WeaponSelectionPanel : Control
         typeNode.Text = "强化已有装备";
         if (iconNode != null)
             iconNode.Text = upgrade.Icon;
+        upgrade.SyncDescription();
         descNode.Text = upgrade.Description;
         rarityNode.Text = "升级";
 

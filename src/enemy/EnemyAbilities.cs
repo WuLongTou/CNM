@@ -1,6 +1,7 @@
 namespace ZombieWars.Enemy;
 
 using System;
+using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Vfx;
@@ -39,6 +40,7 @@ public partial class ZombieAbilitySystem : Node
 
     // Ghost phase
     private bool _isGhostPhase;
+    private float _ghostPhaseOriginalSpeed;
 
     // Teleport
     private float _teleportDistance = 150.0f;
@@ -160,13 +162,15 @@ public partial class ZombieAbilitySystem : Node
             if (_isGhostPhase)
             {
                 // Store and boost speed
+                _ghostPhaseOriginalSpeed = _zombie.Speed;
                 _zombie.Speed *= 1.3f;
                 _SpawnGhostVFX();
             }
             else
             {
-                // Restore speed (applied via round scaling stored value)
-                _zombie.Speed *= 0.77f; // inverse of 1.3x
+                // Restore speed to exact original value
+                if (_ghostPhaseOriginalSpeed > 0)
+                    _zombie.Speed = _ghostPhaseOriginalSpeed;
             }
         }
     }
@@ -437,8 +441,9 @@ public partial class ZombieAbilitySystem : Node
                 p.TakeDamage(damage, self);
         }
 
-        // Damage zombies
-        foreach (var z in ZombieRegistry.All)
+        // Damage zombies — iterate a snapshot to avoid Collection was modified
+        var snapshot = new List<Zombie>(ZombieRegistry.All);
+        foreach (var z in snapshot)
         {
             if (!IsInstanceValid(z) || z == self)
                 continue;

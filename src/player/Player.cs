@@ -171,8 +171,6 @@ public partial class Player : CharacterBody2D
         _HandleMovement();
         Vfx?.UpdateWalkAnimation((float)delta);
         _HandleDashInput();
-        _HandleTargetCycle();
-        _HandleStatusEffects((float)delta);
         _HandleInvincibility((float)delta);
         Aura?.Handle((float)delta);
         Combat?.HandleManualAttack();
@@ -270,20 +268,6 @@ public partial class Player : CharacterBody2D
         if (Collision != null) Collision.Disabled = false;
         if (Sprite != null) Sprite.Modulate = Colors.White;
         _dashCooldownTimer.Start();
-    }
-
-    private void _HandleTargetCycle()
-    {
-        if (Input.IsActionJustPressed("cycle_target"))
-        {
-            TargetPriority = (TargetPriority + 1) % 3;
-            GameServices.UI.UpdatePlayerStatus(this);
-        }
-    }
-
-    private void _HandleStatusEffects(float delta)
-    {
-        // Poison damage is handled by PlayerBuffSystem._ProcessBuffTick
     }
 
     private void _HandleInvincibility(float delta)

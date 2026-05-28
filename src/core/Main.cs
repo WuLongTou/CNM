@@ -122,12 +122,6 @@ public partial class Main : Node2D
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event.IsActionPressed("pause"))
-        {
-            if (_uiManager.IsUpgradeActive())
-                return;
-            GetTree().Paused = !GetTree().Paused;
-        }
     }
 
     private void OnPlayerHealthChanged(int newHealth)
@@ -144,7 +138,6 @@ public partial class Main : Node2D
 
     public void ToggleHelp()
     {
-        // Placeholder — help panel UI not yet implemented
-        LogUtils.Print("帮助面板切换 (TODO)");
+        _uiManager.ToggleHelp();
     }
 }

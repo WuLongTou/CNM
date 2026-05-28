@@ -145,7 +145,8 @@ public partial class SoundManager : Node
         {
             _musicPlayer.Stream = GD.Load<AudioStream>(path);
             _musicPlayer.ProcessMode = Node.ProcessModeEnum.Always;
-            _musicPlayer.Connect("finished", Callable.From(() => _musicPlayer?.Play()));
+            if (!_musicPlayer.IsConnected("finished", Callable.From(() => _musicPlayer?.Play())))
+                _musicPlayer.Connect("finished", Callable.From(() => _musicPlayer?.Play()));
             _musicPlayer.Play();
         }
     }

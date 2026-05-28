@@ -968,7 +968,7 @@ public partial class PlayerCombat : Node
 
     private bool _CanPayHealthCost()
     {
-        if (Player!.HealthCostPerAttack <= 0 || Player.CurrentHealth > Player.HealthCostPerAttack)
+        if (Player!.HealthCostPerAttack <= 0 || Player.CurrentHealth >= Player.HealthCostPerAttack)
             return true;
 
         VFXManager.SpawnFloatingLabel(Player.GetParent(), Player.GlobalPosition, "生命不足", Colors.OrangeRed, 16);

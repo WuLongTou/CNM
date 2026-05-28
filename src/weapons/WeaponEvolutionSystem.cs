@@ -355,7 +355,6 @@ public partial class WeaponEvolutionSystem : Node
             return null;
 
         var result = new WeaponCard();
-        if (result == null) return null;
 
         result.CardName = recipe.ResultName;
         result.Description = recipe.ResultDescription;
@@ -375,8 +374,19 @@ public partial class WeaponEvolutionSystem : Node
             result.RangedEffects.Add((int)effect);
         foreach (var effect in recipe.MagicEffects)
             result.MagicEffects.Add((int)effect);
+
+        // Route effect levels to the correct dictionary based on effect type
+        var meleeKeySet = new HashSet<long>(System.Array.ConvertAll(recipe.MeleeEffects, e => (long)e));
+        var rangedKeySet = new HashSet<long>(System.Array.ConvertAll(recipe.RangedEffects, e => (long)e));
         foreach (var kvp in recipe.EffectLevels)
-            result.MeleeEffectLevels[(Variant)(int)kvp.Key] = (Variant)kvp.Value;
+        {
+            if (meleeKeySet.Contains(kvp.Key))
+                result.MeleeEffectLevels[(Variant)(int)kvp.Key] = (Variant)kvp.Value;
+            else if (rangedKeySet.Contains(kvp.Key))
+                result.RangedEffectLevels[(Variant)(int)kvp.Key] = (Variant)kvp.Value;
+            else
+                result.MagicEffectLevels[(Variant)(int)kvp.Key] = (Variant)kvp.Value;
+        }
 
         // Inherit stats from stronger parent
         result.DamageModifier = Mathf.Max(w1.DamageModifier, w2.DamageModifier) * 1.2f;
@@ -415,7 +425,6 @@ public partial class WeaponEvolutionSystem : Node
 
         // Ascension: boost all existing effects by 1 level
         var evolved = new WeaponCard();
-        if (evolved == null) return null;
 
         _CopyWeaponCard(weapon, evolved);
 
@@ -441,7 +450,6 @@ public partial class WeaponEvolutionSystem : Node
         if (!CanTransformUltimate(weapon, weapon.UpgradeCount)) return null;
 
         var ult = new WeaponCard();
-        if (ult == null) return null;
 
         _CopyWeaponCard(weapon, ult);
 
@@ -474,7 +482,6 @@ public partial class WeaponEvolutionSystem : Node
 
         var left = new WeaponCard();
         var right = new WeaponCard();
-        if (left == null || right == null) return null;
 
         _CopyWeaponCard(weapon, left);
         _CopyWeaponCard(weapon, right);

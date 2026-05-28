@@ -462,7 +462,7 @@ public partial class GameManager : Node
 
     private void _OnZombieDied(Zombie zombie)
     {
-        _zombiesAlive--;
+        _zombiesAlive = Math.Max(0, _zombiesAlive - 1);
         _roundKills++;
         _totalKills++;
 
@@ -627,7 +627,7 @@ public partial class GameManager : Node
 
     private void _OnMinionDied(Zombie zombie)
     {
-        _zombiesAlive--;
+        _zombiesAlive = Math.Max(0, _zombiesAlive - 1);
         _roundKills++;
         _totalKills++;
         Score += 5;
@@ -635,6 +635,7 @@ public partial class GameManager : Node
         SaveManager.AddKill();
 
         _uiManager?.UpdateScoreDisplay(Score);
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _zombiesToSpawn);
         _uiManager?.AddCombo();
     }
 

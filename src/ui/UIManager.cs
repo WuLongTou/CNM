@@ -1,7 +1,6 @@
 namespace ZombieWars.UI;
 
 using Godot;
-using Godot.NativeInterop;
 using System;
 using System.Collections.Generic;
 using ZombieWars.Core;
@@ -56,8 +55,7 @@ public partial class UIManager : Control
     private Label _targetPriorityLabel = null!;
     private Label _dashCooldownLabel = null!;
     private Label _speedLabel = null!;
-    private Panel _controlsPanel = null!;
-    private bool _controlsVisible;
+    private HelpPanel _helpPanel = null!;
     private Panel _welcomePanel = null!;
     private bool _welcomeVisible = true;
     private Label _scoreLabel = null!;
@@ -153,7 +151,7 @@ public partial class UIManager : Control
     {
         _CreateHudPanel();
         _CreateWeaponSelectionPanel();
-        _CreateControlsPanel();
+        _CreateHelpPanel();
         _CreateWelcomePanel();
         _CreateRoundBanner();
     }
@@ -736,100 +734,14 @@ public partial class UIManager : Control
         _roundBannerPanel.AddChild(_roundBannerSub);
     }
 
-    private void _CreateControlsPanel()
+    private void _CreateHelpPanel()
     {
-        _controlsPanel = new Panel
+        _helpPanel = new HelpPanel
         {
-            Visible = false,
-            FocusMode = Control.FocusModeEnum.None
+            Name = "HelpPanel",
+            ZIndex = 80
         };
-        _controlsPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopRight);
-        _OnUiViewportSizeChanged();
-
-        var styleBox = MakeNotePanel(borderRadius: 5f, shadowSize: 6f);
-        _controlsPanel.AddThemeStyleboxOverride("panel", styleBox);
-        AddChild(_controlsPanel);
-
-        var scrollContainer = new ScrollContainer();
-        scrollContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        scrollContainer.SetOffsetsPreset(Control.LayoutPreset.FullRect, Control.LayoutPresetMode.Minsize, 10);
-        _controlsPanel.AddChild(scrollContainer);
-
-        var container = new VBoxContainer();
-        container.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        scrollContainer.AddChild(container);
-
-        var titleLabel = new Label
-        {
-            Text = "🎮 操作指南"
-        };
-        titleLabel.AddThemeFontSizeOverride("font_size", 20);
-        titleLabel.AddThemeColorOverride("font_color", NoteText);
-        titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        container.AddChild(titleLabel);
-
-        var separator = new HSeparator();
-        separator.AddThemeColorOverride("separator", new Color(NoteBorder, 0.5f));
-        container.AddChild(separator);
-
-        _CreateInfoCard(container, "🏃 移动", "WASD 或 方向键\n自由移动角色", new Color(0.3f, 0.8f, 0.3f));
-        _CreateInfoCard(container, "⚔️ 攻击", "按住空格进行攻击\n魔法类自动锁定", new Color(0.8f, 0.3f, 0.3f));
-        _CreateInfoCard(container, "🗡️ 武器类型", "近战: 扇形斩击\n远程: 发射子弹\n魔法: 追踪导弹\n范围: 爆炸攻击", new Color(0.8f, 0.6f, 0.2f));
-        _CreateInfoCard(container, "🎯 回合目标", "消灭所有僵尸\n回合开始时选择强化\n可跳过本次强化", new Color(0.6f, 0.3f, 0.8f));
-        _CreateInfoCard(container, "💨 冲刺", "按 Shift 快速闪避\n有冷却时间", new Color(0.4f, 0.7f, 1.0f));
-        _CreateInfoCard(container, "🔭 锁定", "按 Tab 切换目标优先级\n最近/最远/密集", new Color(0.5f, 0.8f, 0.9f));
-        _CreateInfoCard(container, "⏸ 暂停", "按 ESC 暂停/继续游戏\n强化阶段无法手动暂停", new Color(0.8f, 0.8f, 0.5f));
-
-        var closeHint = new Label
-        {
-            Text = "💡 按 H 键切换显示"
-        };
-        closeHint.AddThemeFontSizeOverride("font_size", 12);
-        closeHint.AddThemeColorOverride("font_color", new Color(0.7f, 0.7f, 0.7f));
-        closeHint.HorizontalAlignment = HorizontalAlignment.Center;
-        container.AddChild(closeHint);
-    }
-
-    private void _CreateInfoCard(VBoxContainer parent, string title, string content, Color accentColor)
-    {
-        var card = new Panel
-        {
-            CustomMinimumSize = new Vector2(0, 80)
-        };
-        var cardStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(NoteBg, 0.85f),
-            BorderWidthLeft = 2,
-            BorderColor = NoteBorder,
-            CornerRadiusTopLeft = 5,
-            CornerRadiusTopRight = 5,
-            CornerRadiusBottomLeft = 5,
-            CornerRadiusBottomRight = 5
-        };
-        card.AddThemeStyleboxOverride("panel", cardStyle);
-        parent.AddChild(card);
-
-        var cardContainer = new VBoxContainer();
-        cardContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        cardContainer.SetOffsetsPreset(Control.LayoutPreset.FullRect, Control.LayoutPresetMode.Minsize, 8);
-        card.AddChild(cardContainer);
-
-        var titleLabel = new Label { Text = title };
-        titleLabel.AddThemeFontSizeOverride("font_size", 14);
-        titleLabel.AddThemeColorOverride("font_color", NoteText);
-        cardContainer.AddChild(titleLabel);
-
-        var contentLabel = new Label
-        {
-            Text = content,
-            AutowrapMode = TextServer.AutowrapMode.WordSmart
-        };
-        contentLabel.AddThemeFontSizeOverride("font_size", 12);
-        contentLabel.AddThemeColorOverride("font_color", NoteText);
-        cardContainer.AddChild(contentLabel);
-
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 5) };
-        parent.AddChild(spacer);
+        AddChild(_helpPanel);
     }
 
     private void _CreateWelcomePanel()
@@ -971,6 +883,11 @@ public partial class UIManager : Control
 
             if (key.Keycode == Key.H)
                 _ToggleControlsPanel();
+            else if (key.Keycode == Key.Escape && _helpPanel.Visible)
+            {
+                _helpPanel.Close();
+                GetViewport().SetInputAsHandled();
+            }
         }
 
         if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left && IsUpgradeActive())
@@ -1106,9 +1023,13 @@ public partial class UIManager : Control
 
     private void _ToggleControlsPanel()
     {
-        if (_weaponSelectionPanel.Visible && !_controlsVisible) return;
-        _controlsVisible = !_controlsVisible;
-        _controlsPanel.Visible = _controlsVisible;
+        if (_weaponSelectionPanel.Visible && !_helpPanel.Visible) return;
+        _helpPanel.Toggle();
+    }
+
+    public void ToggleHelp()
+    {
+        _helpPanel.Toggle();
     }
 
     private void _ToggleSound()
@@ -1142,8 +1063,8 @@ public partial class UIManager : Control
         GetTree().Paused = true;
         if (_pausePanel != null) _pausePanel.Visible = false;
 
-        if (_controlsVisible)
-            _ToggleControlsPanel();
+        if (_helpPanel.Visible)
+            _helpPanel.Close();
 
         if (_gameManager?.PlayerRef != null)
         {
@@ -1516,6 +1437,7 @@ public partial class UIManager : Control
         titleNode.Text = upgrade.DisplayName;
         typeNode.Text = "强化已有装备";
         if (iconNode != null) iconNode.Text = upgrade.Icon;
+        upgrade.SyncDescription();
         descNode.Text = upgrade.Description;
         rarityNode.Text = "升级";
 
@@ -1813,14 +1735,6 @@ public partial class UIManager : Control
     private void _OnUiViewportSizeChanged()
     {
         var viewportSize = GetViewport().GetVisibleRect().Size;
-        if (_controlsPanel != null)
-        {
-            _controlsPanel.Size = new Vector2(
-                Mathf.Min(340.0f, viewportSize.X * 0.36f),
-                Mathf.Min(520.0f, viewportSize.Y - 40.0f)
-            );
-            _controlsPanel.Position = new Vector2(-_controlsPanel.Size.X - 20.0f, 20.0f);
-        }
         var bannerSize = new Vector2(Mathf.Min(460.0f, viewportSize.X - 40.0f), 100.0f);
         if (_roundBannerPanel != null)
         {

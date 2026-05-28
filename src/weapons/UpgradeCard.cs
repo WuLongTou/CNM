@@ -27,10 +27,16 @@ public partial class UpgradeCard : WeaponCard
     }
 
     public WeaponCard TargetRef { get; set; } = null!;
-    public string DisplayName { get; set; } = "";
-
-    public new string CardName => DisplayName;
-    public new string Description => _BuildDescription();
+    public string DisplayName
+    {
+        get => _displayName;
+        set
+        {
+            _displayName = value;
+            CardName = value;
+        }
+    }
+    private string _displayName = "";
 
     public float DamageDelta { get; set; } = 0.0f;
     public float AttackSpeedDelta { get; set; } = 0.0f;
@@ -48,6 +54,11 @@ public partial class UpgradeCard : WeaponCard
 
     public UpgradeDirection UpgradeDirection_ { get; set; } = UpgradeDirection.None;
     public new string UpgradeCategory { get; set; } = "强化";
+
+    public void SyncDescription()
+    {
+        Description = _BuildDescription();
+    }
 
     private string _BuildDescription()
     {

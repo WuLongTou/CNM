@@ -355,8 +355,6 @@ public partial class Zombie : CharacterBody2D
             _HandleEliteAffix(d);
         }
 
-        _abilitySystem?._Process(d);
-
         if (Player != null)
         {
             _MoveTowardsPlayer();
@@ -372,8 +370,17 @@ public partial class Zombie : CharacterBody2D
     // Movement
     // ═══════════════════════════════════════════════
 
+    private static readonly HashSet<ZombieType> _selfMovingTypes = new()
+    {
+        ZombieType.Ship, ZombieType.Mech, ZombieType.Knight, ZombieType.Dragon, ZombieType.Swarm
+    };
+
     private void _MoveTowardsPlayer()
     {
+        // Types with custom movement already set Velocity and called MoveAndSlide
+        if (_selfMovingTypes.Contains(ZombieType))
+            return;
+
         if (_isCharmed)
         {
             var nearest = _FindNearestZombie(GameConfig.CharmSearchRange);
@@ -636,7 +643,10 @@ public partial class Zombie : CharacterBody2D
         else if (_dragonFlying)
         {
             // Retreating upward
-            Velocity = -Velocity.Normalized() * Speed * 0.5f * _slowMultiplier;
+            Vector2 retreatDir = Velocity.LengthSquared() > 0.01f
+                ? -Velocity.Normalized()
+                : new Vector2(0, -1);
+            Velocity = retreatDir * Speed * 0.5f * _slowMultiplier;
             MoveAndSlide();
             if (GlobalPosition.Y < _diveTarget.Y - _dragonHeight)
             {
@@ -857,8 +867,13 @@ public partial class Zombie : CharacterBody2D
         }
     }
 
+    private bool _isDead;
+
     public void Die()
     {
+        if (_isDead) return;
+        _isDead = true;
+
         if (ZombieType == ZombieType.Exploder)
         {
             _Explode();
@@ -896,8 +911,9 @@ public partial class Zombie : CharacterBody2D
                 p.TakeDamage((int)(Damage * GameConfig.EliteExplosiveMult), this);
         }
 
-        // Damage zombies
-        foreach (var z in ZombieRegistry.All)
+        // Damage zombies — iterate a snapshot to avoid Collection was modified
+        var snapshot = new List<Zombie>(ZombieRegistry.All);
+        foreach (var z in snapshot)
         {
             if (!IsInstanceValid(z) || z == this)
                 continue;
