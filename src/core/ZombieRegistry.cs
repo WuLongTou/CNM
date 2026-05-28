@@ -11,43 +11,65 @@ using ZombieWars.Enemy;
 public static partial class ZombieRegistry
 {
     private static readonly List<Zombie> _zombies = new();
+    private static readonly object _lock = new();
 
-    public static int Count => _zombies.Count;
+    public static int Count
+    {
+        get
+        {
+            lock (_lock) return _zombies.Count;
+        }
+    }
 
-    public static IReadOnlyList<Zombie> All => _zombies;
+    public static IReadOnlyList<Zombie> All
+    {
+        get
+        {
+            lock (_lock) return _zombies.ToArray();
+        }
+    }
 
     public static void Register(Zombie z)
     {
-        if (z == null || _zombies.Contains(z))
-            return;
-        _zombies.Add(z);
-        // Invalidate spatial grid when new zombie spawns
+        if (z == null) return;
+        lock (_lock)
+        {
+            if (_zombies.Contains(z)) return;
+            _zombies.Add(z);
+        }
         SpatialUtils.InvalidateGrid();
     }
 
     public static void Unregister(Zombie z)
     {
-        if (z == null)
-            return;
-        _zombies.Remove(z);
-        // Invalidate spatial grid when zombie dies
+        if (z == null) return;
+        lock (_lock)
+        {
+            _zombies.Remove(z);
+        }
         SpatialUtils.InvalidateGrid();
     }
 
     public static void RefreshFromGroup(SceneTree tree)
     {
-        _zombies.Clear();
-        foreach (var node in tree.GetNodesInGroup("zombies"))
+        lock (_lock)
         {
-            if (node is Zombie z)
-                _zombies.Add(z);
+            _zombies.Clear();
+            foreach (var node in tree.GetNodesInGroup("zombies"))
+            {
+                if (node is Zombie z)
+                    _zombies.Add(z);
+            }
         }
         SpatialUtils.InvalidateGrid();
     }
 
     public static void Clear()
     {
-        _zombies.Clear();
+        lock (_lock)
+        {
+            _zombies.Clear();
+        }
         SpatialUtils.Clear();
     }
 }
