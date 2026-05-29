@@ -44,3 +44,4 @@ browser-data/
 
 # Claude Code worktree metadata
 .claude/
+*.import
