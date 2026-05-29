@@ -277,13 +277,13 @@ public partial class GameManager : Node
         LogUtils.Print($"第 {CurrentRound} 回合结束！");
 
         _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
-        GameServices.Audio.ResetKillStreak();
 
         await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
 
         _uiManager?.HideRoundSummary();
         await ToSignal(GetTree().CreateTimer(0.4f), Timer.SignalName.Timeout);
 
+        GameServices.Audio.ResetKillStreak();
         _endingRound = false;
         StartNewRound();
     }
@@ -658,6 +658,8 @@ public partial class GameManager : Node
         _uiManager?.UpdateScoreDisplay(Score);
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _zombiesToSpawn);
         _uiManager?.AddCombo();
+        if (_player?.Combat != null)
+            _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
     }
 
     public void SpawnSwarmGroup(Vector2 pos)
@@ -764,7 +766,7 @@ public partial class GameManager : Node
 
         if (roll > dropChance) return;
 
-        string pickupType = roll < dropChance * 0.6f ? "health_potion" : "skill_book";
+        string pickupType = GD.Randf() < 0.5f ? "health_potion" : "skill_book";
         SpawnPickup(zombie.GlobalPosition, pickupType);
     }
 

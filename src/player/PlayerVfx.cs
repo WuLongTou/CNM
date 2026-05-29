@@ -1236,7 +1236,7 @@ public partial class PlayerVfx : Node
             _footstepTimer += delta;
             if (_footstepTimer >= FootstepInterval)
             {
-                _footstepTimer = 0.0f;
+                _footstepTimer -= FootstepInterval; // Use modulo-style to avoid burst on resume
                 GameServices.Audio.PlayFootstep();
             }
         }
