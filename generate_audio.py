@@ -7,7 +7,7 @@ import random
 import os
 
 SAMPLE_RATE = 44100
-OUTPUT_DIR = "/Users/liyou/Work/ZVS/assets/audio"
+OUTPUT_DIR = "/Users/liyou/work/CNM/assets/audio"
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -229,6 +229,46 @@ if max_amp > 1.0:
     music = [s / max_amp * 0.9 for s in music]
 
 write_wav("bg_music.wav", music)
+
+# ===== Footstep =====
+# Quick footstep sound - short impact with slight reverb
+def footstep():
+    impact = sine(80, 0.03, 0.6)
+    click = sine(200, 0.02, 0.3)
+    noise_burst = noise(0.05, 0.15)
+    return envelope(add(impact, click, noise_burst), attack=0.005, release=0.04)
+
+write_wav("footstep.wav", footstep())
+
+# ===== Dash =====
+# Whoosh sound for dash movement
+def dash():
+    whoosh = sweep(400, 150, 0.15, 0.3)
+    noise_burst = noise(0.12, 0.2)
+    return envelope(add(whoosh, noise_burst), attack=0.02, release=0.05)
+
+write_wav("dash.wav", dash())
+
+# ===== Combo 3 =====
+# Short victory chime for 3+ combo
+def combo_3():
+    c4 = sine(523, 0.15, 0.4)
+    e4 = sine(659, 0.15, 0.35)
+    g4 = sine(784, 0.2, 0.4)
+    return envelope(add(c4, e4, g4), attack=0.01, release=0.1)
+
+write_wav("combo_3.wav", combo_3())
+
+# ===== Combo 5 =====
+# Larger victory fanfare for 5+ combo
+def combo_5():
+    c4 = sine(523, 0.12, 0.4)
+    e4 = sine(659, 0.12, 0.35)
+    g4 = sine(784, 0.12, 0.35)
+    c5 = sine(1047, 0.25, 0.5)
+    return envelope(add(c4, e4, g4, c5), attack=0.01, release=0.15)
+
+write_wav("combo_5.wav", combo_5())
 
 print(f"\nGenerated audio files in {OUTPUT_DIR}:")
 for f in sorted(os.listdir(OUTPUT_DIR)):
