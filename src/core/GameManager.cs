@@ -598,6 +598,7 @@ public partial class GameManager : Node
         minion.SetPlayerTarget(_player);
         minion.Died += _OnMinionDied;
         GetTree().CurrentScene.AddChild(minion);
+        ZombieRegistry.Register(minion);
 
         var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
         minion.ApplyRoundScaling(CurrentRound, roundMult * 0.6f);
@@ -630,6 +631,7 @@ public partial class GameManager : Node
         zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
 
         GetTree().CurrentScene.AddChild(zombieInstance);
+        ZombieRegistry.Register(zombieInstance);
         _zombiesAlive++;
     }
 
@@ -681,6 +683,7 @@ public partial class GameManager : Node
             ship.SetPlayerTarget(_player);
             ship.Died += _OnMinionDied;
             GetTree().CurrentScene.AddChild(ship);
+            ZombieRegistry.Register(ship);
 
             var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.7f;
             ship.ApplyRoundScaling(CurrentRound, roundMult);

@@ -548,7 +548,10 @@ void fragment() {
         int blastRadius = (int)(80 * IntensityMultipliers[(int)Intensity]);
         int damage = 50 + (int)(IntensityMultipliers[(int)Intensity] * 30);
 
+        var snapshot = new System.Collections.Generic.List<ZombieWars.Enemy.Zombie>();
         foreach (var z in ZombieRegistry.All)
+            snapshot.Add(z);
+        foreach (var z in snapshot)
         {
             if (IsInstanceValid(z) && strikePos.DistanceTo(z.GlobalPosition) <= blastRadius)
             {
