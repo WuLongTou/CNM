@@ -67,6 +67,7 @@ public partial class GameManager : Node
     public int HighScore { get; private set; }
     public int TotalKills => _totalKills;
 
+    private float _survivalTime;
     private float _edgeIndicatorTimer;
 
     private static readonly Dictionary<int, string> TypeNames = new()
@@ -126,7 +127,17 @@ public partial class GameManager : Node
         SaveManager.AddGamePlayed();
         LogUtils.Print($"最高分: {HighScore}");
 
+        AchievementSystem.Instance?.ResetRoundStats();
+
         StartNewRound();
+    }
+
+    public override void _Notification(int what)
+    {
+        if (what == NotificationPredelete)
+        {
+            AchievementSystem.Instance?.OnGameEnded(_totalKills, _totalDamageDealt, _survivalTime);
+        }
     }
 
     private bool _IsWelcomeVisible()
@@ -139,6 +150,7 @@ public partial class GameManager : Node
     {
         if (CurrentState == GameState.Combat)
         {
+            _survivalTime += (float)delta;
             _HandleCombat(delta);
         }
     }
@@ -259,9 +271,13 @@ public partial class GameManager : Node
         CurrentState = GameState.RoundTransition;
         RoundEnded?.Invoke(CurrentRound);
 
+        AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
+        AchievementSystem.Instance?.ResetRoundStats();
+
         LogUtils.Print($"第 {CurrentRound} 回合结束！");
 
         _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
+        GameServices.Audio.ResetKillStreak();
 
         await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
 
@@ -630,6 +646,9 @@ public partial class GameManager : Node
         _zombiesAlive = Math.Max(0, _zombiesAlive - 1);
         _roundKills++;
         _totalKills++;
+
+        AchievementSystem.Instance?.OnZombieKilled(zombie.ZombieType, false, false);
+
         Score += 5;
 
         SaveManager.AddKill();

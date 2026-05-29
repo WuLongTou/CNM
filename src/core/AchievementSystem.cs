@@ -209,4 +209,11 @@ public partial class AchievementSystem : Node
         int secs = (int)(seconds % 60);
         return $"{mins}:{secs:D2}";
     }
+
+    public void OnGameEnded(int totalKills, int totalDamage, float survivalTime)
+    {
+        TryUnlock(AchievementType.Round5Survived);
+        TryUnlock(AchievementType.Round10Survived);
+        TryUnlock(AchievementType.Round20Survived);
+    }
 }

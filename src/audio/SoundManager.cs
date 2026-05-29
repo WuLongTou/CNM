@@ -92,7 +92,8 @@ public partial class SoundManager : Node
             "melee_attack", "ranged_attack", "magic_attack",
             "zombie_hit", "zombie_die", "player_hurt", "player_die",
             "weapon_select", "upgrade", "game_over",
-            "explosion", "lightning", "charm"
+            "explosion", "lightning", "charm",
+            "footstep", "dash"
         };
         foreach (var name in files)
         {
@@ -135,7 +136,23 @@ public partial class SoundManager : Node
     public void PlayExplosion() => _PlaySfx("explosion");
     public void PlayLightning() => _PlaySfx("lightning");
     public void PlayCharm() => _PlaySfx("charm");
-    public void NotifyKill() { }
+    public void PlayFootstep() => _PlaySfx("footstep");
+    public void PlayDash() => _PlaySfx("dash");
+
+    private int _killStreak;
+    public void NotifyKill()
+    {
+        _killStreak++;
+        if (_killStreak >= 5)
+            _PlaySfx("combo_5");
+        else if (_killStreak >= 3)
+            _PlaySfx("combo_3");
+    }
+
+    public void ResetKillStreak()
+    {
+        _killStreak = 0;
+    }
 
     public void StartMusic()
     {
