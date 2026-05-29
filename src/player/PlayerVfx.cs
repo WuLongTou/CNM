@@ -22,6 +22,8 @@ public partial class PlayerVfx : Node
     private bool _facingLeft = false;
 
     private float _trailTimer = 0.0f;
+    private float _footstepTimer = 0.0f;
+    private const float FootstepInterval = 0.28f;
 
     private enum AnimState { Idle, Walk, Attack, Hurt, Dash }
     private AnimState _animState = AnimState.Idle;
@@ -649,7 +651,7 @@ public partial class PlayerVfx : Node
         _ApplyStateFrame();
     }
     public void PlayHurtAnim() { _animState = AnimState.Hurt; _stateTimer = 0.2f; _ApplyStateFrame(); }
-    public void PlayDashAnim() { _animState = AnimState.Dash; _stateTimer = 0.15f; _ApplyStateFrame(); }
+    public void PlayDashAnim() { _animState = AnimState.Dash; _stateTimer = 0.15f; GameServices.Audio.PlayDash(); _ApplyStateFrame(); }
 
     private void _ApplyStateFrame()
     {
@@ -1228,6 +1230,20 @@ public partial class PlayerVfx : Node
         }
 
         _isMoving = Player!.Velocity.Length() > 10;
+
+        if (_isMoving)
+        {
+            _footstepTimer += delta;
+            if (_footstepTimer >= FootstepInterval)
+            {
+                _footstepTimer = 0.0f;
+                GameServices.Audio.PlayFootstep();
+            }
+        }
+        else
+        {
+            _footstepTimer = 0.0f;
+        }
 
         if (_isMoving && _walkFrames.Count > 0)
         {
