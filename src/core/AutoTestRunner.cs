@@ -30,7 +30,7 @@ public partial class AutoTestRunner : Node
         _gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
         if (_gameManager == null)
         {
-            GD.PrintErr("[AUTOTEST] GameManager not found");
+            LogUtils.PrintErr("[AUTOTEST] GameManager not found");
             return;
         }
 
@@ -39,12 +39,12 @@ public partial class AutoTestRunner : Node
             ?? GetTree().CurrentScene?.GetNodeOrNull<Player>("Player");
         if (_player == null)
         {
-            GD.PrintErr("[AUTOTEST] Player not found");
+            LogUtils.PrintErr("[AUTOTEST] Player not found");
             return;
         }
 
         _initialRound = _gameManager.CurrentRound;
-        GD.Print("[AUTOTEST] Runner attached");
+        LogUtils.Print("[AUTOTEST] Runner attached");
         _RunSpriteRegressionChecks();
         _spriteRegressionChecksPassed = true;
         _ = RunAsync();
@@ -60,15 +60,15 @@ public partial class AutoTestRunner : Node
             if (!_started && _gameManager.CurrentState == GameState.WeaponSelection)
             {
                 _started = true;
-                GD.Print($"[AUTOTEST] weapon selection detected at round={_gameManager.CurrentRound}");
+                LogUtils.Print($"[AUTOTEST] weapon selection detected at round={_gameManager.CurrentRound}");
                 _gameManager.OnUpgradeSkipped();
-                GD.Print("[AUTOTEST] skipped selection to enter combat");
+                LogUtils.Print("[AUTOTEST] skipped selection to enter combat");
             }
 
             if (!_combatSeen && _gameManager.CurrentState == GameState.Combat)
             {
                 _combatSeen = true;
-                GD.Print("[AUTOTEST] entered combat");
+                LogUtils.Print("[AUTOTEST] entered combat");
             }
 
             if (_combatSeen && !_attackRegressionChecksPassed && _gameManager.CurrentState == GameState.Combat)
@@ -89,13 +89,13 @@ public partial class AutoTestRunner : Node
             if (!_roundCompleted && _gameManager.CurrentRound > _initialRound)
             {
                 _roundCompleted = true;
-                GD.Print($"[AUTOTEST] next round reached: {_gameManager.CurrentRound}");
+                LogUtils.Print($"[AUTOTEST] next round reached: {_gameManager.CurrentRound}");
                 GetTree().Quit(0);
                 return;
             }
         }
 
-        GD.PrintErr("[AUTOTEST] timeout before reaching next round");
+        LogUtils.PrintErr("[AUTOTEST] timeout before reaching next round");
         GetTree().Quit(2);
     }
 
@@ -104,7 +104,7 @@ public partial class AutoTestRunner : Node
         if (_player?.Vfx == null)
             throw new Exception("[AUTOTEST] Player VFX missing");
 
-        GD.Print("[AUTOTEST] running sprite regression checks");
+        LogUtils.Print("[AUTOTEST] running sprite regression checks");
 
         var vfxType = typeof(PlayerVfx);
         var warriorWalkField = vfxType.GetField("_warriorWalkFrames", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
@@ -134,7 +134,7 @@ public partial class AutoTestRunner : Node
         if (mageWalk == null || mageWalk.Count != 8)
             throw new Exception($"[AUTOTEST] mage walk should load 8 frames, got {mageWalk?.Count ?? -1}");
 
-        GD.Print("[AUTOTEST] sprite regression checks passed");
+        LogUtils.Print("[AUTOTEST] sprite regression checks passed");
     }
 
     private async Task _RunAttackRegressionChecks()
@@ -143,7 +143,7 @@ public partial class AutoTestRunner : Node
             throw new Exception("[AUTOTEST] Player combat missing");
 
         var combat = _player.Combat;
-        GD.Print("[AUTOTEST] running attack regression checks");
+        LogUtils.Print("[AUTOTEST] running attack regression checks");
 
         combat.CanAttack = true;
         combat.PerformAttack();
@@ -173,7 +173,7 @@ public partial class AutoTestRunner : Node
         if (!combat.CanAttack || !combat.AttackTimer.IsStopped())
             throw new Exception("[AUTOTEST] death should clear stale attack cooldown state");
 
-        GD.Print("[AUTOTEST] attack regression checks passed");
+        LogUtils.Print("[AUTOTEST] attack regression checks passed");
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
     }
 

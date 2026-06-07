@@ -49,6 +49,10 @@ public partial class PlayerCombat : Node
     private Area2D _attackArea = null!;
     private Timer _attackTimer = null!;
     public Timer AttackTimer => _attackTimer;
+
+    // 鼠标在 HUD 区域时的提示冷却（物理帧计数）：避免每帧 spam 提示
+    private ulong _lastMouseHintFrame;
+    private const ulong MouseHintCooldownFrames = 60;
     public bool CanAttack { get; set; } = true;
 
     // Combo reward system
@@ -186,6 +190,17 @@ public partial class PlayerCombat : Node
             {
                 GameServices.Audio.PlayMagicAttack();
                 _FireMagicMissileToward(mousePos);
+            }
+            else
+            {
+                // Mouse in HUD area - show hint to move mouse to game area (throttled to avoid spam)
+                ulong now = Engine.GetPhysicsFrames();
+                if (now - _lastMouseHintFrame >= MouseHintCooldownFrames)
+                {
+                    _lastMouseHintFrame = now;
+                    VFXManager.SpawnFloatingLabel(Player.GetParent(), Player.GlobalPosition,
+                        "请将鼠标移到游戏区域", new Color(0.9f, 0.7f, 0.3f), 14);
+                }
             }
         }
     }
@@ -971,6 +986,7 @@ public partial class PlayerCombat : Node
             return true;
 
         VFXManager.SpawnFloatingLabel(Player.GetParent(), Player.GlobalPosition, "生命不足", Colors.OrangeRed, 16);
+        GameServices.UI.FlashWarning();
         GameServices.UI.UpdatePlayerStatus(Player);
         return false;
     }

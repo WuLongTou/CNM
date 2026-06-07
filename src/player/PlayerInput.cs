@@ -27,7 +27,7 @@ public partial class PlayerInput : Node
     /// <summary>Normalised 2D movement direction from WASD / arrow keys.</summary>
     public Vector2 MoveDirection { get; private set; }
 
-    /// <summary>True while Space (or left mouse button) is held down.</summary>
+    /// <summary>True on the single frame Space is held or left mouse button is pressed.</summary>
     public bool IsAttackPressed { get; private set; }
 
     /// <summary>True on the single frame Shift is pressed.</summary>
@@ -81,10 +81,11 @@ public partial class PlayerInput : Node
         if (MoveDirection.Length() > 1.0f)
             MoveDirection = MoveDirection.Normalized();
 
-        // ── Attack (space bar OR left mouse button held) ───────────────────
+        // ── Attack (space bar OR left mouse button just pressed) ──────────
         bool spaceHeld = Input.IsActionPressed(ACTION_ATTACK);
-        bool leftMouseHeld = @event is InputEventMouseButton emb && emb.Pressed && emb.ButtonIndex == MouseButton.Left;
-        IsAttackPressed = spaceHeld || leftMouseHeld;
+        bool leftMouseJustPressed = @event is InputEventMouseButton emb
+            && emb.Pressed && emb.ButtonIndex == MouseButton.Left;
+        IsAttackPressed = spaceHeld || leftMouseJustPressed;
 
         // ── Dash — single frame ─────────────────────────────────────────────
         IsDashPressed = Input.IsActionJustPressed(ACTION_DASH);

@@ -187,6 +187,7 @@ public partial class Player : CharacterBody2D
             {
                 TargetPriority = (TargetPriority + 1) % 3;
                 GameServices.UI.UpdatePlayerStatus(this);
+                GameServices.UI.ShowTargetSwitchNotification(TargetPriority);
             }
         }
     }

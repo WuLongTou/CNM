@@ -37,6 +37,7 @@ public partial class ScreenEffects : Node
         _CreateDamageFlash();
         _CreateLowHpVignette();
         _CreateAttackFlash();
+        _CreateWarningFlash();
         _InitDamageNumberPool();
     }
 
@@ -180,6 +181,31 @@ void fragment() {
         _attackFlash.Color = new Color(color.R, color.G, color.B, 0.12f);
         var tw = CreateTween();
         tw.TweenProperty(_attackFlash, "color:a", 0.0f, 0.15f);
+    }
+
+    // ══ Warning Flash (for low health / insufficient resources) ══
+
+    private ColorRect? _warningFlash;
+
+    private void _CreateWarningFlash()
+    {
+        _warningFlash = new ColorRect
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ZIndex = 41
+        };
+        _warningFlash.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _warningFlash.Color = new Color(0, 0, 0, 0);
+        AddChild(_warningFlash);
+    }
+
+    /// <summary>Flash a warning overlay (red edge glow) for events like low health.</summary>
+    public void FlashWarning()
+    {
+        if (_warningFlash == null) return;
+        _warningFlash.Color = new Color(0.8f, 0.1f, 0.05f, 0.25f);
+        var tw = CreateTween();
+        tw.TweenProperty(_warningFlash, "color:a", 0.0f, 0.6f);
     }
 
     // ══ Damage Numbers ══

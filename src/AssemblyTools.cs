@@ -6,6 +6,7 @@
 
 using Godot;
 using System;
+using ZombieWars.Core;
 
 namespace ZombieWars;
 
@@ -176,7 +177,7 @@ public static partial class AssemblyTools
     /// <summary>Print a message to the Godot console with the [ZombieWars] prefix.</summary>
     public static void Log(string message)
     {
-        GD.Print($"[ZombieWars] {message}");
+        LogUtils.Print($"[ZombieWars] {message}");
     }
 
     /// <summary>Print a warning to the Godot console.</summary>

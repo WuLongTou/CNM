@@ -258,21 +258,21 @@ public partial class UIManager : Control
         row2.AddThemeConstantOverride("separation", 10);
         mainVbox.AddChild(row2);
 
-        _damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f));
+        _damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f), 12);
         row2.AddChild(_damageLabel);
-        _attackIntervalLabel = _MakeStatLabel("间隔 0.50s", new Color(0.75f, 0.65f, 0.45f));
+        _attackIntervalLabel = _MakeStatLabel("间隔 0.5s", new Color(0.75f, 0.65f, 0.45f), 12);
         row2.AddChild(_attackIntervalLabel);
-        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f));
+        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f), 12);
         row2.AddChild(_critLabel);
-        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f));
+        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f), 12);
         row2.AddChild(_lifestealLabel);
-        _attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f));
+        _attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f), 12);
         row2.AddChild(_attackTypeLabel);
-        _targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f));
+        _targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f), 12);
         row2.AddChild(_targetPriorityLabel);
-        _dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f));
+        _dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f), 12);
         row2.AddChild(_dashCooldownLabel);
-        _speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f));
+        _speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f), 12);
         row2.AddChild(_speedLabel);
 
         // Effect icons container
@@ -336,10 +336,10 @@ public partial class UIManager : Control
         AddChild(_bossHealthLabel);
     }
 
-    private Label _MakeStatLabel(string text, Color color)
+    private Label _MakeStatLabel(string text, Color color, int fontSize = 10)
     {
         var lbl = new Label { Text = text };
-        lbl.AddThemeFontSizeOverride("font_size", 10);
+        lbl.AddThemeFontSizeOverride("font_size", fontSize);
         lbl.AddThemeColorOverride("font_color", color);
         lbl.AddThemeConstantOverride("outline_size", 1);
         lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
@@ -984,9 +984,10 @@ public partial class UIManager : Control
             }
             else
             {
-                var secs = Mathf.CeilToInt(remaining);
-                _dashCooldownLabel.Text = $"闪避 {secs}s";
-                _dashCooldownLabel.TooltipText = $"闪避冷却中，还需 {secs}s";
+                // Show one decimal for smooth countdown, switch to integer when >= 2s
+                string secs = remaining < 2.0f ? remaining.ToString("F1") + "s" : Mathf.FloorToInt(remaining) + "s";
+                _dashCooldownLabel.Text = $"闪避 {secs}";
+                _dashCooldownLabel.TooltipText = $"闪避冷却中，还需 {secs}";
             }
         }
     }
@@ -1056,7 +1057,7 @@ public partial class UIManager : Control
     {
         if (_weaponDeck == null)
         {
-            GD.PrintErr("错误：武器牌堆未设置");
+            LogUtils.PrintErr("错误：武器牌堆未设置");
             return;
         }
         _pauseLockedByUpgrade = true;
@@ -2314,6 +2315,11 @@ public partial class UIManager : Control
         _screenFx?.FlashDamage();
     }
 
+    public void FlashWarning()
+    {
+        _screenFx?.FlashWarning();
+    }
+
     public void ShakeScreen(float intensity)
     {
         _screenFx?.ShakeScreen(intensity);
@@ -2407,6 +2413,14 @@ public partial class UIManager : Control
     {
         if (comboCount < 3) return;
         ShowLevelUpNotification($"连击 x{comboCount}", new Color(1.0f, 0.6f, 0.2f));
+    }
+
+    /// <summary>显示目标切换提示</summary>
+    public void ShowTargetSwitchNotification(int targetPriority)
+    {
+        string[] names = { "最近", "最远", "密集" };
+        string name = targetPriority >= 0 && targetPriority < names.Length ? names[targetPriority] : "最近";
+        ShowLevelUpNotification($"目标: {name}", new Color(0.5f, 0.8f, 0.9f));
     }
 
     private void _ShowAchievementNotification(string text, Color color)
