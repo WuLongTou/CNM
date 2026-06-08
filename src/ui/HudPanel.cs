@@ -411,28 +411,14 @@ public partial class HudPanel : Panel
             btn.AddThemeFontSizeOverride("font_size", UiFontBody);
 
             var itemColor = (Color)item["color"];
-            var style = new StyleBoxFlat
-            {
-                BgColor = ColorUtils.Darken(itemColor, 0.6f) with { A = 0.7f },
-                BorderWidthBottom = 2,
-                BorderColor = itemColor,
-                CornerRadiusTopLeft = 4,
-                CornerRadiusTopRight = 4,
-                CornerRadiusBottomLeft = 4,
-                CornerRadiusBottomRight = 4
-            };
+            var (style, hoverStyle, _) = HandDrawnTheme.MakeButtonStyles(
+                ColorUtils.Darken(itemColor, 0.6f) with { A = 0.7f },
+                ColorUtils.Darken(itemColor, 0.4f),
+                itemColor,
+                radius: 4,
+                shadowSize: 0,
+                bottomOnlyBorder: true);
             btn.AddThemeStyleboxOverride("normal", style);
-
-            var hoverStyle = new StyleBoxFlat
-            {
-                BgColor = ColorUtils.Darken(itemColor, 0.4f),
-                BorderWidthBottom = 2,
-                BorderColor = itemColor,
-                CornerRadiusTopLeft = 4,
-                CornerRadiusTopRight = 4,
-                CornerRadiusBottomLeft = 4,
-                CornerRadiusBottomRight = 4
-            };
             btn.AddThemeStyleboxOverride("hover", hoverStyle);
 
             string effectTooltip = (string)item["tooltip"];

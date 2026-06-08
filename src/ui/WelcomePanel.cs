@@ -85,12 +85,14 @@ public partial class WelcomePanel : Panel
             CustomMinimumSize = new Vector2(180, 50)
         };
         startButton.AddThemeFontSizeOverride("font_size", 22);
-        var startNormal = HandDrawnTheme.MakeNotePanel(borderRadius: 4f, shadowSize: 4f);
-        startNormal.BgColor = new Color(0.25f, 0.12f, 0.12f, 0.9f);
+        var (startNormal, startHover, startPressed) = HandDrawnTheme.MakeButtonStyles(
+            new Color(0.25f, 0.12f, 0.12f, 0.9f),
+            new Color(0.35f, 0.18f, 0.18f, 0.9f),
+            HandDrawnTheme.Colors.NoteBorder,
+            radius: 4, shadowSize: 4);
         startButton.AddThemeStyleboxOverride("normal", startNormal);
-        var startHover = HandDrawnTheme.MakeNotePanel(borderRadius: 4f, shadowSize: 4f);
-        startHover.BgColor = new Color(0.35f, 0.18f, 0.18f, 0.9f);
         startButton.AddThemeStyleboxOverride("hover", startHover);
+        startButton.AddThemeStyleboxOverride("pressed", startPressed);
         startButton.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteBg);
         startButton.Pressed += _onStart;
         vbox.AddChild(startButton);
@@ -101,12 +103,14 @@ public partial class WelcomePanel : Panel
             CustomMinimumSize = new Vector2(120, 40)
         };
         helpButton.AddThemeFontSizeOverride("font_size", 16);
-        var helpNormal = HandDrawnTheme.MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
-        helpNormal.BgColor = new Color(0.2f, 0.15f, 0.15f, 0.9f);
+        var (helpNormal, helpHover, helpPressed) = HandDrawnTheme.MakeButtonStyles(
+            new Color(0.2f, 0.15f, 0.15f, 0.9f),
+            new Color(0.3f, 0.22f, 0.22f, 0.9f),
+            HandDrawnTheme.Colors.NoteBorder,
+            radius: 3, shadowSize: 3);
         helpButton.AddThemeStyleboxOverride("normal", helpNormal);
-        var helpHover = HandDrawnTheme.MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
-        helpHover.BgColor = new Color(0.3f, 0.22f, 0.22f, 0.9f);
         helpButton.AddThemeStyleboxOverride("hover", helpHover);
+        helpButton.AddThemeStyleboxOverride("pressed", helpPressed);
         helpButton.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteBg);
         helpButton.Pressed += _onToggleHelp;
         vbox.AddChild(helpButton);

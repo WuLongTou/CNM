@@ -98,15 +98,13 @@ public partial class GameOverUI : Control
         margin.AddChild(vbox);
 
         // Title
-        var title = new Label
-        {
-            Text = "YOU DIED"
-        };
-        title.AddThemeFontSizeOverride("font_size", 38);
-        title.AddThemeColorOverride("font_color", BloodRed);
-        title.AddThemeConstantOverride("outline_size", 3);
-        title.AddThemeColorOverride("font_outline_color", InkBlack);
-        title.HorizontalAlignment = HorizontalAlignment.Center;
+        var title = HandDrawnTheme.MakeTitleLabel(
+            text: "YOU DIED",
+            fontSize: 38,
+            color: BloodRed,
+            outlineSize: 3,
+            outlineColor: InkBlack,
+            hAlign: HorizontalAlignment.Center);
         vbox.AddChild(title);
 
         // Separator

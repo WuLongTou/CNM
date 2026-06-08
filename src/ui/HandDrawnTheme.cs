@@ -1,6 +1,7 @@
 namespace ZombieWars.UI;
 
 using Godot;
+using ZombieWars.Core;
 
 public static class HandDrawnTheme
 {
@@ -150,22 +151,30 @@ public static class HandDrawnTheme
         };
     }
 
-    /// <summary>返回 (normal, hover, pressed) 三个 StyleBoxFlat 按钮样式，统一 shadowSize=3 / radius=4。</summary>
+    /// <summary>返回 (normal, hover, pressed) 三个 StyleBoxFlat 按钮样式，统一 shadowSize=3 / radius=4 / borderWidth=2。
+    /// bottomOnlyBorder=true 时仅显示底部边框（用于 HudPanel 道具图标强调色条）；shadowSize=0 时清空 ShadowColor 字段以保持无阴影。</summary>
     public static (StyleBoxFlat normal, StyleBoxFlat hover, StyleBoxFlat pressed) MakeButtonStyles(
         Color bgColor, Color hoverColor, Color borderColor,
-        int radius = 4, int shadowSize = 3)
+        int radius = 4, int shadowSize = 3,
+        bool bottomOnlyBorder = false)
     {
         var normal = MakeNotePanel(borderRadius: radius, shadowSize: shadowSize);
         normal.BgColor = bgColor;
         normal.BorderColor = borderColor;
+        if (bottomOnlyBorder) { normal.BorderWidthTop = 0; normal.BorderWidthRight = 0; normal.BorderWidthLeft = 0; }
+        if (shadowSize == 0) { normal.ShadowColor = new Color(0, 0, 0, 0); normal.ShadowSize = 0; }
 
         var hover = MakeNotePanel(borderRadius: radius, shadowSize: shadowSize);
         hover.BgColor = hoverColor;
         hover.BorderColor = borderColor;
+        if (bottomOnlyBorder) { hover.BorderWidthTop = 0; hover.BorderWidthRight = 0; hover.BorderWidthLeft = 0; }
+        if (shadowSize == 0) { hover.ShadowColor = new Color(0, 0, 0, 0); hover.ShadowSize = 0; }
 
         var pressed = MakeNotePanel(borderRadius: radius, shadowSize: shadowSize);
-        pressed.BgColor = Darken(bgColor, 0.1f);
+        pressed.BgColor = ColorUtils.Darken(bgColor, 0.1f);
         pressed.BorderColor = borderColor;
+        if (bottomOnlyBorder) { pressed.BorderWidthTop = 0; pressed.BorderWidthRight = 0; pressed.BorderWidthLeft = 0; }
+        if (shadowSize == 0) { pressed.ShadowColor = new Color(0, 0, 0, 0); pressed.ShadowSize = 0; }
 
         return (normal, hover, pressed);
     }

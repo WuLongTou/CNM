@@ -167,16 +167,17 @@ public partial class UIManager : Control
         _bossHealthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(HandDrawnTheme.Colors.BloodBright));
         AddChild(_bossHealthBar);
 
-        _bossHealthLabel = new Label();
+        _bossHealthLabel = HandDrawnTheme.MakeTitleLabel(
+            text: "",
+            fontSize: UiFontSmall,
+            color: HandDrawnTheme.Colors.BloodBright,
+            outlineSize: UiOutlineNorm,
+            outlineColor: new Color(0, 0, 0, 0.7f),
+            hAlign: HorizontalAlignment.Center,
+            vAlign: VerticalAlignment.Center);
         _bossHealthLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
         _bossHealthLabel.OffsetTop = 66;
         _bossHealthLabel.OffsetBottom = 84;
-        _bossHealthLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        _bossHealthLabel.VerticalAlignment = VerticalAlignment.Center;
-        _bossHealthLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _bossHealthLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
-        _bossHealthLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _bossHealthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
         _bossHealthLabel.Visible = false;
         _bossHealthLabel.ZIndex = 6;
         AddChild(_bossHealthLabel);
