@@ -203,7 +203,7 @@ void fragment() {
     public void FlashWarning()
     {
         if (_warningFlash == null) return;
-        _warningFlash.Color = new Color(0.8f, 0.1f, 0.05f, 0.25f);
+        _warningFlash.Color = new Color(BloodRed, 0.25f);
         var tw = CreateTween();
         tw.TweenProperty(_warningFlash, "color:a", 0.0f, 0.6f);
     }
@@ -245,7 +245,7 @@ void fragment() {
         // Scale damage number by damage amount for visual hierarchy
         if (amount < 0)
         {
-            color = new Color(0.3f, 1.0f, 0.4f);
+            color = new Color(0.55f, 0.75f, 0.55f);
             fontSize = 16;
             text = "+" + Mathf.Abs(amount);
         }
@@ -392,7 +392,7 @@ void fragment() {
 
     public void ShowKillEffect(Vector2 pos, int points)
     {
-        VFXManager.SpawnFloatingLabel(this, pos, "+" + points, new Color(1.0f, 0.85f, 0.2f), 16);
+        VFXManager.SpawnFloatingLabel(this, pos, "+" + points, HandDrawnTheme.Colors.RarityEpic, 16);
     }
 
     // ══ Offscreen Indicator ══
@@ -404,7 +404,7 @@ void fragment() {
         {
             MouseFilter = Control.MouseFilterEnum.Ignore,
             ZIndex = 35,
-            Color = new Color(0.8f, 0.1f, 0.1f, Mathf.Clamp(dangerLevel * 0.3f, 0.05f, 0.3f))
+            Color = new Color(BloodRed, Mathf.Clamp(dangerLevel * 0.3f, 0.05f, 0.3f))
         };
 
         float thickness = Mathf.Clamp(dangerLevel * 8, 3, 12);

@@ -36,7 +36,7 @@
 **Files:**
 - 创建: `src/ui/HandDrawnTheme.cs`
 
-- [ ] **Step 1: 创建 HandDrawnTheme.cs**
+- [x] **Step 1: 创建 HandDrawnTheme.cs**
 
 ```csharp
 using Godot;
@@ -187,12 +187,12 @@ public static class HandDrawnTheme
 }
 ```
 
-- [ ] **Step 2: 编译验证**
+- [x] **Step 2: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors, 0 warnings
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add src/ui/HandDrawnTheme.cs
@@ -206,7 +206,7 @@ git commit -m "feat(ui): 添加 HandDrawnTheme 手绘血色风格工具类"
 **Files:**
 - 修改: `src/core/GameConfig.cs:218-234`
 
-- [ ] **Step 1: 替换 GameConfig 中的 UI 色彩常量**
+- [x] **Step 1: 替换 GameConfig 中的 UI 色彩常量**
 
 在 `GameConfig.cs` 的 UI 常量区域，将 HP 颜色替换为血色主题：
 
@@ -224,12 +224,12 @@ public static readonly Color HpColorMed = new Color(0.75f, 0.45f, 0.25f);
 public static readonly Color HpColorLow = new Color(0.753f, 0.224f, 0.169f);
 ```
 
-- [ ] **Step 2: 编译验证**
+- [x] **Step 2: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add src/core/GameConfig.cs
@@ -244,7 +244,7 @@ git commit -m "feat(ui): 更新 GameConfig 血条颜色为血色主题"
 - 修改: `src/ui/UIManager.cs:136-352`
 - 修改: `src/ui/UIManager.cs:2057-2098` (血条颜色更新)
 
-- [ ] **Step 1: 在 UIManager.cs 顶部添加 using**
+- [x] **Step 1: 在 UIManager.cs 顶部添加 using**
 
 找到:
 ```csharp
@@ -256,7 +256,7 @@ using static ZombieWars.Core.GameEnums;
 using static ZombieWars.UI.HandDrawnTheme;
 ```
 
-- [ ] **Step 2: 改造 `_CreateHudPanel()` 中的 HUD 面板背景**
+- [x] **Step 2: 改造 `_CreateHudPanel()` 中的 HUD 面板背景**
 
 找到 (约行 138-150):
 ```csharp
@@ -276,7 +276,7 @@ hudStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
 hudStyle.BorderWidthBottom = 1;
 ```
 
-- [ ] **Step 3: 改造血条样式**
+- [x] **Step 3: 改造血条样式**
 
 找到 `_healthBar` 的样式设置 (约行 176-205 中的 StyleBoxFlat 创建):
 
@@ -287,7 +287,7 @@ _healthBar.AddThemeStyleboxOverride("background", MakeHpBarBg());
 _healthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(HpHigh));
 ```
 
-- [ ] **Step 4: 改造 HP 标签颜色**
+- [x] **Step 4: 改造 HP 标签颜色**
 
 找到 `_healthLabel` 的颜色设置，替换为:
 ```csharp
@@ -295,28 +295,28 @@ _healthLabel.AddThemeColorOverride("font_color", NoteBg);
 _healthLabel.AddThemeColorOverride("font_shadow_color", InkBlack);
 ```
 
-- [ ] **Step 5: 改造回合标签颜色**
+- [x] **Step 5: 改造回合标签颜色**
 
 找到 `_roundLabel` 的颜色 (金色)，替换为:
 ```csharp
 _roundLabel.AddThemeColorOverride("font_color", BloodBright);
 ```
 
-- [ ] **Step 6: 改造分数标签颜色**
+- [x] **Step 6: 改造分数标签颜色**
 
 找到 `_scoreLabel` 的颜色 (亮金)，替换为:
 ```csharp
 _scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
 ```
 
-- [ ] **Step 7: 改造僵尸计数标签颜色**
+- [x] **Step 7: 改造僵尸计数标签颜色**
 
 找到 `_zombiesLabel` 的颜色，替换为:
 ```csharp
 _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
 ```
 
-- [ ] **Step 8: 改造 Boss 血条样式**
+- [x] **Step 8: 改造 Boss 血条样式**
 
 找到 Boss 血条的背景和填充样式，替换为:
 ```csharp
@@ -327,7 +327,7 @@ _bossHealthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(BloodBright));
 Boss 血条背景色: `new Color(BattlefieldBg, 0.9f)`
 Boss 血条边框: `NoteBorder`
 
-- [ ] **Step 9: 改造 `_MakeStatLabel()` 属性颜色**
+- [x] **Step 9: 改造 `_MakeStatLabel()` 属性颜色**
 
 将所有属性标签的字体颜色替换为手绘风格色:
 - 攻击: `new Color(0.8f, 0.5f, 0.4f)`
@@ -339,7 +339,7 @@ Boss 血条边框: `NoteBorder`
 - 优先: `new Color(0.55f, 0.55f, 0.5f)`
 - 闪避: `new Color(0.55f, 0.6f, 0.55f)`
 
-- [ ] **Step 10: 改造 `UpdateHealthDisplay()` 血条颜色**
+- [x] **Step 10: 改造 `UpdateHealthDisplay()` 血条颜色**
 
 找到 (约行 2057-2098):
 ```csharp
@@ -356,12 +356,12 @@ _healthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(hpColor));
 
 同时将低血量闪烁色改为 `BloodBright`。
 
-- [ ] **Step 11: 编译验证**
+- [x] **Step 11: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 12: 提交**
+- [x] **Step 12: 提交**
 
 ```bash
 git add src/ui/UIManager.cs
@@ -377,7 +377,7 @@ git commit -m "feat(ui): HUD 面板改造为手绘血色便签风格"
 - 修改: `src/ui/UIManager.cs:1096-1285` (显示逻辑 + 稀有度颜色)
 - 修改: `src/ui/UIManager.cs:1477-1527` (强化卡渲染)
 
-- [ ] **Step 1: 改造武器选择面板背景**
+- [x] **Step 1: 改造武器选择面板背景**
 
 找到 `_weaponSelectionPanel` 的背景样式 (约行 366-378):
 ```csharp
@@ -390,14 +390,14 @@ var panelStyle = MakeDarkPanel(0.92f);
 panelStyle.BgColor = new Color(BattlefieldBg, 0.95f);
 ```
 
-- [ ] **Step 2: 改造标题标签**
+- [x] **Step 2: 改造标题标签**
 
 找到标题 "⚔️ 选择本回合强化 ⚔️" 的颜色，替换为:
 ```csharp
 titleLabel.AddThemeColorOverride("font_color", BloodBright);
 ```
 
-- [ ] **Step 3: 改造武器卡牌底板**
+- [x] **Step 3: 改造武器卡牌底板**
 
 找到 3 张武器卡牌 (Button) 的创建逻辑 (约行 428-556)。
 
@@ -413,7 +413,7 @@ button.AddThemeStyleboxOverride("hover", MakeCardPanel(NoteBgHover, BloodBright)
 button.AddThemeStyleboxOverride("pressed", MakeCardPanel(NoteMid, BloodRed));
 ```
 
-- [ ] **Step 4: 改造卡牌内文字颜色**
+- [x] **Step 4: 改造卡牌内文字颜色**
 
 在卡牌内部：
 - Category 标签: `PencilGray`
@@ -422,7 +422,7 @@ button.AddThemeStyleboxOverride("pressed", MakeCardPanel(NoteMid, BloodRed));
 - Desc: `NoteTextDim`
 - Hint: `PencilGray`
 
-- [ ] **Step 5: 改造稀有度颜色映射**
+- [x] **Step 5: 改造稀有度颜色映射**
 
 找到 `ShowWeaponSelection()` 中的稀有度样式 (约行 1214-1246):
 
@@ -433,7 +433,7 @@ button.AddThemeStyleboxOverride("pressed", MakeCardPanel(NoteMid, BloodRed));
 | 3 史诗 | `RarityEpicBg` | `RarityEpic` | `RarityEpic` |
 | 4 传说 | 保持现有金色 | 保持现有金色 | 保持现有金色 |
 
-- [ ] **Step 6: 改造卡牌悬停样式**
+- [x] **Step 6: 改造卡牌悬停样式**
 
 找到悬停样式 (约行 1263-1276)，将颜色调整为:
 ```csharp
@@ -441,7 +441,7 @@ var hoverBg = new Color(baseBg.R + 0.08f, baseBg.G + 0.08f, baseBg.B + 0.08f, ba
 var hoverBorder = new Color(border.R + 0.1f, border.G + 0.1f, border.B + 0.1f, border.A);
 ```
 
-- [ ] **Step 7: 改造 Skip 按钮**
+- [x] **Step 7: 改造 Skip 按钮**
 
 找到 `_skipButton` 的样式，改为手写便签风格:
 ```csharp
@@ -451,7 +451,7 @@ _skipButton.AddThemeStyleboxOverride("hover", MakeNotePanel(borderRadius: 3f, sh
 
 文字颜色: `NoteText`
 
-- [ ] **Step 8: 改造强化卡渲染**
+- [x] **Step 8: 改造强化卡渲染**
 
 找到 `_RenderUpgradeCard()` (约行 1477-1527):
 
@@ -461,12 +461,12 @@ var bgStyle = MakeCardPanel(UpgradeBg, UpgradeBorder);
 titleColor = UpgradeTitle;
 ```
 
-- [ ] **Step 9: 编译验证**
+- [x] **Step 9: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 10: 提交**
+- [x] **Step 10: 提交**
 
 ```bash
 git add src/ui/UIManager.cs
@@ -480,7 +480,7 @@ git commit -m "feat(ui): 武器选择面板改造为手绘便签卡牌风格"
 **Files:**
 - 修改: `src/ui/UIManager.cs:581-666`
 
-- [ ] **Step 1: 改造 Tooltip 面板**
+- [x] **Step 1: 改造 Tooltip 面板**
 
 找到 `_tooltipPanel` 的样式 (约行 583-604):
 
@@ -498,11 +498,11 @@ tooltipStyle.ShadowSize = 8;
 tooltipStyle.ShadowOffset = new Vector2(3, 3);
 ```
 
-- [ ] **Step 2: 改造 Tooltip 文字颜色**
+- [x] **Step 2: 改造 Tooltip 文字颜色**
 
 将 `_tooltipLabel` 的默认颜色改为 `NoteText`。
 
-- [ ] **Step 3: 改造暂停面板**
+- [x] **Step 3: 改造暂停面板**
 
 找到 `_pausePanel` 的样式 (约行 642-652):
 
@@ -520,12 +520,12 @@ BgColor = new Color(BattlefieldBg, 0.7f)
 - 颜色: `NoteBg` (浅色文字在暗背景上)
 - 添加便签底板: `MakeNotePanel()` 居中显示
 
-- [ ] **Step 4: 编译验证**
+- [x] **Step 4: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/ui/UIManager.cs
@@ -539,7 +539,7 @@ git commit -m "feat(ui): Tooltip 和暂停面板改造为手绘便签风格"
 **Files:**
 - 修改: `src/ui/UIManager.cs:668-875`
 
-- [ ] **Step 1: 改造回合横幅 `_roundBanner`**
+- [x] **Step 1: 改造回合横幅 `_roundBanner`**
 
 找到横幅标签 (约行 670-691):
 
@@ -549,7 +549,7 @@ _roundBanner.AddThemeColorOverride("font_color", BloodBright);
 _roundBanner.AddThemeColorOverride("font_shadow_color", InkBlack);
 ```
 
-- [ ] **Step 2: 改造控制面板 `_controlsPanel`**
+- [x] **Step 2: 改造控制面板 `_controlsPanel`**
 
 找到控制面板背景 (约行 696-718):
 
@@ -560,7 +560,7 @@ _controlsPanel.AddThemeStyleboxOverride("panel", MakeNotePanel(borderRadius: 5f,
 
 标题 "🎮 操作指南" 颜色改为 `NoteText`。
 
-- [ ] **Step 3: 改造信息卡片 `_CreateInfoCard()`**
+- [x] **Step 3: 改造信息卡片 `_CreateInfoCard()`**
 
 找到 (约行 760-800):
 
@@ -581,7 +581,7 @@ var cardStyle = new StyleBoxFlat
 
 文字颜色改为 `NoteText`。
 
-- [ ] **Step 4: 改造欢迎面板 `_welcomePanel`**
+- [x] **Step 4: 改造欢迎面板 `_welcomePanel`**
 
 找到欢迎面板 (约行 802-875):
 
@@ -602,12 +602,12 @@ startHover.BgColor = NoteBgHover;
 
 文字颜色: `NoteText`
 
-- [ ] **Step 5: 编译验证**
+- [x] **Step 5: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 6: 提交**
+- [x] **Step 6: 提交**
 
 ```bash
 git add src/ui/UIManager.cs
@@ -621,13 +621,13 @@ git commit -m "feat(ui): 横幅、控制面板、欢迎面板改造为手绘便�
 **Files:**
 - 修改: `src/ui/UIManager.cs:1879-2001`
 
-- [ ] **Step 1: 改造回合总结背景**
+- [x] **Step 1: 改造回合总结背景**
 
 找到背景 Panel (约行 1885-1895):
 
 替换为血色半透明: `new Color(BattlefieldBg, 0.6f)`
 
-- [ ] **Step 2: 改造总结卡片**
+- [x] **Step 2: 改造总结卡片**
 
 找到卡片 Panel (约行 1904-1924):
 
@@ -638,19 +638,19 @@ cardStyle.ShadowOffset = new Vector2(4, 4);
 
 移除金色边框，改用 `NoteBorder`。
 
-- [ ] **Step 3: 改造总结文字颜色**
+- [x] **Step 3: 改造总结文字颜色**
 
 标题 "第 X 回合完成": `BloodBright`
 击杀数(橙): `new Color(0.8f, 0.5f, 0.4f)`
 累计击杀(红): `BloodRed`
 得分(金): `new Color(0.85f, 0.6f, 0.45f)`
 
-- [ ] **Step 4: 编译验证**
+- [x] **Step 4: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add src/ui/UIManager.cs
@@ -664,13 +664,13 @@ git commit -m "feat(ui): 回合总结面板改造为手绘便签风格"
 **Files:**
 - 修改: `src/ui/GameOverUI.cs:20-198`
 
-- [ ] **Step 1: 在 GameOverUI.cs 顶部添加 using**
+- [x] **Step 1: 在 GameOverUI.cs 顶部添加 using**
 
 ```csharp
 using static ZombieWars.UI.HandDrawnTheme;
 ```
 
-- [ ] **Step 2: 改造背景**
+- [x] **Step 2: 改造背景**
 
 找到黑色背景 ColorRect (约行 26-32):
 ```csharp
@@ -692,7 +692,7 @@ Color = new Color(0.3f, 0.02f, 0.02f, 0.25f)
 Color = new Color(0.3f, 0.05f, 0.02f, 0.3f)
 ```
 
-- [ ] **Step 3: 改造内容面板**
+- [x] **Step 3: 改造内容面板**
 
 找到内容面板 Panel (约行 47-69):
 
@@ -707,11 +707,11 @@ panelStyle.BorderWidthRight = 2;
 panelStyle.ShadowOffset = new Vector2(4, 4);
 ```
 
-- [ ] **Step 4: 改造 "YOU DIED" 标题**
+- [x] **Step 4: 改造 "YOU DIED" 标题**
 
 颜色从深红改为 `BloodRed`，描边 `InkBlack`。
 
-- [ ] **Step 5: 改造统计行颜色**
+- [x] **Step 5: 改造统计行颜色**
 
 标签颜色: `NoteTextDim`
 值颜色: 使用血色变体
@@ -720,13 +720,13 @@ panelStyle.ShadowOffset = new Vector2(4, 4);
 - 最终得分: `new Color(0.85f, 0.6f, 0.45f)`
 - 新纪录: `RarityEpic` (金色)
 
-- [ ] **Step 6: 改造成就徽章**
+- [x] **Step 6: 改造成就徽章**
 
 背景: `new Color(NoteBg, 0.8f)`
 边框: `NoteBorder`
 文字: `NoteText`
 
-- [ ] **Step 7: 改造按钮**
+- [x] **Step 7: 改造按钮**
 
 "重新开始" 按钮:
 ```csharp
@@ -740,12 +740,12 @@ restartHover.BgColor = new Color(0.35f, 0.18f, 0.18f, 0.9f);
 
 文字颜色: `NoteBg`
 
-- [ ] **Step 8: 编译验证**
+- [x] **Step 8: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add src/ui/GameOverUI.cs
@@ -759,13 +759,13 @@ git commit -m "feat(ui): Game Over 界面改造为血色信纸风格"
 **Files:**
 - 修改: `src/ui/ScreenEffects.cs`
 
-- [ ] **Step 1: 在 ScreenEffects.cs 顶部添加 using**
+- [x] **Step 1: 在 ScreenEffects.cs 顶部添加 using**
 
 ```csharp
 using static ZombieWars.UI.HandDrawnTheme;
 ```
 
-- [ ] **Step 2: 改造受伤闪烁颜色**
+- [x] **Step 2: 改造受伤闪烁颜色**
 
 找到 `FlashDamage()` (约行 111-117):
 
@@ -778,17 +778,17 @@ var color = new Color(0.8f, 0.1f, 0.1f, 0.25f);
 var color = new Color(BloodBright, 0.2f);
 ```
 
-- [ ] **Step 3: 改造攻击闪光颜色**
+- [x] **Step 3: 改造攻击闪光颜色**
 
 找到 `FlashAttackColor()` — 确保传入的颜色与血色主题一致。
 
-- [ ] **Step 4: 改造低血量暗角**
+- [x] **Step 4: 改造低血量暗角**
 
 找到 `_CreateLowHpVignette()` (约行 121-144):
 
 确保暗角颜色为血红色调。
 
-- [ ] **Step 5: 改造连击显示颜色**
+- [x] **Step 5: 改造连击显示颜色**
 
 找到 `_UpdateComboDisplay()` (约行 302-354):
 
@@ -803,7 +803,7 @@ var comboColors = new[]
 };
 ```
 
-- [ ] **Step 6: 改造伤害数字颜色**
+- [x] **Step 6: 改造伤害数字颜色**
 
 找到 `ShowDamageNumber()` (约行 185-288):
 
@@ -813,18 +813,18 @@ var comboColors = new[]
 - 高: `BloodRed`
 - 暴击: `BloodBright`
 
-- [ ] **Step 7: 改造 Boss 氛围效果**
+- [x] **Step 7: 改造 Boss 氛围效果**
 
 找到 `TriggerBossAtmosphere()` (约行 401-415):
 
 将红色叠加色从 `new Color(0.5f, 0.05f, 0.05f, 0.2f)` 调整为 `new Color(BloodRed, 0.25f)`。
 
-- [ ] **Step 8: 编译验证**
+- [x] **Step 8: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add src/ui/ScreenEffects.cs
@@ -838,7 +838,7 @@ git commit -m "feat(ui): 屏幕特效颜色改造为血色主题"
 **Files:**
 - 修改: `src/ui/WeaponFormatter.cs:26-48`
 
-- [ ] **Step 1: 改造 `GetRarityColor()` 和 `GetRarityColorValue()`**
+- [x] **Step 1: 改造 `GetRarityColor()` 和 `GetRarityColorValue()`**
 
 找到 (约行 26-48):
 
@@ -861,12 +861,12 @@ public static Color GetRarityColorValue(int rarity) => rarity switch
 };
 ```
 
-- [ ] **Step 2: 编译验证**
+- [x] **Step 2: 编译验证**
 
 Run: `dotnet build`
 Expected: 0 errors
 
-- [ ] **Step 3: 提交**
+- [x] **Step 3: 提交**
 
 ```bash
 git add src/ui/WeaponFormatter.cs
@@ -877,22 +877,22 @@ git commit -m "feat(ui): 武器稀有度颜色改造为血色主题"
 
 ## Task 11: 最终验证与清理
 
-- [ ] **Step 1: 全量编译**
+- [x] **Step 1: 全量编译**
 
 Run: `dotnet build`
 Expected: 0 errors, 0 warnings
 
-- [ ] **Step 2: Godot 脚本检查**
+- [x] **Step 2: Godot 脚本检查**
 
 Run: `/Applications/Godot.app/Contents/MacOS/Godot --headless --check-only`
 Expected: 无错误
 
-- [ ] **Step 3: 检查无残留调试代码**
+- [x] **Step 3: 检查无残留调试代码**
 
 Run: `grep -n "GD.Print\|LogUtils.Print" src/ui/*.cs`
 Expected: 无输出（UI 文件中不应有调试 print）
 
-- [ ] **Step 4: 推送到远程**
+- [x] **Step 4: 推送到远程**
 
 ```bash
 git push origin main

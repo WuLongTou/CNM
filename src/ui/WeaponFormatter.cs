@@ -22,27 +22,15 @@ public static partial class WeaponFormatter
         };
     }
 
-    public static string GetRarityColor(int rarity)
-    {
-        return rarity switch
-        {
-            2 => "#c0392b",
-            3 => "#f39c12",
-            4 => "#ffcc40",
-            _ => "#9a8a8a"
-        };
-    }
+    public static string GetRarityColor(int rarity) => "#" + GetRarityColorValue(rarity).ToHtml(false);
 
-    public static Color GetRarityColorValue(int rarity)
+    public static Color GetRarityColorValue(int rarity) => rarity switch
     {
-        return rarity switch
-        {
-            2 => HandDrawnTheme.Colors.RarityRare,
-            3 => HandDrawnTheme.Colors.RarityEpic,
-            4 => new Color(1f, 0.8f, 0.25f),
-            _ => new Color(0.6f, 0.54f, 0.54f)
-        };
-    }
+        2 => HandDrawnTheme.Colors.RarityRare,
+        3 => HandDrawnTheme.Colors.RarityEpic,
+        4 => HandDrawnTheme.Colors.RarityEpic,  // 传说复用史诗金色，保持视觉梯度
+        _ => HandDrawnTheme.Colors.RarityCommon
+    };
 
     public static Array<string> GetEffectLevelSummary(Player player)
     {
