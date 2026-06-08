@@ -13,6 +13,7 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 public partial class GameOverUI : Control
 {
     private GameManager? _gameManager;
+    private Tween? _titlePulseTween;
 
     public GameOverUI()
     {
@@ -28,6 +29,16 @@ public partial class GameOverUI : Control
     {
         if (hudPanel != null)
             hudPanel.Visible = false;
+
+        // 防御性清理：若 ShowGameOver 在单次 GameOverUI 生命周期内被多次调用，
+        // 先释放上次添加的子节点和无限循环 tween，避免累积。
+        if (_titlePulseTween != null && _titlePulseTween.IsRunning())
+        {
+            _titlePulseTween.Kill();
+            _titlePulseTween = null;
+        }
+        foreach (Node child in GetChildren())
+            child.QueueFree();
 
         // Dark background fade-in
         var bg = new ColorRect
@@ -201,6 +212,7 @@ public partial class GameOverUI : Control
             .SetTrans(Tween.TransitionType.Sine);
         titleTw.TweenProperty(title, Node2D.PropertyName.Modulate.ToString(), new Color(1, 1, 1), 1.2f)
             .SetTrans(Tween.TransitionType.Sine);
+        _titlePulseTween = titleTw;
 
         GameServices.Audio.PlayGameOver();
     }

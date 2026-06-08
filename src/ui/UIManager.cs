@@ -143,6 +143,15 @@ public partial class UIManager : Control
         SetProcess(true);
     }
 
+    public override void _ExitTree()
+    {
+        // 退订静态事件，防止 UIManager 实例被 AchievementSystem 静态委托长期持有。
+        Core.AchievementSystem.OnAchievementUnlocked -= _ShowAchievementNotification;
+        Core.AchievementSystem.OnMilestoneReached -= _ShowMilestoneNotification;
+        if (GetViewport() != null)
+            GetViewport().SizeChanged -= _OnUiViewportSizeChanged;
+    }
+
     // ═══════════════════════════════════════════════
     // UI Construction
     // ═══════════════════════════════════════════════

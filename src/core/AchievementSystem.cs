@@ -39,6 +39,13 @@ public partial class AchievementSystem : Node
         AddToGroup("achievement_system");
     }
 
+    public override void _ExitTree()
+    {
+        // 清空静态实例引用，避免在场景重载后访问已 dispose 的节点。
+        if (_instance == this)
+            _instance = null;
+    }
+
     public override void _Process(double delta)
     {
         _survivalTime += (float)delta;
