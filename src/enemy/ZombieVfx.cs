@@ -157,7 +157,10 @@ public partial class ZombieVfx : Node
         if (!FileAccess.FileExists(sheetPath))
             return false;
 
-        var frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
+        // Enemy spritesheet 现在是精确的 6x1 网格（每张 6 帧 walk 循环）。
+        // 改用 LoadAtlasFrames 固定网格切分，避免 LoadAndSplitSpriteSheet 投影分割
+        // 在非纯白背景下失败。
+        var frames = TextureUtils.LoadAtlasFrames(sheetPath, 6, 1);
         if (frames == null || frames.Count == 0)
             return false;
 

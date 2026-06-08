@@ -526,8 +526,36 @@ public partial class PlayerVfx : Node
         _idleFrame = null;
         _baseTexture = null;
 
-        // Always use procedural stick figure, class-specific per weapon type
-        _CreatePlayerSprite(_lastAttackType);
+        // 优先使用 _ReloadStaticSprites 加载的 PNG sprite（精确拼图后的 spritesheet）
+        if (_warriorIdleFrames.Count > 0 || _rangerIdleFrames.Count > 0 || _mageIdleFrames.Count > 0)
+        {
+            // 按当前职业选择静态数组（CurrentAttackType 决定职业：Melee=Warrior/Ranged=Ranger/Magic=Mage）
+            Godot.Collections.Array<Texture2D> walkSrc, atkSrc, idleSrc;
+            Texture2D? idleFirstSrc, baseSrc;
+            switch (_lastAttackType)
+            {
+                case AttackType.Ranged:
+                    walkSrc = _rangerWalkFrames; atkSrc = _rangerAttackFrames; idleSrc = _rangerIdleFrames;
+                    idleFirstSrc = _rangerIdle; baseSrc = _rangerBase; break;
+                case AttackType.Magic:
+                case AttackType.Area:
+                    walkSrc = _mageWalkFrames; atkSrc = _mageAttackFrames; idleSrc = _mageIdleFrames;
+                    idleFirstSrc = _mageIdle; baseSrc = _mageBase; break;
+                default: // Melee
+                    walkSrc = _warriorWalkFrames; atkSrc = _warriorAttackFrames; idleSrc = _warriorIdleFrames;
+                    idleFirstSrc = _warriorIdle; baseSrc = _warriorBase; break;
+            }
+            foreach (var f in walkSrc) _walkFrames.Add(f);
+            foreach (var f in atkSrc) _attackFrames.Add(f);
+            foreach (var f in idleSrc) _idleFrames.Add(f);
+            _idleFrame = idleFirstSrc;
+            _baseTexture = baseSrc;
+        }
+        else
+        {
+            // 兜底：程序生成 chibi 角色
+            _CreatePlayerSprite(_lastAttackType);
+        }
 
         if (_idleFrame != null && Player?.Sprite != null)
             Player.Sprite.Texture = _idleFrame;
