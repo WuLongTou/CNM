@@ -81,6 +81,12 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     private float _poisonTickTimer;
     private float _poisonDamage;
 
+    // Burn
+    private bool _isBurned;
+    private float _burnRemaining;
+    private float _burnTickTimer;
+    private float _burnDamage;
+
     // Charm
     private bool _isCharmed;
     private float _charmTimer;
@@ -321,6 +327,21 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             {
                 _poisonTickTimer = GameConfig.ZombiePoisonTick;
                 TakeDamage((int)_poisonDamage);
+            }
+        }
+
+        if (_isBurned && _burnRemaining > 0)
+        {
+            _burnRemaining -= d;
+            _burnTickTimer -= d;
+            if (_burnTickTimer <= 0 && _burnRemaining > 0)
+            {
+                _burnTickTimer = GameConfig.ZombiePoisonTick;
+                TakeDamage((int)_burnDamage);
+            }
+            if (_burnRemaining <= 0)
+            {
+                _isBurned = false;
             }
         }
 
@@ -981,6 +1002,17 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
         GameServices.Audio.PlayCharm();
         _vfx?.ShowCharmed();
+    }
+
+    /// <summary>灼烧：持续时间内的 dot 伤害（与 poison 相同的 tick 机制，但共享计时器避免叠加污染）。</summary>
+    public void ApplyBurn(float dps, float duration)
+    {
+        if (dps <= 0 || duration <= 0) return;
+        // 若已 burn，用更高 dps 或更长 duration 续期
+        if (dps > _burnDamage) _burnDamage = dps;
+        _burnRemaining = duration;
+        _burnTickTimer = GameConfig.ZombiePoisonTick;
+        _isBurned = true;
     }
 
     public void SetPlayerTarget(Node targetPlayer)

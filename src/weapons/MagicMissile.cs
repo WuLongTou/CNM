@@ -6,6 +6,7 @@ using Godot;
 using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Player;
+using ZombieWars.Weapons.Effects;
 
 public partial class MagicMissile : Area2D, IDamager
 {
@@ -176,8 +177,7 @@ public partial class MagicMissile : Area2D, IDamager
         if (Shooter is Player p)
             p.RegisterDamageDealt(zombie, Damage);
 
-        if (CharmDuration > 0)
-            zombie.ApplyCharm(CharmDuration);
+        new CharmEffect { Chance = 100, Duration = CharmDuration }.ApplyTo(zombie);
 
         if (PushForce > 0)
         {
@@ -185,11 +185,13 @@ public partial class MagicMissile : Area2D, IDamager
             zombie.Velocity += pushDir * PushForce;
         }
 
-        if (StunDuration > 0)
-            zombie.ApplyStun(StunDuration);
-
-        if (DotDamage > 0)
-            zombie.ApplyPoison(DotDamage, GameConfig.MissilePoisonDuration);
+        new StunEffect { Chance = 100, Duration = StunDuration }.ApplyTo(zombie);
+        new PoisonEffect
+        {
+            Chance = 100,
+            Dps = DotDamage,
+            Duration = GameConfig.MissilePoisonDuration
+        }.ApplyTo(zombie);
 
         _chainTargets.Add(zombie);
     }

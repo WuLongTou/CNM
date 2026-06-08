@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Player;
+using ZombieWars.Weapons.Effects;
 
 public partial class Projectile : CharacterBody2D, IDamager
 {
@@ -249,10 +250,14 @@ public partial class Projectile : CharacterBody2D, IDamager
         if (target is not Zombie z) return;
 
         player.RegisterDamageDealt(z, Damage);
-        if (player.FreezeDuration > 0 && GD.Randf() < player.FreezeDuration / 100.0f)
-            z.ApplyFreeze(0.8f);
-        if (player.PoisonDamage > 0 && GD.Randf() < player.PoisonDamage / 100.0f)
-            z.ApplyPoison(3.0f + player.PoisonDamage * 0.2f, 3.0f);
+
+        new FreezeEffect { Chance = player.FreezeDuration, Duration = 0.8f }.ApplyTo(z);
+        new PoisonEffect
+        {
+            Chance = player.PoisonDamage,
+            Dps = 3.0f + player.PoisonDamage * 0.2f,
+            Duration = 3.0f
+        }.ApplyTo(z);
     }
 
     private void _CreateHitEffect()

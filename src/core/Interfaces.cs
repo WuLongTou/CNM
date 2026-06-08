@@ -55,6 +55,13 @@ public interface IZombie : IDamageable
     bool IsBoss { get; }
     new Vector2 GlobalPosition { get; }
     Vector2 Velocity { get; set; }
+
+    // 效果应用接口（IAttackEffect 调用入口）
+    void ApplyFreeze(float duration);
+    void ApplyStun(float duration);
+    void ApplyPoison(float dps, float duration);
+    void ApplyCharm(float duration);
+    void ApplyBurn(float dps, float duration);
 }
 
 /// <summary>
@@ -63,31 +70,4 @@ public interface IZombie : IDamageable
 public interface IAttackEffect
 {
     void ApplyTo(IZombie target);
-}
-
-/// <summary>
-/// Extension methods for common operations.
-/// </summary>
-public static class CoreExtensions
-{
-    /// <summary>
-    /// Calculates damage with critical hit chance.
-    /// </summary>
-    public static (int damage, bool isCrit) CalculateDamage(
-        this IDamager damager, int baseDamage, int critChance)
-    {
-        bool isCrit = Random.Shared.Next(100) < critChance;
-        int damage = isCrit
-            ? (int)(baseDamage * 2.5f)  // Use CritMultiplier from config
-            : baseDamage;
-        return (damage, isCrit);
-    }
-
-    /// <summary>
-    /// Clamps health between 0 and maxHealth.
-    /// </summary>
-    public static int ClampHealth(this IDamageable entity, int health)
-    {
-        return Math.Clamp(health, 0, entity.MaxHealth);
-    }
 }
