@@ -75,6 +75,10 @@ public partial class ZombieArrow : Area2D, IDamager
             if (IsInstanceValid(Shooter))
                 VFXManager.SpawnHitEffect(Shooter.GetParent(), GlobalPosition, new Color(0.8f, 0.6f, 0.3f));
         }
+        else if (body is IDamageable d)
+        {
+            d.TakeDamage(Damage);
+        }
         else if (body.HasMethod("TakeDamage"))
         {
             body.Call("TakeDamage", Damage);

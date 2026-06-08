@@ -300,9 +300,8 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         CharmDuration = Mathf.Max(CharmDuration, duration);
     }
 
-    // 显式实现 IDamageable / IPlayer 接口签名（无 attacker 参数版本）
+    // 显式实现 IDamageable 接口签名（无 attacker 参数版本）。IPlayer 继承 IDamageable.TakeDamage
     void IDamageable.TakeDamage(int amount) => TakeDamage(amount, null);
-    void IPlayer.TakeDamage(int amount) => TakeDamage(amount, null);
 
     public void TakeDamage(int amount, Zombie? attacker = null)
     {

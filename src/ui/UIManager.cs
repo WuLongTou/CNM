@@ -7,6 +7,7 @@ using ZombieWars.Core;
 using ZombieWars.Weapons;
 
 using Player = ZombieWars.Player.Player;
+using static ZombieWars.Core.GameConfig;
 using static ZombieWars.Core.GameEnums;
 using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
@@ -172,9 +173,9 @@ public partial class UIManager : Control
         _bossHealthLabel.OffsetBottom = 84;
         _bossHealthLabel.HorizontalAlignment = HorizontalAlignment.Center;
         _bossHealthLabel.VerticalAlignment = VerticalAlignment.Center;
-        _bossHealthLabel.AddThemeFontSizeOverride("font_size", 12);
+        _bossHealthLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
         _bossHealthLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
-        _bossHealthLabel.AddThemeConstantOverride("outline_size", 2);
+        _bossHealthLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         _bossHealthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
         _bossHealthLabel.Visible = false;
         _bossHealthLabel.ZIndex = 6;
@@ -200,7 +201,7 @@ public partial class UIManager : Control
         _weaponSelectionPanel.AddChild(centerContainer);
 
         var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", 30);
+        mainVbox.AddThemeConstantOverride("separation", UiSpacingSection);
         centerContainer.AddChild(mainVbox);
 
         // Title
@@ -219,7 +220,7 @@ public partial class UIManager : Control
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             CustomMinimumSize = new Vector2(720, 0)
         };
-        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", 16);
+        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", UiFontEmph);
         _currentWeaponLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
         _currentWeaponLabel.HorizontalAlignment = HorizontalAlignment.Center;
         mainVbox.AddChild(_currentWeaponLabel);
@@ -237,7 +238,7 @@ public partial class UIManager : Control
 
         // Card button container
         var buttonContainer = new HBoxContainer();
-        buttonContainer.AddThemeConstantOverride("separation", 20);
+        buttonContainer.AddThemeConstantOverride("separation", UiSpacingWide);
         buttonContainer.Alignment = BoxContainer.AlignmentMode.Center;
         mainVbox.AddChild(buttonContainer);
 
@@ -261,7 +262,7 @@ public partial class UIManager : Control
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
             cardVbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            cardVbox.AddThemeConstantOverride("separation", 10);
+            cardVbox.AddThemeConstantOverride("separation", UiSpacingNormal);
 
             var margin = new MarginContainer
             {
@@ -282,7 +283,7 @@ public partial class UIManager : Control
                 Text = "【类型】",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            categoryLabel.AddThemeFontSizeOverride("font_size", 12);
+            categoryLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
             categoryLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(categoryLabel);
 
@@ -294,7 +295,7 @@ public partial class UIManager : Control
                 HorizontalAlignment = HorizontalAlignment.Center,
                 AutowrapMode = TextServer.AutowrapMode.WordSmart
             };
-            title.AddThemeFontSizeOverride("font_size", 22);
+            title.AddThemeFontSizeOverride("font_size", UiFontTitle);
             cardVbox.AddChild(title);
 
             // Separator
@@ -327,7 +328,7 @@ public partial class UIManager : Control
                 Text = "类型",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            typeLabel.AddThemeFontSizeOverride("font_size", 14);
+            typeLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
             typeLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(typeLabel);
 
@@ -358,7 +359,7 @@ public partial class UIManager : Control
                 Text = "稀有度",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            rarity.AddThemeFontSizeOverride("font_size", 14);
+            rarity.AddThemeFontSizeOverride("font_size", UiFontBody);
             cardVbox.AddChild(rarity);
 
             // 7. Hint
@@ -368,7 +369,7 @@ public partial class UIManager : Control
                 Text = "悬停查看详情",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            hintLabel.AddThemeFontSizeOverride("font_size", 11);
+            hintLabel.AddThemeFontSizeOverride("font_size", UiFontMicro);
             hintLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(hintLabel);
         }
@@ -379,7 +380,7 @@ public partial class UIManager : Control
             Text = "💡 按 [1] [2] [3] 选择 | 按 [S] 或 [Enter] 跳过",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        keyboardHintLabel.AddThemeFontSizeOverride("font_size", 14);
+        keyboardHintLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
         keyboardHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
         mainVbox.AddChild(keyboardHintLabel);
 
@@ -392,7 +393,7 @@ public partial class UIManager : Control
             Text = "跳过升级",
             CustomMinimumSize = new Vector2(150, 40)
         };
-        _skipButton.AddThemeFontSizeOverride("font_size", 16);
+        _skipButton.AddThemeFontSizeOverride("font_size", UiFontEmph);
         var skipNormal = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
         skipNormal.BgColor = new Color(0.25f, 0.2f, 0.2f, 0.9f);
         _skipButton.AddThemeStyleboxOverride("normal", skipNormal);
@@ -1405,7 +1406,7 @@ public partial class UIManager : Control
         card.AddChild(margin);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 8);
+        vbox.AddThemeConstantOverride("separation", UiSpacingNormal);
         vbox.MouseFilter = Control.MouseFilterEnum.Ignore;
         margin.AddChild(vbox);
 
@@ -1417,7 +1418,7 @@ public partial class UIManager : Control
         };
         titleLbl.AddThemeFontSizeOverride("font_size", 26);
         titleLbl.AddThemeColorOverride("font_color", BloodBright);
-        titleLbl.AddThemeConstantOverride("outline_size", 3);
+        titleLbl.AddThemeConstantOverride("outline_size", UiOutlineBold);
         titleLbl.AddThemeColorOverride("font_outline_color", InkBlack);
         vbox.AddChild(titleLbl);
 
@@ -1427,7 +1428,7 @@ public partial class UIManager : Control
             Text = "ROUND COMPLETE",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        subLbl.AddThemeFontSizeOverride("font_size", 11);
+        subLbl.AddThemeFontSizeOverride("font_size", UiFontMicro);
         subLbl.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.40f));
         vbox.AddChild(subLbl);
 
@@ -1455,7 +1456,7 @@ public partial class UIManager : Control
             Text = "准备进入下一波...",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        hint.AddThemeFontSizeOverride("font_size", 12);
+        hint.AddThemeFontSizeOverride("font_size", UiFontSmall);
         hint.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.55f));
         vbox.AddChild(hint);
 
@@ -1485,9 +1486,9 @@ public partial class UIManager : Control
             Text = label,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
-        lbl.AddThemeFontSizeOverride("font_size", 16);
+        lbl.AddThemeFontSizeOverride("font_size", UiFontEmph);
         lbl.AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.70f));
-        lbl.AddThemeConstantOverride("outline_size", 1);
+        lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
         lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
         row.AddChild(lbl);
 
@@ -1500,7 +1501,7 @@ public partial class UIManager : Control
         };
         val.AddThemeFontSizeOverride("font_size", 20);
         val.AddThemeColorOverride("font_color", accentColor);
-        val.AddThemeConstantOverride("outline_size", 2);
+        val.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         val.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
         row.AddChild(val);
     }
@@ -1641,8 +1642,8 @@ public partial class UIManager : Control
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            _levelUpLabel.AddThemeFontSizeOverride("font_size", 22);
-            _levelUpLabel.AddThemeConstantOverride("outline_size", 4);
+            _levelUpLabel.AddThemeFontSizeOverride("font_size", UiFontTitle);
+            _levelUpLabel.AddThemeConstantOverride("outline_size", UiOutlineHero);
             _levelUpLabel.AddThemeColorOverride("font_outline_color", InkBlack);
             center.AddChild(_levelUpLabel);
         }

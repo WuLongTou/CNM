@@ -190,9 +190,21 @@ public partial class Projectile : CharacterBody2D, IDamager
     {
         if (_damagedEnemies.Contains(area))
             return;
-        if (area.HasMethod("TakeDamage"))
+        // 优先走 IDamageable 接口；保留 HasMethod 兜底以兼容未实现接口的目标
+        //（如 Player 子 Area2D hitbox）。
+        bool damaged = false;
+        if (area is IDamageable d)
+        {
+            d.TakeDamage((int)Damage);
+            damaged = true;
+        }
+        else if (area.HasMethod("TakeDamage"))
         {
             area.Call("TakeDamage", (int)Damage);
+            damaged = true;
+        }
+        if (damaged)
+        {
             _damagedEnemies.Add(area);
             _CreateHitEffect();
             if (PiercingCount <= 0)

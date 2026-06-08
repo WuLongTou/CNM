@@ -1093,8 +1093,8 @@ public partial class ZombieVfx : Node
         {
             if (p is Node2D player && _zombie.GlobalPosition.DistanceTo(player.GlobalPosition) <= 80.0f)
             {
-                if (p.HasMethod("TakeDamage"))
-                    p.Call("TakeDamage", (int)(_zombie.Damage * 0.5f));
+                if (p is IDamageable d)
+                    d.TakeDamage((int)(_zombie.Damage * 0.5f));
             }
         }
     }

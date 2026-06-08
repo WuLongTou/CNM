@@ -7,6 +7,7 @@ using ZombieWars.Core;
 using ZombieWars.Weapons;
 
 using Player = ZombieWars.Player.Player;
+using static ZombieWars.Core.GameConfig;
 using static ZombieWars.Core.GameEnums;
 
 /// <summary>
@@ -75,23 +76,23 @@ public partial class HudPanel : Panel
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 10);
-        margin.AddThemeConstantOverride("margin_right", 10);
-        margin.AddThemeConstantOverride("margin_top", 4);
-        margin.AddThemeConstantOverride("margin_bottom", 4);
+        margin.AddThemeConstantOverride("margin_left", UiMarginSmall);
+        margin.AddThemeConstantOverride("margin_right", UiMarginSmall);
+        margin.AddThemeConstantOverride("margin_top", UiMarginTiny);
+        margin.AddThemeConstantOverride("margin_bottom", UiMarginTiny);
         AddChild(margin);
 
         var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", 3);
+        mainVbox.AddThemeConstantOverride("separation", UiSpacingHairline);
         margin.AddChild(mainVbox);
 
         // Row 1
         var row1 = new HBoxContainer();
-        row1.AddThemeConstantOverride("separation", 12);
+        row1.AddThemeConstantOverride("separation", UiSpacingMedium);
         mainVbox.AddChild(row1);
 
         var hpWrapper = new HBoxContainer();
-        hpWrapper.AddThemeConstantOverride("separation", 6);
+        hpWrapper.AddThemeConstantOverride("separation", UiSpacingTight);
         hpWrapper.CustomMinimumSize = new Vector2(240, 0);
         hpWrapper.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
         row1.AddChild(hpWrapper);
@@ -107,9 +108,9 @@ public partial class HudPanel : Panel
         hpWrapper.AddChild(_healthBar);
 
         _healthLabel = new Label { Text = "120/120" };
-        _healthLabel.AddThemeFontSizeOverride("font_size", 11);
+        _healthLabel.AddThemeFontSizeOverride("font_size", UiFontMicro);
         _healthLabel.AddThemeColorOverride("font_color", new Color(0.94f, 0.91f, 0.91f));
-        _healthLabel.AddThemeConstantOverride("outline_size", 2);
+        _healthLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         _healthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
         _healthLabel.VerticalAlignment = VerticalAlignment.Center;
         hpWrapper.AddChild(_healthLabel);
@@ -117,18 +118,18 @@ public partial class HudPanel : Panel
         var centerBox = new HBoxContainer();
         centerBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         centerBox.Alignment = BoxContainer.AlignmentMode.Center;
-        centerBox.AddThemeConstantOverride("separation", 16);
+        centerBox.AddThemeConstantOverride("separation", UiSpacingWide);
         row1.AddChild(centerBox);
 
         _roundLabel = new Label { Text = "第 1 波" };
-        _roundLabel.AddThemeFontSizeOverride("font_size", 14);
+        _roundLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
         _roundLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
-        _roundLabel.AddThemeConstantOverride("outline_size", 2);
+        _roundLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         _roundLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
         centerBox.AddChild(_roundLabel);
 
         _zombiesLabel = new Label { Text = "剩余 0" };
-        _zombiesLabel.AddThemeFontSizeOverride("font_size", 12);
+        _zombiesLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
         _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
         centerBox.AddChild(_zombiesLabel);
 
@@ -139,36 +140,36 @@ public partial class HudPanel : Panel
             CustomMinimumSize = new Vector2(80, 0)
         };
         _scoreLabel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
-        _scoreLabel.AddThemeFontSizeOverride("font_size", 14);
+        _scoreLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
         _scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
-        _scoreLabel.AddThemeConstantOverride("outline_size", 2);
+        _scoreLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         _scoreLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
         row1.AddChild(_scoreLabel);
 
         // Row 2
         var row2 = new HBoxContainer();
-        row2.AddThemeConstantOverride("separation", 10);
+        row2.AddThemeConstantOverride("separation", UiSpacingNormal);
         mainVbox.AddChild(row2);
 
-        _damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f), 12);
+        _damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f), UiFontSmall);
         row2.AddChild(_damageLabel);
-        _attackIntervalLabel = _MakeStatLabel("间隔 0.5s", new Color(0.75f, 0.65f, 0.45f), 12);
+        _attackIntervalLabel = _MakeStatLabel("间隔 0.5s", new Color(0.75f, 0.65f, 0.45f), UiFontSmall);
         row2.AddChild(_attackIntervalLabel);
-        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f), 12);
+        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f), UiFontSmall);
         row2.AddChild(_critLabel);
-        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f), 12);
+        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f), UiFontSmall);
         row2.AddChild(_lifestealLabel);
-        _attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f), 12);
+        _attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f), UiFontSmall);
         row2.AddChild(_attackTypeLabel);
-        _targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f), 12);
+        _targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f), UiFontSmall);
         row2.AddChild(_targetPriorityLabel);
-        _dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f), 12);
+        _dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f), UiFontSmall);
         row2.AddChild(_dashCooldownLabel);
-        _speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f), 12);
+        _speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f), UiFontSmall);
         row2.AddChild(_speedLabel);
 
         _effectsContainer = new HBoxContainer();
-        _effectsContainer.AddThemeConstantOverride("separation", 3);
+        _effectsContainer.AddThemeConstantOverride("separation", UiSpacingHairline);
         _effectsContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
         row2.AddChild(_effectsContainer);
 
@@ -407,7 +408,7 @@ public partial class HudPanel : Panel
                 FocusMode = Control.FocusModeEnum.None,
                 Flat = true
             };
-            btn.AddThemeFontSizeOverride("font_size", 14);
+            btn.AddThemeFontSizeOverride("font_size", UiFontBody);
 
             var itemColor = (Color)item["color"];
             var style = new StyleBoxFlat
@@ -445,7 +446,7 @@ public partial class HudPanel : Panel
         if (activeItems.Count == 0)
         {
             var hint = new Label { Text = "无" };
-            hint.AddThemeFontSizeOverride("font_size", 11);
+            hint.AddThemeFontSizeOverride("font_size", UiFontMicro);
             hint.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
             _effectsContainer.AddChild(hint);
         }
@@ -469,12 +470,12 @@ public partial class HudPanel : Panel
         _attackTypeLabel.TooltipText = WeaponFormatter.BuildAttackEffectsTooltip(player);
     }
 
-    private static Label _MakeStatLabel(string text, Color color, int fontSize = 10)
+    private static Label _MakeStatLabel(string text, Color color, int fontSize = UiFontSmall)
     {
         var lbl = new Label { Text = text };
         lbl.AddThemeFontSizeOverride("font_size", fontSize);
         lbl.AddThemeColorOverride("font_color", color);
-        lbl.AddThemeConstantOverride("outline_size", 1);
+        lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
         lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
         return lbl;
     }

@@ -40,7 +40,6 @@ public interface IPlayer : IDamageable
     float CritMultiplier { get; }
 
     void RegisterDamageDealt(Zombie target, float damage);
-    new void TakeDamage(int amount);
 }
 
 /// <summary>

@@ -1075,6 +1075,10 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
                 player.ApplyPoison(GameConfig.SpitterPoisonDps, GameConfig.SpitterPoisonDuration);
                 player.ApplyBuffFromZombie(BuffType.Poison, GameConfig.SpitterPoisonDuration, GameConfig.SpitterPoisonDps);
             }
+            else if (target is IDamageable d)
+            {
+                d.TakeDamage(Damage);
+            }
             else if (target.HasMethod("TakeDamage"))
             {
                 target.Call("TakeDamage", Damage);

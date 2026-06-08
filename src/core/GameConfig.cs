@@ -222,6 +222,36 @@ public static class GameConfig
     public const float TooltipMaxWidth = 360.0f;
     public static readonly Godot.Vector2 TooltipOffset = new(15.0f, 15.0f);
 
+    // UI 间距（VBox / HBox separation）
+    public const int UiSpacingHairline = 3;
+    public const int UiSpacingTight = 6;
+    public const int UiSpacingNormal = 8;
+    public const int UiSpacingMedium = 12;
+    public const int UiSpacingWide = 16;
+    public const int UiSpacingHuge = 25;
+    public const int UiSpacingSection = 30;
+
+    // UI 边距（Panel.margin_*_）
+    public const int UiMarginTiny = 4;
+    public const int UiMarginSmall = 10;
+    public const int UiMarginMedium = 15;
+    public const int UiMarginLarge = 24;
+    public const int UiMarginHuge = 50;
+
+    // UI 字号
+    public const int UiFontMicro = 11;
+    public const int UiFontSmall = 12;
+    public const int UiFontBody = 14;
+    public const int UiFontEmph = 16;
+    public const int UiFontTitle = 22;
+    public const int UiFontHuge = 36;
+
+    // UI 描边
+    public const int UiOutlineThin = 1;
+    public const int UiOutlineNorm = 2;
+    public const int UiOutlineBold = 3;
+    public const int UiOutlineHero = 4;
+
     // Health thresholds
     public const float HealthHighThreshold = 0.6f;
     public const float HealthMedThreshold = 0.3f;
