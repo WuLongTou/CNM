@@ -502,11 +502,6 @@ public partial class UIManager : Control
 
             if (key.Keycode == Key.H)
                 _ToggleControlsPanel();
-            else if (key.Keycode == Key.Escape && _helpPanel.Visible)
-            {
-                _helpPanel.Close();
-                GetViewport().SetInputAsHandled();
-            }
         }
 
         if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left && IsUpgradeActive())
@@ -522,13 +517,38 @@ public partial class UIManager : Control
 
     public override void _UnhandledInput(InputEvent @event)
     {
-        if (@event.IsActionPressed("pause"))
-        {
-            if (IsUpgradeActive())
-                return;
-            SetUserPaused(!_userPaused);
+        if (@event.IsActionPressed("pause") && TryHandleEscape())
             GetViewport().SetInputAsHandled();
+    }
+
+    /// <summary>
+    /// 统一 ESC 键处理：按优先级短路求值状态机。
+    /// 优先级：GameOver / WelcomePanel > HelpPanel > 武器选择 > 普通暂停。
+    /// 返回 true 表示事件已消费（调用方应 SetInputAsHandled）。
+    /// </summary>
+    private bool TryHandleEscape()
+    {
+        // 1. 退出游戏状态（最高）
+        if (_gameOverUi.Visible || (_welcomePanel != null && _welcomePanel.Visible))
+        {
+            GetTree().Quit();
+            return true;
         }
+        // 2. 关闭帮助面板
+        if (_helpPanel.Visible)
+        {
+            _helpPanel.Close();
+            return true;
+        }
+        // 3. 跳过武器选择
+        if (IsUpgradeActive())
+        {
+            _OnSkipPressed();
+            return true;
+        }
+        // 4. 切换暂停
+        SetUserPaused(!_userPaused);
+        return true;
     }
 
     // ═══════════════════════════════════════════════

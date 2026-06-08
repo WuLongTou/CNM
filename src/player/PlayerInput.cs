@@ -36,10 +36,7 @@ public partial class PlayerInput : Node
     /// <summary>True on the single frame Tab is pressed.</summary>
     public bool IsCycleTargetPressed { get; private set; }
 
-    /// <summary>True when ESC/pause is pressed.</summary>
-    public bool IsPausePressed { get; private set; }
-
-    /// <summary>True when H is pressed (toggle help panel).</summary>
+    /// <summary>True on the single frame H is pressed.</summary>
     public bool IsHelpToggled { get; private set; }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -53,7 +50,6 @@ public partial class PlayerInput : Node
     private const string ACTION_ATTACK = "attack";
     private const string ACTION_DASH = "dash";
     private const string ACTION_CYCLE_TARGET = "cycle_target";
-    private const string ACTION_PAUSE = "pause";
     private const string ACTION_TOGGLE_HELP = "toggle_help";
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -93,9 +89,6 @@ public partial class PlayerInput : Node
         // ── Cycle target — single frame ─────────────────────────────────────
         IsCycleTargetPressed = Input.IsActionJustPressed(ACTION_CYCLE_TARGET);
 
-        // ── Pause ──────────────────────────────────────────────────────────
-        IsPausePressed = Input.IsActionJustPressed(ACTION_PAUSE);
-
         // ── Help toggle ────────────────────────────────────────────────────
         IsHelpToggled = Input.IsActionJustPressed(ACTION_TOGGLE_HELP);
     }
@@ -126,7 +119,6 @@ public partial class PlayerInput : Node
         IsAttackPressed = false;
         IsDashPressed = false;
         IsCycleTargetPressed = false;
-        IsPausePressed = false;
         IsHelpToggled = false;
     }
 }
