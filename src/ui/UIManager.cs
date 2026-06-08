@@ -43,29 +43,14 @@ public partial class UIManager : Control
     private Panel _weaponSelectionPanel = null!;
     private readonly List<Button> _weaponButtons = new();
     private Button? _skipButton;
-    private Panel _hudPanel = null!;
-    private Label _healthLabel = null!;
-    private Label _roundLabel = null!;
-    private Label _zombiesLabel = null!;
-    private Label _damageLabel = null!;
-    private Label _critLabel = null!;
-    private Label _lifestealLabel = null!;
-    private Label _attackIntervalLabel = null!;
-    private Label _attackTypeLabel = null!;
-    private Label _targetPriorityLabel = null!;
-    private Label _dashCooldownLabel = null!;
-    private Label _speedLabel = null!;
+    private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
-    private Panel _welcomePanel = null!;
-    private bool _welcomeVisible = true;
-    private Label _scoreLabel = null!;
-    private ProgressBar _healthBar = null!;
+    private WelcomePanel? _welcomePanel;
     private ProgressBar _bossHealthBar = null!;
     private Label _bossHealthLabel = null!;
     private bool _bossUiVisible;
     private int _bossUiHealth = -1;
     private int _bossUiMaxHealth = -1;
-    private Button _soundToggleButton = null!;
 
     // ═══════════════════════════════════════════════
     // Weapon Selection
@@ -86,25 +71,13 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     // Pause
     // ═══════════════════════════════════════════════
-    private Panel _pausePanel = null!;
-    private Label _pauseLabel = null!;
+    private PausePanel? _pausePanel;
     private bool _pauseLockedByUpgrade;
     private bool _userPaused;
     private Label _currentWeaponLabel = null!;
 
-    private Panel _roundBannerPanel = null!;
-    private Label _roundBanner = null!;
-    private Label _roundBannerSub = null!;
-    private ColorRect _roundBannerGlow = null!;
-    private Tween? _bannerTween;
+    private RoundBanner? _roundBanner;
     private Panel? _roundSummaryPanel;
-    private Tween? _lowHealthTween;
-
-    // ═══════════════════════════════════════════════
-    // Effects / Buff Icons
-    // ═══════════════════════════════════════════════
-    private HBoxContainer _effectsContainer = null!;
-    private readonly Dictionary<string, Button> _effectIcons = new();
 
     // ═══════════════════════════════════════════════
     // Level Up / Milestone
@@ -134,10 +107,29 @@ public partial class UIManager : Control
         Core.AchievementSystem.OnAchievementUnlocked += _ShowAchievementNotification;
         Core.AchievementSystem.OnMilestoneReached += _ShowMilestoneNotification;
 
-        _CreateUiElements();
+        // 构造各 UI 子面板
+        _hudPanel = new HudPanel();
+        _hudPanel.Setup(
+            onToggleSound: _ToggleSound,
+            onToggleHelp: _ToggleControlsPanel,
+            showTooltip: _ShowTooltip,
+            hideTooltip: _HideTooltip);
+        AddChild(_hudPanel);
+        _CreateBossHealthBar();
+
+        _CreateWeaponSelectionPanel();
+        _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 80 };
+        AddChild(_helpPanel);
+        _welcomePanel = new WelcomePanel();
+        _welcomePanel.Setup(onStart: _StartGame, onToggleHelp: _ToggleControlsPanel);
+        AddChild(_welcomePanel);
+        _roundBanner = new RoundBanner();
+        AddChild(_roundBanner);
+
         _SetupConnections();
         _CreateTooltipPanel();
-        _CreatePausePanel();
+        _pausePanel = new PausePanel();
+        AddChild(_pausePanel);
         GetViewport().SizeChanged += _OnUiViewportSizeChanged;
         _OnUiViewportSizeChanged();
         SetProcess(true);
@@ -156,162 +148,8 @@ public partial class UIManager : Control
     // UI Construction
     // ═══════════════════════════════════════════════
 
-    private void _CreateUiElements()
+    private void _CreateBossHealthBar()
     {
-        _CreateHudPanel();
-        _CreateWeaponSelectionPanel();
-        _CreateHelpPanel();
-        _CreateWelcomePanel();
-        _CreateRoundBanner();
-    }
-
-    private void _CreateHudPanel()
-    {
-        _hudPanel = new Panel();
-        _hudPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-        _hudPanel.CustomMinimumSize = new Vector2(0, 48);
-        _hudPanel.OffsetBottom = 52;
-
-        var hudStyle = MakeDarkPanel(0.90f);
-        hudStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
-        hudStyle.BorderWidthBottom = 1;
-        _hudPanel.AddThemeStyleboxOverride("panel", hudStyle);
-        AddChild(_hudPanel);
-
-        var margin = new MarginContainer();
-        margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 10);
-        margin.AddThemeConstantOverride("margin_right", 10);
-        margin.AddThemeConstantOverride("margin_top", 4);
-        margin.AddThemeConstantOverride("margin_bottom", 4);
-        _hudPanel.AddChild(margin);
-
-        var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", 3);
-        margin.AddChild(mainVbox);
-
-        // Row 1: HP bar (left) | Round (center) | Score (right)
-        var row1 = new HBoxContainer();
-        row1.AddThemeConstantOverride("separation", 12);
-        mainVbox.AddChild(row1);
-
-        // Left: HP bar area (fixed width, no expand)
-        var hpWrapper = new HBoxContainer();
-        hpWrapper.AddThemeConstantOverride("separation", 6);
-        hpWrapper.CustomMinimumSize = new Vector2(240, 0);
-        hpWrapper.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
-        row1.AddChild(hpWrapper);
-
-        _healthBar = new ProgressBar
-        {
-            CustomMinimumSize = new Vector2(180, 14),
-            SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin,
-            ShowPercentage = false
-        };
-        _healthBar.AddThemeStyleboxOverride("background", MakeHpBarBg());
-        _healthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(HandDrawnTheme.Colors.HpHigh));
-        hpWrapper.AddChild(_healthBar);
-
-        _healthLabel = new Label
-        {
-            Text = "120/120"
-        };
-        _healthLabel.AddThemeFontSizeOverride("font_size", 11);
-        _healthLabel.AddThemeColorOverride("font_color", new Color(0.94f, 0.91f, 0.91f));
-        _healthLabel.AddThemeConstantOverride("outline_size", 2);
-        _healthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
-        _healthLabel.VerticalAlignment = VerticalAlignment.Center;
-        hpWrapper.AddChild(_healthLabel);
-
-        // Center: round + zombies
-        var centerBox = new HBoxContainer();
-        centerBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        centerBox.Alignment = BoxContainer.AlignmentMode.Center;
-        centerBox.AddThemeConstantOverride("separation", 16);
-        row1.AddChild(centerBox);
-
-        _roundLabel = new Label
-        {
-            Text = "第 1 波"
-        };
-        _roundLabel.AddThemeFontSizeOverride("font_size", 14);
-        _roundLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
-        _roundLabel.AddThemeConstantOverride("outline_size", 2);
-        _roundLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
-        centerBox.AddChild(_roundLabel);
-
-        _zombiesLabel = new Label
-        {
-            Text = "剩余 0"
-        };
-        _zombiesLabel.AddThemeFontSizeOverride("font_size", 12);
-        _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
-        centerBox.AddChild(_zombiesLabel);
-
-        // Right: score
-        _scoreLabel = new Label
-        {
-            Text = "0",
-            HorizontalAlignment = HorizontalAlignment.Right,
-            CustomMinimumSize = new Vector2(80, 0)
-        };
-        _scoreLabel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
-        _scoreLabel.AddThemeFontSizeOverride("font_size", 14);
-        _scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
-        _scoreLabel.AddThemeConstantOverride("outline_size", 2);
-        _scoreLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
-        row1.AddChild(_scoreLabel);
-
-        // Row 2: stats + effect icons
-        var row2 = new HBoxContainer();
-        row2.AddThemeConstantOverride("separation", 10);
-        mainVbox.AddChild(row2);
-
-        _damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f), 12);
-        row2.AddChild(_damageLabel);
-        _attackIntervalLabel = _MakeStatLabel("间隔 0.5s", new Color(0.75f, 0.65f, 0.45f), 12);
-        row2.AddChild(_attackIntervalLabel);
-        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f), 12);
-        row2.AddChild(_critLabel);
-        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f), 12);
-        row2.AddChild(_lifestealLabel);
-        _attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f), 12);
-        row2.AddChild(_attackTypeLabel);
-        _targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f), 12);
-        row2.AddChild(_targetPriorityLabel);
-        _dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f), 12);
-        row2.AddChild(_dashCooldownLabel);
-        _speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f), 12);
-        row2.AddChild(_speedLabel);
-
-        // Effect icons container
-        _effectsContainer = new HBoxContainer();
-        _effectsContainer.AddThemeConstantOverride("separation", 3);
-        _effectsContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        row2.AddChild(_effectsContainer);
-
-        // Sound toggle button
-        var soundBtn = new Button
-        {
-            Text = "🔊",
-            CustomMinimumSize = new Vector2(24, 20),
-            FocusMode = Control.FocusModeEnum.None,
-            TooltipText = "点击切换音效"
-        };
-        soundBtn.Pressed += _ToggleSound;
-        row2.AddChild(soundBtn);
-        _soundToggleButton = soundBtn;
-
-        var helpBtn = new Button
-        {
-            Text = "?",
-            CustomMinimumSize = new Vector2(20, 20),
-            FocusMode = Control.FocusModeEnum.None
-        };
-        helpBtn.Pressed += _ToggleControlsPanel;
-        row2.AddChild(helpBtn);
-
-        // Boss health bar
         _bossHealthBar = new ProgressBar
         {
             ShowPercentage = false
@@ -324,10 +162,8 @@ public partial class UIManager : Control
         _bossHealthBar.CustomMinimumSize = new Vector2(0, 12);
         _bossHealthBar.Visible = false;
         _bossHealthBar.ZIndex = 5;
-        var bossBg = MakeHpBarBg();
-        var bossFill = MakeHpBarFill(HandDrawnTheme.Colors.BloodBright);
-        _bossHealthBar.AddThemeStyleboxOverride("background", bossBg);
-        _bossHealthBar.AddThemeStyleboxOverride("fill", bossFill);
+        _bossHealthBar.AddThemeStyleboxOverride("background", MakeHpBarBg());
+        _bossHealthBar.AddThemeStyleboxOverride("fill", MakeHpBarFill(HandDrawnTheme.Colors.BloodBright));
         AddChild(_bossHealthBar);
 
         _bossHealthLabel = new Label();
@@ -343,16 +179,6 @@ public partial class UIManager : Control
         _bossHealthLabel.Visible = false;
         _bossHealthLabel.ZIndex = 6;
         AddChild(_bossHealthLabel);
-    }
-
-    private Label _MakeStatLabel(string text, Color color, int fontSize = 10)
-    {
-        var lbl = new Label { Text = text };
-        lbl.AddThemeFontSizeOverride("font_size", fontSize);
-        lbl.AddThemeColorOverride("font_color", color);
-        lbl.AddThemeConstantOverride("outline_size", 1);
-        lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
-        return lbl;
     }
 
     private void _CreateWeaponSelectionPanel()
@@ -627,224 +453,6 @@ public partial class UIManager : Control
         AddChild(_tooltipHideTimer);
     }
 
-    private void _CreatePausePanel()
-    {
-        _pausePanel = new Panel
-        {
-            Visible = false,
-            ZIndex = 90,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ProcessMode = ProcessModeEnum.Always
-        };
-        _pausePanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        var styleBox = new StyleBoxFlat { BgColor = new Color(BattlefieldBg, 0.7f) };
-        _pausePanel.AddThemeStyleboxOverride("panel", styleBox);
-        AddChild(_pausePanel);
-
-        var center = new CenterContainer();
-        center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _pausePanel.AddChild(center);
-
-        var pauseCard = new Panel();
-        pauseCard.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
-        var pauseCardStyle = MakeNotePanel(borderRadius: 5f, shadowSize: 8f);
-        pauseCard.AddThemeStyleboxOverride("panel", pauseCardStyle);
-
-        var pauseVbox = new VBoxContainer();
-        pauseVbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        pauseCard.AddChild(pauseVbox);
-
-        var pauseMargin = new MarginContainer();
-        pauseMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        pauseMargin.AddThemeConstantOverride("margin_left", 30);
-        pauseMargin.AddThemeConstantOverride("margin_right", 30);
-        pauseMargin.AddThemeConstantOverride("margin_top", 20);
-        pauseMargin.AddThemeConstantOverride("margin_bottom", 20);
-        pauseVbox.AddChild(pauseMargin);
-
-        _pauseLabel = new Label
-        {
-            Text = "⏸ 暂停中\n按 ESC 继续",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        _pauseLabel.AddThemeFontSizeOverride("font_size", 28);
-        _pauseLabel.AddThemeColorOverride("font_color", NoteText);
-        pauseMargin.AddChild(_pauseLabel);
-        center.AddChild(pauseCard);
-    }
-
-    private void _CreateRoundBanner()
-    {
-        var bannerSize = new Vector2(460.0f, 100.0f);
-
-        // CenterContainer fills the screen — centers children automatically
-        var wrapper = new CenterContainer
-        {
-            ZIndex = 48,
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        wrapper.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        AddChild(wrapper);
-
-        // Glow background
-        _roundBannerGlow = new ColorRect
-        {
-            Visible = false,
-            Color = new Color(BloodBright, 0.0f),
-            CustomMinimumSize = bannerSize,
-            PivotOffset = bannerSize / 2.0f
-        };
-        wrapper.AddChild(_roundBannerGlow);
-
-        // Panel background
-        _roundBannerPanel = new Panel
-        {
-            Visible = false,
-            ZIndex = 49,
-            CustomMinimumSize = bannerSize,
-            PivotOffset = bannerSize / 2.0f
-        };
-        var panelStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 12f);
-        panelStyle.BgColor = new Color(BattlefieldBg, 0.92f);
-        panelStyle.BorderColor = new Color(BloodBright, 0.8f);
-        panelStyle.BorderWidthTop = 2;
-        panelStyle.BorderWidthBottom = 2;
-        panelStyle.BorderWidthLeft = 2;
-        panelStyle.BorderWidthRight = 2;
-        panelStyle.ShadowColor = new Color(BloodBright, 0.25f);
-        panelStyle.ShadowOffset = new Vector2(4, 4);
-        _roundBannerPanel.AddThemeStyleboxOverride("panel", panelStyle);
-        wrapper.AddChild(_roundBannerPanel);
-
-        // Main title label
-        _roundBanner = new Label
-        {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        _roundBanner.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _roundBanner.AddThemeFontSizeOverride("font_size", 36);
-        _roundBanner.AddThemeColorOverride("font_color", BloodBright);
-        _roundBanner.AddThemeConstantOverride("outline_size", 6);
-        _roundBanner.AddThemeColorOverride("font_outline_color", InkBlack);
-        _roundBannerPanel.AddChild(_roundBanner);
-
-        // Subtitle label
-        _roundBannerSub = new Label
-        {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Bottom
-        };
-        _roundBannerSub.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _roundBannerSub.AddThemeFontSizeOverride("font_size", 14);
-        _roundBannerSub.AddThemeColorOverride("font_color", new Color(NoteText, 0.7f));
-        _roundBannerSub.AddThemeConstantOverride("outline_size", 2);
-        _roundBannerSub.AddThemeColorOverride("font_outline_color", InkBlack);
-        _roundBannerPanel.AddChild(_roundBannerSub);
-    }
-
-    private void _CreateHelpPanel()
-    {
-        _helpPanel = new HelpPanel
-        {
-            Name = "HelpPanel",
-            ZIndex = 80
-        };
-        AddChild(_helpPanel);
-    }
-
-    private void _CreateWelcomePanel()
-    {
-        _welcomePanel = new Panel();
-        _welcomePanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        var styleBox = new StyleBoxFlat { BgColor = new Color(BattlefieldBg, 0.85f) };
-        _welcomePanel.AddThemeStyleboxOverride("panel", styleBox);
-        AddChild(_welcomePanel);
-
-        var marginContainer = new MarginContainer();
-        marginContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        marginContainer.AddThemeConstantOverride("margin_left", 50);
-        marginContainer.AddThemeConstantOverride("margin_right", 50);
-        marginContainer.AddThemeConstantOverride("margin_top", 30);
-        marginContainer.AddThemeConstantOverride("margin_bottom", 30);
-        _welcomePanel.AddChild(marginContainer);
-
-        var centerContainer = new CenterContainer();
-        centerContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        marginContainer.AddChild(centerContainer);
-
-        var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 25);
-        centerContainer.AddChild(vbox);
-
-        var title = new Label { Text = "🧟 僵尸大战 🧟" };
-        title.AddThemeFontSizeOverride("font_size", 36);
-        title.AddThemeColorOverride("font_color", BloodBright);
-        title.HorizontalAlignment = HorizontalAlignment.Center;
-        vbox.AddChild(title);
-
-        var subtitle = new Label { Text = "Zombie vs Survivors" };
-        subtitle.AddThemeFontSizeOverride("font_size", 18);
-        subtitle.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
-        subtitle.HorizontalAlignment = HorizontalAlignment.Center;
-        vbox.AddChild(subtitle);
-
-        string[] introTexts = {
-            "欢迎来到僵尸大战！",
-            "",
-            "在这个生存游戏中，你需要：",
-            "• 每回合选择武器卡牌强化自己",
-            "• 消灭不断涌现的僵尸",
-            "• 尽可能坚持更多回合",
-            "",
-            "准备好迎接挑战了吗？"
-        };
-
-        foreach (var text in introTexts)
-        {
-            var label = new Label { Text = text };
-            if (text == "")
-                label.CustomMinimumSize = new Vector2(0, 8);
-            else
-                label.AddThemeFontSizeOverride("font_size", 16);
-            label.AddThemeColorOverride("font_color", new Color(0.7f, 0.55f, 0.55f));
-            label.HorizontalAlignment = HorizontalAlignment.Center;
-            vbox.AddChild(label);
-        }
-
-        var startButton = new Button
-        {
-            Text = "开始游戏",
-            CustomMinimumSize = new Vector2(180, 50)
-        };
-        startButton.AddThemeFontSizeOverride("font_size", 22);
-        var startNormal = MakeNotePanel(borderRadius: 4f, shadowSize: 4f);
-        startNormal.BgColor = new Color(0.25f, 0.12f, 0.12f, 0.9f);
-        startButton.AddThemeStyleboxOverride("normal", startNormal);
-        var startHover = MakeNotePanel(borderRadius: 4f, shadowSize: 4f);
-        startHover.BgColor = new Color(0.35f, 0.18f, 0.18f, 0.9f);
-        startButton.AddThemeStyleboxOverride("hover", startHover);
-        startButton.AddThemeColorOverride("font_color", NoteBg);
-        startButton.Pressed += _StartGame;
-        vbox.AddChild(startButton);
-
-        var helpButton = new Button
-        {
-            Text = "操作说明",
-            CustomMinimumSize = new Vector2(120, 40)
-        };
-        helpButton.AddThemeFontSizeOverride("font_size", 16);
-        var helpNormal = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
-        helpNormal.BgColor = new Color(0.2f, 0.15f, 0.15f, 0.9f);
-        helpButton.AddThemeStyleboxOverride("normal", helpNormal);
-        var helpHover = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
-        helpHover.BgColor = new Color(0.3f, 0.22f, 0.22f, 0.9f);
-        helpButton.AddThemeStyleboxOverride("hover", helpHover);
-        helpButton.AddThemeColorOverride("font_color", NoteBg);
-        helpButton.Pressed += _ToggleControlsPanel;
-        vbox.AddChild(helpButton);
-    }
-
     // ═══════════════════════════════════════════════
     // Connections
     // ═══════════════════════════════════════════════
@@ -977,42 +585,24 @@ public partial class UIManager : Control
 
     private void _UpdateDashDisplay(Player player)
     {
-        if (_dashCooldownLabel == null) return;
         if (player.CanDash)
         {
-            _dashCooldownLabel.Text = "闪避 就绪";
-            _dashCooldownLabel.TooltipText = "闪避已就绪，按 Shift 使用";
+            _hudPanel?.UpdateDashCooldown(0.0f);
         }
         else
         {
-            var remaining = player.DashCooldownTimer?.TimeLeft ?? 0.0f;
-            if (remaining < 0.5f)
-            {
-                _dashCooldownLabel.Text = "闪避 就绪";
-                _dashCooldownLabel.TooltipText = "闪避已就绪，按 Shift 使用";
-            }
-            else
-            {
-                // Show one decimal for smooth countdown, switch to integer when >= 2s
-                string secs = remaining < 2.0f ? remaining.ToString("F1") + "s" : Mathf.FloorToInt(remaining) + "s";
-                _dashCooldownLabel.Text = $"闪避 {secs}";
-                _dashCooldownLabel.TooltipText = $"闪避冷却中，还需 {secs}";
-            }
+            var remaining = (float)(player.DashCooldownTimer?.TimeLeft ?? 0.0);
+            _hudPanel?.UpdateDashCooldown(remaining);
         }
     }
 
     private void _UpdateAttackIntervalDisplay(Player player)
     {
-        if (_attackIntervalLabel == null) return;
-        var intervalText = Mathf.Snapped(player.AttackCooldown, 0.1f).ToString("F1") + "s";
-        string cooldownText;
-        if (player.Combat == null) return;
-        if (player.Combat.AttackTimer.TimeLeft < 0.05f)
-            cooldownText = "就绪";
-        else
-            cooldownText = ((float)player.Combat.AttackTimer.TimeLeft).ToString("F1") + "s";
-        _attackIntervalLabel.Text = $"间隔 {intervalText} | 冷却 {cooldownText}";
-        _attackIntervalLabel.TooltipText = $"攻击间隔: {intervalText}\n下次可攻击: {cooldownText}";
+        var intervalText = Mathf.Snapped(player.AttackCooldown, 0.1f);
+        float cooldown = 0.0f;
+        if (player.Combat != null && player.Combat.AttackTimer.TimeLeft >= 0.05f)
+            cooldown = (float)player.Combat.AttackTimer.TimeLeft;
+        _hudPanel?.UpdateAttackInterval((float)intervalText, cooldown);
     }
 
     // ═══════════════════════════════════════════════
@@ -1022,7 +612,7 @@ public partial class UIManager : Control
     public void SetUserPaused(bool paused)
     {
         _userPaused = paused;
-        _pausePanel.Visible = paused;
+        if (_pausePanel != null) _pausePanel.Visible = paused;
         if (paused)
             GetTree().Paused = true;
         else if (!_pauseLockedByUpgrade)
@@ -1046,16 +636,12 @@ public partial class UIManager : Control
     {
         var sm = GameServices.Audio;
         sm.SfxEnabled = !sm.SfxEnabled;
-        if (_soundToggleButton != null)
-        {
-            _soundToggleButton.Text = sm.SfxEnabled ? "🔊" : "🔇";
-        }
+        _hudPanel?.SetSoundIcon(sm.SfxEnabled);
     }
 
     private void _StartGame()
     {
-        _welcomePanel.Visible = false;
-        _welcomeVisible = false;
+        if (_welcomePanel != null) _welcomePanel.Visible = false;
     }
 
     // ═══════════════════════════════════════════════
@@ -1745,17 +1331,7 @@ public partial class UIManager : Control
     private void _OnUiViewportSizeChanged()
     {
         var viewportSize = GetViewport().GetVisibleRect().Size;
-        var bannerSize = new Vector2(Mathf.Min(460.0f, viewportSize.X - 40.0f), 100.0f);
-        if (_roundBannerPanel != null)
-        {
-            _roundBannerPanel.CustomMinimumSize = bannerSize;
-            _roundBannerPanel.PivotOffset = bannerSize / 2.0f;
-        }
-        if (_roundBannerGlow != null)
-        {
-            _roundBannerGlow.CustomMinimumSize = bannerSize;
-            _roundBannerGlow.PivotOffset = bannerSize / 2.0f;
-        }
+        _roundBanner?.OnViewportSizeChanged(viewportSize);
     }
 
     // ═══════════════════════════════════════════════
@@ -1771,76 +1347,17 @@ public partial class UIManager : Control
 
     public void UpdateRoundDisplay(int roundNumber)
     {
-        _roundLabel.Text = $"🏆 回合 {roundNumber}";
-        _roundLabel.TooltipText = $"当前回合: {roundNumber}";
+        _hudPanel?.UpdateRound(roundNumber);
     }
 
     public void ShowRoundBanner(string text, bool persistent = false)
     {
-        if (_roundBanner == null || _roundBannerPanel == null) return;
-
-        // Kill any running banner tween
-        if (_bannerTween != null && _bannerTween.IsValid())
-            _bannerTween.Kill();
-
-        _roundBanner.Text = text;
-        _roundBannerSub.Text = "";
-        _roundBannerPanel.Visible = true;
-        _roundBannerPanel.Modulate = new Color(1, 1, 1, 0);
-        _roundBannerPanel.Scale = new Vector2(0.3f, 0.3f);
-        _roundBannerGlow.Visible = true;
-        _roundBannerGlow.Color = new Color(BloodBright, 0.0f);
-        _roundBannerGlow.Scale = new Vector2(0.3f, 0.3f);
-
-        // Entrance: quick scale up with overshoot + glow pulse
-        _bannerTween = CreateTween();
-        _bannerTween.SetParallel(true);
-        _bannerTween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.05f, 1.05f), 0.3f)
-            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-        _bannerTween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.2f)
-            .SetTrans(Tween.TransitionType.Cubic);
-        _bannerTween.TweenProperty(_roundBannerGlow, "scale", new Vector2(1.6f, 1.6f), 0.3f)
-            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-        _bannerTween.TweenProperty(_roundBannerGlow, "color:a", 0.4f, 0.2f)
-            .SetTrans(Tween.TransitionType.Cubic);
-
-        // Settle
-        _bannerTween.SetParallel(false);
-        _bannerTween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.0f, 1.0f), 0.1f)
-            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
-        // Glow fade
-        _bannerTween.Parallel().TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.2f);
-
-        if (!persistent)
-        {
-            // Hold then dramatic exit
-            _bannerTween.TweenInterval(0.6f);
-            // Scale up + fade out simultaneously
-            _bannerTween.SetParallel(true);
-            _bannerTween.TweenProperty(_roundBannerPanel, "scale", new Vector2(1.8f, 1.8f), 0.3f)
-                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-            _bannerTween.TweenProperty(_roundBannerPanel, Node2D.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.3f)
-                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-            _bannerTween.TweenProperty(_roundBannerGlow, "scale", new Vector2(2.5f, 2.5f), 0.3f)
-                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-            _bannerTween.TweenProperty(_roundBannerGlow, "color:a", 0.0f, 0.3f)
-                .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.In);
-            _bannerTween.SetParallel(false);
-            _bannerTween.TweenCallback(Callable.From(() =>
-            {
-                _roundBannerPanel.Visible = false;
-                _roundBannerGlow.Visible = false;
-            }));
-        }
+        _roundBanner?.Show(text, persistent);
     }
 
     public void HideRoundBanner()
     {
-        if (_roundBannerPanel == null) return;
-
-        _roundBannerPanel.Visible = false;
-        if (_roundBannerGlow != null)
-            _roundBannerGlow.Visible = false;
+        _roundBanner?.Hide();
     }
     public void ShowRoundSummary(int round, int kills, int totalKills, int score)
     {
@@ -2005,287 +1522,25 @@ public partial class UIManager : Control
 
     public void UpdateScoreDisplay(int newScore)
     {
-        if (_scoreLabel != null)
-            _scoreLabel.Text = newScore.ToString();
+        _hudPanel?.UpdateScore(newScore);
     }
 
     public void UpdateHealthDisplay(int currentHealth, int maxHealth)
     {
-        if (_healthBar == null) return;
-        _healthBar.MaxValue = maxHealth;
-        _healthBar.Value = currentHealth;
+        if (_hudPanel == null) return;
+        _hudPanel.UpdateHealth(currentHealth, maxHealth);
         float healthPercent = (float)currentHealth / maxHealth;
-
-        var hpColor = healthPercent > GameConfig.HealthHighThreshold ? HandDrawnTheme.Colors.HpHigh
-            : healthPercent > GameConfig.HealthMedThreshold ? HandDrawnTheme.Colors.HpMed
-            : HandDrawnTheme.Colors.HpLow;
-        var fillStyle = MakeHpBarFill(hpColor);
-        _healthBar.AddThemeStyleboxOverride("fill", fillStyle);
-
-        if (_healthLabel != null)
-            _healthLabel.Text = $"{currentHealth}/{maxHealth}";
-
         UpdateLowHpVignette(healthPercent);
-
-        if (healthPercent <= 0.3f)
-        {
-            if (_lowHealthTween == null || !_lowHealthTween.IsRunning())
-            {
-                _lowHealthTween = CreateTween();
-                _lowHealthTween.SetLoops();
-                _lowHealthTween.TweenProperty(_healthBar, Control.PropertyName.Modulate.ToString() + ":a", 0.6f, 0.35f);
-                _lowHealthTween.TweenProperty(_healthBar, Control.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.35f);
-            }
-        }
-        else
-        {
-            if (_lowHealthTween != null && _lowHealthTween.IsRunning())
-                _lowHealthTween.Kill();
-            _healthBar.Modulate = _healthBar.Modulate with { A = 1.0f };
-        }
     }
 
     public void UpdateZombiesDisplay(int zombiesRemaining, int totalZombies)
     {
-        if (_zombiesLabel != null)
-            _zombiesLabel.Text = $"剩余: {zombiesRemaining}/{totalZombies}";
+        _hudPanel?.UpdateZombies(zombiesRemaining, totalZombies);
     }
 
     public void UpdatePlayerStatus(Player player)
     {
-        if (_damageLabel != null)
-            _damageLabel.Text = $"攻击 {Mathf.RoundToInt(player.CurrentDamage)}";
-        if (_critLabel != null)
-            _critLabel.Text = $"暴击 {Mathf.RoundToInt(player.CriticalChance)}%";
-        if (_lifestealLabel != null)
-            _lifestealLabel.Text = $"吸血 {Mathf.RoundToInt(player.LifeStealPercent)}%";
-        if (_speedLabel != null)
-            _speedLabel.Text = $"速度 {Mathf.RoundToInt(player.CurrentSpeed)}";
-        if (_attackTypeLabel != null)
-        {
-            _attackTypeLabel.Text = player.CurrentAttackType switch
-            {
-                AttackType.Melee => "近战",
-                AttackType.Ranged => "远程",
-                AttackType.Area => "范围",
-                AttackType.Magic => "魔法",
-                _ => "近战"
-            };
-        }
-
-        if (_targetPriorityLabel != null)
-        {
-            _targetPriorityLabel.Text = player.TargetPriority switch
-            {
-                0 => "锁定: 最近",
-                1 => "锁定: 最远",
-                2 => "锁定: 密集",
-                _ => "锁定: 最近"
-            };
-        }
-
-        _UpdateEffectsDisplay(player);
-        _UpdateStatusTooltips(player);
-    }
-
-    private void _UpdateStatusTooltips(Player player)
-    {
-        if (_damageLabel != null)
-            _damageLabel.TooltipText = $"攻击力: {Mathf.RoundToInt(player.CurrentDamage)}\n基础伤害与倍率已计入";
-        if (_critLabel != null)
-            _critLabel.TooltipText = $"暴击概率: {Mathf.RoundToInt(player.CriticalChance)}%\n暴击伤害倍率: x{Mathf.Snapped(player.CritMultiplier, 0.1f)}";
-        if (_lifestealLabel != null)
-            _lifestealLabel.TooltipText = $"吸血比例: {Mathf.RoundToInt(player.LifeStealPercent)}%\n命中后回复对应比例生命";
-        if (_speedLabel != null)
-            _speedLabel.TooltipText = $"移动速度: {Mathf.RoundToInt(player.CurrentSpeed)}\n受装备、升级和减速效果影响";
-        if (_targetPriorityLabel != null)
-        {
-            string priorityText = player.TargetPriority switch
-            {
-                1 => "最远",
-                2 => "密集",
-                _ => "最近"
-            };
-            _targetPriorityLabel.TooltipText = $"目标优先级: {priorityText}\n按 Tab 切换";
-        }
-        if (_attackTypeLabel != null)
-            _attackTypeLabel.TooltipText = WeaponFormatter.BuildAttackEffectsTooltip(player);
-    }
-
-    private void _UpdateEffectsDisplay(Player player)
-    {
-        if (_effectsContainer == null) return;
-
-        foreach (Node child in _effectsContainer.GetChildren())
-            child.QueueFree();
-        _effectIcons.Clear();
-
-        var activeItems = new List<Godot.Collections.Dictionary>();
-
-        // Current weapon
-        foreach (var effect in player.ActiveEffects)
-        {
-            if (effect.Category == WeaponCategory.Weapon)
-            {
-                activeItems.Add(new Godot.Collections.Dictionary
-                {
-                    ["icon"] = effect.Icon,
-                    ["name"] = effect.CardName,
-                    ["type"] = "weapon",
-                    ["color"] = WeaponFormatter.GetRarityColorValue(effect.Rarity),
-                    ["tooltip"] = WeaponFormatter.GetEffectTooltip(effect)
-                });
-                break;
-            }
-        }
-
-        // Equipment
-        foreach (var effect in player.ActiveEffects)
-        {
-            if (effect.Category == WeaponCategory.Equipment)
-            {
-                activeItems.Add(new Godot.Collections.Dictionary
-                {
-                    ["icon"] = effect.Icon,
-                    ["name"] = effect.CardName,
-                    ["type"] = "equipment",
-                    ["color"] = WeaponFormatter.GetRarityColorValue(effect.Rarity),
-                    ["tooltip"] = WeaponFormatter.GetEffectTooltip(effect)
-                });
-            }
-        }
-
-        // Shield aura
-        if (player.Aura?.Active == true)
-        {
-            activeItems.Add(new Godot.Collections.Dictionary
-            {
-                ["icon"] = "❄️",
-                ["name"] = "冰霜护盾",
-                ["type"] = "buff",
-                ["color"] = new Color(0.3f, 0.8f, 1.0f),
-                ["tooltip"] = $"【冰霜护盾】\n伤害: {Mathf.RoundToInt(player.Aura.Damage)}\n范围: {Mathf.RoundToInt(player.Aura.Radius)}\n效果: 环绕的冰晶会伤害并减速接触的敌人"
-            });
-        }
-
-        // Stats
-        if (player.CriticalChance > 0)
-        {
-            activeItems.Add(new Godot.Collections.Dictionary
-            {
-                ["icon"] = "💥",
-                ["name"] = "暴击",
-                ["type"] = "stat",
-                ["color"] = new Color(1.0f, 0.6f, 0.2f),
-                ["tooltip"] = $"【暴击】\n几率: {Mathf.RoundToInt(player.CriticalChance)}%\n伤害: x2.0"
-            });
-        }
-
-        if (player.LifeStealPercent > 0)
-        {
-            activeItems.Add(new Godot.Collections.Dictionary
-            {
-                ["icon"] = "🩸",
-                ["name"] = "吸血",
-                ["type"] = "stat",
-                ["color"] = new Color(0.9f, 0.3f, 0.3f),
-                ["tooltip"] = $"【吸血】\n比例: {Mathf.RoundToInt(player.LifeStealPercent)}%\n效果: 造成伤害时回复生命"
-            });
-        }
-
-        if (player.FreezeDuration > 0)
-        {
-            activeItems.Add(new Godot.Collections.Dictionary
-            {
-                ["icon"] = "🧊",
-                ["name"] = "冰冻",
-                ["type"] = "stat",
-                ["color"] = new Color(0.4f, 0.8f, 1.0f),
-                ["tooltip"] = $"【冰冻】\n几率: {Mathf.RoundToInt(player.FreezeDuration)}%\n效果: 攻击有几率冻结敌人"
-            });
-        }
-
-        if (player.PoisonDamage > 0)
-        {
-            activeItems.Add(new Godot.Collections.Dictionary
-            {
-                ["icon"] = "☠️",
-                ["name"] = "中毒",
-                ["type"] = "stat",
-                ["color"] = new Color(0.4f, 0.9f, 0.3f),
-                ["tooltip"] = $"【中毒】\n几率: {Mathf.RoundToInt(player.PoisonDamage)}%\n效果: 攻击有几率使敌人中毒"
-            });
-        }
-
-        if (player.ShieldAmount > 0)
-        {
-            activeItems.Add(new Godot.Collections.Dictionary
-            {
-                ["icon"] = "🛡️",
-                ["name"] = "护盾",
-                ["type"] = "buff",
-                ["color"] = new Color(0.6f, 0.8f, 1.0f),
-                ["tooltip"] = $"【护盾】\n剩余: {player.ShieldAmount}\n效果: 吸收伤害"
-            });
-        }
-
-        // Create icon buttons
-        foreach (Godot.Collections.Dictionary item in activeItems)
-        {
-            var btn = new Button
-            {
-                Text = (string)item["icon"],
-                CustomMinimumSize = new Vector2(28, 24),
-                FocusMode = Control.FocusModeEnum.None,
-                Flat = true
-            };
-            btn.AddThemeFontSizeOverride("font_size", 14);
-
-            var itemColor = (Color)item["color"];
-            var style = new StyleBoxFlat
-            {
-                BgColor = _Darken(itemColor, 0.6f) with { A = 0.7f },
-                BorderWidthBottom = 2,
-                BorderColor = itemColor,
-                CornerRadiusTopLeft = 4,
-                CornerRadiusTopRight = 4,
-                CornerRadiusBottomLeft = 4,
-                CornerRadiusBottomRight = 4
-            };
-            btn.AddThemeStyleboxOverride("normal", style);
-
-            var hoverStyle = new StyleBoxFlat
-            {
-                BgColor = _Darken(itemColor, 0.4f),
-                BorderWidthBottom = 2,
-                BorderColor = itemColor,
-                CornerRadiusTopLeft = 4,
-                CornerRadiusTopRight = 4,
-                CornerRadiusBottomLeft = 4,
-                CornerRadiusBottomRight = 4
-            };
-            btn.AddThemeStyleboxOverride("hover", hoverStyle);
-
-            string effectTooltip = (string)item["tooltip"];
-            btn.MouseEntered += () => _ShowTooltip(effectTooltip);
-            btn.MouseExited += _OnEffectIconExited;
-
-            _effectsContainer.AddChild(btn);
-            _effectIcons[(string)item["name"]] = btn;
-        }
-
-        if (activeItems.Count == 0)
-        {
-            var hint = new Label { Text = "无" };
-            hint.AddThemeFontSizeOverride("font_size", 11);
-            hint.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
-            _effectsContainer.AddChild(hint);
-        }
-    }
-
-    private void _OnEffectIconExited()
-    {
-        _HideTooltip();
+        _hudPanel?.UpdatePlayerStatus(player);
     }
 
     // ═══════════════════════════════════════════════
@@ -2453,9 +1708,9 @@ public partial class UIManager : Control
         _screenFx?.TriggerBossAtmosphere();
     }
 
-    public bool GetWelcomeVisible() => _welcomeVisible;
+    public bool GetWelcomeVisible() => _welcomePanel != null && _welcomePanel.Visible;
 
-    public Control GetHudPanel() => _hudPanel;
+    public Control GetHudPanel() => _hudPanel!;
 
     // ═══════════════════════════════════════════════
     // Color Utilities
