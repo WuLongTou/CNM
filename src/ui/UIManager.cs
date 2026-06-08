@@ -806,7 +806,7 @@ public partial class UIManager : Control
                 button.AddThemeStyleboxOverride("normal", cardStyle);
 
                 var hoverBg = new Color(0.25f, 0.18f, 0.18f, 0.95f);
-                var hoverBorder = _Lighten(borderColor, 0.2f);
+                var hoverBorder = ColorUtils.Lighten(borderColor, 0.2f);
                 var cardHoverStyle = MakeCardPanel(hoverBg, hoverBorder);
                 button.AddThemeStyleboxOverride("hover", cardHoverStyle);
             }
@@ -1046,7 +1046,7 @@ public partial class UIManager : Control
         button.AddThemeStyleboxOverride("normal", style);
 
         var hoverBg = new Color(0.25f, 0.18f, 0.18f, 0.95f);
-        var hoverBorder = _Lighten(upBorder, 0.2f);
+        var hoverBorder = ColorUtils.Lighten(upBorder, 0.2f);
         var hoverStyle = MakeCardPanel(hoverBg, hoverBorder);
         button.AddThemeStyleboxOverride("hover", hoverStyle);
     }
@@ -1711,24 +1711,4 @@ public partial class UIManager : Control
     public bool GetWelcomeVisible() => _welcomePanel != null && _welcomePanel.Visible;
 
     public Control GetHudPanel() => _hudPanel!;
-
-    // ═══════════════════════════════════════════════
-    // Color Utilities
-    // ═══════════════════════════════════════════════
-
-    private static Color _Lighten(Color c, float amount)
-    {
-        float r = Mathf.Min(1.0f, c.R + amount);
-        float g = Mathf.Min(1.0f, c.G + amount);
-        float b = Mathf.Min(1.0f, c.B + amount);
-        return new Color(r, g, b, c.A);
-    }
-
-    private static Color _Darken(Color c, float amount)
-    {
-        float r = Mathf.Max(0.0f, c.R - amount);
-        float g = Mathf.Max(0.0f, c.G - amount);
-        float b = Mathf.Max(0.0f, c.B - amount);
-        return new Color(r, g, b, c.A);
-    }
 }

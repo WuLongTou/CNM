@@ -14,8 +14,18 @@ using Player = ZombieWars.Player.Player;
 /// Core logic (movement, attack, status effects, type abilities) kept here;
 /// visual effects are delegated to ZombieVfx.
 /// </summary>
-public partial class Zombie : CharacterBody2D
+public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 {
+    // IDamageable.IsDead — 僵尸死亡判定（CurrentHealth <= 0）
+    public bool IsDead => CurrentHealth <= 0;
+
+    // IDamageable.Heal — 治疗接口（向上限钳制）
+    public void Heal(int amount)
+    {
+        if (amount <= 0) return;
+        CurrentHealth = Mathf.Min(MaxHealth, CurrentHealth + amount);
+    }
+
     // ═══════════════════════════════════════════════
     // Signals & Events
     // ═══════════════════════════════════════════════

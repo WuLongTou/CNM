@@ -7,9 +7,10 @@ using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Player;
 
-public partial class MagicMissile : Area2D
+public partial class MagicMissile : Area2D, IDamager
 {
     public Zombie? Target { get; set; }
+    int IDamager.Damage => (int)Damage;
     public float Damage { get; set; } = 10.0f;
     public float Speed { get; set; } = GameConfig.MissileSpeed;
     public float HomingStrength { get; set; } = GameConfig.MissileHomingStrength;

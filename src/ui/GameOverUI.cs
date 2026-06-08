@@ -291,18 +291,9 @@ public partial class GameOverUI : Control
         btn.AddThemeStyleboxOverride("hover", h);
 
         var p = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
-        p.BgColor = _Darken(bgColor, 0.1f);
+        p.BgColor = ColorUtils.Darken(bgColor, 0.1f);
         p.BorderColor = borderColor;
         btn.AddThemeStyleboxOverride("pressed", p);
         return btn;
-    }
-
-    private static Color _Darken(Color c, float amount)
-    {
-        return new Color(
-            Mathf.Max(0.0f, c.R - amount),
-            Mathf.Max(0.0f, c.G - amount),
-            Mathf.Max(0.0f, c.B - amount),
-            c.A);
     }
 }

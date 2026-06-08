@@ -7,9 +7,10 @@ using ZombieWars.Core;
 using ZombieWars.Vfx;
 using Zombie = ZombieWars.Enemy.Zombie;
 
-public partial class PlayerAura : Node2D
+public partial class PlayerAura : Node2D, IDamager
 {
     public Player? Player { get; set; }
+    int IDamager.Damage => (int)Damage;
 
     public bool Active { get; set; } = false;
     public float Damage { get; set; } = Core.GameConfig.AuraBaseDamage;

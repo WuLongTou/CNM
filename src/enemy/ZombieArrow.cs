@@ -1,6 +1,7 @@
 namespace ZombieWars.Enemy;
 
 using Godot;
+using ZombieWars.Core;
 using ZombieWars.Vfx;
 using ZombieWars.Player;
 
@@ -8,7 +9,7 @@ using ZombieWars.Player;
 /// ZombieArrow - physics-based homing projectile fired by Archer zombies.
 /// Uses Area2D for collision detection against the player layer.
 /// </summary>
-public partial class ZombieArrow : Area2D
+public partial class ZombieArrow : Area2D, IDamager
 {
     public Node2D Target { get; set; } = null!;
     public int Damage { get; set; }

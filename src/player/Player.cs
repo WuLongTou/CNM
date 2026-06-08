@@ -15,7 +15,7 @@ using static ZombieWars.Core.GameEnums;
 /// aura: PlayerAura — 冰霜护盾光环系统
 /// vfx: PlayerVfx — 视觉效果、精灵、动画
 /// </summary>
-public partial class Player : CharacterBody2D
+public partial class Player : CharacterBody2D, IDamageable, IPlayer
 {
     public event Action<int>? HealthChanged;
 
@@ -299,6 +299,10 @@ public partial class Player : CharacterBody2D
     {
         CharmDuration = Mathf.Max(CharmDuration, duration);
     }
+
+    // 显式实现 IDamageable / IPlayer 接口签名（无 attacker 参数版本）
+    void IDamageable.TakeDamage(int amount) => TakeDamage(amount, null);
+    void IPlayer.TakeDamage(int amount) => TakeDamage(amount, null);
 
     public void TakeDamage(int amount, Zombie? attacker = null)
     {

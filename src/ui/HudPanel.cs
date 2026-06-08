@@ -412,7 +412,7 @@ public partial class HudPanel : Panel
             var itemColor = (Color)item["color"];
             var style = new StyleBoxFlat
             {
-                BgColor = _Darken(itemColor, 0.6f) with { A = 0.7f },
+                BgColor = ColorUtils.Darken(itemColor, 0.6f) with { A = 0.7f },
                 BorderWidthBottom = 2,
                 BorderColor = itemColor,
                 CornerRadiusTopLeft = 4,
@@ -424,7 +424,7 @@ public partial class HudPanel : Panel
 
             var hoverStyle = new StyleBoxFlat
             {
-                BgColor = _Darken(itemColor, 0.4f),
+                BgColor = ColorUtils.Darken(itemColor, 0.4f),
                 BorderWidthBottom = 2,
                 BorderColor = itemColor,
                 CornerRadiusTopLeft = 4,
@@ -477,15 +477,6 @@ public partial class HudPanel : Panel
         lbl.AddThemeConstantOverride("outline_size", 1);
         lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
         return lbl;
-    }
-
-    private static Color _Darken(Color c, float amount)
-    {
-        return new Color(
-            Mathf.Max(0.0f, c.R - amount),
-            Mathf.Max(0.0f, c.G - amount),
-            Mathf.Max(0.0f, c.B - amount),
-            c.A);
     }
 
     public void SetSoundIcon(bool sfxEnabled)

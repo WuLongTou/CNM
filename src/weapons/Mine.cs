@@ -7,9 +7,10 @@ using ZombieWars.Enemy;
 using ZombieWars.Player;
 using static ZombieWars.Core.GameEnums;
 
-public partial class Mine : Area2D
+public partial class Mine : Area2D, IDamager
 {
     public float Damage { get; set; } = 80.0f;
+    int IDamager.Damage => (int)Damage;
     public float BlastRadius { get; set; } = 100.0f;
     public float ArmTime { get; set; } = 0.5f;
     public float Lifetime { get; set; } = 15.0f;

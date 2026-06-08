@@ -7,10 +7,11 @@ using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Player;
 
-public partial class Projectile : CharacterBody2D
+public partial class Projectile : CharacterBody2D, IDamager
 {
     public new Vector2 Velocity;
     public float Damage { get; set; } = 10.0f;
+    int IDamager.Damage => (int)Damage;
     public float Lifetime { get; set; } = 3.0f;
     public float TrajectoryDamageRatio { get; set; } = 0.0f;
     public int PiercingCount { get; set; } = 0;
