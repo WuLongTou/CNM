@@ -487,8 +487,13 @@ public static class TextureUtils
 
                 if (stripBright)
                 {
-                    // 处理白色/亮色背景
-                    if (brightness > threshold && c.R > threshold && c.G > threshold && c.B > threshold)
+                    // 处理亮色背景（白/米黄/暗红纹理等）。
+                    // 注意：不能用 "R/G/B 三通道都 > threshold" 严格判断，
+                    // 因为 aged-paper 风格的背景往往是米黄/暗红色，R、G 高但 B 略低。
+                    // 改用 "min(R,G,B) > threshold - 0.10" 容差判断：min 高说明是亮背景，
+                    // 任一通道偏低则说明是角色本色（红/绿/蓝等），保留。
+                    float minChannel = Mathf.Min(c.R, Mathf.Min(c.G, c.B));
+                    if (brightness > threshold && minChannel > (threshold - 0.10f))
                     {
                         float alpha = Mathf.Clamp((1.0f - brightness) / (1.0f - threshold), 0.0f, 1.0f);
                         img.SetPixel(x, y, new Color(c.R, c.G, c.B, alpha * c.A));
