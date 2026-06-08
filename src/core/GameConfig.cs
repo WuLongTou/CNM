@@ -236,6 +236,11 @@ public static class GameConfig
     public const int UiMarginSmall = 10;
     public const int UiMarginMedium = 15;
     public const int UiMarginLarge = 24;
+    public const int UiMarginXLarge = 16;     // tooltip / 卡片水平 padding
+    public const int UiMarginHeroCard = 28;    // 回合结算 hero card 水平
+    public const int UiMarginHeroPad = 24;     // 回合结算 hero card 垂直
+    public const int UiMarginPanel = 30;       // 大型 panel 外边距
+    public const int UiMarginPanelInner = 25;  // 大型 panel 内边距
     public const int UiMarginHuge = 50;
 
     // UI 字号

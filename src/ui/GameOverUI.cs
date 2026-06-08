@@ -3,6 +3,7 @@ namespace ZombieWars.UI;
 using Godot;
 using ZombieWars.Core;
 
+using static ZombieWars.Core.GameConfig;
 using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
 
@@ -83,10 +84,10 @@ public partial class GameOverUI : Control
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 30);
-        margin.AddThemeConstantOverride("margin_right", 30);
-        margin.AddThemeConstantOverride("margin_top", 25);
-        margin.AddThemeConstantOverride("margin_bottom", 25);
+        margin.AddThemeConstantOverride("margin_left", UiMarginPanel);
+        margin.AddThemeConstantOverride("margin_right", UiMarginPanel);
+        margin.AddThemeConstantOverride("margin_top", UiMarginPanelInner);
+        margin.AddThemeConstantOverride("margin_bottom", UiMarginPanelInner);
         content.AddChild(margin);
 
         var vbox = new VBoxContainer
@@ -280,19 +281,9 @@ public partial class GameOverUI : Control
         btn.AddThemeFontSizeOverride("font_size", 15);
         btn.AddThemeColorOverride("font_color", NoteBg);
 
-        var s = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
-        s.BgColor = bgColor;
-        s.BorderColor = borderColor;
+        var (s, h, p) = MakeButtonStyles(bgColor, hoverColor, borderColor, radius: 4, shadowSize: 3);
         btn.AddThemeStyleboxOverride("normal", s);
-
-        var h = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
-        h.BgColor = hoverColor;
-        h.BorderColor = borderColor;
         btn.AddThemeStyleboxOverride("hover", h);
-
-        var p = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
-        p.BgColor = ColorUtils.Darken(bgColor, 0.1f);
-        p.BorderColor = borderColor;
         btn.AddThemeStyleboxOverride("pressed", p);
         return btn;
     }

@@ -1,7 +1,6 @@
 namespace ZombieWars.UI;
 
 using Godot;
-using System;
 
 public static class HandDrawnTheme
 {
@@ -41,8 +40,6 @@ public static class HandDrawnTheme
 
         public static readonly Color NotePaperShadow = new(0f, 0f, 0f, 0.45f);
     }
-
-    private static readonly Random RandomInstance = new();
 
     public static StyleBoxFlat MakeNotePanel(
         float rotationDeg = 0f,
@@ -136,8 +133,60 @@ public static class HandDrawnTheme
         };
     }
 
-    public static float RandomRotation(float minDeg = -0.8f, float maxDeg = 0.8f)
+    /// <summary>左侧 3px 强调色条的"信息卡"样式（用于 HelpPanel 提示行等）。</summary>
+    public static StyleBoxFlat MakeAccentBorder(
+        Color bgColor, Color accentColor,
+        int radius = 4, int borderWidth = 3)
     {
-        return (float)(RandomInstance.NextDouble() * (maxDeg - minDeg) + minDeg);
+        return new StyleBoxFlat
+        {
+            BgColor = bgColor,
+            BorderWidthLeft = borderWidth,
+            BorderColor = accentColor,
+            CornerRadiusBottomLeft = radius,
+            CornerRadiusBottomRight = radius,
+            CornerRadiusTopLeft = radius,
+            CornerRadiusTopRight = radius,
+        };
+    }
+
+    /// <summary>返回 (normal, hover, pressed) 三个 StyleBoxFlat 按钮样式，统一 shadowSize=3 / radius=4。</summary>
+    public static (StyleBoxFlat normal, StyleBoxFlat hover, StyleBoxFlat pressed) MakeButtonStyles(
+        Color bgColor, Color hoverColor, Color borderColor,
+        int radius = 4, int shadowSize = 3)
+    {
+        var normal = MakeNotePanel(borderRadius: radius, shadowSize: shadowSize);
+        normal.BgColor = bgColor;
+        normal.BorderColor = borderColor;
+
+        var hover = MakeNotePanel(borderRadius: radius, shadowSize: shadowSize);
+        hover.BgColor = hoverColor;
+        hover.BorderColor = borderColor;
+
+        var pressed = MakeNotePanel(borderRadius: radius, shadowSize: shadowSize);
+        pressed.BgColor = Darken(bgColor, 0.1f);
+        pressed.BorderColor = borderColor;
+
+        return (normal, hover, pressed);
+    }
+
+    /// <summary>预制带主题覆盖的"标题"Label（font_size + color + outline + outline_color）。</summary>
+    public static Label MakeTitleLabel(
+        string text, int fontSize, Color color,
+        int outlineSize = 2, Color? outlineColor = null,
+        HorizontalAlignment hAlign = HorizontalAlignment.Left,
+        VerticalAlignment vAlign = VerticalAlignment.Center)
+    {
+        var lbl = new Label
+        {
+            Text = text,
+            HorizontalAlignment = hAlign,
+            VerticalAlignment = vAlign
+        };
+        lbl.AddThemeFontSizeOverride("font_size", fontSize);
+        lbl.AddThemeColorOverride("font_color", color);
+        lbl.AddThemeConstantOverride("outline_size", outlineSize);
+        lbl.AddThemeColorOverride("font_outline_color", outlineColor ?? Colors.InkBlack);
+        return lbl;
     }
 }

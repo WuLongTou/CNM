@@ -269,10 +269,10 @@ public partial class UIManager : Control
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
             margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            margin.AddThemeConstantOverride("margin_top", 15);
-            margin.AddThemeConstantOverride("margin_bottom", 15);
-            margin.AddThemeConstantOverride("margin_left", 15);
-            margin.AddThemeConstantOverride("margin_right", 15);
+            margin.AddThemeConstantOverride("margin_top", UiMarginMedium);
+            margin.AddThemeConstantOverride("margin_bottom", UiMarginMedium);
+            margin.AddThemeConstantOverride("margin_left", UiMarginMedium);
+            margin.AddThemeConstantOverride("margin_right", UiMarginMedium);
             button.AddChild(margin);
             margin.AddChild(cardVbox);
 
@@ -436,8 +436,8 @@ public partial class UIManager : Control
         {
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        margin.AddThemeConstantOverride("margin_left", 16);
-        margin.AddThemeConstantOverride("margin_right", 16);
+        margin.AddThemeConstantOverride("margin_left", UiMarginXLarge);
+        margin.AddThemeConstantOverride("margin_right", UiMarginXLarge);
         margin.AddThemeConstantOverride("margin_top", 12);
         margin.AddThemeConstantOverride("margin_bottom", 12);
         _tooltipPanel.AddChild(margin);
@@ -1398,10 +1398,10 @@ public partial class UIManager : Control
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 28);
-        margin.AddThemeConstantOverride("margin_right", 28);
-        margin.AddThemeConstantOverride("margin_top", 24);
-        margin.AddThemeConstantOverride("margin_bottom", 24);
+        margin.AddThemeConstantOverride("margin_left", UiMarginHeroCard);
+        margin.AddThemeConstantOverride("margin_right", UiMarginHeroCard);
+        margin.AddThemeConstantOverride("margin_top", UiMarginHeroPad);
+        margin.AddThemeConstantOverride("margin_bottom", UiMarginHeroPad);
         margin.MouseFilter = Control.MouseFilterEnum.Ignore;
         card.AddChild(margin);
 
