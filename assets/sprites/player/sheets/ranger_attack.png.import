@@ -3,11 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://cohphu5dq6r35"
-valid=false
+path="res://.godot/imported/ranger_attack.png-7091f0a14a6fd2b881abda842d845a98.ctex"
+metadata={
+"vram_texture": false
+}
 
 [deps]
 
 source_file="res://assets/sprites/player/sheets/ranger_attack.png"
+dest_files=["res://.godot/imported/ranger_attack.png-7091f0a14a6fd2b881abda842d845a98.ctex"]
 
 [params]
 
