@@ -3,10 +3,29 @@
 ## 项目概述
 Godot 4.6 + C# 游戏项目（僵尸大战）。
 
+> 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好）以全局 `~/.claude/CLAUDE.md` 为基础，本文件只做项目特有补充，不得放宽或违背全局约束。
+
 ## 硬约束
-- **Git 安全**：禁止破坏性 git 操作；同步到 main 前必须整理为单功能单 commit，并保持线性历史。合并流程：worktree 内 `git rebase main`（解决冲突）→ 必要时 `git reset --soft main && git commit` 压成一条 → 回到 main 执行 `git merge --ff-only <branch>` → 清理 worktree 和分支。禁止使用 `git cherry-pick` 或产生 merge commit。
-- **Commit 规范**：commit message 格式为 `<type>(<scope>): <subject>`，例如 `feat(combat): add zombie AI behavior`。
-- **临时文件**：所有临时文件、截图、中间输出写入 `.local/` 目录。
+- **开发隔离**：遵循全局 Worktree 约束——所有开发改动在 `.claude/worktrees/<分支名>`（已被 `.gitignore` 忽略）中进行，主工作树保持干净，严禁在主目录直接堆改动。
+- **Git**：遵循全局 Git 规范（worktree 隔离、`merge --ff-only`、线性历史、中文 Commit 格式并标注实际模型）；本项目额外禁止 `git cherry-pick`。
+- **临时文件**：所有临时文件、截图、中间输出写入 `.local/` 目录（已被 `.gitignore` 忽略）。
+- **模态/选择/UI 页面快捷键必须独占输入**（硬约束，2026-06-11 立）：
+  - 卡片选择、强化选择、暂停、Help、GameOver 等任何"模态/选择/UI"页面打开时，
+    **游戏操作的快捷键（WASD/方向键移动、空格攻击、Shift 冲刺、Tab 切目标等）必须 100% 失效**，
+    绝不允许"在卡片页面按 A 还能让角色移动"这种误操作。
+  - **绝不复用"常用操作"按键做 UI 快捷键**（硬约束，2026-06-11 立）：
+    任何 input action 已绑定的键（如 move=WASD、attack=Space、dash=Insert、cycle_target=Backspace、
+    toggle_help=H）都不可用于 UI 快捷键，否则即出现"按 S 跳过时角色向下走"这种双重绑定 bug。
+    UI 快捷键只能用未绑定的键（如 Enter、Delete、BackQuote、斜杠等）或纯鼠标操作。
+  - 实现要求：
+    1. `UIManager` 拦截 1/2/3/Enter/Delete 等卡片快捷键并 `SetInputAsHandled` 之外，**`PlayerInput` 也必须
+       在 `GameManager.CurrentState != Combat` 时直接清空所有输入状态并 return**——单靠
+       SetInputAsHandled 拦不住 `Input.IsActionPressed` 这种全局查询。
+    2. 任何新增的模态/选择/UI 页面必须接入 `GameManager.CurrentState` 状态机，
+       或在自身 `_Ready`/`Toggle` 时显式禁用 PlayerInput。
+    3. 修改 `project.godot` 里的 input action 绑定前，必须先 grep 检查目标键是否已绑定其他 action。
+  - 反例：原 `UIManager._Input` 把"跳过强化"绑到 `S/Enter`，但 `move_down` 已绑 S 键——
+    玩家在卡片页按 S 既触发"跳过"又触发"向下走"。已修复为 `Enter/Delete`（不与 move 冲突）。
 
 ## 任务分级
 - **L0**：问答、只读分析、查文档。
@@ -15,8 +34,8 @@ Godot 4.6 + C# 游戏项目（僵尸大战）。
 - **L3**：新增功能、跨模块改动、架构调整；先设计，再计划，再实现。
 
 ## 验证分级
-- **开发完成**：完成与改动直接相关的格式化、lint、编译和验证；不得遗留调试代码或临时注释。
-- **准备合并**：在"开发完成"的基础上，如改动涉及场景/资源变更，需在 Godot 编辑器中验证。
+- **开发完成**：完成与改动直接相关的格式化、lint、编译；不得遗留调试代码或临时注释。
+- **准备合并**：在"开发完成"基础上，按全局「完成前验证」过完整 format → lint →（如有用例）test → build；改动涉及场景/资源时，额外在 Godot 编辑器中验证。
 
 ## 构建 & 测试
 - `/Applications/Godot.app/Contents/MacOS/Godot --headless --export-debug "macOS"` — 导出调试构建
