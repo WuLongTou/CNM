@@ -61,14 +61,13 @@ public partial class WeatherSystem : CanvasLayer
     // State
     // ═══════════════════════════════════════════════════
 
-    private float _transitionTimer;
-    private float _transitionDuration = 3.0f;
-    private bool _isTransitioning;
-    private WeatherType _targetWeather;
-    private WeatherIntensity _targetIntensity;
-
     private float _tickTimer;
     private float _tickInterval = 1.0f;
+
+    // 持续推送到 HUD 的频率（秒）。和 _tickInterval 错开，确保 HUD 状态即使
+    // 在 tick 之间也能保持最新。
+    private float _hudUpdateTimer;
+    private float _hudUpdateInterval = 0.5f;
 
     private record Atmosphere(
         float TintR, float TintG, float TintB,
@@ -245,13 +244,8 @@ void fragment() {
     /// <summary>Transition to a new weather type and intensity.</summary>
     public void ChangeWeather(WeatherType type, WeatherIntensity intensity)
     {
-        if (CurrentWeather == type && Intensity == intensity && !_isTransitioning)
+        if (CurrentWeather == type && Intensity == intensity)
             return;
-
-        _targetWeather = type;
-        _targetIntensity = intensity;
-        _isTransitioning = true;
-        _transitionTimer = 0.0f;
 
         _StopAllWeatherEffects();
         _StartWeatherEffects(type, intensity);
@@ -264,7 +258,6 @@ void fragment() {
 
         CurrentWeather = type;
         Intensity = intensity;
-        _isTransitioning = false;
 
         // Auto-change timer
         if (_weatherChangeTimer != null)
@@ -354,6 +347,39 @@ void fragment() {
             _ => 0.0f
         };
 
+    /// <summary>
+    /// 返回当前天气的游戏效果摘要，用于 HUD 实时显示。
+    /// 只包含与默认值不同的效果，避免晴天时显示一堆 0。
+    /// </summary>
+    public string GetEffectsDescription()
+    {
+        var parts = new System.Collections.Generic.List<string>();
+
+        float speedMod = GetZombieSpeedModifier();
+        if (!Mathf.IsEqualApprox(speedMod, 1.0f))
+        {
+            int pct = Mathf.RoundToInt((speedMod - 1.0f) * 100);
+            parts.Add($"僵尸速{pct:+#;-#}%");
+        }
+
+        float dmgMod = GetPlayerDamageModifier();
+        if (!Mathf.IsEqualApprox(dmgMod, 1.0f))
+        {
+            int pct = Mathf.RoundToInt((dmgMod - 1.0f) * 100);
+            parts.Add($"伤害{pct:+#;-#}%");
+        }
+
+        float stealth = GetZombieStealthBonus();
+        if (stealth > 0.01f)
+            parts.Add($"隐匿+{Mathf.RoundToInt(stealth * 100)}%");
+
+        float vis = GetVisibilityFactor();
+        if (vis < 0.95f)
+            parts.Add($"能见度{Mathf.RoundToInt(vis * 100)}%");
+
+        return string.Join(" ", parts);
+    }
+
     // ═══════════════════════════════════════════════════
     // Process Loop
     // ═══════════════════════════════════════════════════
@@ -361,16 +387,6 @@ void fragment() {
     public override void _Process(double delta)
     {
         float d = (float)delta;
-
-        // Handle transitions
-        if (_isTransitioning)
-        {
-            _transitionTimer += d;
-            float t = Mathf.Clamp(_transitionTimer / _transitionDuration, 0.0f, 1.0f);
-            _UpdateTransition(t);
-            if (_transitionTimer >= _transitionDuration)
-                _isTransitioning = false;
-        }
 
         // Weather-specific per-tick logic
         _tickTimer += d;
@@ -389,6 +405,25 @@ void fragment() {
                 _lightningTimer = 0.0f;
                 _TriggerLightningStrike();
             }
+        }
+
+        // 持续推送当前天气到 HUD，让玩家随时能看到（特别酸雨持续掉血时）——
+        // 区别于变化时的 ShowWeatherNotification 一次性弹窗。
+        _hudUpdateTimer += d;
+        if (_hudUpdateTimer >= _hudUpdateInterval)
+        {
+            _hudUpdateTimer = 0.0f;
+            bool isHazard = IsPlayerTakingHazardDamage();
+            int dmg = isHazard ? (int)GetAcidRainDamagePerTick() : 0;
+            string effects = GetEffectsDescription();
+            GetTree().CallGroup(
+                "ui_manager", "update_weather_hud",
+                _GetWeatherName(CurrentWeather),
+                _GetWeatherColor(CurrentWeather),
+                isHazard,
+                dmg,
+                effects
+            );
         }
     }
 
@@ -645,13 +680,6 @@ void fragment() {
 
     // ═══════════════════════════════════════════════════
     // Transition
-    // ═══════════════════════════════════════════════════
-
-    private void _UpdateTransition(float t)
-    {
-        // Fade transitions handled by ColorRect alpha changes in _StartWeatherEffects
-    }
-
     // ═══════════════════════════════════════════════════
     // World Atmosphere — world-integrated, no full-screen overlay
     // ═══════════════════════════════════════════════════

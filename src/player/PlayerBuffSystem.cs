@@ -22,7 +22,7 @@ public partial class PlayerBuffSystem : Node
     public event Action<PlayerBuff>? BuffApplied;
     public event Action<PlayerBuff>? BuffRemoved;
     public event Action<PlayerBuff>? BuffExpired;
-    public event Action<PlayerBuff, float>? BuffTick; // buff + tick damage/heal value
+    public event Action<PlayerBuff, float>? BuffTick;
 
     // ═══════════════════════════════════════════════════
     // State
@@ -30,10 +30,6 @@ public partial class PlayerBuffSystem : Node
 
     private readonly Dictionary<BuffType, PlayerBuff> _activeBuffs = new();
     private Player? _player;
-
-    // UI references
-    private Control? _buffIconContainer;
-    private readonly Dictionary<BuffType, Label> _buffTimers = new();
 
     // Cached list to avoid allocation in _Process
     private readonly List<BuffType> _expiredBuffer = new();
@@ -196,9 +192,6 @@ public partial class PlayerBuffSystem : Node
                 }
             }
 
-            // Update timer UI
-            _UpdateBuffTimerLabel(buff);
-
             // Check expiry
             if (buff.RemainingTime <= 0)
             {
@@ -243,6 +236,41 @@ public partial class PlayerBuffSystem : Node
         BuffTick?.Invoke(buff, buff.Value);
     }
 
+    /// <summary>
+    /// 返回当前所有活跃 debuff 的总伤害速率（每秒扣血）。
+    /// HudPanel 用它在顶部显示"⚠ 中毒 -X/s"标签，让玩家知道为什么会持续掉血。
+    /// </summary>
+    public float GetActiveDebuffDamagePerSecond()
+    {
+        float total = 0f;
+        foreach (var kvp in _activeBuffs)
+        {
+            var buff = kvp.Value;
+            if ((buff.Type == BuffType.Poison || buff.Type == BuffType.Burn) && buff.TickInterval > 0)
+            {
+                // 每次 tick 扣 buff.Value 血，频率 1/tickInterval 次/秒
+                total += buff.Value / buff.TickInterval;
+            }
+        }
+        return total;
+    }
+
+    /// <summary>
+    /// 返回当前活跃 debuff 名称列表（用于 HUD 显示）。
+    /// </summary>
+    public string GetActiveDebuffDescription()
+    {
+        if (_activeBuffs.Count == 0) return "";
+        var names = new List<string>();
+        foreach (var kvp in _activeBuffs)
+        {
+            var buff = kvp.Value;
+            if (buff.Type == BuffType.Poison) names.Add("中毒");
+            else if (buff.Type == BuffType.Burn) names.Add("燃烧");
+        }
+        return string.Join("+", names);
+    }
+
     private void _ExpireBuff(BuffType type)
     {
         if (!_activeBuffs.TryGetValue(type, out var buff))
@@ -265,9 +293,7 @@ public partial class PlayerBuffSystem : Node
         switch (buff.Type)
         {
             case BuffType.Poison:
-                _player.PoisonedDps = Mathf.Max(_player.PoisonedDps, buff.Value);
-                _player.PoisonedTimer = Mathf.Max(_player.PoisonedTimer, buff.Duration);
-                _player.PoisonedTickTimer = Mathf.Min(_player.PoisonedTickTimer, 0.1f);
+                // 中毒伤害由 _ProcessBuffTick 按 tickInterval 处理
                 if (_player.Sprite != null)
                     _player.Sprite.Modulate = new Color(0.7f, 0.3f, 0.8f);
                 break;
@@ -311,8 +337,6 @@ public partial class PlayerBuffSystem : Node
         switch (buff.Type)
         {
             case BuffType.Poison:
-                _player.PoisonedDps = 0;
-                _player.PoisonedTimer = 0;
                 if (_player.Sprite != null && !_activeBuffs.ContainsKey(BuffType.Burn))
                     _player.Sprite.Modulate = Colors.White;
                 break;
@@ -413,24 +437,12 @@ public partial class PlayerBuffSystem : Node
                     _player.Sprite.Modulate = Colors.White;
             }
         }
-
-        if (_buffTimers.TryGetValue(type, out var label))
-        {
-            if (IsInstanceValid(label)) label.QueueFree();
-            _buffTimers.Remove(type);
-        }
     }
 
     private void _ClearAllVisualOverlays()
     {
         if (_player?.Sprite != null)
             _player.Sprite.Modulate = Colors.White;
-
-        foreach (var label in _buffTimers.Values)
-        {
-            if (IsInstanceValid(label)) label.QueueFree();
-        }
-        _buffTimers.Clear();
     }
 
     private void _SpawnApplyVFX(PlayerBuff buff)
@@ -469,12 +481,6 @@ public partial class PlayerBuffSystem : Node
                     buff.Type.ToString(), buff.VisualColor);
                 break;
         }
-    }
-
-    private void _UpdateBuffTimerLabel(PlayerBuff buff)
-    {
-        // Timer labels are shown via UIManager buff bar integration point.
-        // Emit a signal so the UI can update.
     }
 
     // ═══════════════════════════════════════════════════

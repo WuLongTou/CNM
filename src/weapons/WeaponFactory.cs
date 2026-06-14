@@ -79,6 +79,30 @@ public static partial class WeaponFactory
         { "雷电法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
         { "死神法杖", "res://assets/sprites/weapons/sword_fire.jpg" },
         { "力场法杖", "res://assets/sprites/weapons/pistol_magic.jpg" },
+
+        // 装备图标
+        { "生命药水", "res://assets/sprites/equipment/health_potion.png" },
+        { "敏捷靴", "res://assets/sprites/equipment/agility_boots.png" },
+        { "攻击宝石", "res://assets/sprites/equipment/attack_gem.png" },
+        { "暴击指环", "res://assets/sprites/equipment/crit_ring.png" },
+        { "吸血护符", "res://assets/sprites/equipment/lifesteal_amulet.png" },
+        { "寒霜徽章", "res://assets/sprites/equipment/frost_badge.png" },
+        { "剧毒之戒", "res://assets/sprites/equipment/poison_ring.png" },
+        { "冰霜护盾", "res://assets/sprites/equipment/frost_shield.png" },
+        { "铁盔", "res://assets/sprites/equipment/iron_helmet.png" },
+        { "皮甲", "res://assets/sprites/equipment/leather_armor.png" },
+        { "疾风护符", "res://assets/sprites/equipment/swift_amulet.png" },
+        { "再生戒指", "res://assets/sprites/equipment/regen_ring.png" },
+        { "狂战士护腕", "res://assets/sprites/equipment/berserker_bracer.png" },
+        { "猎人印记", "res://assets/sprites/equipment/hunter_mark.png" },
+        { "幽灵斗篷", "res://assets/sprites/equipment/ghost_cloak.png" },
+        { "荆棘护甲", "res://assets/sprites/equipment/thorn_armor.png" },
+        { "闪避护符", "res://assets/sprites/equipment/dodge_amulet.png" },
+        { "生命汲取", "res://assets/sprites/equipment/life_drain.png" },
+        { "穿甲弹", "res://assets/sprites/equipment/armor_pierce.png" },
+        { "弹跳之刃", "res://assets/sprites/equipment/bouncing_blade.png" },
+        { "毁灭之息", "res://assets/sprites/equipment/destruction_breath.png" },
+        { "钢铁意志", "res://assets/sprites/equipment/iron_will.png" },
     };
 
     private static readonly GodotArray _WEAPON_DATA = new GodotArray

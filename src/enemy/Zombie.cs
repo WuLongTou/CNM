@@ -321,6 +321,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
                 if (_originalPlayer != null && IsInstanceValid(_originalPlayer))
                     Player = _originalPlayer;
                 _originalPlayer = null;
+                _vfx?.ClearEffect();
             }
         }
 
@@ -332,6 +333,12 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             {
                 _poisonTickTimer = GameConfig.ZombiePoisonTick;
                 TakeDamage((int)_poisonDamage);
+            }
+            if (_poisonRemaining <= 0)
+            {
+                _poisonRemaining = 0;
+                _poisonDamage = 0;
+                _vfx?.ClearEffect();
             }
         }
 
@@ -1096,7 +1103,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             if (target is Player player)
             {
                 player.TakeDamage(Damage);
-                player.ApplyPoison(GameConfig.SpitterPoisonDps, GameConfig.SpitterPoisonDuration);
                 player.ApplyBuffFromZombie(BuffType.Poison, GameConfig.SpitterPoisonDuration, GameConfig.SpitterPoisonDps);
             }
             else if (target is IDamageable d)

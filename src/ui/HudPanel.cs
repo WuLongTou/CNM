@@ -23,6 +23,7 @@ public partial class HudPanel : Panel
     // ── Setup-time 注入的回调 ────────────────────────────────
     private Action _onToggleSound = null!;
     private Action _onToggleHelp = null!;
+    private Action _onToggleEquipment = null!;
     private Action<string> _showTooltip = null!;
     private Action _hideTooltip = null!;
 
@@ -32,6 +33,7 @@ public partial class HudPanel : Panel
     private Label _roundLabel = null!;
     private Label _zombiesLabel = null!;
     private Label _scoreLabel = null!;
+    private Label _weatherLabel = null!;
 
     // ── Row 2: 属性行 ───────────────────────────────────────
     private Label _damageLabel = null!;
@@ -47,6 +49,7 @@ public partial class HudPanel : Panel
     private HBoxContainer _effectsContainer = null!;
     private readonly Dictionary<string, Button> _effectIcons = new();
     private Button _soundToggleButton = null!;
+    private Label _debuffLabel = null!;  // 常驻 debuff 提示：中毒/燃烧等
 
     // ── 低血量闪烁 tween ────────────────────────────────────
     private Tween? _lowHealthTween;
@@ -54,53 +57,137 @@ public partial class HudPanel : Panel
     /// <summary>
     /// 注入按钮回调与 tooltip 桥接。必须在 AddChild 之前调用一次。
     /// </summary>
-    public void Setup(Action onToggleSound, Action onToggleHelp, Action<string> showTooltip, Action hideTooltip)
+    public void Setup(Action onToggleSound, Action onToggleHelp, Action onToggleEquipment, Action<string> showTooltip, Action hideTooltip)
     {
         _onToggleSound = onToggleSound;
         _onToggleHelp = onToggleHelp;
+        _onToggleEquipment = onToggleEquipment;
         _showTooltip = showTooltip;
         _hideTooltip = hideTooltip;
     }
 
     public override void _Ready()
     {
-        // ── 顶部 HUD 容器 ──────────────────────────────────
-        SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-        CustomMinimumSize = new Vector2(0, 48);
-        OffsetBottom = 52;
+        // ── 全屏透明容器，承载顶栏 + 底栏 ──────────────────
+        // ZIndex 100 让 HUD 永远在所有 UI 之上（包括武器选择面板 FullRect）。
+        // 本容器必须透明（无 panel 背景），否则会用深色蒙住整个游戏画面。
+        SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        MouseFilter = MouseFilterEnum.Ignore;
+        ZIndex = 100;
+        // 空背景覆盖 Panel 默认 stylebox，让本容器不渲染任何背景色
+        AddThemeStyleboxOverride("panel", new StyleBoxEmpty());
 
-        var hudStyle = HandDrawnTheme.MakeDarkPanel(0.90f);
-        hudStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
-        hudStyle.BorderWidthBottom = 1;
-        AddThemeStyleboxOverride("panel", hudStyle);
+        // ═══ 顶栏：波次 / 剩余 / 天气 / Debuff / 分数 ═══
+        var topPanel = new Panel();
+        topPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
+        topPanel.OffsetBottom = 30;
+        topPanel.CustomMinimumSize = new Vector2(0, 30);
+        topPanel.MouseFilter = MouseFilterEnum.Ignore;
+        var topStyle = HandDrawnTheme.MakeDarkPanel(0.90f);
+        topStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
+        topStyle.BorderWidthBottom = 1;
+        topPanel.AddThemeStyleboxOverride("panel", topStyle);
+        AddChild(topPanel);
 
-        var margin = new MarginContainer();
-        margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", UiMarginSmall);
-        margin.AddThemeConstantOverride("margin_right", UiMarginSmall);
-        margin.AddThemeConstantOverride("margin_top", UiMarginTiny);
-        margin.AddThemeConstantOverride("margin_bottom", UiMarginTiny);
-        AddChild(margin);
+        var topMargin = new MarginContainer();
+        topMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        topMargin.AddThemeConstantOverride("margin_left", UiMarginSmall);
+        topMargin.AddThemeConstantOverride("margin_right", UiMarginSmall);
+        topMargin.AddThemeConstantOverride("margin_top", UiMarginTiny);
+        topMargin.AddThemeConstantOverride("margin_bottom", UiMarginTiny);
+        topPanel.AddChild(topMargin);
 
-        var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", UiSpacingHairline);
-        margin.AddChild(mainVbox);
+        var topRow = new HBoxContainer();
+        topRow.AddThemeConstantOverride("separation", UiSpacingMedium);
+        topRow.Alignment = BoxContainer.AlignmentMode.Center;
+        topMargin.AddChild(topRow);
 
-        // Row 1
-        var row1 = new HBoxContainer();
-        row1.AddThemeConstantOverride("separation", UiSpacingMedium);
-        mainVbox.AddChild(row1);
+        _roundLabel = new Label { Text = "第 1 波" };
+        _roundLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
+        _roundLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
+        _roundLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+        _roundLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        topRow.AddChild(_roundLabel);
 
+        _zombiesLabel = new Label { Text = "剩余 0" };
+        _zombiesLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
+        _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
+        topRow.AddChild(_zombiesLabel);
+
+        // 常驻天气显示：酸雨/暴风时变红警示
+        _weatherLabel = new Label { Text = "☀ 晴" };
+        _weatherLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
+        _weatherLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.5f));
+        _weatherLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+        _weatherLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        topRow.AddChild(_weatherLabel);
+
+        // 常驻 debuff 提示：中毒/燃烧等持续掉血状态，避免"莫名其妙掉血"
+        _debuffLabel = new Label { Text = "" };
+        _debuffLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
+        _debuffLabel.AddThemeColorOverride("font_color", new Color(0.9f, 0.3f, 0.9f));  // 紫红色提示
+        _debuffLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+        _debuffLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        topRow.AddChild(_debuffLabel);
+
+        // 分数靠右
+        _scoreLabel = new Label
+        {
+            Text = "0",
+            HorizontalAlignment = HorizontalAlignment.Right,
+            CustomMinimumSize = new Vector2(80, 0),
+            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
+        };
+        _scoreLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
+        _scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
+        _scoreLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+        _scoreLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        topRow.AddChild(_scoreLabel);
+
+        // ═══ 底栏：装备图标 / HP条 / 状态 / 按钮 ═══
+        var bottomPanel = new Panel();
+        bottomPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomWide);
+        bottomPanel.OffsetTop = -44;
+        bottomPanel.CustomMinimumSize = new Vector2(0, 44);
+        bottomPanel.MouseFilter = MouseFilterEnum.Ignore;
+        var bottomStyle = HandDrawnTheme.MakeDarkPanel(0.90f);
+        bottomStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
+        bottomStyle.BorderWidthTop = 1;
+        bottomPanel.AddThemeStyleboxOverride("panel", bottomStyle);
+        AddChild(bottomPanel);
+
+        var bottomMargin = new MarginContainer();
+        bottomMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        bottomMargin.AddThemeConstantOverride("margin_left", UiMarginSmall);
+        bottomMargin.AddThemeConstantOverride("margin_right", UiMarginSmall);
+        bottomMargin.AddThemeConstantOverride("margin_top", UiMarginTiny);
+        bottomMargin.AddThemeConstantOverride("margin_bottom", UiMarginTiny);
+        bottomPanel.AddChild(bottomMargin);
+
+        var bottomRow = new HBoxContainer();
+        bottomRow.AddThemeConstantOverride("separation", UiSpacingMedium);
+        bottomMargin.AddChild(bottomRow);
+
+        // 左侧：装备效果图标
+        _effectsContainer = new HBoxContainer();
+        _effectsContainer.AddThemeConstantOverride("separation", UiSpacingHairline);
+        _effectsContainer.CustomMinimumSize = new Vector2(140, 0);
+        _effectsContainer.Alignment = BoxContainer.AlignmentMode.Begin;
+        bottomRow.AddChild(_effectsContainer);
+
+        // 弹性间隔：把 HP 条推到中间
+        var leftSpacer = new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        bottomRow.AddChild(leftSpacer);
+
+        // 中间：HP 条（加大加粗，战斗时一眼看到血量）
         var hpWrapper = new HBoxContainer();
         hpWrapper.AddThemeConstantOverride("separation", UiSpacingTight);
-        hpWrapper.CustomMinimumSize = new Vector2(240, 0);
-        hpWrapper.SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin;
-        row1.AddChild(hpWrapper);
+        hpWrapper.SizeFlagsHorizontal = Control.SizeFlags.ShrinkCenter;
+        bottomRow.AddChild(hpWrapper);
 
         _healthBar = new ProgressBar
         {
-            CustomMinimumSize = new Vector2(180, 14),
-            SizeFlagsHorizontal = Control.SizeFlags.ShrinkBegin,
+            CustomMinimumSize = new Vector2(200, 20),
             ShowPercentage = false
         };
         _healthBar.AddThemeStyleboxOverride("background", HandDrawnTheme.MakeHpBarBg());
@@ -108,89 +195,64 @@ public partial class HudPanel : Panel
         hpWrapper.AddChild(_healthBar);
 
         _healthLabel = new Label { Text = "120/120" };
-        _healthLabel.AddThemeFontSizeOverride("font_size", UiFontMicro);
+        _healthLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
         _healthLabel.AddThemeColorOverride("font_color", new Color(0.94f, 0.91f, 0.91f));
         _healthLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         _healthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
         _healthLabel.VerticalAlignment = VerticalAlignment.Center;
         hpWrapper.AddChild(_healthLabel);
 
-        var centerBox = new HBoxContainer();
-        centerBox.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        centerBox.Alignment = BoxContainer.AlignmentMode.Center;
-        centerBox.AddThemeConstantOverride("separation", UiSpacingWide);
-        row1.AddChild(centerBox);
+        // 弹性间隔：把按钮推到右边
+        var rightSpacer = new Control { SizeFlagsHorizontal = Control.SizeFlags.ExpandFill };
+        bottomRow.AddChild(rightSpacer);
 
-        _roundLabel = new Label { Text = "第 1 波" };
-        _roundLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
-        _roundLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
-        _roundLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _roundLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
-        centerBox.AddChild(_roundLabel);
-
-        _zombiesLabel = new Label { Text = "剩余 0" };
-        _zombiesLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
-        centerBox.AddChild(_zombiesLabel);
-
-        _scoreLabel = new Label
-        {
-            Text = "0",
-            HorizontalAlignment = HorizontalAlignment.Right,
-            CustomMinimumSize = new Vector2(80, 0)
-        };
-        _scoreLabel.SizeFlagsHorizontal = Control.SizeFlags.ShrinkEnd;
-        _scoreLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
-        _scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
-        _scoreLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _scoreLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
-        row1.AddChild(_scoreLabel);
-
-        // Row 2
-        var row2 = new HBoxContainer();
-        row2.AddThemeConstantOverride("separation", UiSpacingNormal);
-        mainVbox.AddChild(row2);
-
-        _damageLabel = _MakeStatLabel("攻击 10", new Color(0.8f, 0.5f, 0.4f), UiFontSmall);
-        row2.AddChild(_damageLabel);
-        _attackIntervalLabel = _MakeStatLabel("间隔 0.5s", new Color(0.75f, 0.65f, 0.45f), UiFontSmall);
-        row2.AddChild(_attackIntervalLabel);
-        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.75f, 0.45f, 0.55f), UiFontSmall);
-        row2.AddChild(_critLabel);
-        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.7f, 0.35f, 0.35f), UiFontSmall);
-        row2.AddChild(_lifestealLabel);
-        _attackTypeLabel = _MakeStatLabel("近战", new Color(0.6f, 0.55f, 0.6f), UiFontSmall);
-        row2.AddChild(_attackTypeLabel);
-        _targetPriorityLabel = _MakeStatLabel("最近", new Color(0.55f, 0.55f, 0.5f), UiFontSmall);
-        row2.AddChild(_targetPriorityLabel);
+        // 闪避冷却（战术信息，保留可见）
         _dashCooldownLabel = _MakeStatLabel("闪避 就绪", new Color(0.55f, 0.6f, 0.55f), UiFontSmall);
-        row2.AddChild(_dashCooldownLabel);
-        _speedLabel = _MakeStatLabel("速度 0", new Color(0.65f, 0.55f, 0.55f), UiFontSmall);
-        row2.AddChild(_speedLabel);
+        bottomRow.AddChild(_dashCooldownLabel);
 
-        _effectsContainer = new HBoxContainer();
-        _effectsContainer.AddThemeConstantOverride("separation", UiSpacingHairline);
-        _effectsContainer.SizeFlagsHorizontal = Control.SizeFlags.ExpandFill;
-        row2.AddChild(_effectsContainer);
-
+        // 右侧：按钮组（固定大小，不拉伸）
         _soundToggleButton = new Button
         {
             Text = "🔊",
-            CustomMinimumSize = new Vector2(24, 20),
+            CustomMinimumSize = new Vector2(28, 24),
             FocusMode = Control.FocusModeEnum.None,
             TooltipText = "点击切换音效"
         };
         _soundToggleButton.Pressed += _onToggleSound;
-        row2.AddChild(_soundToggleButton);
+        bottomRow.AddChild(_soundToggleButton);
+
+        // 装备面板按钮（C 键也可打开）
+        var equipBtn = new Button
+        {
+            Text = "装备",
+            CustomMinimumSize = new Vector2(48, 24),
+            FocusMode = Control.FocusModeEnum.None,
+            TooltipText = "查看角色装备 (C)"
+        };
+        equipBtn.AddThemeFontSizeOverride("font_size", UiFontMicro);
+        equipBtn.Pressed += _onToggleEquipment;
+        bottomRow.AddChild(equipBtn);
 
         var helpBtn = new Button
         {
             Text = "?",
-            CustomMinimumSize = new Vector2(20, 20),
+            CustomMinimumSize = new Vector2(28, 24),
             FocusMode = Control.FocusModeEnum.None
         };
         helpBtn.Pressed += _onToggleHelp;
-        row2.AddChild(helpBtn);
+        bottomRow.AddChild(helpBtn);
+
+        // ═══ 隐藏的属性标签容器 ═══
+        // 攻击/间隔/暴击/吸血/类型/目标/速度 这类详细属性属于"构建详情"，
+        // 战斗 HUD 不该堆一行噪音——已移到装备面板的 tooltip 里查看。
+        // 这里只保留对象引用（不加入场景树），让 UpdatePlayerStatus 等方法不报错。
+        _damageLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
+        _attackIntervalLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
+        _critLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
+        _lifestealLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
+        _attackTypeLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
+        _targetPriorityLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
+        _speedLabel = _MakeStatLabel("", Colors.White, UiFontSmall);
     }
 
     // ═══ Public API ═══
@@ -235,6 +297,44 @@ public partial class HudPanel : Panel
     public void UpdateZombies(int zombiesRemaining, int totalZombies)
     {
         _zombiesLabel.Text = $"剩余: {zombiesRemaining}/{totalZombies}";
+    }
+
+    /// <summary>
+    /// 更新常驻天气显示。WeatherSystem 在 _OnWeatherTick 末尾每 0.5s 调用一次，
+    /// 保证玩家随时能看到当前天气（特别是酸雨持续掉血时不会再"莫名其妙"）。
+    /// </summary>
+    public void UpdateWeather(string name, Color color, bool isHazard, int damagePerTick, string effectsDesc)
+    {
+        string icon = isHazard ? "⚠ " : "";
+        string dmg = (isHazard && damagePerTick > 0) ? $" -{damagePerTick}/tick" : "";
+        string effects = !string.IsNullOrEmpty(effectsDesc) ? $" {effectsDesc}" : "";
+        _weatherLabel.Text = $"{icon}{name}{dmg}{effects}";
+        _weatherLabel.AddThemeColorOverride("font_color", color);
+    }
+
+    /// <summary>
+    /// 更新常驻 debuff 提示：当前活跃的中毒/燃烧等持续掉血状态。
+    /// 每次 UpdatePlayerStatus 顺便调用，让玩家知道"为什么会持续掉血"。
+    /// </summary>
+    public void UpdateDebuffStatus(Player player)
+    {
+        if (_debuffLabel == null) return;
+        var buffSystem = player.BuffSystem;
+        if (buffSystem == null)
+        {
+            _debuffLabel.Text = "";
+            return;
+        }
+        float dps = buffSystem.GetActiveDebuffDamagePerSecond();
+        string desc = buffSystem.GetActiveDebuffDescription();
+        if (dps > 0 && desc.Length > 0)
+        {
+            _debuffLabel.Text = $"⚠ {desc} -{dps:F0}/s";
+        }
+        else
+        {
+            _debuffLabel.Text = "";
+        }
     }
 
     public void UpdateScore(int newScore)
@@ -288,6 +388,7 @@ public partial class HudPanel : Panel
         };
         _UpdateStatusTooltips(player);
         UpdateEffects(player);
+        UpdateDebuffStatus(player);
     }
 
     public void UpdateEffects(Player player)

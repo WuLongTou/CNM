@@ -21,6 +21,13 @@ public partial class PlayerVfx : Node
     private bool _isMoving = false;
     private bool _facingLeft = false;
 
+    /// <summary>
+    /// 当前角色朝向（true=朝左，false=朝右）。
+    /// 这是唯一事实源——任何依赖朝向做决策的代码（攻击方向/特效生成点等）
+    /// 都应该读这个属性，不要直接读 Sprite.FlipH 或 Scale.x。
+    /// </summary>
+    public bool FacingLeft => _facingLeft;
+
     private float _trailTimer = 0.0f;
     private float _footstepTimer = 0.0f;
     private const float FootstepInterval = 0.28f;
@@ -81,7 +88,8 @@ public partial class PlayerVfx : Node
         _idleFrame = ImageTexture.CreateFromImage(img);
         if (_walkFrames.Count == 0)
             Player.Sprite.Texture = _idleFrame;
-        Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
+        Player.Sprite.Scale = Vector2.One;
+        Player.Sprite.FlipH = _facingLeft;
 
         var attackImg = img.Duplicate() as Image;
         _TintImage(attackImg, new Color(1.3f, 1.1f, 0.7f));
@@ -151,10 +159,11 @@ public partial class PlayerVfx : Node
 
         // Invalidate texture cache so re-loaded PNGs get fresh processing
         Core.TextureUtils.ClearCache();
-        _allSpritesLoaded = true;
         _LoadWarriorSprites();
         _LoadRangerSprites();
         _LoadMageSprites();
+        // 所有精灵加载完成后再标记，避免加载失败时误判
+        _allSpritesLoaded = true;
     }
 
     private static readonly string[] _WARRIOR_WALK = {
@@ -205,22 +214,49 @@ public partial class PlayerVfx : Node
         "mage_idle_03", "mage_idle_04",
     };
 
+    /// <summary>
+    /// 从任意布局的 sprite sheet 中按"等距分布"取 N 帧。
+    /// AI 生成的 sprite 网格不固定（可能是 4x3 / 4x4 / 6x4 等），
+    /// 直接取前 N 帧只会取到第一行的帧，丢失后续 walk 周期。
+    /// 改为按总帧数等距取样，均匀覆盖整个动画序列。
+    /// </summary>
+    private static void _TakeFramesEvenly(
+        Godot.Collections.Array<Texture2D> src,
+        Godot.Collections.Array<Texture2D> dst,
+        int want)
+    {
+        dst.Clear();
+        if (src == null || src.Count == 0 || want <= 0) return;
+        int total = src.Count;
+        if (total <= want)
+        {
+            for (int i = 0; i < total; i++) dst.Add(src[i]);
+            return;
+        }
+        // 等距取样：保证首尾都覆盖
+        for (int i = 0; i < want; i++)
+        {
+            int idx = (int)System.Math.Round((double)i * (total - 1) / (want - 1));
+            if (idx >= total) idx = total - 1;
+            dst.Add(src[idx]);
+        }
+    }
+
     private static void _LoadWarriorSprites()
     {
         _warriorWalkFrames.Clear();
         _warriorAttackFrames.Clear();
         _warriorIdleFrames.Clear();
 
-        // Load from spritesheets: warrior_walk (3x4 grid=12 cells, use 8),
-        // warrior_attack (3x3 grid=9 cells, use 6), warrior_idle (2x2=4 cells)
-        var allWalk = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/warrior_walk.png", 4, 3);
-        for (int i = 0; i < 8 && i < allWalk.Count; i++) _warriorWalkFrames.Add(allWalk[i]);
+        // 投影分割（LoadAndSplitSpriteSheet）+ 等距取样：适配 4x3/4x4/6x4 等任意布局
+        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_walk.png");
+        _TakeFramesEvenly(allWalk, _warriorWalkFrames, 8);
 
-        var allAttack = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/warrior_attack.png", 3, 3);
-        for (int i = 0; i < 6 && i < allAttack.Count; i++) _warriorAttackFrames.Add(allAttack[i]);
+        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_attack.png");
+        _TakeFramesEvenly(allAttack, _warriorAttackFrames, 6);
 
-        var allIdle = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/warrior_idle.png", 2, 2);
-        for (int i = 0; i < 4 && i < allIdle.Count; i++) _warriorIdleFrames.Add(allIdle[i]);
+        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_idle.png");
+        _TakeFramesEvenly(allIdle, _warriorIdleFrames, 4);
 
         _warriorIdle = _warriorIdleFrames.Count > 0 ? _warriorIdleFrames[0] : null;
         _warriorBase = _warriorWalkFrames.Count > 0 ? _warriorWalkFrames[0] : null;
@@ -232,16 +268,14 @@ public partial class PlayerVfx : Node
         _rangerAttackFrames.Clear();
         _rangerIdleFrames.Clear();
 
-        // Load from spritesheets: ranger_walk (3x4 grid, use 8),
-        // ranger_attack (2x3 grid, use 6), ranger_idle (2x2=4 cells)
-        var allWalk = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/ranger_walk.png", 4, 3);
-        for (int i = 0; i < 8 && i < allWalk.Count; i++) _rangerWalkFrames.Add(allWalk[i]);
+        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_walk.png");
+        _TakeFramesEvenly(allWalk, _rangerWalkFrames, 8);
 
-        var allAttack = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/ranger_attack.png", 3, 2);
-        for (int i = 0; i < 6 && i < allAttack.Count; i++) _rangerAttackFrames.Add(allAttack[i]);
+        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_attack.png");
+        _TakeFramesEvenly(allAttack, _rangerAttackFrames, 6);
 
-        var allIdle = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/ranger_idle.png", 2, 2);
-        for (int i = 0; i < 4 && i < allIdle.Count; i++) _rangerIdleFrames.Add(allIdle[i]);
+        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_idle.png");
+        _TakeFramesEvenly(allIdle, _rangerIdleFrames, 4);
 
         _rangerIdle = _rangerIdleFrames.Count > 0 ? _rangerIdleFrames[0] : null;
         _rangerBase = _rangerWalkFrames.Count > 0 ? _rangerWalkFrames[0] : null;
@@ -253,16 +287,14 @@ public partial class PlayerVfx : Node
         _mageAttackFrames.Clear();
         _mageIdleFrames.Clear();
 
-        // Load from spritesheets: mage_walk (2x4 grid=8 cells),
-        // mage_attack (2x3 grid=6 cells), mage_idle (2x2=4 cells)
-        var allWalk = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/mage_walk.png", 4, 2);
-        for (int i = 0; i < 8 && i < allWalk.Count; i++) _mageWalkFrames.Add(allWalk[i]);
+        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_walk.png");
+        _TakeFramesEvenly(allWalk, _mageWalkFrames, 8);
 
-        var allAttack = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/mage_attack.png", 3, 2);
-        for (int i = 0; i < 6 && i < allAttack.Count; i++) _mageAttackFrames.Add(allAttack[i]);
+        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_attack.png");
+        _TakeFramesEvenly(allAttack, _mageAttackFrames, 6);
 
-        var allIdle = Core.TextureUtils.LoadAtlasFrames("res://assets/sprites/player/sheets/mage_idle.png", 2, 2);
-        for (int i = 0; i < 4 && i < allIdle.Count; i++) _mageIdleFrames.Add(allIdle[i]);
+        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_idle.png");
+        _TakeFramesEvenly(allIdle, _mageIdleFrames, 4);
 
         _mageIdle = _mageIdleFrames.Count > 0 ? _mageIdleFrames[0] : null;
         _mageBase = _mageWalkFrames.Count > 0 ? _mageWalkFrames[0] : null;
@@ -563,43 +595,13 @@ public partial class PlayerVfx : Node
             Player.Sprite.Texture = _walkFrames[0];
 
         if (Player?.Sprite != null)
-            Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
+        {
+            Player.Sprite.Scale = Vector2.One;
+            Player.Sprite.FlipH = _facingLeft;
+        }
 
         if (_walkFrames.Count > 0 && Player?.Sprite != null)
             CallDeferred(MethodName._GenerateStateVariantsDeferred);
-    }
-
-    private static Texture2D? _LoadWithAlpha(string path)
-    {
-        var tex = GD.Load<Texture2D>(path);
-        if (tex == null) return null;
-        var img = tex.GetImage();
-        if (img == null) return tex;
-        // Duplicate before mutating — tex.GetImage() returns a shared reference
-        img = img.Duplicate() as Image ?? img;
-        if (img.GetFormat() != Image.Format.Rgba8)
-            img.Convert(Image.Format.Rgba8);
-        _StripWhiteBackground(img, 0.82f);
-        return ImageTexture.CreateFromImage(img);
-    }
-
-    private static void _StripWhiteBackground(Image img, float threshold)
-    {
-        int w = img.GetWidth();
-        int h = img.GetHeight();
-        for (int x = 0; x < w; x++)
-        {
-            for (int y = 0; y < h; y++)
-            {
-                var c = img.GetPixel(x, y);
-                float brightness = (c.R + c.G + c.B) / 3.0f;
-                if (brightness > threshold && c.R > threshold && c.G > threshold && c.B > threshold)
-                {
-                    float alpha = Mathf.Clamp((1.0f - brightness) / (1.0f - threshold), 0.0f, 1.0f);
-                    img.SetPixel(x, y, new Color(c.R, c.G, c.B, alpha * c.A));
-                }
-            }
-        }
     }
 
     private static void _TintImage(Image? img, Color tint)
@@ -1252,7 +1254,9 @@ public partial class PlayerVfx : Node
             {
                 _animState = AnimState.Idle;
                 Player.Sprite.Texture = _idleFrame ?? (_walkFrames.Count > 0 ? _walkFrames[0] : null);
-                Player.Sprite.Scale = new Vector2(1.0f, 1.0f);
+                // 朝向锁定为 _facingLeft 状态，避免 idle 时重置朝向
+                Player.Sprite.Scale = Vector2.One;
+                Player.Sprite.FlipH = _facingLeft;
             }
             return;
         }
@@ -1322,12 +1326,16 @@ public partial class PlayerVfx : Node
             Player.Sprite.SelfModulate = Colors.White;
         }
 
-        // Breathing animation for idle
+        // Breathing animation for idle（朝向只由 FlipH 控制，避免和负 scale 双重翻转）
         if (_animState == AnimState.Idle && _idleFrame != null)
         {
             _animTimer += delta;
             float breathe = Mathf.Sin(_animTimer * Mathf.Tau / Core.GameConfig.IdleBreathSpeed) * 0.02f;
-            Player.Sprite.Scale = new Vector2(1.0f + breathe * 0.8f, 1.0f - breathe * 0.8f);
+            Player.Sprite.Scale = new Vector2(
+                1.0f + breathe * 0.8f,
+                1.0f - breathe * 0.8f
+            );
+            Player.Sprite.FlipH = _facingLeft;
         }
 
         if (Player!.Velocity.X < -10)
@@ -1359,31 +1367,20 @@ public partial class PlayerVfx : Node
     public void ShowAttackEffect(Vector2 targetPos, AttackType attackType)
     {
         PlayAttackAnim();
-        Color flashColor = Colors.White;
-        bool doFlash = false;
         switch (attackType)
         {
             case AttackType.Melee:
-                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.5f);
                 _ShowMeleeSlash(targetPos);
-                doFlash = true;
                 break;
             case AttackType.Ranged:
-                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.4f);
                 break;
             case AttackType.Area:
-                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.5f);
                 _ShowAreaRings();
-                doFlash = true;
                 break;
             case AttackType.Magic:
-                flashColor = new Color(0.9f, 0.3f, 0.2f, 0.5f);
                 _ShowMagicCircle(targetPos);
-                doFlash = true;
                 break;
         }
-        if (doFlash)
-            GameServices.UI.FlashAttackColor(flashColor);
     }
 
     private void _ShowMeleeSlash(Vector2 targetPos)

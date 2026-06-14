@@ -199,8 +199,9 @@ public partial class HelpPanel : Panel
         _AddInfoCard("Tab", "切换目标优先级 (最近/最远/密集)", new Color(0.5f, 0.8f, 0.9f));
         _AddInfoCard("ESC", "暂停/继续游戏\n强化阶段无法手动暂停", new Color(0.8f, 0.8f, 0.5f));
         _AddInfoCard("H", "打开/关闭帮助面板", new Color(0.7f, 0.6f, 0.8f));
+        _AddInfoCard("C", "打开/关闭角色装备面板\n按身体部位查看已装备的武器/防具/饰品", new Color(0.6f, 0.7f, 0.9f));
         _AddInfoCard("1 / 2 / 3", "武器选择阶段快速选牌", new Color(0.6f, 0.7f, 0.4f));
-        _AddInfoCard("S / Enter", "武器选择阶段跳过强化", new Color(0.7f, 0.6f, 0.5f));
+        _AddInfoCard("Enter / Delete", "武器选择阶段跳过强化", new Color(0.7f, 0.6f, 0.5f));
     }
 
     // ═══════════════════════════════════════════════
@@ -322,7 +323,6 @@ public partial class HelpPanel : Panel
 
     private void _AddInfoCard(string title, string content, Color accentColor)
     {
-        var card = new Panel();
         var cardStyle = new StyleBoxFlat
         {
             BgColor = new Color(NoteBg, 0.75f),
@@ -331,22 +331,22 @@ public partial class HelpPanel : Panel
             CornerRadiusTopLeft = 4,
             CornerRadiusTopRight = 4,
             CornerRadiusBottomLeft = 4,
-            CornerRadiusBottomRight = 4
+            CornerRadiusBottomRight = 4,
+            ContentMarginLeft = 10,
+            ContentMarginRight = 10,
+            ContentMarginTop = 6,
+            ContentMarginBottom = 6
         };
+
+        var card = new PanelContainer();
+        card.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         card.AddThemeStyleboxOverride("panel", cardStyle);
         _contentContainer.AddChild(card);
 
-        var margin = new MarginContainer();
-        margin.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 10);
-        margin.AddThemeConstantOverride("margin_right", 10);
-        margin.AddThemeConstantOverride("margin_top", 6);
-        margin.AddThemeConstantOverride("margin_bottom", 6);
-        card.AddChild(margin);
-
         var hbox = new HBoxContainer();
         hbox.AddThemeConstantOverride("separation", 10);
-        margin.AddChild(hbox);
+        hbox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        card.AddChild(hbox);
 
         var titleLabel = new Label
         {

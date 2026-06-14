@@ -618,7 +618,10 @@ public partial class PlayerCombat : Node
         if (targets.Count > 0)
             return targets[0].GlobalPosition;
 
-        Vector2 fallback = Player!.GlobalPosition + new Vector2(Player.Sprite?.FlipH == true ? -40.0f : 40.0f, 0.0f);
+        // 攻击方向必须和角色朝向一致——读 PlayerVfx.FacingLeft（唯一事实源），
+        // 不要再用 Sprite.FlipH 或 Scale.x（这两个不严格同步，会导致"看着朝左但攻击朝右"bug）
+        bool facingLeft = Player!.Vfx?.FacingLeft ?? false;
+        Vector2 fallback = Player.GlobalPosition + new Vector2(facingLeft ? -40.0f : 40.0f, 0.0f);
         Zombie? rangedTarget = _FindTargetZombie(Core.GameConfig.RangedAttackRange);
         return rangedTarget?.GlobalPosition ?? fallback;
     }
@@ -678,6 +681,22 @@ public partial class PlayerCombat : Node
                     kept.Add(e);
             }
             Player.ActiveEffects = kept;
+        }
+        else
+        {
+            // 单槽位装备：头盔/护甲/靴子选新换旧（MMO 式装备格）
+            // 戒指/特效/饰品(buff) 保持多件叠加
+            string upcat = weapon.UpgradeCategory ?? "";
+            if (upcat == "头盔" || upcat == "护甲" || upcat == "鞋子")
+            {
+                var kept = new Array<WeaponCard>();
+                foreach (var e in Player!.ActiveEffects)
+                {
+                    if (e.Category != WeaponCategory.Equipment || e.UpgradeCategory != upcat)
+                        kept.Add(e);
+                }
+                Player.ActiveEffects = kept;
+            }
         }
         Player!.ActiveEffects.Add(weapon);
         RecalculateStats();

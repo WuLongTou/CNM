@@ -47,6 +47,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     private Timer _dashTimer = null!;
     private Timer _dashCooldownTimer = null!;
+    private GameManager? _gameManager;
     private Vector2 _cachedScreenMin;
     private Vector2 _cachedScreenMax;
     private Vector2 _cachedScreenSize;
@@ -97,10 +98,6 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public int TotalDamageDealt { get; set; } = 0;
     public int TotalKills { get; set; } = 0;
     public float TotalSurvivalTime { get; set; } = 0.0f;
-
-    public float PoisonedTimer { get; set; } = 0.0f;
-    public float PoisonedTickTimer { get; set; } = 0.0f;
-    public float PoisonedDps { get; set; } = 0.0f;
 
     public Sprite2D? Sprite { get; set; }
     public Sprite2D? Shadow { get; set; }
@@ -161,6 +158,12 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     public override void _PhysicsProcess(double delta)
     {
+        if (!_IsCombatInputEnabled())
+        {
+            Velocity = Vector2.Zero;
+            return;
+        }
+
         if (IsDashing)
         {
             Vfx?.SpawnDashTrail((float)delta);
@@ -183,6 +186,9 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     public override void _Input(InputEvent @event)
     {
+        if (!_IsCombatInputEnabled())
+            return;
+
         if (@event is InputEventKey keyEvent && keyEvent.Pressed)
         {
             if (keyEvent.Keycode == Key.Tab)
@@ -273,6 +279,14 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         }
     }
 
+    private bool _IsCombatInputEnabled()
+    {
+        if (_gameManager == null || !IsInstanceValid(_gameManager))
+            _gameManager = GetTree().GetFirstNodeInGroup("game_manager") as GameManager;
+
+        return _gameManager == null || _gameManager.CurrentState == GameState.Combat;
+    }
+
     private void _HandleMovement()
     {
         Vector2 inputVec = Vector2.Zero;
@@ -356,13 +370,6 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     {
         if (InvincibleTimer > 0)
             InvincibleTimer -= delta;
-    }
-
-    public void ApplyPoison(float damagePerSecond, float duration)
-    {
-        PoisonedDps = Math.Max(PoisonedDps, damagePerSecond);
-        PoisonedTimer = Math.Max(PoisonedTimer, duration);
-        PoisonedTickTimer = Math.Min(PoisonedTickTimer, 0.1f);
     }
 
     public void ApplyBuffFromZombie(BuffType buffType, float duration, float value)

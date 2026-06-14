@@ -46,6 +46,7 @@ public partial class UIManager : Control
     private Button? _skipButton;
     private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
+    private EquipmentPanel _equipmentPanel = null!;
     private WelcomePanel? _welcomePanel;
     private ProgressBar _bossHealthBar = null!;
     private Label _bossHealthLabel = null!;
@@ -113,6 +114,7 @@ public partial class UIManager : Control
         _hudPanel.Setup(
             onToggleSound: _ToggleSound,
             onToggleHelp: _ToggleControlsPanel,
+            onToggleEquipment: _ToggleEquipmentPanel,
             showTooltip: _ShowTooltip,
             hideTooltip: _HideTooltip);
         AddChild(_hudPanel);
@@ -121,6 +123,9 @@ public partial class UIManager : Control
         _CreateWeaponSelectionPanel();
         _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 80 };
         AddChild(_helpPanel);
+        _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 80 };
+        _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
+        AddChild(_equipmentPanel);
         _welcomePanel = new WelcomePanel();
         _welcomePanel.Setup(onStart: _StartGame, onToggleHelp: _ToggleControlsPanel);
         AddChild(_welcomePanel);
@@ -411,7 +416,7 @@ public partial class UIManager : Control
             cardVbox.AddChild(sep1);
 
             // 3. Icon
-            var iconPlaceholder = new Control
+            var iconPlaceholder = new CenterContainer
             {
                 Name = "IconContainer",
                 CustomMinimumSize = new Vector2(0, 70),
@@ -427,7 +432,6 @@ public partial class UIManager : Control
             };
             iconLabel.AddThemeFontSizeOverride("font_size", 55);
             iconPlaceholder.AddChild(iconLabel);
-            iconLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
 
             // 4. Type
             var typeLabel = new Label
@@ -485,7 +489,7 @@ public partial class UIManager : Control
         // Keyboard hint label
         var keyboardHintLabel = new Label
         {
-            Text = "💡 按 [1] [2] [3] 选择 | 按 [S] 或 [Enter] 跳过",
+            Text = "💡 按 [1] [2] [3] 选择 | 按 [Enter] 或 [Delete] 跳过",
             HorizontalAlignment = HorizontalAlignment.Center
         };
         keyboardHintLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
@@ -598,17 +602,31 @@ public partial class UIManager : Control
                         _OnWeaponButtonPressed(2);
                         GetViewport().SetInputAsHandled();
                         return;
-                    case Key.S:
+                    // 跳过强化：原用 S/Enter，但 S 与 move_down 冲突——
+                    // 玩家在战斗中按 S 是"向下走"，卡片页用 S 是"跳过"，
+                    // 这就是用户报告的"卡片快捷键用常用操作键"的根因。
+                    // 改用 Enter（通用确认键，不与 move/attack 冲突） + Delete（不冲突的备用键）。
                     case Key.Enter:
                     case Key.KpEnter:
+                    case Key.Delete:
                         _OnSkipPressed();
                         GetViewport().SetInputAsHandled();
                         return;
                 }
             }
 
-            if (key.Keycode == Key.H)
+            if (@event.IsActionPressed("toggle_help") || key.Keycode == Key.H)
+            {
                 _ToggleControlsPanel();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+            else if (@event.IsActionPressed("toggle_equipment") || key.Keycode == Key.C)
+            {
+                _ToggleEquipmentPanel();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
         }
 
         if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left && IsUpgradeActive())
@@ -644,7 +662,13 @@ public partial class UIManager : Control
         // 2. 关闭帮助面板
         if (_helpPanel.Visible)
         {
-            _helpPanel.Close();
+            _CloseHelpPanel();
+            return true;
+        }
+        // 2b. 关闭装备面板
+        if (_equipmentPanel.Visible)
+        {
+            _CloseEquipmentPanel();
             return true;
         }
         // 3. 跳过武器选择
@@ -671,6 +695,7 @@ public partial class UIManager : Control
         {
             _UpdateDashDisplay(_gameManager.PlayerRef);
             _UpdateAttackIntervalDisplay(_gameManager.PlayerRef);
+            _hudPanel?.UpdateDebuffStatus(_gameManager.PlayerRef);
         }
 
         // Boss health bar
@@ -744,7 +769,7 @@ public partial class UIManager : Control
         if (_pausePanel != null) _pausePanel.Visible = paused;
         if (paused)
             GetTree().Paused = true;
-        else if (!_pauseLockedByUpgrade)
+        else if (!_pauseLockedByUpgrade && !_IsUiModalVisible())
             GetTree().Paused = false;
     }
 
@@ -753,12 +778,58 @@ public partial class UIManager : Control
     private void _ToggleControlsPanel()
     {
         if (_weaponSelectionPanel.Visible && !_helpPanel.Visible) return;
+        if (!_helpPanel.Visible && _equipmentPanel.Visible)
+            _equipmentPanel.Close();
         _helpPanel.Toggle();
+        _RefreshUiModalPauseLock();
+    }
+
+    /// <summary>C 键 / HUD [装备] 按钮：开关 MMO 式装备面板。</summary>
+    private void _ToggleEquipmentPanel()
+    {
+        // 武器选择阶段不弹装备面板，避免遮挡选卡
+        if (_weaponSelectionPanel.Visible && !_equipmentPanel.Visible) return;
+        if (!_equipmentPanel.Visible && _helpPanel.Visible)
+            _helpPanel.Close();
+        _equipmentPanel.Toggle();
+        if (_equipmentPanel.Visible)
+        {
+            var player = _gameManager?.PlayerRef;
+            if (player != null)
+                _equipmentPanel.Refresh(player);
+        }
+        _RefreshUiModalPauseLock();
+    }
+
+    private void _CloseHelpPanel()
+    {
+        _helpPanel.Close();
+        _RefreshUiModalPauseLock();
+    }
+
+    private void _CloseEquipmentPanel()
+    {
+        _equipmentPanel.Close();
+        _RefreshUiModalPauseLock();
+    }
+
+    private bool _IsUiModalVisible() => _helpPanel.Visible || _equipmentPanel.Visible;
+
+    private void _RefreshUiModalPauseLock()
+    {
+        if (_IsUiModalVisible())
+        {
+            GetTree().Paused = true;
+        }
+        else if (!_pauseLockedByUpgrade && !_userPaused)
+        {
+            GetTree().Paused = false;
+        }
     }
 
     public void ToggleHelp()
     {
-        _helpPanel.Toggle();
+        _ToggleControlsPanel();
     }
 
     private void _ToggleSound()
@@ -789,7 +860,10 @@ public partial class UIManager : Control
         if (_pausePanel != null) _pausePanel.Visible = false;
 
         if (_helpPanel.Visible)
-            _helpPanel.Close();
+            _CloseHelpPanel();
+
+        if (_equipmentPanel.Visible)
+            _CloseEquipmentPanel();
 
         if (_gameManager?.PlayerRef != null)
         {
@@ -827,7 +901,8 @@ public partial class UIManager : Control
                 var categoryNode = (Label)vbox.GetNode("Category");
                 var titleNode = (Label)vbox.GetNode("Title");
                 var typeNode = (Label)vbox.GetNode("Type");
-                var iconNode = vbox.FindChild("Icon", true, false) as Label;
+                var iconContainer = vbox.GetNodeOrNull<Control>("IconContainer");
+                var iconNode = iconContainer?.GetNodeOrNull<Label>("Icon");
                 var descNode = (Label)vbox.GetNode("Desc");
                 var rarityNode = (Label)vbox.GetNode("Rarity");
 
@@ -864,14 +939,13 @@ public partial class UIManager : Control
                 descNode.Text = keywords.Count > 0 ? string.Join(" ", keywords) : "基础";
                 rarityNode.Text = WeaponFormatter.GetRarityText(wc.Rarity);
 
-                // 使用真实武器图片替代 emoji 图标
-                if (wc.IconTexture != null && iconNode != null)
+                if (iconContainer != null && wc.IconTexture != null)
                 {
-                    // Check if we already have a TextureRect (avoid duplicates on reuse)
-                    var existingTex = iconNode.GetParent()?.GetNodeOrNull<TextureRect>("IconTex");
+                    var existingTex = iconContainer.GetNodeOrNull<TextureRect>("IconTex");
                     if (existingTex != null)
                     {
                         existingTex.Texture = wc.IconTexture;
+                        existingTex.Visible = true;
                     }
                     else
                     {
@@ -883,13 +957,29 @@ public partial class UIManager : Control
                             StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
                             CustomMinimumSize = new Vector2(60, 60)
                         };
-                        iconNode.GetParent()?.RemoveChild(iconNode);
-                        iconNode.GetParent()?.AddChild(texRect);
+                        iconContainer.AddChild(texRect);
                     }
+                    if (iconNode != null)
+                        iconNode.Visible = false;
                 }
-                else if (iconNode != null)
+                else if (iconContainer != null)
                 {
+                    var existingTex = iconContainer.GetNodeOrNull<TextureRect>("IconTex");
+                    if (existingTex != null)
+                        existingTex.Visible = false;
+                    if (iconNode == null)
+                    {
+                        iconNode = new Label
+                        {
+                            Name = "Icon",
+                            HorizontalAlignment = HorizontalAlignment.Center,
+                            VerticalAlignment = VerticalAlignment.Center
+                        };
+                        iconNode.AddThemeFontSizeOverride("font_size", 55);
+                        iconContainer.AddChild(iconNode);
+                    }
                     iconNode.Text = wc.Icon;
+                    iconNode.Visible = true;
                 }
 
                 var cardBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
@@ -953,9 +1043,9 @@ public partial class UIManager : Control
         _weaponSelectionPanel.Visible = false;
         _HideTooltip();
         _pauseLockedByUpgrade = false;
-        if (!_userPaused)
+        if (!_userPaused && !_IsUiModalVisible())
             GetTree().Paused = false;
-        else if (_pausePanel != null)
+        else if (_userPaused && _pausePanel != null)
             _pausePanel.Visible = true;
     }
 
@@ -1670,6 +1760,9 @@ public partial class UIManager : Control
     public void UpdatePlayerStatus(Player player)
     {
         _hudPanel?.UpdatePlayerStatus(player);
+        // 装备面板开着时实时刷新（选卡后立刻看到新装备入槽）
+        if (_equipmentPanel.Visible)
+            _equipmentPanel.Refresh(player);
     }
 
     // ═══════════════════════════════════════════════
@@ -1830,6 +1923,16 @@ public partial class UIManager : Control
     public void ShowWeatherNotification(string weatherName, Color weatherColor)
     {
         ShowLevelUpNotification($"天气: {weatherName}", weatherColor);
+    }
+
+    /// <summary>
+    /// 持续更新 HUD 天气显示（由 WeatherSystem 每 0.5s 推一次）。
+    /// 区别于 ShowWeatherNotification 的"变化时弹一次"——
+    /// HUD 顶部常驻 label 让玩家随时看到当前天气，特别是酸雨持续掉血时。
+    /// </summary>
+    public void UpdateWeatherHUD(string weatherName, Color weatherColor, bool isHazard, int damagePerTick, string effectsDesc)
+    {
+        _hudPanel?.UpdateWeather(weatherName, weatherColor, isHazard, damagePerTick, effectsDesc);
     }
 
     public void TriggerBossAtmosphere()

@@ -8,6 +8,8 @@
 
 using Godot;
 using System;
+using ZombieWars.Core;
+using static ZombieWars.Core.GameEnums;
 
 namespace ZombieWars.Player;
 
@@ -52,6 +54,9 @@ public partial class PlayerInput : Node
     private const string ACTION_CYCLE_TARGET = "cycle_target";
     private const string ACTION_TOGGLE_HELP = "toggle_help";
 
+    /// <summary>Cached GameManager reference (null if not loaded yet).</summary>
+    private Core.GameManager? _gameManager;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Lifecycle
     // ─────────────────────────────────────────────────────────────────────────
@@ -69,6 +74,23 @@ public partial class PlayerInput : Node
 
     public override void _Input(InputEvent @event)
     {
+        // 卡片/暂停/Help/GameOver 等非战斗阶段：禁用所有游戏操作输入。
+        // 只允许 UIManager 内部处理卡片快捷键（如 1/2/3）。
+        // 这是硬约束：任何模态/选择/UI 页面打开时，游戏操作快捷键绝不能生效，
+        // 避免误触移动/攻击破坏页面状态。
+        if (_gameManager == null || !IsInstanceValid(_gameManager))
+            _gameManager = GetTree().GetFirstNodeInGroup("game_manager") as Core.GameManager;
+        if (_gameManager != null && _gameManager.CurrentState != GameState.Combat)
+        {
+            // 清空所有输入状态，确保 Player 不会读到残留输入
+            MoveDirection = Vector2.Zero;
+            IsAttackPressed = false;
+            IsDashPressed = false;
+            IsCycleTargetPressed = false;
+            IsHelpToggled = false;
+            return;
+        }
+
         // ── Movement axis ──────────────────────────────────────────────────
         float horizontal = Input.GetAxis(ACTION_MOVE_LEFT, ACTION_MOVE_RIGHT);
         float vertical = Input.GetAxis(ACTION_MOVE_UP, ACTION_MOVE_DOWN);

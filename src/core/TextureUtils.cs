@@ -63,34 +63,6 @@ public static class TextureUtils
     }
 
     /// <summary>
-    /// Load a texture from file without normalization.
-    /// Use this for backgrounds or UI elements that should preserve original size.
-    /// Results are cached.
-    /// </summary>
-    public static Texture2D? LoadTexture(string path)
-    {
-        if (_textureCache.TryGetValue(path, out var cached))
-            return cached;
-
-        if (!FileAccess.FileExists(path))
-            return null;
-
-        var tex = GD.Load<Texture2D>(path);
-        if (tex == null) return null;
-
-        var img = tex.GetImage();
-        if (img == null) return tex;
-
-        if (img.GetFormat() != Image.Format.Rgba8)
-            img.Convert(Image.Format.Rgba8);
-
-        _StripWhiteBackground(img, 0.85f);
-        var result = ImageTexture.CreateFromImage(img);
-        _textureCache[path] = result;
-        return result;
-    }
-
-    /// <summary>
     /// Load multiple frames for animation from numbered files.
     /// Results are cached for performance.
     /// </summary>
@@ -173,12 +145,20 @@ public static class TextureUtils
             {
                 int x = col * cellW;
                 int y = row * cellH;
-                var region = img.GetRegion(new Rect2I(x, y, cellW, cellH));
+                // 最后一列/行使用剩余像素，避免整数除法丢失边缘
+                int regionW = (col == cols - 1) ? img.GetWidth() - x : cellW;
+                int regionH = (row == rows - 1) ? img.GetHeight() - y : cellH;
+                var region = img.GetRegion(new Rect2I(x, y, regionW, regionH));
 
                 if (_IsMostlyTransparent(region))
                     continue;
 
                 _StripWhiteBackground(region, 0.85f);
+
+                // 白底去除后可能产生全透明帧，二次过滤
+                if (_IsMostlyTransparent(region))
+                    continue;
+
                 region = _TrimTransparent(region);
                 region = _ResizeToFit(region, NormalSpriteSize);
                 frames.Add(ImageTexture.CreateFromImage(region));
@@ -213,6 +193,10 @@ public static class TextureUtils
         if (img.GetFormat() != Image.Format.Rgba8)
             img.Convert(Image.Format.Rgba8);
 
+        // 必须先剥白底再去检测 sprite 区域——否则白色背景像素会被 _FindSpriteRegions
+        // 误判为"内容行"，导致整张图被识别为 1 个 region
+        _StripWhiteBackground(img, 0.85f);
+
         // Use projection-based segmentation: scan rows then columns
         // to find bounding boxes of individual sprites by detecting
         // gaps of dark/background pixels between them.
@@ -235,6 +219,10 @@ public static class TextureUtils
             var r = regions[i];
             var region = img.GetRegion(r);
 
+            // 跳过空帧（无实际内容的区域）
+            if (_IsMostlyTransparent(region))
+                continue;
+
             _StripWhiteBackground(region, 0.85f);
             region = _TrimTransparent(region);
             region = _ResizeToFit(region, NormalSpriteSize);
@@ -248,24 +236,26 @@ public static class TextureUtils
     /// <summary>
     /// Projection-based sprite region detection.
     /// Scans rows for bright-pixel bands, then columns within each band
-    /// to find individual sprite bounding boxes. Ignores black outlines
-    /// by only counting pixels with at least one bright channel.
+    /// to find individual sprite bounding boxes. Only counts non-transparent
+    /// pixels (alpha > 0.01) so transparent background doesn't get misread
+    /// as content.
     /// </summary>
     private static System.Collections.Generic.List<Rect2I> _FindSpriteRegions(Image img)
     {
         int w = img.GetWidth();
         int h = img.GetHeight();
-        const float bright = 0.18f;
+        const float bright = 0.10f;
         var result = new System.Collections.Generic.List<Rect2I>();
 
-        // Step 1: find "content rows" — rows with at least one bright pixel
+        // Step 1: find "content rows" — rows with at least one non-transparent
+        // bright pixel. 必须同时看 alpha：透明背景（即使 RGB=255）不应算内容。
         var contentRow = new bool[h];
         for (int y = 0; y < h; y++)
         {
             for (int x = 0; x < w; x++)
             {
                 var c = img.GetPixel(x, y);
-                if (c.R > bright || c.G > bright || c.B > bright)
+                if (c.A > 0.01f && (c.R > bright || c.G > bright || c.B > bright))
                 {
                     contentRow[y] = true;
                     break;
@@ -296,14 +286,14 @@ public static class TextureUtils
     {
         int w = img.GetWidth();
 
-        // Find "content columns" within this band
+        // Find "content columns" within this band (also requires alpha > 0.01)
         var contentCol = new bool[w];
         for (int x = 0; x < w; x++)
         {
             for (int y = y0; y <= y1; y++)
             {
                 var c = img.GetPixel(x, y);
-                if (c.R > bright || c.G > bright || c.B > bright)
+                if (c.A > 0.01f && (c.R > bright || c.G > bright || c.B > bright))
                 {
                     contentCol[x] = true;
                     break;
@@ -326,7 +316,11 @@ public static class TextureUtils
                 int ry = Mathf.Max(0, y0 - pad);
                 int rx2 = Mathf.Min(w - 1, x - 1 + pad);
                 int ry2 = Mathf.Min(img.GetHeight() - 1, y1 + pad);
-                result.Add(new Rect2I(rx, ry, rx2 - rx + 1, ry2 - ry + 1));
+                int rw = rx2 - rx + 1;
+                int rh = ry2 - ry + 1;
+                // 过滤过小碎片（至少 NormalSpriteSize/4 宽和高）
+                if (rw >= NormalSpriteSize / 4 && rh >= NormalSpriteSize / 4)
+                    result.Add(new Rect2I(rx, ry, rw, rh));
                 colStart = -1;
             }
         }

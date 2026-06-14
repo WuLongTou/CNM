@@ -157,6 +157,8 @@ public partial class ZombieVfx : Node
         if (!FileAccess.FileExists(sheetPath))
             return false;
 
+        // 原始手绘 spritesheet 使用投影分割自动检测帧（bright=0.10 可检测灰色轮廓像素）。
+        // 配合最小区域过滤和空帧过滤，确保每帧完整且有效。
         var frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
         if (frames == null || frames.Count == 0)
             return false;
@@ -164,8 +166,11 @@ public partial class ZombieVfx : Node
         // Ensure all sprites face right
         if (TextureUtils.FacesLeft(frames[0]))
         {
+            // 复制数组后再翻转，避免直接修改缓存中的 frames
+            var flipped = new Godot.Collections.Array<Texture2D>();
             for (int i = 0; i < frames.Count; i++)
-                frames[i] = TextureUtils.FlipHorizontal(frames[i]);
+                flipped.Add(TextureUtils.FlipHorizontal(frames[i]));
+            frames = flipped;
         }
 
         _sprite.Texture = frames[0];
@@ -350,6 +355,8 @@ public partial class ZombieVfx : Node
         _spriteCache.Clear();
         _walkFramesCache.Clear();
         _cacheInitialized = false;
+        // 同步清除 TextureUtils 的帧/纹理缓存
+        TextureUtils.ClearCache();
     }
 
     private Image _CreateZombieImage(ZombieType type, Color baseColor, int size, float legSwing, float bodyBob, int frame)
@@ -870,7 +877,12 @@ public partial class ZombieVfx : Node
 
     public void ClearEffect()
     {
-        if (_sprite != null) _sprite.Modulate = Colors.White;
+        if (_sprite != null)
+        {
+            // 恢复默认颜色，但 Invisible 类型需保持半透明 alpha=0.3
+            float alpha = (_zombie != null && _zombie.ZombieType == ZombieType.Invisible) ? 0.3f : 1.0f;
+            _sprite.Modulate = Colors.White with { A = alpha };
+        }
     }
 
     public void SpawnDeathEffects()
