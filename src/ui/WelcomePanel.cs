@@ -47,7 +47,7 @@ public partial class WelcomePanel : Panel
         marginContainer.AddChild(centerContainer);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 25);
+        vbox.AddThemeConstantOverride("separation", 18);
         centerContainer.AddChild(vbox);
 
         var title = new Label { Text = "🧟 僵尸大战 🧟" };
@@ -71,8 +71,9 @@ public partial class WelcomePanel : Panel
             "• 每回合选择武器卡牌强化自己",
             "• 消灭不断涌现的僵尸",
             "• 尽可能坚持更多回合",
+            "• 看底部 HUD 掌握生命、武器、目标、伤害和攻速",
             "",
-            "准备好迎接挑战了吗？"
+            "提示：按 H 查看 HUD 图例，按 C 查看装备详情。"
         };
 
         foreach (var text in introTexts)

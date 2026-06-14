@@ -195,15 +195,17 @@ public partial class UIManager : Control
             _fieldChargeLabel = new Label { Name = "FieldChargeLabel" };
             _fieldChargeLabel.SetAnchorsPreset(LayoutPreset.BottomLeft);
             _fieldChargeLabel.OffsetLeft = 12;
-            _fieldChargeLabel.OffsetBottom = -12;
-            _fieldChargeLabel.OffsetTop = -40;
+            _fieldChargeLabel.OffsetBottom = -94;
+            _fieldChargeLabel.OffsetTop = -122;
             _fieldChargeLabel.AddThemeFontSizeOverride("font_size", 13);
             _fieldChargeLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldAccent);
             _fieldChargeLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
             _fieldChargeLabel.AddThemeConstantOverride("outline_size", 3);
             AddChild(_fieldChargeLabel);
         }
-        _fieldChargeLabel.Text = maxSlots <= 0 ? "" : $"⟡ 力场 {available} ⊕⊗⊙  [~放置]";
+        _fieldChargeLabel.Text = maxSlots <= 0
+            ? ""
+            : $"力场: {available}/{maxSlots}  `放置  ⊕吸引 ⊗排斥 ⊙旋涡";
     }
 
     public void UpdateStrategyIndicator(ZombieWars.Math.StrategySystem? strategySys)
@@ -214,8 +216,8 @@ public partial class UIManager : Control
             _strategyLabel = new Label { Name = "StrategyLabel" };
             _strategyLabel.SetAnchorsPreset(LayoutPreset.BottomLeft);
             _strategyLabel.OffsetLeft = 12;
-            _strategyLabel.OffsetBottom = -44;
-            _strategyLabel.OffsetTop = -70;
+            _strategyLabel.OffsetBottom = -124;
+            _strategyLabel.OffsetTop = -150;
             _strategyLabel.AddThemeFontSizeOverride("font_size", 11);
             _strategyLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.NetherPurple);
             _strategyLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
@@ -225,13 +227,13 @@ public partial class UIManager : Control
         if (!ZombieWars.Math.StrategySystem.IsStrategyActive(strategySys.CurrentRound)) { _strategyLabel.Text = ""; return; }
         string desc = strategySys.GetCurrentProfile() switch
         {
-            Core.GameEnums.StrategyProfile.MeleeDominant => "你：近战流 → 敌增坦克型",
-            Core.GameEnums.StrategyProfile.RangedDominant => "你：远程流 → 敌增蜂群型",
-            Core.GameEnums.StrategyProfile.MagicDominant => "你：魔法流 → 敌增远程型",
-            Core.GameEnums.StrategyProfile.Balanced => "你：均衡流",
+            Core.GameEnums.StrategyProfile.MeleeDominant => "敌人适应: 你偏近战，坦克僵尸变多",
+            Core.GameEnums.StrategyProfile.RangedDominant => "敌人适应: 你偏远程，蜂群僵尸变多",
+            Core.GameEnums.StrategyProfile.MagicDominant => "敌人适应: 你偏魔法，远程僵尸变多",
+            Core.GameEnums.StrategyProfile.Balanced => "敌人适应: 你的流派均衡",
             _ => ""
         };
-        _strategyLabel.Text = $"♟ {desc}  适应{strategySys.AdaptationRate:F0%}";
+        _strategyLabel.Text = $"♟ {desc}  强度 {strategySys.AdaptationRate:F0%}";
     }
 
     public void ShowFieldPlacementHint(bool show, Core.GameEnums.FieldType? type)
@@ -257,7 +259,7 @@ public partial class UIManager : Control
             Core.GameEnums.FieldType.Vortex => "⊙ 旋涡（环绕陷阱）",
             _ => ""
         };
-        _fieldHintLabel.Text = $"{typeDesc}\n左键放置 · 右键/`取消 · 1/2/3切换";
+        _fieldHintLabel.Text = $"{typeDesc}\n左键放置力场 · 右键或 ` 取消 · 1/2/3 切换力场类型";
         _fieldHintLabel.Visible = true;
     }
 

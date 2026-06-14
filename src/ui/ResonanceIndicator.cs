@@ -37,7 +37,7 @@ public partial class ResonanceIndicator : Control
         // 标题
         _titleLabel = new Label
         {
-            Text = "波形共振",
+            Text = "共振加成",
             Position = new Vector2(0, 0),
         };
         _titleLabel.AddThemeFontSizeOverride("font_size", 10);
@@ -165,7 +165,7 @@ public partial class ResonanceIndicator : Control
 
         if (_waveSystem.HarmonicCount == 0)
         {
-            _statusLabel.Text = "波纹：无";
+            _statusLabel.Text = "暂无尸潮波形";
             _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.TextDim);
             return;
         }
@@ -181,17 +181,17 @@ public partial class ResonanceIndicator : Control
 
         if (mult >= 2.5f)
         {
-            _statusLabel.Text = $"★ 完美共振 ×{mult:F1} ★";
+            _statusLabel.Text = $"★ 共振伤害 ×{mult:F1} ★";
             _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldBright);
         }
         else if (mult >= 1.5f)
         {
-            _statusLabel.Text = $"共振中 ×{mult:F1}";
+            _statusLabel.Text = $"共振伤害 ×{mult:F1}";
             _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldAccent);
         }
         else
         {
-            _statusLabel.Text = $"{waveDesc} · ω={_waveSystem.BaseFrequency:F2}";
+            _statusLabel.Text = $"尸潮波形: {waveDesc}";
             _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.TextDim);
         }
     }

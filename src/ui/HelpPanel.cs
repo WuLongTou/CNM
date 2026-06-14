@@ -7,13 +7,13 @@ using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 /// <summary>
-/// Tabbed help panel — controls, zombie codex, weapon guide, and game mechanics.
+/// Tabbed help panel — HUD legend, controls, zombie codex, weapon guide, and game mechanics.
 /// Toggled via H key or the "?" HUD button.
 /// </summary>
 public partial class HelpPanel : Panel
 {
     private int _currentTab;
-    private readonly string[] _tabNames = { "操作", "僵尸", "武器", "机制" };
+    private readonly string[] _tabNames = { "HUD", "操作", "僵尸", "武器", "机制" };
     private Panel _contentPanel = null!;
     private VBoxContainer _contentContainer = null!;
     private readonly List<Button> _tabButtons = new();
@@ -37,7 +37,7 @@ public partial class HelpPanel : Panel
         AddChild(center);
 
         var card = new Panel();
-        card.CustomMinimumSize = new Vector2(620, 520);
+        card.CustomMinimumSize = new Vector2(700, 560);
         card.MouseFilter = MouseFilterEnum.Stop;
         var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 10f);
         cardStyle.ShadowOffset = new Vector2(4, 4);
@@ -64,7 +64,7 @@ public partial class HelpPanel : Panel
 
         var titleLabel = new Label
         {
-            Text = "帮助面板",
+            Text = "帮助与 HUD 说明",
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
         titleLabel.AddThemeFontSizeOverride("font_size", 22);
@@ -180,11 +180,40 @@ public partial class HelpPanel : Panel
 
         switch (_currentTab)
         {
-            case 0: _BuildControlsTab(); break;
-            case 1: _BuildZombieTab(); break;
-            case 2: _BuildWeaponTab(); break;
-            case 3: _BuildMechanicsTab(); break;
+            case 0: _BuildHudTab(); break;
+            case 1: _BuildControlsTab(); break;
+            case 2: _BuildZombieTab(); break;
+            case 3: _BuildWeaponTab(); break;
+            case 4: _BuildMechanicsTab(); break;
         }
+    }
+
+    // ═══════════════════════════════════════════════
+    // Tab: HUD
+    // ═══════════════════════════════════════════════
+
+    private void _BuildHudTab()
+    {
+        _AddSectionLabel("-- 顶部信息栏 --");
+        _AddInfoCard("回合", "当前第几回合。每回合开始前会抽强化卡，回合越高敌人越强。", new Color(0.85f, 0.72f, 0.35f));
+        _AddInfoCard("僵尸", "格式为 剩余/本回合总量。\n清完本回合僵尸后进入结算和下一次强化。", new Color(0.75f, 0.55f, 0.55f));
+        _AddInfoCard("天气", "显示当前天气。带 ⚠ 的天气会造成危险效果，例如持续掉血或额外刷怪。", new Color(0.55f, 0.75f, 0.95f));
+        _AddInfoCard("负面状态", "中毒、燃烧等持续掉血状态会在顶部显示，例如 ⚠ 中毒 -5/s。", new Color(0.9f, 0.35f, 0.85f));
+        _AddInfoCard("分数", "击杀僵尸、精英和 BOSS 获得分数。BOSS 和精英给分更高。", new Color(0.95f, 0.55f, 0.45f));
+
+        _AddSectionLabel("-- 底部战斗栏 --");
+        _AddInfoCard("效果图标", "当前武器、装备、护盾、暴击、吸血等都会显示成图标。\n鼠标悬停图标可查看详细数值和说明。", new Color(0.85f, 0.75f, 0.45f));
+        _AddInfoCard("生命", "生命值归零会死亡；低血量时血条会闪烁。\n回合结算时会恢复一部分最大生命。", new Color(0.35f, 0.75f, 0.45f));
+        _AddInfoCard("闪避", "显示冲刺闪避是否就绪。就绪时按 Shift 冲刺，冷却时会显示剩余秒数。", new Color(0.45f, 0.7f, 1.0f));
+        _AddInfoCard("武器 / 类型", "武器显示当前主要攻击卡；类型说明攻击方式：近战、远程、范围或魔法。", new Color(0.72f, 0.78f, 0.92f));
+        _AddInfoCard("目标", "自动攻击优先锁定谁：最近、最远或密集敌群。\n按 Tab 可切换。", new Color(0.55f, 0.82f, 0.88f));
+        _AddInfoCard("伤害 / 间隔", "伤害是单次攻击基础伤害；间隔是两次攻击之间的时间。\n间隔越短，攻击越快。", new Color(0.92f, 0.70f, 0.52f));
+        _AddInfoCard("暴击 / 吸血 / 移速", "暴击提高爆发伤害；吸血会按伤害比例回血；移速影响走位和拉怪。", new Color(0.80f, 0.65f, 0.45f));
+
+        _AddSectionLabel("-- 特殊系统提示 --");
+        _AddInfoCard("力场", "左下角显示可用力场次数。\n按 ` 进入放置模式，左键放置，右键取消。⊕吸引、⊗排斥、⊙旋涡。", new Color(0.75f, 0.65f, 0.95f));
+        _AddInfoCard("共振", "右上角共振指示器展示武器频率与尸潮波形的接近程度。\n越接近共振，部分伤害加成越明显。", new Color(0.45f, 0.85f, 0.95f));
+        _AddInfoCard("装备面板", "按 C 或点击底部【装备】打开，查看身体部位槽位和每件装备的完整效果。", new Color(0.6f, 0.7f, 0.9f));
     }
 
     // ═══════════════════════════════════════════════
