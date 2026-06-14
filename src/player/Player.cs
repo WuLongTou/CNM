@@ -123,7 +123,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
         Sprite = new Sprite2D
         {
-            TextureFilter = TextureFilterEnum.Nearest
+            TextureFilter = TextureFilterEnum.Linear
         };
         AddChild(Sprite);
 

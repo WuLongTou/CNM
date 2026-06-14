@@ -37,12 +37,12 @@ public partial class ResonanceIndicator : Control
         // 标题
         _titleLabel = new Label
         {
-            Text = "波形共振",
+            Text = "共振加成",
             Position = new Vector2(0, 0),
         };
         _titleLabel.AddThemeFontSizeOverride("font_size", 10);
-        _titleLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldAccent);
-        _titleLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+        _titleLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
+        _titleLabel.AddThemeColorOverride("font_outline_color", HandDrawnTheme.Colors.InkBlack);
         _titleLabel.AddThemeConstantOverride("outline_size", 2);
         AddChild(_titleLabel);
 
@@ -61,14 +61,14 @@ public partial class ResonanceIndicator : Control
             Size = new Vector2(_displayWidth, _displayHeight),
             Modulate = new Color(1, 1, 1, 0.5f),
         };
-        bg.AddThemeStyleboxOverride("panel", AlchemyTheme.MakeDarkPanel(0.6f));
+        bg.AddThemeStyleboxOverride("panel", HandDrawnTheme.MakeDarkPanel(0.6f, withBorder: true));
         drawRoot.AddChild(bg);
 
         // 波纹曲线（白色）
         _waveLine = new Line2D
         {
             Width = 1.5f,
-            DefaultColor = AlchemyTheme.Colors.ParchmentLight,
+            DefaultColor = HandDrawnTheme.Colors.NoteBgHover,
             Position = new Vector2(0, _displayHeight / 2.0f),
         };
         drawRoot.AddChild(_waveLine);
@@ -77,7 +77,7 @@ public partial class ResonanceIndicator : Control
         _weaponLine = new Line2D
         {
             Width = 1.5f,
-            DefaultColor = AlchemyTheme.Colors.GoldAccent,
+            DefaultColor = HandDrawnTheme.Colors.BloodBright,
             Position = new Vector2(0, _displayHeight / 2.0f),
         };
         drawRoot.AddChild(_weaponLine);
@@ -88,8 +88,8 @@ public partial class ResonanceIndicator : Control
             Position = new Vector2(0, _displayHeight + 16),
         };
         _statusLabel.AddThemeFontSizeOverride("font_size", 9);
-        _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.TextDim);
-        _statusLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+        _statusLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteTextDim);
+        _statusLabel.AddThemeColorOverride("font_outline_color", HandDrawnTheme.Colors.InkBlack);
         _statusLabel.AddThemeConstantOverride("outline_size", 1);
         AddChild(_statusLabel);
     }
@@ -152,11 +152,11 @@ public partial class ResonanceIndicator : Control
         float mult = _waveSystem.CalculateResonanceMultiplier(_weaponFrequency);
         bool resonating = mult >= 1.5f;
         _weaponLine.DefaultColor = resonating
-            ? AlchemyTheme.Colors.GoldBright
-            : new Color(AlchemyTheme.Colors.GoldAccent, 0.6f);
+            ? HandDrawnTheme.Colors.BattlefieldBright
+            : new Color(HandDrawnTheme.Colors.BloodBright, 0.6f);
         _waveLine.DefaultColor = resonating
-            ? AlchemyTheme.Colors.CandleGlow
-            : AlchemyTheme.Colors.ParchmentLight;
+            ? HandDrawnTheme.Colors.CandleGlow
+            : HandDrawnTheme.Colors.NoteBgHover;
     }
 
     private void UpdateStatus()
@@ -165,8 +165,8 @@ public partial class ResonanceIndicator : Control
 
         if (_waveSystem.HarmonicCount == 0)
         {
-            _statusLabel.Text = "波纹：无";
-            _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.TextDim);
+            _statusLabel.Text = "暂无尸潮波形";
+            _statusLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteTextDim);
             return;
         }
 
@@ -181,18 +181,18 @@ public partial class ResonanceIndicator : Control
 
         if (mult >= 2.5f)
         {
-            _statusLabel.Text = $"★ 完美共振 ×{mult:F1} ★";
-            _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldBright);
+            _statusLabel.Text = $"★ 共振伤害 ×{mult:F1} ★";
+            _statusLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BattlefieldBright);
         }
         else if (mult >= 1.5f)
         {
-            _statusLabel.Text = $"共振中 ×{mult:F1}";
-            _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldAccent);
+            _statusLabel.Text = $"共振伤害 ×{mult:F1}";
+            _statusLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
         }
         else
         {
-            _statusLabel.Text = $"{waveDesc} · ω={_waveSystem.BaseFrequency:F2}";
-            _statusLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.TextDim);
+            _statusLabel.Text = $"尸潮波形: {waveDesc}";
+            _statusLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteTextDim);
         }
     }
 }

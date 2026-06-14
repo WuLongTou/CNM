@@ -6,15 +6,14 @@ Godot 4.6 + C# 游戏项目（僵尸大战）。
 > 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好）以全局 `~/.claude/CLAUDE.md` 为基础，本文件只做项目特有补充，不得放宽或违背全局约束。
 
 ## 硬约束
-- **开发隔离**：遵循全局 Worktree 约束——所有开发改动在 `.claude/worktrees/<分支名>`（已被 `.gitignore` 忽略）中进行，主工作树保持干净，严禁在主目录直接堆改动。
-- **Git**：遵循全局 Git 规范（worktree 隔离、`merge --ff-only`、线性历史、中文 Commit 格式并标注实际模型）；本项目额外禁止 `git cherry-pick`。
-- **临时文件**：所有临时文件、截图、中间输出写入 `.local/` 目录（已被 `.gitignore` 忽略）。
+- **Git 额外约束**：在全局 Git 规范之上，本项目**额外禁止 `git cherry-pick`**（保持线性历史）。
+- **临时文件目录**：本项目临时文件 / 截图 / 中间输出统一写入 `.local/`（已 gitignore）。
 - **模态/选择/UI 页面快捷键必须独占输入**（硬约束，2026-06-11 立）：
   - 卡片选择、强化选择、暂停、Help、GameOver 等任何"模态/选择/UI"页面打开时，
     **游戏操作的快捷键（WASD/方向键移动、空格攻击、Shift 冲刺、Tab 切目标等）必须 100% 失效**，
     绝不允许"在卡片页面按 A 还能让角色移动"这种误操作。
   - **绝不复用"常用操作"按键做 UI 快捷键**（硬约束，2026-06-11 立）：
-    任何 input action 已绑定的键（如 move=WASD、attack=Space、dash=Insert、cycle_target=Backspace、
+    任何 input action 已绑定的键（如 move=WASD、attack=Space、dash=Shift、cycle_target=Tab、
     toggle_help=H）都不可用于 UI 快捷键，否则即出现"按 S 跳过时角色向下走"这种双重绑定 bug。
     UI 快捷键只能用未绑定的键（如 Enter、Delete、BackQuote、斜杠等）或纯鼠标操作。
   - 实现要求：

@@ -44,6 +44,11 @@ public partial class UIManager : Control
     private Panel _weaponSelectionPanel = null!;
     private readonly List<Button> _weaponButtons = new();
     private Button? _skipButton;
+    private VBoxContainer? _weaponSelectionMainVbox;
+    private HBoxContainer? _weaponButtonContainer;
+    private Label? _weaponSelectionTitleLabel;
+    private Label? _weaponSelectionDescLabel;
+    private Label? _weaponKeyboardHintLabel;
     private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
     private EquipmentPanel _equipmentPanel = null!;
@@ -53,6 +58,7 @@ public partial class UIManager : Control
     private bool _bossUiVisible;
     private int _bossUiHealth = -1;
     private int _bossUiMaxHealth = -1;
+    private bool _gameStarted;
 
     // ═══════════════════════════════════════════════
     // Weapon Selection
@@ -121,12 +127,13 @@ public partial class UIManager : Control
         _CreateBossHealthBar();
 
         _CreateWeaponSelectionPanel();
-        _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 80 };
+        _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 170 };
         AddChild(_helpPanel);
-        _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 80 };
+        _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
         _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
         AddChild(_equipmentPanel);
         _welcomePanel = new WelcomePanel();
+        _welcomePanel.ZIndex = 160;
         _welcomePanel.Setup(onStart: _StartGame, onToggleHelp: _ToggleControlsPanel);
         AddChild(_welcomePanel);
         _roundBanner = new RoundBanner();
@@ -139,6 +146,7 @@ public partial class UIManager : Control
         _CreateTooltipPanel();
         _pausePanel = new PausePanel();
         AddChild(_pausePanel);
+        _SetGameplayHudVisible(false);
         GetViewport().SizeChanged += _OnUiViewportSizeChanged;
         _OnUiViewportSizeChanged();
         SetProcess(true);
@@ -170,12 +178,13 @@ public partial class UIManager : Control
     private void _CreateResonanceIndicator()
     {
         if (!Core.GameConfig.MathSystemsEnabled) return;
+        var viewport = ResponsiveUi.ViewportSize(this);
         _resonanceIndicator = new ResonanceIndicator { Name = "ResonanceIndicator", MouseFilter = MouseFilterEnum.Ignore };
         _resonanceIndicator.SetAnchorsPreset(LayoutPreset.TopRight);
-        _resonanceIndicator.OffsetLeft = -210;
-        _resonanceIndicator.OffsetTop = 58;
-        _resonanceIndicator.OffsetRight = -12;
-        _resonanceIndicator.OffsetBottom = 130;
+        _resonanceIndicator.OffsetLeft = -ResponsiveUi.Px(210, viewport, 150);
+        _resonanceIndicator.OffsetTop = ResponsiveUi.Px(58, viewport, 42);
+        _resonanceIndicator.OffsetRight = -ResponsiveUi.Px(12, viewport, 6);
+        _resonanceIndicator.OffsetBottom = _resonanceIndicator.OffsetTop + ResponsiveUi.Px(72, viewport, 52);
         AddChild(_resonanceIndicator);
     }
 
@@ -192,18 +201,21 @@ public partial class UIManager : Control
         if (!Core.GameConfig.MathSystemsEnabled) return;
         if (_fieldChargeLabel == null)
         {
+            var viewport = ResponsiveUi.ViewportSize(this);
             _fieldChargeLabel = new Label { Name = "FieldChargeLabel" };
             _fieldChargeLabel.SetAnchorsPreset(LayoutPreset.BottomLeft);
-            _fieldChargeLabel.OffsetLeft = 12;
-            _fieldChargeLabel.OffsetBottom = -12;
-            _fieldChargeLabel.OffsetTop = -40;
-            _fieldChargeLabel.AddThemeFontSizeOverride("font_size", 13);
-            _fieldChargeLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldAccent);
-            _fieldChargeLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+            _fieldChargeLabel.OffsetLeft = ResponsiveUi.Px(12, viewport, 6);
+            _fieldChargeLabel.OffsetBottom = -ResponsiveUi.Px(94, viewport, 70);
+            _fieldChargeLabel.OffsetTop = -ResponsiveUi.Px(122, viewport, 96);
+            _fieldChargeLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(13, viewport, 9));
+            _fieldChargeLabel.AddThemeColorOverride("font_color", BloodBright);
+            _fieldChargeLabel.AddThemeColorOverride("font_outline_color", InkBlack);
             _fieldChargeLabel.AddThemeConstantOverride("outline_size", 3);
             AddChild(_fieldChargeLabel);
         }
-        _fieldChargeLabel.Text = maxSlots <= 0 ? "" : $"⟡ 力场 {available} ⊕⊗⊙  [~放置]";
+        _fieldChargeLabel.Text = maxSlots <= 0
+            ? ""
+            : $"力场: {available}/{maxSlots}  `放置  ⊕吸引 ⊗排斥 ⊙旋涡";
     }
 
     public void UpdateStrategyIndicator(ZombieWars.Math.StrategySystem? strategySys)
@@ -211,41 +223,43 @@ public partial class UIManager : Control
         if (!Core.GameConfig.MathSystemsEnabled || strategySys == null) return;
         if (_strategyLabel == null)
         {
+            var viewport = ResponsiveUi.ViewportSize(this);
             _strategyLabel = new Label { Name = "StrategyLabel" };
             _strategyLabel.SetAnchorsPreset(LayoutPreset.BottomLeft);
-            _strategyLabel.OffsetLeft = 12;
-            _strategyLabel.OffsetBottom = -44;
-            _strategyLabel.OffsetTop = -70;
-            _strategyLabel.AddThemeFontSizeOverride("font_size", 11);
-            _strategyLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.NetherPurple);
-            _strategyLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+            _strategyLabel.OffsetLeft = ResponsiveUi.Px(12, viewport, 6);
+            _strategyLabel.OffsetBottom = -ResponsiveUi.Px(124, viewport, 96);
+            _strategyLabel.OffsetTop = -ResponsiveUi.Px(150, viewport, 116);
+            _strategyLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(11, viewport, 9));
+            _strategyLabel.AddThemeColorOverride("font_color", NetherPurple);
+            _strategyLabel.AddThemeColorOverride("font_outline_color", InkBlack);
             _strategyLabel.AddThemeConstantOverride("outline_size", 2);
             AddChild(_strategyLabel);
         }
         if (!ZombieWars.Math.StrategySystem.IsStrategyActive(strategySys.CurrentRound)) { _strategyLabel.Text = ""; return; }
         string desc = strategySys.GetCurrentProfile() switch
         {
-            Core.GameEnums.StrategyProfile.MeleeDominant => "你：近战流 → 敌增坦克型",
-            Core.GameEnums.StrategyProfile.RangedDominant => "你：远程流 → 敌增蜂群型",
-            Core.GameEnums.StrategyProfile.MagicDominant => "你：魔法流 → 敌增远程型",
-            Core.GameEnums.StrategyProfile.Balanced => "你：均衡流",
+            Core.GameEnums.StrategyProfile.MeleeDominant => "敌人适应: 你偏近战，坦克僵尸变多",
+            Core.GameEnums.StrategyProfile.RangedDominant => "敌人适应: 你偏远程，蜂群僵尸变多",
+            Core.GameEnums.StrategyProfile.MagicDominant => "敌人适应: 你偏魔法，远程僵尸变多",
+            Core.GameEnums.StrategyProfile.Balanced => "敌人适应: 你的流派均衡",
             _ => ""
         };
-        _strategyLabel.Text = $"♟ {desc}  适应{strategySys.AdaptationRate:F0%}";
+        _strategyLabel.Text = $"♟ {desc}  强度 {strategySys.AdaptationRate:F0%}";
     }
 
     public void ShowFieldPlacementHint(bool show, Core.GameEnums.FieldType? type)
     {
         if (_fieldHintLabel == null)
         {
+            var viewport = ResponsiveUi.ViewportSize(this);
             _fieldHintLabel = new Label { Name = "FieldHintLabel" };
             _fieldHintLabel.SetAnchorsPreset(LayoutPreset.CenterBottom);
-            _fieldHintLabel.OffsetBottom = -120;
-            _fieldHintLabel.OffsetTop = -160;
+            _fieldHintLabel.OffsetBottom = -ResponsiveUi.Px(120, viewport, 82);
+            _fieldHintLabel.OffsetTop = -ResponsiveUi.Px(160, viewport, 116);
             _fieldHintLabel.HorizontalAlignment = HorizontalAlignment.Center;
-            _fieldHintLabel.AddThemeFontSizeOverride("font_size", 16);
-            _fieldHintLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.CandleGlow);
-            _fieldHintLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+            _fieldHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewport, 11));
+            _fieldHintLabel.AddThemeColorOverride("font_color", CandleGlow);
+            _fieldHintLabel.AddThemeColorOverride("font_outline_color", InkBlack);
             _fieldHintLabel.AddThemeConstantOverride("outline_size", 3);
             AddChild(_fieldHintLabel);
         }
@@ -257,22 +271,23 @@ public partial class UIManager : Control
             Core.GameEnums.FieldType.Vortex => "⊙ 旋涡（环绕陷阱）",
             _ => ""
         };
-        _fieldHintLabel.Text = $"{typeDesc}\n左键放置 · 右键/`取消 · 1/2/3切换";
+        _fieldHintLabel.Text = $"{typeDesc}\n左键放置力场 · 右键或 ` 取消 · 1/2/3 切换力场类型";
         _fieldHintLabel.Visible = true;
     }
 
     private void _CreateBossHealthBar()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         _bossHealthBar = new ProgressBar
         {
             ShowPercentage = false
         };
         _bossHealthBar.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-        _bossHealthBar.OffsetTop = 66;
-        _bossHealthBar.OffsetBottom = 78;
-        _bossHealthBar.OffsetLeft = 16;
-        _bossHealthBar.OffsetRight = -16;
-        _bossHealthBar.CustomMinimumSize = new Vector2(0, 12);
+        _bossHealthBar.OffsetTop = ResponsiveUi.Px(66, viewport, 46);
+        _bossHealthBar.OffsetBottom = _bossHealthBar.OffsetTop + ResponsiveUi.Px(12, viewport, 8);
+        _bossHealthBar.OffsetLeft = ResponsiveUi.Px(16, viewport, 8);
+        _bossHealthBar.OffsetRight = -ResponsiveUi.Px(16, viewport, 8);
+        _bossHealthBar.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(12, viewport, 8));
         _bossHealthBar.Visible = false;
         _bossHealthBar.ZIndex = 5;
         _bossHealthBar.AddThemeStyleboxOverride("background", MakeHpBarBg());
@@ -281,15 +296,15 @@ public partial class UIManager : Control
 
         _bossHealthLabel = HandDrawnTheme.MakeTitleLabel(
             text: "",
-            fontSize: UiFontSmall,
+            fontSize: ResponsiveUi.Font(UiFontSmall, viewport, 9),
             color: HandDrawnTheme.Colors.BloodBright,
             outlineSize: UiOutlineNorm,
             outlineColor: new Color(0, 0, 0, 0.7f),
             hAlign: HorizontalAlignment.Center,
             vAlign: VerticalAlignment.Center);
         _bossHealthLabel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-        _bossHealthLabel.OffsetTop = 66;
-        _bossHealthLabel.OffsetBottom = 84;
+        _bossHealthLabel.OffsetTop = _bossHealthBar.OffsetTop;
+        _bossHealthLabel.OffsetBottom = _bossHealthBar.OffsetTop + ResponsiveUi.Px(18, viewport, 12);
         _bossHealthLabel.Visible = false;
         _bossHealthLabel.ZIndex = 6;
         AddChild(_bossHealthLabel);
@@ -297,6 +312,7 @@ public partial class UIManager : Control
 
     private void _CreateWeaponSelectionPanel()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         _weaponSelectionPanel = new Panel
         {
             Visible = false,
@@ -314,26 +330,28 @@ public partial class UIManager : Control
         _weaponSelectionPanel.AddChild(centerContainer);
 
         var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", UiSpacingSection);
+        mainVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingSection, viewport, 12));
         centerContainer.AddChild(mainVbox);
+        _weaponSelectionMainVbox = mainVbox;
 
         // Title
         var titleLabel = new Label
         {
             Text = "⚔️ 选择本回合强化 ⚔️"
         };
-        titleLabel.AddThemeFontSizeOverride("font_size", 32);
+        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(32, viewport, 22));
         titleLabel.AddThemeColorOverride("font_color", BloodBright);
         titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
         mainVbox.AddChild(titleLabel);
+        _weaponSelectionTitleLabel = titleLabel;
 
         _currentWeaponLabel = new Label
         {
             Text = "当前武器: 无",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            CustomMinimumSize = new Vector2(720, 0)
+            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewport, 0.9f), 0)
         };
-        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", UiFontEmph);
+        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 12));
         _currentWeaponLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
         _currentWeaponLabel.HorizontalAlignment = HorizontalAlignment.Center;
         mainVbox.AddChild(_currentWeaponLabel);
@@ -343,17 +361,19 @@ public partial class UIManager : Control
         {
             Text = "你可能抽到新武器、装备，或对已有装备的强化卡",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            CustomMinimumSize = new Vector2(720, 0)
+            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewport, 0.9f), 0)
         };
-        descLabel.AddThemeFontSizeOverride("font_size", 18);
+        descLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(18, viewport, 13));
         descLabel.AddThemeColorOverride("font_color", Godot.Colors.White); descLabel.HorizontalAlignment = HorizontalAlignment.Center;
         mainVbox.AddChild(descLabel);
+        _weaponSelectionDescLabel = descLabel;
 
         // Card button container
         var buttonContainer = new HBoxContainer();
-        buttonContainer.AddThemeConstantOverride("separation", UiSpacingWide);
+        buttonContainer.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingWide, viewport, 8));
         buttonContainer.Alignment = BoxContainer.AlignmentMode.Center;
         mainVbox.AddChild(buttonContainer);
+        _weaponButtonContainer = buttonContainer;
 
         // Create 3 weapon buttons
         for (int i = 0; i < 3; i++)
@@ -361,7 +381,7 @@ public partial class UIManager : Control
             int cardIndex = i; // capture for closure
             var button = new Button
             {
-                CustomMinimumSize = new Vector2(200, 280),
+                CustomMinimumSize = ResponsiveUi.Size(200, 280, viewport, 120),
                 FocusMode = Control.FocusModeEnum.None
             };
             button.MouseEntered += () => _OnCardMouseEntered(cardIndex);
@@ -375,17 +395,17 @@ public partial class UIManager : Control
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
             cardVbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            cardVbox.AddThemeConstantOverride("separation", UiSpacingNormal);
+            cardVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingNormal, viewport, 4));
 
             var margin = new MarginContainer
             {
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
             margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            margin.AddThemeConstantOverride("margin_top", UiMarginMedium);
-            margin.AddThemeConstantOverride("margin_bottom", UiMarginMedium);
-            margin.AddThemeConstantOverride("margin_left", UiMarginMedium);
-            margin.AddThemeConstantOverride("margin_right", UiMarginMedium);
+            margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
+            margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
+            margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
+            margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
             button.AddChild(margin);
             margin.AddChild(cardVbox);
 
@@ -396,7 +416,7 @@ public partial class UIManager : Control
                 Text = "【类型】",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            categoryLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
+            categoryLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 9));
             categoryLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(categoryLabel);
 
@@ -408,7 +428,7 @@ public partial class UIManager : Control
                 HorizontalAlignment = HorizontalAlignment.Center,
                 AutowrapMode = TextServer.AutowrapMode.WordSmart
             };
-            title.AddThemeFontSizeOverride("font_size", UiFontTitle);
+            title.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 15));
             cardVbox.AddChild(title);
 
             // Separator
@@ -419,7 +439,7 @@ public partial class UIManager : Control
             var iconPlaceholder = new CenterContainer
             {
                 Name = "IconContainer",
-                CustomMinimumSize = new Vector2(0, 70),
+                CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(70, viewport, 42)),
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
             cardVbox.AddChild(iconPlaceholder);
@@ -430,7 +450,7 @@ public partial class UIManager : Control
                 Text = "⚔️",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            iconLabel.AddThemeFontSizeOverride("font_size", 55);
+            iconLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
             iconPlaceholder.AddChild(iconLabel);
 
             // 4. Type
@@ -440,7 +460,7 @@ public partial class UIManager : Control
                 Text = "类型",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            typeLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
+            typeLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 10));
             typeLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(typeLabel);
 
@@ -452,7 +472,7 @@ public partial class UIManager : Control
                 HorizontalAlignment = HorizontalAlignment.Center,
                 AutowrapMode = TextServer.AutowrapMode.WordSmart
             };
-            desc.AddThemeFontSizeOverride("font_size", 13);
+            desc.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(13, viewport, 10));
             desc.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(desc);
 
@@ -471,7 +491,7 @@ public partial class UIManager : Control
                 Text = "稀有度",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            rarity.AddThemeFontSizeOverride("font_size", UiFontBody);
+            rarity.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 10));
             cardVbox.AddChild(rarity);
 
             // 7. Hint
@@ -481,7 +501,7 @@ public partial class UIManager : Control
                 Text = "悬停查看详情",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
-            hintLabel.AddThemeFontSizeOverride("font_size", UiFontMicro);
+            hintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewport, 9));
             hintLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(hintLabel);
         }
@@ -492,9 +512,10 @@ public partial class UIManager : Control
             Text = "💡 按 [1] [2] [3] 选择 | 按 [Enter] 或 [Delete] 跳过",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        keyboardHintLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
+        keyboardHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 10));
         keyboardHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
         mainVbox.AddChild(keyboardHintLabel);
+        _weaponKeyboardHintLabel = keyboardHintLabel;
 
         // Skip button
         var skipContainer = new CenterContainer();
@@ -503,9 +524,9 @@ public partial class UIManager : Control
         _skipButton = new Button
         {
             Text = "跳过升级",
-            CustomMinimumSize = new Vector2(150, 40)
+            CustomMinimumSize = ResponsiveUi.Size(150, 40, viewport, 30)
         };
-        _skipButton.AddThemeFontSizeOverride("font_size", UiFontEmph);
+        _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 12));
         var skipNormal = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
         skipNormal.BgColor = new Color(0.25f, 0.2f, 0.2f, 0.9f);
         _skipButton.AddThemeStyleboxOverride("normal", skipNormal);
@@ -518,6 +539,7 @@ public partial class UIManager : Control
 
     private void _CreateTooltipPanel()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         _tooltipPanel = new Panel
         {
             Visible = false,
@@ -538,20 +560,20 @@ public partial class UIManager : Control
             FitContent = true,
             ScrollActive = false,
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            CustomMinimumSize = new Vector2(320, 0)
+            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(320, viewport, 0.48f), 0)
         };
-        _tooltipLabel.AddThemeFontSizeOverride("normal_font_size", 14);
-        _tooltipLabel.AddThemeFontSizeOverride("bold_font_size", 15);
+        _tooltipLabel.AddThemeFontSizeOverride("normal_font_size", ResponsiveUi.Font(14, viewport, 10));
+        _tooltipLabel.AddThemeFontSizeOverride("bold_font_size", ResponsiveUi.Font(15, viewport, 11));
         _tooltipLabel.AddThemeColorOverride("default_color", NoteText);
 
         var margin = new MarginContainer
         {
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
-        margin.AddThemeConstantOverride("margin_left", UiMarginXLarge);
-        margin.AddThemeConstantOverride("margin_right", UiMarginXLarge);
-        margin.AddThemeConstantOverride("margin_top", 12);
-        margin.AddThemeConstantOverride("margin_bottom", 12);
+        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginXLarge, viewport, 8));
+        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginXLarge, viewport, 8));
+        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(12, viewport, 6));
+        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(12, viewport, 6));
         _tooltipPanel.AddChild(margin);
         margin.AddChild(_tooltipLabel);
 
@@ -705,8 +727,8 @@ public partial class UIManager : Control
             if (!_bossUiVisible)
             {
                 _bossUiVisible = true;
-                if (_bossHealthBar != null) _bossHealthBar.Visible = true;
-                if (_bossHealthLabel != null) _bossHealthLabel.Visible = true;
+                if (_bossHealthBar != null) _bossHealthBar.Visible = _gameStarted;
+                if (_bossHealthLabel != null) _bossHealthLabel.Visible = _gameStarted;
             }
             if (boss.CurrentHealth != _bossUiHealth || boss.MaxHealth != _bossUiMaxHealth)
             {
@@ -841,7 +863,21 @@ public partial class UIManager : Control
 
     private void _StartGame()
     {
+        _gameStarted = true;
         if (_welcomePanel != null) _welcomePanel.Visible = false;
+        _SetGameplayHudVisible(true);
+    }
+
+    private void _SetGameplayHudVisible(bool visible)
+    {
+        if (_hudPanel != null) _hudPanel.Visible = visible;
+        if (_bossHealthBar != null) _bossHealthBar.Visible = visible && _bossUiVisible;
+        if (_bossHealthLabel != null) _bossHealthLabel.Visible = visible && _bossUiVisible;
+        if (_roundBanner != null) _roundBanner.Visible = visible;
+        if (_resonanceIndicator != null) _resonanceIndicator.Visible = visible && Core.GameConfig.MathSystemsEnabled;
+        if (_fieldChargeLabel != null) _fieldChargeLabel.Visible = visible;
+        if (_strategyLabel != null) _strategyLabel.Visible = visible;
+        if (_fieldHintLabel != null) _fieldHintLabel.Visible = visible;
     }
 
     // ═══════════════════════════════════════════════
@@ -941,10 +977,12 @@ public partial class UIManager : Control
 
                 if (iconContainer != null && wc.IconTexture != null)
                 {
+                    var viewport = ResponsiveUi.ViewportSize(this);
                     var existingTex = iconContainer.GetNodeOrNull<TextureRect>("IconTex");
                     if (existingTex != null)
                     {
                         existingTex.Texture = wc.IconTexture;
+                        existingTex.CustomMinimumSize = ResponsiveUi.Size(60, 60, viewport, 38);
                         existingTex.Visible = true;
                     }
                     else
@@ -955,7 +993,7 @@ public partial class UIManager : Control
                             Texture = wc.IconTexture,
                             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
                             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                            CustomMinimumSize = new Vector2(60, 60)
+                            CustomMinimumSize = ResponsiveUi.Size(60, 60, viewport, 38)
                         };
                         iconContainer.AddChild(texRect);
                     }
@@ -964,6 +1002,7 @@ public partial class UIManager : Control
                 }
                 else if (iconContainer != null)
                 {
+                    var viewport = ResponsiveUi.ViewportSize(this);
                     var existingTex = iconContainer.GetNodeOrNull<TextureRect>("IconTex");
                     if (existingTex != null)
                         existingTex.Visible = false;
@@ -975,9 +1014,10 @@ public partial class UIManager : Control
                             HorizontalAlignment = HorizontalAlignment.Center,
                             VerticalAlignment = VerticalAlignment.Center
                         };
-                        iconNode.AddThemeFontSizeOverride("font_size", 55);
+                        iconNode.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
                         iconContainer.AddChild(iconNode);
                     }
+                    iconNode.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
                     iconNode.Text = wc.Icon;
                     iconNode.Visible = true;
                 }
@@ -1003,9 +1043,9 @@ public partial class UIManager : Control
                         rarityNode.AddThemeColorOverride("font_color", RarityEpic);
                         break;
                     case 4:
-                        borderColor = new Color(1f, 0.8f, 0.25f);
-                        titleNode.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.25f));
-                        rarityNode.AddThemeColorOverride("font_color", new Color(1f, 0.8f, 0.25f));
+                        borderColor = RarityLegendary;
+                        titleNode.AddThemeColorOverride("font_color", RarityLegendary);
+                        rarityNode.AddThemeColorOverride("font_color", RarityLegendary);
                         break;
                     default:
                         borderColor = RarityCommon;
@@ -1167,13 +1207,13 @@ public partial class UIManager : Control
         _tooltipLabel.ResetSize();
 
         var screenSize = GetViewport().GetVisibleRect().Size;
-        float contentWidth = Mathf.Min(_tooltipMaxWidth, Mathf.Max(260.0f, screenSize.X * 0.32f));
+        float contentWidth = Mathf.Min(_tooltipMaxWidth, Mathf.Max(ResponsiveUi.Px(260, screenSize, 180), screenSize.X * 0.32f));
         float contentHeight = _tooltipLabel.GetContentHeight();
 
-        contentHeight = Mathf.Max(contentHeight, 100.0f);
+        contentHeight = Mathf.Max(contentHeight, ResponsiveUi.Px(100, screenSize, 72));
 
-        float panelWidth = contentWidth + 32.0f;
-        float panelHeight = contentHeight + 24.0f;
+        float panelWidth = contentWidth + ResponsiveUi.Px(32, screenSize, 16);
+        float panelHeight = contentHeight + ResponsiveUi.Px(24, screenSize, 12);
 
         _tooltipLabel.CustomMinimumSize = new Vector2(contentWidth, contentHeight);
         _tooltipPanel.CustomMinimumSize = new Vector2(panelWidth, panelHeight);
@@ -1222,8 +1262,8 @@ public partial class UIManager : Control
         }
 
         _tooltipPanel.Position = new Vector2(
-            Mathf.Clamp(mousePos.X + _tooltipOffset.X, 10, screenSize.X - panelSize.X - 10),
-            Mathf.Clamp(mousePos.Y + _tooltipOffset.Y, 10, screenSize.Y - panelSize.Y - 10)
+            Mathf.Clamp(mousePos.X + _tooltipOffset.X, ResponsiveUi.Px(10, screenSize, 5), screenSize.X - panelSize.X - ResponsiveUi.Px(10, screenSize, 5)),
+            Mathf.Clamp(mousePos.Y + _tooltipOffset.Y, ResponsiveUi.Px(10, screenSize, 5), screenSize.Y - panelSize.Y - ResponsiveUi.Px(10, screenSize, 5))
         );
     }
 
@@ -1551,6 +1591,134 @@ public partial class UIManager : Control
     {
         var viewportSize = GetViewport().GetVisibleRect().Size;
         _roundBanner?.OnViewportSizeChanged(viewportSize);
+        _ApplyResponsiveLayout(viewportSize);
+    }
+
+    private void _ApplyResponsiveLayout(Vector2 viewportSize)
+    {
+        float scale = ResponsiveUi.Scale(viewportSize);
+        _tooltipMaxWidth = Mathf.Min(GameConfig.TooltipMaxWidth * scale, viewportSize.X * 0.54f);
+        _tooltipOffset = ResponsiveUi.Size(GameConfig.TooltipOffset.X, GameConfig.TooltipOffset.Y, viewportSize, 8);
+
+        if (_tooltipLabel != null)
+        {
+            _tooltipLabel.AddThemeFontSizeOverride("normal_font_size", ResponsiveUi.Font(14, viewportSize, 10));
+            _tooltipLabel.AddThemeFontSizeOverride("bold_font_size", ResponsiveUi.Font(15, viewportSize, 11));
+        }
+
+        _ApplyWeaponSelectionResponsive(viewportSize);
+        _ApplyBossHealthResponsive(viewportSize);
+        _ApplyMathUiResponsive(viewportSize);
+        _ApplyLevelUpResponsive(viewportSize);
+    }
+
+    private void _ApplyWeaponSelectionResponsive(Vector2 viewportSize)
+    {
+        _weaponSelectionMainVbox?.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingSection, viewportSize, 12));
+        _weaponButtonContainer?.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingWide, viewportSize, 8));
+        _weaponSelectionTitleLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(32, viewportSize, 22));
+        _currentWeaponLabel.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewportSize, 0.9f), 0);
+        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewportSize, 12));
+        _weaponSelectionDescLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(18, viewportSize, 13));
+        if (_weaponSelectionDescLabel != null)
+            _weaponSelectionDescLabel.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewportSize, 0.9f), 0);
+        _weaponKeyboardHintLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewportSize, 10));
+
+        foreach (var button in _weaponButtons)
+        {
+            button.CustomMinimumSize = ResponsiveUi.Size(200, 280, viewportSize, 120);
+            if (button.GetChildCount() == 0 || button.GetChild(0) is not MarginContainer margin)
+                continue;
+
+            int cardMargin = ResponsiveUi.Px(UiMarginMedium, viewportSize, 6);
+            margin.AddThemeConstantOverride("margin_top", cardMargin);
+            margin.AddThemeConstantOverride("margin_bottom", cardMargin);
+            margin.AddThemeConstantOverride("margin_left", cardMargin);
+            margin.AddThemeConstantOverride("margin_right", cardMargin);
+
+            if (margin.GetChildCount() == 0 || margin.GetChild(0) is not VBoxContainer vbox)
+                continue;
+
+            vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingNormal, viewportSize, 4));
+            (vbox.FindChild("Category", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewportSize, 9));
+            (vbox.FindChild("Title", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewportSize, 15));
+            (vbox.FindChild("Type", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewportSize, 10));
+            (vbox.FindChild("Desc", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(13, viewportSize, 10));
+            (vbox.FindChild("Rarity", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewportSize, 10));
+            (vbox.FindChild("Hint", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewportSize, 9));
+            (vbox.FindChild("Icon", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewportSize, 32));
+            if (vbox.FindChild("IconContainer", true, false) is CenterContainer iconContainer)
+                iconContainer.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(70, viewportSize, 42));
+        }
+
+        if (_skipButton != null)
+        {
+            _skipButton.CustomMinimumSize = ResponsiveUi.Size(150, 40, viewportSize, 30);
+            _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewportSize, 12));
+        }
+    }
+
+    private void _ApplyBossHealthResponsive(Vector2 viewportSize)
+    {
+        if (_bossHealthBar == null || _bossHealthLabel == null)
+            return;
+
+        float top = ResponsiveUi.Px(66, viewportSize, 46);
+        float height = ResponsiveUi.Px(12, viewportSize, 8);
+        _bossHealthBar.OffsetTop = top;
+        _bossHealthBar.OffsetBottom = top + height;
+        _bossHealthBar.OffsetLeft = ResponsiveUi.Px(16, viewportSize, 8);
+        _bossHealthBar.OffsetRight = -ResponsiveUi.Px(16, viewportSize, 8);
+        _bossHealthBar.CustomMinimumSize = new Vector2(0, height);
+        _bossHealthLabel.OffsetTop = top;
+        _bossHealthLabel.OffsetBottom = top + ResponsiveUi.Px(18, viewportSize, 12);
+        _bossHealthLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewportSize, 9));
+    }
+
+    private void _ApplyMathUiResponsive(Vector2 viewportSize)
+    {
+        if (_resonanceIndicator != null)
+        {
+            _resonanceIndicator.OffsetLeft = -ResponsiveUi.Px(210, viewportSize, 150);
+            _resonanceIndicator.OffsetTop = ResponsiveUi.Px(58, viewportSize, 42);
+            _resonanceIndicator.OffsetRight = -ResponsiveUi.Px(12, viewportSize, 6);
+            _resonanceIndicator.OffsetBottom = _resonanceIndicator.OffsetTop + ResponsiveUi.Px(72, viewportSize, 52);
+        }
+
+        if (_fieldChargeLabel != null)
+        {
+            _fieldChargeLabel.OffsetLeft = ResponsiveUi.Px(12, viewportSize, 6);
+            _fieldChargeLabel.OffsetBottom = -ResponsiveUi.Px(94, viewportSize, 70);
+            _fieldChargeLabel.OffsetTop = -ResponsiveUi.Px(122, viewportSize, 96);
+            _fieldChargeLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(13, viewportSize, 9));
+        }
+
+        if (_strategyLabel != null)
+        {
+            _strategyLabel.OffsetLeft = ResponsiveUi.Px(12, viewportSize, 6);
+            _strategyLabel.OffsetBottom = -ResponsiveUi.Px(124, viewportSize, 96);
+            _strategyLabel.OffsetTop = -ResponsiveUi.Px(150, viewportSize, 116);
+            _strategyLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(11, viewportSize, 9));
+        }
+
+        if (_fieldHintLabel != null)
+        {
+            _fieldHintLabel.OffsetBottom = -ResponsiveUi.Px(120, viewportSize, 82);
+            _fieldHintLabel.OffsetTop = -ResponsiveUi.Px(160, viewportSize, 116);
+            _fieldHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewportSize, 11));
+        }
+    }
+
+    private void _ApplyLevelUpResponsive(Vector2 viewportSize)
+    {
+        if (_levelUpPanel == null)
+            return;
+
+        float top = ResponsiveUi.Px(90, viewportSize, 64);
+        _levelUpPanel.OffsetTop = top;
+        _levelUpPanel.OffsetBottom = top + ResponsiveUi.Px(40, viewportSize, 30);
+        _levelUpLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewportSize, 15));
+        _levelUpLabel?.AddThemeConstantOverride("outline_size", ResponsiveUi.Px(UiOutlineHero, viewportSize, 2));
     }
 
     // ═══════════════════════════════════════════════
@@ -1580,6 +1748,7 @@ public partial class UIManager : Control
     }
     public void ShowRoundSummary(int round, int kills, int totalKills, int score)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         HideRoundBanner();
 
         if (_roundSummaryPanel != null && IsInstanceValid(_roundSummaryPanel))
@@ -1606,7 +1775,7 @@ public partial class UIManager : Control
 
         // The actual card
         var card = new Panel();
-        card.CustomMinimumSize = new Vector2(340, 260);
+        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(340, 260), viewport, 0.84f, 0.72f);
         card.MouseFilter = Control.MouseFilterEnum.Ignore;
 
         var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 8f);
@@ -1616,15 +1785,15 @@ public partial class UIManager : Control
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", UiMarginHeroCard);
-        margin.AddThemeConstantOverride("margin_right", UiMarginHeroCard);
-        margin.AddThemeConstantOverride("margin_top", UiMarginHeroPad);
-        margin.AddThemeConstantOverride("margin_bottom", UiMarginHeroPad);
+        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginHeroCard, viewport, 12));
+        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginHeroCard, viewport, 12));
+        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(UiMarginHeroPad, viewport, 10));
+        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(UiMarginHeroPad, viewport, 10));
         margin.MouseFilter = Control.MouseFilterEnum.Ignore;
         card.AddChild(margin);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", UiSpacingNormal);
+        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingNormal, viewport, 4));
         vbox.MouseFilter = Control.MouseFilterEnum.Ignore;
         margin.AddChild(vbox);
 
@@ -1634,7 +1803,7 @@ public partial class UIManager : Control
             Text = $"第 {round} 回合完成",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        titleLbl.AddThemeFontSizeOverride("font_size", 26);
+        titleLbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(26, viewport, 18));
         titleLbl.AddThemeColorOverride("font_color", BloodBright);
         titleLbl.AddThemeConstantOverride("outline_size", UiOutlineBold);
         titleLbl.AddThemeColorOverride("font_outline_color", InkBlack);
@@ -1646,18 +1815,18 @@ public partial class UIManager : Control
             Text = "ROUND COMPLETE",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        subLbl.AddThemeFontSizeOverride("font_size", UiFontMicro);
+        subLbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewport, 9));
         subLbl.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.40f));
         vbox.AddChild(subLbl);
 
         // Separator
         var sep = new HSeparator();
         sep.AddThemeColorOverride("separator", new Color(0.85f, 0.70f, 0.25f, 0.3f));
-        sep.CustomMinimumSize = new Vector2(0, 6);
+        sep.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(6, viewport, 3));
         vbox.AddChild(sep);
 
         // Spacer
-        var sp1 = new Control { CustomMinimumSize = new Vector2(0, 4), MouseFilter = Control.MouseFilterEnum.Ignore };
+        var sp1 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(4, viewport, 2)), MouseFilter = Control.MouseFilterEnum.Ignore };
         vbox.AddChild(sp1);
 
         _AddStatRow(vbox, "本波击杀", kills.ToString(), new Color(0.8f, 0.5f, 0.4f));
@@ -1665,7 +1834,7 @@ public partial class UIManager : Control
         _AddStatRow(vbox, "当前得分", score.ToString(), new Color(0.85f, 0.6f, 0.45f));
 
         // Spacer
-        var sp2 = new Control { CustomMinimumSize = new Vector2(0, 6), MouseFilter = Control.MouseFilterEnum.Ignore };
+        var sp2 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(6, viewport, 3)), MouseFilter = Control.MouseFilterEnum.Ignore };
         vbox.AddChild(sp2);
 
         // Bottom hint
@@ -1674,7 +1843,7 @@ public partial class UIManager : Control
             Text = "准备进入下一波...",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        hint.AddThemeFontSizeOverride("font_size", UiFontSmall);
+        hint.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 9));
         hint.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.55f));
         vbox.AddChild(hint);
 
@@ -1693,6 +1862,7 @@ public partial class UIManager : Control
 
     private void _AddStatRow(VBoxContainer parent, string label, string value, Color accentColor)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         var row = new HBoxContainer();
         row.MouseFilter = Control.MouseFilterEnum.Ignore;
         row.AddThemeConstantOverride("separation", 0);
@@ -1704,7 +1874,7 @@ public partial class UIManager : Control
             Text = label,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
-        lbl.AddThemeFontSizeOverride("font_size", UiFontEmph);
+        lbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 11));
         lbl.AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.70f));
         lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
         lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
@@ -1717,7 +1887,7 @@ public partial class UIManager : Control
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
             HorizontalAlignment = HorizontalAlignment.Right
         };
-        val.AddThemeFontSizeOverride("font_size", 20);
+        val.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(20, viewport, 14));
         val.AddThemeColorOverride("font_color", accentColor);
         val.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         val.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
@@ -1839,6 +2009,7 @@ public partial class UIManager : Control
     /// <summary>显示升级/强化通知</summary>
     public void ShowLevelUpNotification(string text, Color color)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         if (_levelUpPanel == null)
         {
             _levelUpPanel = new Panel
@@ -1848,8 +2019,8 @@ public partial class UIManager : Control
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
             _levelUpPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-            _levelUpPanel.OffsetTop = 90;
-            _levelUpPanel.OffsetBottom = 130;
+            _levelUpPanel.OffsetTop = ResponsiveUi.Px(90, viewport, 64);
+            _levelUpPanel.OffsetBottom = _levelUpPanel.OffsetTop + ResponsiveUi.Px(40, viewport, 30);
             var style = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0) };
             _levelUpPanel.AddThemeStyleboxOverride("panel", style);
             AddChild(_levelUpPanel);
@@ -1863,8 +2034,8 @@ public partial class UIManager : Control
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            _levelUpLabel.AddThemeFontSizeOverride("font_size", UiFontTitle);
-            _levelUpLabel.AddThemeConstantOverride("outline_size", UiOutlineHero);
+            _levelUpLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 15));
+            _levelUpLabel.AddThemeConstantOverride("outline_size", ResponsiveUi.Px(UiOutlineHero, viewport, 2));
             _levelUpLabel.AddThemeColorOverride("font_outline_color", InkBlack);
             center.AddChild(_levelUpLabel);
         }

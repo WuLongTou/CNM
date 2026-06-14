@@ -81,6 +81,8 @@ public partial class RoundBanner : CenterContainer
         _sub.AddThemeConstantOverride("outline_size", 2);
         _sub.AddThemeColorOverride("font_outline_color", HandDrawnTheme.Colors.InkBlack);
         _panel.AddChild(_sub);
+
+        OnViewportSizeChanged(ResponsiveUi.ViewportSize(this));
     }
 
     /// <summary>显示回合横幅；persistent=true 时不自动淡出，由调用方负责 Hide。</summary>
@@ -146,10 +148,17 @@ public partial class RoundBanner : CenterContainer
     /// <summary>视口尺寸变化时调用，重新计算 banner 尺寸上限。</summary>
     public void OnViewportSizeChanged(Vector2 viewportSize)
     {
-        var size = new Vector2(Mathf.Min(BannerMaxWidth, viewportSize.X - BannerViewportPadding), BannerFixedHeight);
+        float padding = ResponsiveUi.Px(BannerViewportPadding, viewportSize, 18);
+        var size = new Vector2(
+            Mathf.Min(BannerMaxWidth * ResponsiveUi.Scale(viewportSize), viewportSize.X - padding),
+            ResponsiveUi.Px(BannerFixedHeight, viewportSize, 72));
         _panel.CustomMinimumSize = size;
         _panel.PivotOffset = size / 2.0f;
         _glow.CustomMinimumSize = size;
         _glow.PivotOffset = size / 2.0f;
+        _title.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(36, viewportSize, 24));
+        _title.AddThemeConstantOverride("outline_size", ResponsiveUi.Px(6, viewportSize, 3));
+        _sub.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(14, viewportSize, 10));
+        _sub.AddThemeConstantOverride("outline_size", ResponsiveUi.Px(2, viewportSize, 1));
     }
 }

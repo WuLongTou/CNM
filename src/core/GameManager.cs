@@ -57,6 +57,11 @@ public partial class GameManager : Node
     private int _roundDamageTaken;
     private int _totalKills;
     private int _totalDamageDealt;
+    private RoundDirective _roundDirective = RoundDirective.Standard;
+    private Vector2 _riftPosition;
+    private Node2D? _riftVisual;
+    private int _directiveProgress;
+    private const float RiftRadius = 190.0f;
 
     public Player? PlayerRef { get; private set; }
     public Zombie? BossZombie { get; private set; }
@@ -94,6 +99,14 @@ public partial class GameManager : Node
         { 4, 35 }, { 5, 40 }, { 6, 50 }, { 7, 60 }, { 8, 45 },
         { 9, 55 }, { 10, 65 }, { 11, 50 }, { 12, 70 }, { 13, 20 }
     };
+
+    private enum RoundDirective
+    {
+        Standard,
+        RiftHarvest,
+        EliteHunt,
+        SwarmSurge
+    }
 
     private struct SpawnEntry
     {
@@ -270,6 +283,8 @@ public partial class GameManager : Node
         _roundKills = 0;
         _roundDamageDealt = 0;
         _roundDamageTaken = 0;
+        _directiveProgress = 0;
+        _ChooseRoundDirective();
 
         var roundFactor = Mathf.Sqrt((float)CurrentRound) * 1.5f;
         _zombiesToSpawn = ZombiesPerRoundBase + (int)roundFactor + (CurrentRound - 1) * ZombiesIncreasePerRound;
@@ -278,6 +293,8 @@ public partial class GameManager : Node
         _zombiesAlive = 0;
 
         _currentSpawnInterval = Mathf.Max(SpawnIntervalMin, SpawnInterval * Mathf.Pow(0.94f, Mathf.Max(0, CurrentRound - 1)));
+        if (_roundDirective == RoundDirective.SwarmSurge)
+            _currentSpawnInterval = Mathf.Max(SpawnIntervalMin * 0.85f, _currentSpawnInterval * 0.72f);
         _spawnTimer = _currentSpawnInterval;
 
         if (HealBetweenRounds && _player != null && CurrentRound > 1)
@@ -306,7 +323,10 @@ public partial class GameManager : Node
         if (bg != null)
         {
             if (bg is Background background)
+            {
                 background.SetTension(Mathf.Clamp((float)(CurrentRound - 1) / 15.0f, 0.0f, 1.0f));
+                _ApplyDirectiveAtmosphere(background);
+            }
         }
 
         if (CurrentRound % 5 == 0 && _uiManager != null)
@@ -371,6 +391,7 @@ public partial class GameManager : Node
 
         _transitioningToCombat = false;
         CurrentState = GameState.Combat;
+        _ActivateRoundDirective();
         WeaponSelectionEnded?.Invoke();
 
         var cardName = card != null ? card.GetType().Name : "null";
@@ -388,6 +409,7 @@ public partial class GameManager : Node
 
         _transitioningToCombat = false;
         CurrentState = GameState.Combat;
+        _ActivateRoundDirective();
         WeaponSelectionEnded?.Invoke();
 
         LogUtils.Print("跳过升级！直接战斗！");
@@ -419,6 +441,10 @@ public partial class GameManager : Node
 
         var eliteChance = Mathf.Min(EliteChanceMax, EliteChanceBase + EliteChancePerRound * Mathf.Max(0, CurrentRound - 1));
         if (GD.Randf() < eliteChance)
+        {
+            zombieInstance.SetElite(true);
+        }
+        else if (_roundDirective == RoundDirective.EliteHunt && _zombiesSpawned == 0)
         {
             zombieInstance.SetElite(true);
         }
@@ -459,6 +485,9 @@ public partial class GameManager : Node
 
         _zombiesSpawned++;
         _zombiesAlive++;
+
+        if (_roundDirective == RoundDirective.SwarmSurge && _zombiesSpawned % 4 == 0 && !zombieInstance.IsBoss)
+            _TrySpawnSwarmGroup(zombieInstance.GlobalPosition);
 
         _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
 
@@ -649,6 +678,7 @@ public partial class GameManager : Node
 
         // Try to drop a pickup
         _TryDropPickup(zombie);
+        _HandleDirectiveKill(zombie, pts);
     }
 
     private void _OnPlayerDied()
@@ -663,17 +693,161 @@ public partial class GameManager : Node
                 zombie.SetPhysicsProcess(false);
                 zombie.SetProcess(false);
             }
+
         }
 
         _spawnTimer = 999999.0f;
         _zombiesToSpawn = 0;
         _zombiesAlive = 0;
+        _ClearDirectiveVisual();
         ZombieRegistry.Clear();
 
         LogUtils.Print($"游戏结束！坚持了 {CurrentRound} 回合，得分: {Score}");
 
         SaveManager.SaveHighScore(Score);
         SaveManager.AddRoundsSurvived(CurrentRound);
+    }
+
+    private void _ChooseRoundDirective()
+    {
+        _ClearDirectiveVisual();
+        if (CurrentRound <= 1)
+        {
+            _roundDirective = RoundDirective.Standard;
+            return;
+        }
+
+        int directiveSlot = CurrentRound % 4;
+        _roundDirective = directiveSlot switch
+        {
+            1 => RoundDirective.RiftHarvest,
+            2 => RoundDirective.EliteHunt,
+            3 => RoundDirective.SwarmSurge,
+            _ => RoundDirective.Standard
+        };
+    }
+
+    private void _ActivateRoundDirective()
+    {
+        switch (_roundDirective)
+        {
+            case RoundDirective.RiftHarvest:
+                _riftPosition = _PickArenaPoint(0.22f);
+                _CreateRiftVisual();
+                _uiManager?.ShowLevelUpNotification("战术目标: 在炼金裂隙附近击杀 5 只僵尸", new Color(1.0f, 0.62f, 0.24f));
+                break;
+            case RoundDirective.EliteHunt:
+                _uiManager?.ShowLevelUpNotification("战术目标: 击杀精英悬赏目标", new Color(0.95f, 0.35f, 0.25f));
+                break;
+            case RoundDirective.SwarmSurge:
+                _uiManager?.ShowLevelUpNotification("事件: 虫群潮汐，尸群会成组涌入", new Color(0.55f, 0.85f, 0.35f));
+                break;
+            default:
+                _uiManager?.ShowLevelUpNotification("战术目标: 保持连击，快速清场", new Color(0.6f, 0.7f, 0.9f));
+                break;
+        }
+    }
+
+    private void _HandleDirectiveKill(Zombie zombie, int basePoints)
+    {
+        if (_player == null)
+            return;
+
+        switch (_roundDirective)
+        {
+            case RoundDirective.RiftHarvest:
+                if (_riftVisual != null && zombie.GlobalPosition.DistanceTo(_riftPosition) <= RiftRadius)
+                {
+                    _directiveProgress++;
+                    int bonus = Mathf.Max(8, basePoints / 2);
+                    Score += bonus;
+                    _uiManager?.UpdateScoreDisplay(Score);
+                    _uiManager?.ShowKillEffect(zombie.GlobalPosition, bonus);
+                    if (_directiveProgress >= 5)
+                    {
+                        _player.Heal(Mathf.Max(8, _player.MaxHealth / 12));
+                        _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
+                        _uiManager?.ShowLevelUpNotification("裂隙净化完成: 回复生命并获得额外分数", new Color(1.0f, 0.78f, 0.34f));
+                        _ClearDirectiveVisual();
+                        _roundDirective = RoundDirective.Standard;
+                    }
+                }
+                break;
+            case RoundDirective.EliteHunt:
+                if (zombie.IsElite || zombie.IsBoss)
+                {
+                    _directiveProgress++;
+                    Score += basePoints;
+                    _uiManager?.UpdateScoreDisplay(Score);
+                    _uiManager?.ShowLevelUpNotification("精英悬赏完成: 分数翻倍", new Color(1.0f, 0.35f, 0.25f));
+                    _roundDirective = RoundDirective.Standard;
+                }
+                break;
+        }
+    }
+
+    private Vector2 _PickArenaPoint(float marginRatio)
+    {
+        var ws = GameConfig.WorldSize;
+        float mx = ws.X * marginRatio;
+        float my = ws.Y * marginRatio;
+        return new Vector2((float)GD.RandRange(mx, ws.X - mx), (float)GD.RandRange(my, ws.Y - my));
+    }
+
+    private void _CreateRiftVisual()
+    {
+        _ClearDirectiveVisual();
+        var root = new Node2D { Name = "RoundRift", GlobalPosition = _riftPosition, ZIndex = -1 };
+        GetTree().CurrentScene.AddChild(root);
+        _riftVisual = root;
+
+        var outer = new Line2D
+        {
+            Width = 2.0f,
+            DefaultColor = new Color(1.0f, 0.62f, 0.24f, 0.55f),
+            Closed = true
+        };
+        var inner = new Line2D
+        {
+            Width = 1.2f,
+            DefaultColor = new Color(0.55f, 0.20f, 0.95f, 0.48f),
+            Closed = true
+        };
+        for (int i = 0; i < 48; i++)
+        {
+            float angle = i * Mathf.Tau / 48.0f;
+            outer.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * RiftRadius);
+            inner.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (RiftRadius * 0.55f));
+        }
+        root.AddChild(outer);
+        root.AddChild(inner);
+
+        var pulse = root.CreateTween().SetLoops();
+        pulse.TweenProperty(root, "scale", new Vector2(1.06f, 1.06f), 0.7f).SetTrans(Tween.TransitionType.Sine);
+        pulse.TweenProperty(root, "scale", Vector2.One, 0.7f).SetTrans(Tween.TransitionType.Sine);
+    }
+
+    private void _ClearDirectiveVisual()
+    {
+        if (_riftVisual != null && IsInstanceValid(_riftVisual))
+            _riftVisual.QueueFree();
+        _riftVisual = null;
+    }
+
+    private void _ApplyDirectiveAtmosphere(Background background)
+    {
+        switch (_roundDirective)
+        {
+            case RoundDirective.RiftHarvest:
+                background.SetAtmosphereTint(1.05f, 0.82f, 1.12f, 0.28f, 1.0f);
+                break;
+            case RoundDirective.EliteHunt:
+                background.SetAtmosphereTint(1.18f, 0.72f, 0.58f, 0.35f, 1.2f);
+                break;
+            case RoundDirective.SwarmSurge:
+                background.SetAtmosphereTint(0.82f, 1.05f, 0.72f, 0.30f, 0.9f);
+                break;
+        }
     }
 
     private void _UpdateSpawnPoints()
@@ -797,6 +971,7 @@ public partial class GameManager : Node
         _uiManager?.AddCombo();
         if (_player?.Combat != null)
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
+        _HandleDirectiveKill(zombie, 5);
     }
 
     public void SpawnSwarmGroup(Vector2 pos)

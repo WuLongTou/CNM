@@ -32,14 +32,15 @@ public partial class WelcomePanel : Panel
 
     public override void _Ready()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         _CreateBackgroundArt();
 
         var marginContainer = new MarginContainer();
         marginContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        marginContainer.AddThemeConstantOverride("margin_left", 50);
-        marginContainer.AddThemeConstantOverride("margin_right", 50);
-        marginContainer.AddThemeConstantOverride("margin_top", 30);
-        marginContainer.AddThemeConstantOverride("margin_bottom", 30);
+        marginContainer.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(50, viewport, 18));
+        marginContainer.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(50, viewport, 18));
+        marginContainer.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(30, viewport, 12));
+        marginContainer.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(30, viewport, 12));
         AddChild(marginContainer);
 
         var centerContainer = new CenterContainer();
@@ -47,52 +48,48 @@ public partial class WelcomePanel : Panel
         marginContainer.AddChild(centerContainer);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 25);
+        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(16, viewport, 6));
         centerContainer.AddChild(vbox);
 
         var title = new Label { Text = "🧟 僵尸大战 🧟" };
-        title.AddThemeFontSizeOverride("font_size", 36);
+        title.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(36, viewport, 24));
         title.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
         title.HorizontalAlignment = HorizontalAlignment.Center;
         vbox.AddChild(title);
 
         var subtitle = new Label { Text = "Zombie vs Survivors" };
-        subtitle.AddThemeFontSizeOverride("font_size", 18);
+        subtitle.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(18, viewport, 13));
         subtitle.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
         subtitle.HorizontalAlignment = HorizontalAlignment.Center;
         vbox.AddChild(subtitle);
 
-        _AddHeroArt(vbox);
+        if (!ResponsiveUi.Compact(viewport))
+            _AddHeroArt(vbox, viewport);
 
         string[] introTexts = {
-            "欢迎来到僵尸大战！",
-            "",
-            "在这个生存游戏中，你需要：",
-            "• 每回合选择武器卡牌强化自己",
-            "• 消灭不断涌现的僵尸",
-            "• 尽可能坚持更多回合",
-            "",
-            "准备好迎接挑战了吗？"
+            "炼金荒原正在被尸潮吞没。",
+            "选择强化、完成战术目标、在变化的战场中活下去。",
+            "移动/攻击之外，你还可以用力场和天气节奏反制尸群。",
+            "按 H 查看 HUD 图例，按 C 查看装备详情。"
         };
 
         foreach (var text in introTexts)
         {
             var label = new Label { Text = text };
-            if (text == "")
-                label.CustomMinimumSize = new Vector2(0, 8);
-            else
-                label.AddThemeFontSizeOverride("font_size", 16);
+            label.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(15, viewport, 11));
             label.AddThemeColorOverride("font_color", new Color(0.7f, 0.55f, 0.55f));
             label.HorizontalAlignment = HorizontalAlignment.Center;
+            label.AutowrapMode = TextServer.AutowrapMode.WordSmart;
+            label.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(620, viewport, 0.86f), 0);
             vbox.AddChild(label);
         }
 
         var startButton = new Button
         {
             Text = "开始游戏",
-            CustomMinimumSize = new Vector2(180, 50)
+            CustomMinimumSize = ResponsiveUi.Size(180, 50, viewport, 32)
         };
-        startButton.AddThemeFontSizeOverride("font_size", 22);
+        startButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(22, viewport, 16));
         var (startNormal, startHover, startPressed) = HandDrawnTheme.MakeButtonStyles(
             new Color(0.25f, 0.12f, 0.12f, 0.9f),
             new Color(0.35f, 0.18f, 0.18f, 0.9f),
@@ -108,9 +105,9 @@ public partial class WelcomePanel : Panel
         var helpButton = new Button
         {
             Text = "操作说明",
-            CustomMinimumSize = new Vector2(120, 40)
+            CustomMinimumSize = ResponsiveUi.Size(120, 40, viewport, 28)
         };
-        helpButton.AddThemeFontSizeOverride("font_size", 16);
+        helpButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewport, 12));
         var (helpNormal, helpHover, helpPressed) = HandDrawnTheme.MakeButtonStyles(
             new Color(0.2f, 0.15f, 0.15f, 0.9f),
             new Color(0.3f, 0.22f, 0.22f, 0.9f),
@@ -147,7 +144,7 @@ public partial class WelcomePanel : Panel
         MoveChild(art, 0);
     }
 
-    private void _AddHeroArt(VBoxContainer parent)
+    private void _AddHeroArt(VBoxContainer parent, Vector2 viewport)
     {
         if (!FileAccess.FileExists(HeroArtPath))
             return;
@@ -158,13 +155,13 @@ public partial class WelcomePanel : Panel
 
         var heroWrap = new CenterContainer
         {
-            CustomMinimumSize = new Vector2(0, 118),
+            CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(118, viewport, 78)),
             MouseFilter = MouseFilterEnum.Ignore
         };
         var hero = new TextureRect
         {
             Texture = texture,
-            CustomMinimumSize = new Vector2(112, 112),
+            CustomMinimumSize = ResponsiveUi.Size(112, 112, viewport, 72),
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
             TextureFilter = CanvasItem.TextureFilterEnum.Linear,

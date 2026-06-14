@@ -157,14 +157,14 @@ public partial class ZombieVfx : Node
         if (!FileAccess.FileExists(sheetPath))
             return false;
 
-        // 原始手绘 spritesheet 使用投影分割自动检测帧（bright=0.10 可检测灰色轮廓像素）。
-        // 配合最小区域过滤和空帧过滤，确保每帧完整且有效。
-        var frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
+        var frames = TextureUtils.LoadSpriteSheetGridFrames(sheetPath, cols: 4, rows: 4);
+        if (frames.Count == 0)
+            frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
         if (frames == null || frames.Count == 0)
             return false;
 
         // Ensure all sprites face right
-        if (TextureUtils.FacesLeft(frames[0]))
+        if (TextureUtils.FramesFaceLeft(frames))
         {
             // 复制数组后再翻转，避免直接修改缓存中的 frames
             var flipped = new Godot.Collections.Array<Texture2D>();
@@ -175,10 +175,9 @@ public partial class ZombieVfx : Node
 
         _sprite.Texture = frames[0];
         _pngLoaded = true;
-
         _walkFrames.Clear();
-        int walkCount = Mathf.Min(8, frames.Count);
-        for (int i = 0; i < walkCount; i++)
+        _walkFrames.Clear();
+        for (int i = 0; i < frames.Count; i++)
             _walkFrames.Add(frames[i]);
 
         return true;
@@ -237,7 +236,7 @@ public partial class ZombieVfx : Node
     public void CreateVisuals()
     {
         _CreateShadow();
-        _sprite = new Sprite2D { TextureFilter = CanvasItem.TextureFilterEnum.Nearest };
+        _sprite = new Sprite2D { TextureFilter = CanvasItem.TextureFilterEnum.Linear };
         _zombie.AddChild(_sprite);
 
         // Priority: PNG assets > cached generated sprites > generate on the fly

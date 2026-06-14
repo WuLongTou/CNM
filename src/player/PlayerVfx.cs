@@ -20,6 +20,8 @@ public partial class PlayerVfx : Node
     private float _animTimer = 0.0f;
     private bool _isMoving = false;
     private bool _facingLeft = false;
+    private float _breatheTimer = 0.0f;
+    private AttackType _visualAttackType = AttackType.Melee;
 
     /// <summary>
     /// 当前角色朝向（true=朝左，false=朝右）。
@@ -166,80 +168,26 @@ public partial class PlayerVfx : Node
         _allSpritesLoaded = true;
     }
 
-    private static readonly string[] _WARRIOR_WALK = {
-        "warrior_walk_01", "warrior_walk_02",
-        "warrior_walk_03", "warrior_walk_04",
-        "warrior_walk_05", "warrior_walk_06",
-        "warrior_walk_07", "warrior_walk_08",
-    };
-    private static readonly string[] _WARRIOR_ATTACK = {
-        "warrior_attack_01", "warrior_attack_03",
-        "warrior_attack_04", "warrior_attack_05",
-        "warrior_attack_06", "warrior_attack_01",
-    };
-    private static readonly string[] _WARRIOR_IDLE = {
-        "warrior_idle_02", "warrior_idle_04",
-        "warrior_idle_06", "warrior_idle_08",
-    };
-
-    private static readonly string[] _RANGER_WALK = {
-        "ranger_walk_01", "ranger_walk_02",
-        "ranger_walk_03", "ranger_walk_04",
-        "ranger_walk_05", "ranger_walk_06",
-        "ranger_walk_07", "ranger_walk_08",
-    };
-    private static readonly string[] _RANGER_ATTACK = {
-        "ranger_attack_01", "ranger_attack_02",
-        "ranger_attack_03", "ranger_attack_04",
-        "ranger_attack_06", "ranger_attack_03",
-    };
-    private static readonly string[] _RANGER_IDLE = {
-        "ranger_idle_01", "ranger_idle_04",
-        "ranger_idle_01", "ranger_idle_04",
-    };
-
-    private static readonly string[] _MAGE_WALK = {
-        "mage_walk_01", "mage_walk_02",
-        "mage_walk_03", "mage_walk_04",
-        "mage_walk_05", "mage_walk_06",
-        "mage_walk_07", "mage_walk_08",
-    };
-    private static readonly string[] _MAGE_ATTACK = {
-        "mage_attack_01", "mage_attack_02",
-        "mage_attack_03", "mage_attack_04",
-        "mage_attack_05", "mage_attack_06",
-    };
-    private static readonly string[] _MAGE_IDLE = {
-        "mage_idle_01", "mage_idle_02",
-        "mage_idle_03", "mage_idle_04",
-    };
-
     /// <summary>
-    /// 从任意布局的 sprite sheet 中按"等距分布"取 N 帧。
-    /// AI 生成的 sprite 网格不固定（可能是 4x3 / 4x4 / 6x4 等），
-    /// 直接取前 N 帧只会取到第一行的帧，丢失后续 walk 周期。
-    /// 改为按总帧数等距取样，均匀覆盖整个动画序列。
+    /// Copy frames in their authored order. Sprite sheets are 4x4 atlases, so
+    /// jumping through the detected frame list makes walk/attack cycles skip.
     /// </summary>
-    private static void _TakeFramesEvenly(
+    private static void _CopySequentialFrames(
         Godot.Collections.Array<Texture2D> src,
         Godot.Collections.Array<Texture2D> dst,
-        int want)
+        int maxFrames = 0)
     {
         dst.Clear();
-        if (src == null || src.Count == 0 || want <= 0) return;
-        int total = src.Count;
-        if (total <= want)
-        {
-            for (int i = 0; i < total; i++) dst.Add(src[i]);
-            return;
-        }
-        // 等距取样：保证首尾都覆盖
-        for (int i = 0; i < want; i++)
-        {
-            int idx = (int)System.Math.Round((double)i * (total - 1) / (want - 1));
-            if (idx >= total) idx = total - 1;
-            dst.Add(src[idx]);
-        }
+        if (src == null || src.Count == 0) return;
+        int count = maxFrames > 0 ? Mathf.Min(maxFrames, src.Count) : src.Count;
+        for (int i = 0; i < count; i++)
+            dst.Add(src[i]);
+    }
+
+    private static Godot.Collections.Array<Texture2D> _LoadGridAnimation(string path, int maxFrames)
+    {
+        var frames = Core.TextureUtils.LoadSpriteSheetGridFrames(path, cols: 4, rows: 4, maxFrames: maxFrames);
+        return frames.Count > 0 ? frames : Core.TextureUtils.LoadAndSplitSpriteSheet(path);
     }
 
     private static void _LoadWarriorSprites()
@@ -248,15 +196,14 @@ public partial class PlayerVfx : Node
         _warriorAttackFrames.Clear();
         _warriorIdleFrames.Clear();
 
-        // 投影分割（LoadAndSplitSpriteSheet）+ 等距取样：适配 4x3/4x4/6x4 等任意布局
-        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_walk.png");
-        _TakeFramesEvenly(allWalk, _warriorWalkFrames, 8);
+        var allWalk = _LoadGridAnimation("res://assets/sprites/player/sheets/warrior_walk.png", 16);
+        _CopySequentialFrames(allWalk, _warriorWalkFrames);
 
-        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_attack.png");
-        _TakeFramesEvenly(allAttack, _warriorAttackFrames, 6);
+        var allAttack = _LoadGridAnimation("res://assets/sprites/player/sheets/warrior_attack.png", 9);
+        _CopySequentialFrames(allAttack, _warriorAttackFrames);
 
-        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_idle.png");
-        _TakeFramesEvenly(allIdle, _warriorIdleFrames, 4);
+        var allIdle = _LoadGridAnimation("res://assets/sprites/player/sheets/warrior_idle.png", 4);
+        _CopySequentialFrames(allIdle, _warriorIdleFrames, 4);
 
         _warriorIdle = _warriorIdleFrames.Count > 0 ? _warriorIdleFrames[0] : null;
         _warriorBase = _warriorWalkFrames.Count > 0 ? _warriorWalkFrames[0] : null;
@@ -268,14 +215,14 @@ public partial class PlayerVfx : Node
         _rangerAttackFrames.Clear();
         _rangerIdleFrames.Clear();
 
-        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_walk.png");
-        _TakeFramesEvenly(allWalk, _rangerWalkFrames, 8);
+        var allWalk = _LoadGridAnimation("res://assets/sprites/player/sheets/ranger_walk.png", 12);
+        _CopySequentialFrames(allWalk, _rangerWalkFrames);
 
-        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_attack.png");
-        _TakeFramesEvenly(allAttack, _rangerAttackFrames, 6);
+        var allAttack = _LoadGridAnimation("res://assets/sprites/player/sheets/ranger_attack.png", 6);
+        _CopySequentialFrames(allAttack, _rangerAttackFrames);
 
-        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_idle.png");
-        _TakeFramesEvenly(allIdle, _rangerIdleFrames, 4);
+        var allIdle = _LoadGridAnimation("res://assets/sprites/player/sheets/ranger_idle.png", 6);
+        _CopySequentialFrames(allIdle, _rangerIdleFrames, 6);
 
         _rangerIdle = _rangerIdleFrames.Count > 0 ? _rangerIdleFrames[0] : null;
         _rangerBase = _rangerWalkFrames.Count > 0 ? _rangerWalkFrames[0] : null;
@@ -287,14 +234,14 @@ public partial class PlayerVfx : Node
         _mageAttackFrames.Clear();
         _mageIdleFrames.Clear();
 
-        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_walk.png");
-        _TakeFramesEvenly(allWalk, _mageWalkFrames, 8);
+        var allWalk = _LoadGridAnimation("res://assets/sprites/player/sheets/mage_walk.png", 8);
+        _CopySequentialFrames(allWalk, _mageWalkFrames);
 
-        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_attack.png");
-        _TakeFramesEvenly(allAttack, _mageAttackFrames, 6);
+        var allAttack = _LoadGridAnimation("res://assets/sprites/player/sheets/mage_attack.png", 9);
+        _CopySequentialFrames(allAttack, _mageAttackFrames);
 
-        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_idle.png");
-        _TakeFramesEvenly(allIdle, _mageIdleFrames, 4);
+        var allIdle = _LoadGridAnimation("res://assets/sprites/player/sheets/mage_idle.png", 1);
+        _CopySequentialFrames(allIdle, _mageIdleFrames, 1);
 
         _mageIdle = _mageIdleFrames.Count > 0 ? _mageIdleFrames[0] : null;
         _mageBase = _mageWalkFrames.Count > 0 ? _mageWalkFrames[0] : null;
@@ -303,6 +250,7 @@ public partial class PlayerVfx : Node
     /// Switch active sprites based on current weapon type. Call when weapon changes.
     public void SwitchWeaponSprites(AttackType attackType)
     {
+        _visualAttackType = attackType;
         if (attackType == _lastAttackType) return;
         _lastAttackType = attackType;
         _ApplyWeaponSprites();
@@ -321,7 +269,6 @@ public partial class PlayerVfx : Node
         // 优先使用 _ReloadStaticSprites 加载的 PNG sprite（精确拼图后的 spritesheet）
         if (_warriorIdleFrames.Count > 0 || _rangerIdleFrames.Count > 0 || _mageIdleFrames.Count > 0)
         {
-            // 按当前职业选择静态数组（CurrentAttackType 决定职业：Melee=Warrior/Ranged=Ranger/Magic=Mage）
             Godot.Collections.Array<Texture2D> walkSrc, atkSrc, idleSrc;
             Texture2D? idleFirstSrc, baseSrc;
             switch (_lastAttackType)
@@ -333,7 +280,7 @@ public partial class PlayerVfx : Node
                 case AttackType.Area:
                     walkSrc = _mageWalkFrames; atkSrc = _mageAttackFrames; idleSrc = _mageIdleFrames;
                     idleFirstSrc = _mageIdle; baseSrc = _mageBase; break;
-                default: // Melee
+                default:
                     walkSrc = _warriorWalkFrames; atkSrc = _warriorAttackFrames; idleSrc = _warriorIdleFrames;
                     idleFirstSrc = _warriorIdle; baseSrc = _warriorBase; break;
             }
@@ -1018,6 +965,7 @@ public partial class PlayerVfx : Node
                 Player.Sprite.Scale = Vector2.One;
                 Player.Sprite.FlipH = _facingLeft;
             }
+            _ApplyWeaponVisualTint();
             return;
         }
 
@@ -1040,6 +988,8 @@ public partial class PlayerVfx : Node
         if (_isMoving && _walkFrames.Count > 0)
         {
             _animState = AnimState.Walk;
+            _breatheTimer = 0.0f;
+            Player.Sprite.Scale = Vector2.One;
             _animTimer += delta;
             float frameInterval = Core.GameConfig.WalkAnimSpeed;
             if (_animTimer >= frameInterval)
@@ -1089,8 +1039,8 @@ public partial class PlayerVfx : Node
         // Breathing animation for idle（朝向只由 FlipH 控制，避免和负 scale 双重翻转）
         if (_animState == AnimState.Idle && _idleFrame != null)
         {
-            _animTimer += delta;
-            float breathe = Mathf.Sin(_animTimer * Mathf.Tau / Core.GameConfig.IdleBreathSpeed) * 0.02f;
+            _breatheTimer += delta;
+            float breathe = Mathf.Sin(_breatheTimer * Mathf.Tau / Core.GameConfig.IdleBreathSpeed) * 0.02f;
             Player.Sprite.Scale = new Vector2(
                 1.0f + breathe * 0.8f,
                 1.0f - breathe * 0.8f
@@ -1108,6 +1058,21 @@ public partial class PlayerVfx : Node
             _facingLeft = false;
             Player.Sprite.FlipH = false;
         }
+
+        _ApplyWeaponVisualTint();
+    }
+
+    private void _ApplyWeaponVisualTint()
+    {
+        if (Player?.Sprite == null)
+            return;
+
+        Player.Sprite.Modulate = _visualAttackType switch
+        {
+            AttackType.Ranged => new Color(0.92f, 1.0f, 0.96f),
+            AttackType.Magic or AttackType.Area => new Color(0.94f, 0.92f, 1.0f),
+            _ => Colors.White
+        };
     }
 
     public void SpawnDashTrail(float delta)

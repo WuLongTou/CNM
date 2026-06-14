@@ -37,6 +37,7 @@ public partial class EquipmentPanel : Panel
 
     public override void _Ready()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         Visible = false;
         ProcessMode = ProcessModeEnum.Always;
         SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -51,7 +52,7 @@ public partial class EquipmentPanel : Panel
         AddChild(center);
 
         var card = new Panel();
-        card.CustomMinimumSize = new Vector2(440, 420);
+        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(440, 420), viewport, 0.88f, 0.86f);
         card.MouseFilter = MouseFilterEnum.Stop;
         var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 10f);
         cardStyle.ShadowOffset = new Vector2(4, 4);
@@ -60,20 +61,20 @@ public partial class EquipmentPanel : Panel
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", 20);
-        margin.AddThemeConstantOverride("margin_right", 20);
-        margin.AddThemeConstantOverride("margin_top", 16);
-        margin.AddThemeConstantOverride("margin_bottom", 16);
+        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(20, viewport, 10));
+        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(20, viewport, 10));
+        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(16, viewport, 8));
+        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(16, viewport, 8));
         card.AddChild(margin);
 
         var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", 12);
+        mainVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(12, viewport, 6));
         mainVbox.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         margin.AddChild(mainVbox);
 
         // 标题行
         var titleRow = new HBoxContainer();
-        titleRow.AddThemeConstantOverride("separation", 8);
+        titleRow.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
         mainVbox.AddChild(titleRow);
 
         var titleLabel = new Label
@@ -81,7 +82,7 @@ public partial class EquipmentPanel : Panel
             Text = "角色装备",
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        titleLabel.AddThemeFontSizeOverride("font_size", 22);
+        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(22, viewport, 16));
         titleLabel.AddThemeColorOverride("font_color", BloodBright);
         titleLabel.AddThemeConstantOverride("outline_size", 2);
         titleLabel.AddThemeColorOverride("font_outline_color", InkBlack);
@@ -89,7 +90,7 @@ public partial class EquipmentPanel : Panel
         titleRow.AddChild(titleLabel);
 
         var closeHint = new Label { Text = "按 C 关闭" };
-        closeHint.AddThemeFontSizeOverride("font_size", 12);
+        closeHint.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(12, viewport, 9));
         closeHint.AddThemeColorOverride("font_color", NoteText);
         closeHint.VerticalAlignment = VerticalAlignment.Center;
         titleRow.AddChild(closeHint);
@@ -103,13 +104,13 @@ public partial class EquipmentPanel : Panel
         {
             Columns = 5
         };
-        grid.AddThemeConstantOverride("h_separation", 10);
-        grid.AddThemeConstantOverride("v_separation", 10);
+        grid.AddThemeConstantOverride("h_separation", ResponsiveUi.Px(10, viewport, 5));
+        grid.AddThemeConstantOverride("v_separation", ResponsiveUi.Px(10, viewport, 5));
         grid.SizeFlagsHorizontal = SizeFlags.ShrinkCenter;
         mainVbox.AddChild(grid);
 
         // 占位空白单元
-        static Control _Empty() => new Control { CustomMinimumSize = new Vector2(60, 60) };
+        Control _Empty() => new() { CustomMinimumSize = ResponsiveUi.Size(60, 60, viewport, 42) };
 
         // Row 0: _ _ 头盔 _ _
         grid.AddChild(_Empty());
@@ -200,9 +201,11 @@ public partial class EquipmentPanel : Panel
 
     private TextureRect _MakeSlot(Container parent, string hint)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+        var slotSize = ResponsiveUi.Size(60, 60, viewport, 42);
         var frame = new PanelContainer
         {
-            CustomMinimumSize = new Vector2(60, 60),
+            CustomMinimumSize = slotSize,
             MouseFilter = MouseFilterEnum.Stop,
             TooltipText = hint
         };
@@ -210,7 +213,7 @@ public partial class EquipmentPanel : Panel
 
         var slot = new TextureRect
         {
-            CustomMinimumSize = new Vector2(60, 60),
+            CustomMinimumSize = slotSize,
             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
             MouseFilter = MouseFilterEnum.Ignore,
@@ -288,14 +291,14 @@ public partial class EquipmentPanel : Panel
             BorderWidthRight = 1,
             BorderWidthTop = 1,
             BorderWidthBottom = 1,
-            CornerRadiusTopLeft = 4,
-            CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4,
-            CornerRadiusBottomRight = 4,
-            ContentMarginLeft = 2,
-            ContentMarginRight = 2,
-            ContentMarginTop = 2,
-            ContentMarginBottom = 2
+            CornerRadiusTopLeft = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            CornerRadiusTopRight = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            CornerRadiusBottomLeft = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            CornerRadiusBottomRight = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            ContentMarginLeft = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1),
+            ContentMarginRight = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1),
+            ContentMarginTop = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1),
+            ContentMarginBottom = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1)
         };
         frame.AddThemeStyleboxOverride("panel", style);
     }
@@ -318,14 +321,14 @@ public partial class EquipmentPanel : Panel
             BorderWidthRight = 2,
             BorderWidthTop = 2,
             BorderWidthBottom = 2,
-            CornerRadiusTopLeft = 4,
-            CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4,
-            CornerRadiusBottomRight = 4,
-            ContentMarginLeft = 2,
-            ContentMarginRight = 2,
-            ContentMarginTop = 2,
-            ContentMarginBottom = 2
+            CornerRadiusTopLeft = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            CornerRadiusTopRight = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            CornerRadiusBottomLeft = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            CornerRadiusBottomRight = ResponsiveUi.Px(4, ResponsiveUi.ViewportSize(this), 3),
+            ContentMarginLeft = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1),
+            ContentMarginRight = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1),
+            ContentMarginTop = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1),
+            ContentMarginBottom = ResponsiveUi.Px(2, ResponsiveUi.ViewportSize(this), 1)
         };
         frame.AddThemeStyleboxOverride("panel", style);
     }

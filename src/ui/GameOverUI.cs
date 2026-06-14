@@ -28,6 +28,7 @@ public partial class GameOverUI : Control
 
     public void ShowGameOver(Panel? hudPanel)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         if (hudPanel != null)
             hudPanel.Visible = false;
 
@@ -67,8 +68,9 @@ public partial class GameOverUI : Control
         {
             ZIndex = 52,
             Modulate = new Color(1, 1, 1, 0),
-            CustomMinimumSize = new Vector2(420, 440)
+            CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(420, 440), viewport, 0.9f, 0.86f)
         };
+        content.Size = content.CustomMinimumSize;
         content.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
         content.Position -= content.CustomMinimumSize / 2;
         var style = MakeNotePanel(borderRadius: 6f, shadowSize: 10f);
@@ -84,23 +86,23 @@ public partial class GameOverUI : Control
 
         var margin = new MarginContainer();
         margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", UiMarginPanel);
-        margin.AddThemeConstantOverride("margin_right", UiMarginPanel);
-        margin.AddThemeConstantOverride("margin_top", UiMarginPanelInner);
-        margin.AddThemeConstantOverride("margin_bottom", UiMarginPanelInner);
+        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginPanel, viewport, 14));
+        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginPanel, viewport, 14));
+        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(UiMarginPanelInner, viewport, 12));
+        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(UiMarginPanelInner, viewport, 12));
         content.AddChild(margin);
 
         var vbox = new VBoxContainer
         {
             Alignment = BoxContainer.AlignmentMode.Center
         };
-        vbox.AddThemeConstantOverride("separation", 12);
+        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(12, viewport, 6));
         margin.AddChild(vbox);
 
         // Title
         var title = HandDrawnTheme.MakeTitleLabel(
             text: "YOU DIED",
-            fontSize: 38,
+            fontSize: ResponsiveUi.Font(38, viewport, 26),
             color: BloodRed,
             outlineSize: 3,
             outlineColor: InkBlack,
@@ -117,7 +119,7 @@ public partial class GameOverUI : Control
 
         // Stats
         var statsBox = new VBoxContainer();
-        statsBox.AddThemeConstantOverride("separation", 8);
+        statsBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
         vbox.AddChild(statsBox);
 
         int roundCount = _gameManager?.GetCurrentRound() ?? 0;
@@ -140,7 +142,7 @@ public partial class GameOverUI : Control
             Text = "━━ 成就 ━━",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        achievementsLabel.AddThemeFontSizeOverride("font_size", 12);
+        achievementsLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(12, viewport, 9));
         achievementsLabel.AddThemeColorOverride("font_color", NoteTextDim);
         vbox.AddChild(achievementsLabel);
 
@@ -149,7 +151,7 @@ public partial class GameOverUI : Control
         {
             Alignment = BoxContainer.AlignmentMode.Center
         };
-        achievementsBox.AddThemeConstantOverride("separation", 10);
+        achievementsBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(10, viewport, 4));
         vbox.AddChild(achievementsBox);
 
         // Check and display achievements
@@ -168,35 +170,35 @@ public partial class GameOverUI : Control
             Text = _GetTipForNextRun(roundCount, kills),
             HorizontalAlignment = HorizontalAlignment.Center,
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            CustomMinimumSize = new Vector2(360, 0)
+            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(360, viewport, 0.76f), 0)
         };
-        tipsLabel.AddThemeFontSizeOverride("font_size", 11);
+        tipsLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(11, viewport, 9));
         tipsLabel.AddThemeColorOverride("font_color", NoteTextDim);
         vbox.AddChild(tipsLabel);
 
         // Spacer
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 8) };
+        var spacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(8, viewport, 3)) };
         vbox.AddChild(spacer);
 
         // Buttons
-        var btnBox = new HBoxContainer
-        {
-            Alignment = BoxContainer.AlignmentMode.Center
-        };
-        btnBox.AddThemeConstantOverride("separation", 16);
+        BoxContainer btnBox = ResponsiveUi.Compact(viewport) ? new VBoxContainer() : new HBoxContainer();
+        btnBox.Alignment = BoxContainer.AlignmentMode.Center;
+        btnBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(16, viewport, 6));
         vbox.AddChild(btnBox);
 
         var restartBtn = _MakeButton("重新开始",
             new Color(0.25f, 0.12f, 0.12f, 0.9f),
             new Color(0.35f, 0.18f, 0.18f, 0.9f),
-            NoteBorder);
+            NoteBorder,
+            viewport);
         restartBtn.Pressed += () => GetTree().ReloadCurrentScene();
         btnBox.AddChild(restartBtn);
 
         var quitBtn = _MakeButton("退出游戏",
             new Color(0.18f, 0.08f, 0.08f, 0.9f),
             new Color(0.28f, 0.14f, 0.14f, 0.9f),
-            NoteBorder);
+            NoteBorder,
+            viewport);
         quitBtn.Pressed += () => GetTree().Quit();
         btnBox.AddChild(quitBtn);
 
@@ -218,12 +220,13 @@ public partial class GameOverUI : Control
 
     private void _AddAchievementBadge(HBoxContainer parent, string icon, string text, Color color)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         var badge = new Label
         {
             Text = icon + " " + text,
             TooltipText = icon + " " + text
         };
-        badge.AddThemeFontSizeOverride("font_size", 11);
+        badge.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(11, viewport, 9));
         badge.AddThemeColorOverride("font_color", color);
         parent.AddChild(badge);
     }
@@ -243,8 +246,9 @@ public partial class GameOverUI : Control
 
     private void _AddStatRow(VBoxContainer parent, string labelText, string valueText, Color color)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
         var row = new HBoxContainer();
-        row.AddThemeConstantOverride("separation", 8);
+        row.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
         parent.AddChild(row);
 
         var lbl = new Label
@@ -252,7 +256,7 @@ public partial class GameOverUI : Control
             Text = labelText,
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
-        lbl.AddThemeFontSizeOverride("font_size", 15);
+        lbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(15, viewport, 11));
         lbl.AddThemeColorOverride("font_color", NoteTextDim);
         row.AddChild(lbl);
 
@@ -261,22 +265,22 @@ public partial class GameOverUI : Control
             Text = valueText,
             HorizontalAlignment = HorizontalAlignment.Right
         };
-        val.AddThemeFontSizeOverride("font_size", 16);
+        val.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewport, 12));
         val.AddThemeColorOverride("font_color", color);
         val.AddThemeConstantOverride("outline_size", 1);
         val.AddThemeColorOverride("font_outline_color", InkBlack);
         row.AddChild(val);
     }
 
-    private Button _MakeButton(string text, Color bgColor, Color hoverColor, Color borderColor)
+    private Button _MakeButton(string text, Color bgColor, Color hoverColor, Color borderColor, Vector2 viewport)
     {
         var btn = new Button
         {
             Text = text,
             FocusMode = Control.FocusModeEnum.None,
-            CustomMinimumSize = new Vector2(140, 40)
+            CustomMinimumSize = ResponsiveUi.Size(140, 40, viewport, 30)
         };
-        btn.AddThemeFontSizeOverride("font_size", 15);
+        btn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(15, viewport, 11));
         btn.AddThemeColorOverride("font_color", NoteBg);
 
         var (s, h, p) = MakeButtonStyles(bgColor, hoverColor, borderColor, radius: 4, shadowSize: 3);

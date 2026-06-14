@@ -24,10 +24,14 @@ public static class HandDrawnTheme
         public static readonly Color BloodBright = new(0.788f, 0.659f, 0.298f);   // 金箔
         public static readonly Color InkBlack = new(0.102f, 0.078f, 0.063f);
         public static readonly Color PencilGray = new(0.290f, 0.486f, 0.435f);    // 铜锈绿
+        // 数学系统 UI 辅助色（由 AlchemyTheme 并入，删除半成品主题后统一在此定义）
+        public static readonly Color NetherPurple = new(0.357f, 0.227f, 0.420f);   // 炼紫（策略指示器）
+        public static readonly Color CandleGlow = new(0.910f, 0.757f, 0.439f);     // 烛光金（共振高亮）
 
         public static readonly Color RarityCommon = new(0.659f, 0.596f, 0.471f);
         public static readonly Color RarityRare = new(0.290f, 0.486f, 0.435f);    // 铜锈绿
         public static readonly Color RarityEpic = new(0.788f, 0.659f, 0.298f);    // 金箔
+        public static readonly Color RarityLegendary = new(1.0f, 0.8f, 0.25f);     // 亮金（传说品质；统一 UIManager 卡片边框/标题色）
         public static readonly Color RarityCommonBg = new(0.20f, 0.16f, 0.12f, 0.95f);
         public static readonly Color RarityRareBg = new(0.12f, 0.18f, 0.16f, 0.95f);
         public static readonly Color RarityEpicBg = new(0.22f, 0.18f, 0.10f, 0.95f);
@@ -99,9 +103,9 @@ public static class HandDrawnTheme
         };
     }
 
-    public static StyleBoxFlat MakeDarkPanel(float alpha = 0.92f)
+    public static StyleBoxFlat MakeDarkPanel(float alpha = 0.92f, bool withBorder = false)
     {
-        return new StyleBoxFlat
+        var style = new StyleBoxFlat
         {
             BgColor = new Color(Colors.BattlefieldBg, alpha),
             CornerRadiusBottomLeft = 4,
@@ -109,6 +113,16 @@ public static class HandDrawnTheme
             CornerRadiusTopLeft = 4,
             CornerRadiusTopRight = 4,
         };
+        if (withBorder)
+        {
+            // 还原原 AlchemyTheme.MakeDarkPanel 自带的 1px 羊皮纸边框（数学系统指示器面板用）
+            style.BorderColor = new Color(Colors.NoteMid, alpha * 0.6f);
+            style.BorderWidthTop = 1;
+            style.BorderWidthBottom = 1;
+            style.BorderWidthLeft = 1;
+            style.BorderWidthRight = 1;
+        }
+        return style;
     }
 
     public static StyleBoxFlat MakeHpBarBg()

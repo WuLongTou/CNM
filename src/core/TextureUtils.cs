@@ -177,6 +177,51 @@ public static class TextureUtils
     }
 
     /// <summary>
+    /// Load a fixed-grid sprite sheet in row-major order while preserving each
+    /// cell's canvas. This keeps the sprite anchor stable across animation
+    /// frames and avoids projection-split jump cuts.
+    /// </summary>
+    public static Godot.Collections.Array<Texture2D> LoadSpriteSheetGridFrames(
+        string path, int cols = 4, int rows = 4, int maxFrames = 0)
+    {
+        string cacheKey = $"grid:{path}_{cols}x{rows}_{maxFrames}";
+        if (_frameCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        var frames = new Godot.Collections.Array<Texture2D>();
+        var img = _LoadImage(path);
+        if (img == null)
+            return frames;
+
+        _StripWhiteBackground(img, 0.85f);
+
+        int cellW = img.GetWidth() / cols;
+        int cellH = img.GetHeight() / rows;
+        for (int row = 0; row < rows; row++)
+        {
+            for (int col = 0; col < cols; col++)
+            {
+                if (maxFrames > 0 && frames.Count >= maxFrames)
+                    break;
+
+                int x = col * cellW;
+                int y = row * cellH;
+                int regionW = col == cols - 1 ? img.GetWidth() - x : cellW;
+                int regionH = row == rows - 1 ? img.GetHeight() - y : cellH;
+                var region = img.GetRegion(new Rect2I(x, y, regionW, regionH));
+                if (_IsMostlyTransparent(region))
+                    continue;
+
+                region = _ResizeToFit(region, NormalSpriteSize);
+                frames.Add(ImageTexture.CreateFromImage(region));
+            }
+        }
+
+        _frameCache[cacheKey] = frames;
+        return frames;
+    }
+
+    /// <summary>
     /// Load a sprite sheet image and split it into individual frames.
     /// Uses connected component analysis to detect individual sprite regions.
     /// </summary>
@@ -556,11 +601,30 @@ public static class TextureUtils
 
     public static bool FacesLeft(Texture2D tex)
     {
+        float leftMass = 0f, rightMass = 0f;
+        _AccumulateHorizontalMass(tex, ref leftMass, ref rightMass);
+        return leftMass > rightMass * 1.08f;
+    }
+
+    public static bool FramesFaceLeft(Godot.Collections.Array<Texture2D> frames, int sampleCount = 3)
+    {
+        if (frames.Count == 0)
+            return false;
+
+        float leftMass = 0f, rightMass = 0f;
+        int count = Mathf.Min(sampleCount, frames.Count);
+        for (int i = 0; i < count; i++)
+            _AccumulateHorizontalMass(frames[i], ref leftMass, ref rightMass);
+
+        return leftMass > rightMass * 1.08f;
+    }
+
+    private static void _AccumulateHorizontalMass(Texture2D tex, ref float leftMass, ref float rightMass)
+    {
         var img = tex.GetImage();
-        if (img == null) return false;
+        if (img == null) return;
         int w = img.GetWidth();
         int mid = w / 2;
-        float leftMass = 0f, rightMass = 0f;
         for (int y = 0; y < img.GetHeight(); y++)
         {
             for (int x = 0; x < w; x++)
@@ -571,7 +635,6 @@ public static class TextureUtils
                 else rightMass += a;
             }
         }
-        return leftMass > rightMass;
     }
 
     public static Texture2D FlipHorizontal(Texture2D tex)

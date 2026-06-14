@@ -33,6 +33,7 @@ public partial class Background : Node2D
         _CreateFireLights();
         _CreateAshParticles();
         _CreateEmberParticles();
+        _CreateAlchemyLandmarks();
         _CreateGroundDecals();
         SetProcess(false);
     }
@@ -497,6 +498,124 @@ public partial class Background : Node2D
         }
     }
 
+    private void _CreateAlchemyLandmarks()
+    {
+        _CreatePathRibbon();
+        _CreateRuneCircles();
+        _CreateRuinMarkers();
+    }
+
+    private void _CreatePathRibbon()
+    {
+        var ws = _WorldSize;
+        var path = new Line2D
+        {
+            Width = 58.0f,
+            DefaultColor = new Color(0.16f, 0.12f, 0.08f, 0.28f),
+            JointMode = Line2D.LineJointMode.Round,
+            BeginCapMode = Line2D.LineCapMode.Round,
+            EndCapMode = Line2D.LineCapMode.Round,
+            ZIndex = -3
+        };
+
+        path.AddPoint(new Vector2(ws.X * 0.08f, ws.Y * 0.74f));
+        path.AddPoint(new Vector2(ws.X * 0.28f, ws.Y * 0.60f));
+        path.AddPoint(new Vector2(ws.X * 0.48f, ws.Y * 0.62f));
+        path.AddPoint(new Vector2(ws.X * 0.70f, ws.Y * 0.44f));
+        path.AddPoint(new Vector2(ws.X * 0.92f, ws.Y * 0.38f));
+        _backgroundRect!.AddChild(path);
+
+        var edge = new Line2D
+        {
+            Width = 3.0f,
+            DefaultColor = new Color(0.72f, 0.38f, 0.15f, 0.20f),
+            JointMode = Line2D.LineJointMode.Round,
+            ZIndex = -2
+        };
+        foreach (var point in path.Points)
+            edge.AddPoint(point);
+        _backgroundRect.AddChild(edge);
+    }
+
+    private void _CreateRuneCircles()
+    {
+        var ws = _WorldSize;
+        Vector2[] centers =
+        {
+            new(ws.X * 0.28f, ws.Y * 0.34f),
+            new(ws.X * 0.58f, ws.Y * 0.70f),
+            new(ws.X * 0.80f, ws.Y * 0.22f),
+        };
+
+        for (int i = 0; i < centers.Length; i++)
+        {
+            var rune = new Node2D
+            {
+                Position = centers[i],
+                Rotation = (float)GD.RandRange(0.0f, Mathf.Tau),
+                ZIndex = -1,
+                Modulate = new Color(1.0f, 0.72f, 0.32f, 0.30f)
+            };
+            _backgroundRect!.AddChild(rune);
+
+            float radius = 54.0f + i * 16.0f;
+            for (int ring = 0; ring < 2; ring++)
+            {
+                var circle = new Line2D
+                {
+                    Width = 1.4f,
+                    DefaultColor = new Color(0.95f, 0.62f, 0.24f, 0.34f),
+                    Closed = true
+                };
+                int points = 32;
+                float r = radius + ring * 18.0f;
+                for (int p = 0; p < points; p++)
+                {
+                    float angle = p * Mathf.Tau / points;
+                    circle.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * r);
+                }
+                rune.AddChild(circle);
+            }
+
+            var spokes = new Line2D
+            {
+                Width = 1.0f,
+                DefaultColor = new Color(0.95f, 0.62f, 0.24f, 0.20f)
+            };
+            for (int s = 0; s < 6; s++)
+            {
+                float angle = s * Mathf.Tau / 6.0f;
+                spokes.AddPoint(Vector2.Zero);
+                spokes.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (radius + 24.0f));
+            }
+            rune.AddChild(spokes);
+
+            var pulse = CreateTween().SetLoops();
+            pulse.TweenProperty(rune, "modulate:a", 0.46f, 2.4f + i * 0.5f).SetTrans(Tween.TransitionType.Sine);
+            pulse.TweenProperty(rune, "modulate:a", 0.20f, 2.8f + i * 0.4f).SetTrans(Tween.TransitionType.Sine);
+        }
+    }
+
+    private void _CreateRuinMarkers()
+    {
+        var ws = _WorldSize;
+        for (int i = 0; i < 18; i++)
+        {
+            var marker = new ColorRect
+            {
+                Size = new Vector2((float)GD.RandRange(8, 22), (float)GD.RandRange(24, 58)),
+                Position = new Vector2((float)GD.RandRange(80, ws.X - 80), (float)GD.RandRange(90, ws.Y - 90)),
+                Rotation = (float)GD.RandRange(-0.45f, 0.45f),
+                Color = GD.Randf() < 0.45f
+                    ? new Color(0.10f, 0.10f, 0.09f, 0.34f)
+                    : new Color(0.19f, 0.13f, 0.10f, 0.28f),
+                MouseFilter = Control.MouseFilterEnum.Ignore,
+                ZIndex = -2
+            };
+            _backgroundRect!.AddChild(marker);
+        }
+    }
+
     public void UpdateBackgroundSize()
     {
         if (_backgroundRect != null)
@@ -510,6 +629,12 @@ public partial class Background : Node2D
     public void SetTension(float value)
     {
         Tension = Mathf.Clamp(value, 0.0f, 1.0f);
+        if (_atmosphereLayer != null)
+            _atmosphereLayer.Modulate = new Color(
+                Mathf.Lerp(0.90f, 1.20f, Tension),
+                Mathf.Lerp(0.78f, 0.48f, Tension),
+                Mathf.Lerp(0.70f, 0.38f, Tension),
+                Mathf.Lerp(0.18f, 0.38f, Tension));
         foreach (TextureRect fog in _fogLayers)
         {
             if (IsInstanceValid(fog))
