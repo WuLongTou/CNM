@@ -169,25 +169,29 @@ public partial class PlayerVfx : Node
     }
 
     /// <summary>
-    /// Copy frames in their authored order. Sprite sheets are 4x4 atlases, so
-    /// jumping through the detected frame list makes walk/attack cycles skip.
+    /// 从投影分割返回的帧列表中按等距分布取 N 帧，
+    /// 均匀覆盖整个动画序列（投影分割帧顺序可能不固定）。
     /// </summary>
-    private static void _CopySequentialFrames(
+    private static void _TakeFramesEvenly(
         Godot.Collections.Array<Texture2D> src,
         Godot.Collections.Array<Texture2D> dst,
-        int maxFrames = 0)
+        int want)
     {
         dst.Clear();
-        if (src == null || src.Count == 0) return;
-        int count = maxFrames > 0 ? Mathf.Min(maxFrames, src.Count) : src.Count;
-        for (int i = 0; i < count; i++)
-            dst.Add(src[i]);
-    }
-
-    private static Godot.Collections.Array<Texture2D> _LoadGridAnimation(string path, int maxFrames)
-    {
-        var frames = Core.TextureUtils.LoadSpriteSheetGridFrames(path, cols: 4, rows: 4, maxFrames: maxFrames);
-        return frames.Count > 0 ? frames : Core.TextureUtils.LoadAndSplitSpriteSheet(path);
+        if (src == null || src.Count == 0 || want <= 0) return;
+        int total = src.Count;
+        if (total <= want)
+        {
+            for (int i = 0; i < total; i++) dst.Add(src[i]);
+            return;
+        }
+        // 等距取样：保证首尾都覆盖
+        for (int i = 0; i < want; i++)
+        {
+            int idx = (int)System.Math.Round((double)i * (total - 1) / (want - 1));
+            if (idx >= total) idx = total - 1;
+            dst.Add(src[idx]);
+        }
     }
 
     private static void _LoadWarriorSprites()
@@ -196,14 +200,14 @@ public partial class PlayerVfx : Node
         _warriorAttackFrames.Clear();
         _warriorIdleFrames.Clear();
 
-        var allWalk = _LoadGridAnimation("res://assets/sprites/player/sheets/warrior_walk.png", 16);
-        _CopySequentialFrames(allWalk, _warriorWalkFrames);
+        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_walk.png");
+        _TakeFramesEvenly(allWalk, _warriorWalkFrames, 8);
 
-        var allAttack = _LoadGridAnimation("res://assets/sprites/player/sheets/warrior_attack.png", 9);
-        _CopySequentialFrames(allAttack, _warriorAttackFrames);
+        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_attack.png");
+        _TakeFramesEvenly(allAttack, _warriorAttackFrames, 6);
 
-        var allIdle = _LoadGridAnimation("res://assets/sprites/player/sheets/warrior_idle.png", 4);
-        _CopySequentialFrames(allIdle, _warriorIdleFrames, 4);
+        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_idle.png");
+        _TakeFramesEvenly(allIdle, _warriorIdleFrames, 4);
 
         _warriorIdle = _warriorIdleFrames.Count > 0 ? _warriorIdleFrames[0] : null;
         _warriorBase = _warriorWalkFrames.Count > 0 ? _warriorWalkFrames[0] : null;
@@ -215,14 +219,14 @@ public partial class PlayerVfx : Node
         _rangerAttackFrames.Clear();
         _rangerIdleFrames.Clear();
 
-        var allWalk = _LoadGridAnimation("res://assets/sprites/player/sheets/ranger_walk.png", 12);
-        _CopySequentialFrames(allWalk, _rangerWalkFrames);
+        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_walk.png");
+        _TakeFramesEvenly(allWalk, _rangerWalkFrames, 8);
 
-        var allAttack = _LoadGridAnimation("res://assets/sprites/player/sheets/ranger_attack.png", 6);
-        _CopySequentialFrames(allAttack, _rangerAttackFrames);
+        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_attack.png");
+        _TakeFramesEvenly(allAttack, _rangerAttackFrames, 6);
 
-        var allIdle = _LoadGridAnimation("res://assets/sprites/player/sheets/ranger_idle.png", 6);
-        _CopySequentialFrames(allIdle, _rangerIdleFrames, 6);
+        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_idle.png");
+        _TakeFramesEvenly(allIdle, _rangerIdleFrames, 4);
 
         _rangerIdle = _rangerIdleFrames.Count > 0 ? _rangerIdleFrames[0] : null;
         _rangerBase = _rangerWalkFrames.Count > 0 ? _rangerWalkFrames[0] : null;
@@ -234,14 +238,14 @@ public partial class PlayerVfx : Node
         _mageAttackFrames.Clear();
         _mageIdleFrames.Clear();
 
-        var allWalk = _LoadGridAnimation("res://assets/sprites/player/sheets/mage_walk.png", 8);
-        _CopySequentialFrames(allWalk, _mageWalkFrames);
+        var allWalk = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_walk.png");
+        _TakeFramesEvenly(allWalk, _mageWalkFrames, 8);
 
-        var allAttack = _LoadGridAnimation("res://assets/sprites/player/sheets/mage_attack.png", 9);
-        _CopySequentialFrames(allAttack, _mageAttackFrames);
+        var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_attack.png");
+        _TakeFramesEvenly(allAttack, _mageAttackFrames, 6);
 
-        var allIdle = _LoadGridAnimation("res://assets/sprites/player/sheets/mage_idle.png", 1);
-        _CopySequentialFrames(allIdle, _mageIdleFrames, 1);
+        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_idle.png");
+        _TakeFramesEvenly(allIdle, _mageIdleFrames, 4);
 
         _mageIdle = _mageIdleFrames.Count > 0 ? _mageIdleFrames[0] : null;
         _mageBase = _mageWalkFrames.Count > 0 ? _mageWalkFrames[0] : null;

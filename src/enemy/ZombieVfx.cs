@@ -157,9 +157,7 @@ public partial class ZombieVfx : Node
         if (!FileAccess.FileExists(sheetPath))
             return false;
 
-        var frames = TextureUtils.LoadSpriteSheetGridFrames(sheetPath, cols: 4, rows: 4);
-        if (frames.Count == 0)
-            frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
+        var frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
         if (frames == null || frames.Count == 0)
             return false;
 
@@ -176,8 +174,8 @@ public partial class ZombieVfx : Node
         _sprite.Texture = frames[0];
         _pngLoaded = true;
         _walkFrames.Clear();
-        _walkFrames.Clear();
-        for (int i = 0; i < frames.Count; i++)
+        int walkCount = Mathf.Min(8, frames.Count);
+        for (int i = 0; i < walkCount; i++)
             _walkFrames.Add(frames[i]);
 
         return true;
