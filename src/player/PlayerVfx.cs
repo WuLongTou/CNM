@@ -206,7 +206,7 @@ public partial class PlayerVfx : Node
         var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_attack.png");
         _TakeFramesEvenly(allAttack, _warriorAttackFrames, 6);
 
-        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/warrior_idle.png");
+        var allIdle = Core.TextureUtils.LoadSpriteSheetGridFrames("res://assets/sprites/player/sheets/warrior_idle.png", cols: 2, rows: 2);
         _TakeFramesEvenly(allIdle, _warriorIdleFrames, 4);
 
         _warriorIdle = _warriorIdleFrames.Count > 0 ? _warriorIdleFrames[0] : null;
@@ -225,7 +225,7 @@ public partial class PlayerVfx : Node
         var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_attack.png");
         _TakeFramesEvenly(allAttack, _rangerAttackFrames, 6);
 
-        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/ranger_idle.png");
+        var allIdle = Core.TextureUtils.LoadSpriteSheetGridFrames("res://assets/sprites/player/sheets/ranger_idle.png", cols: 2, rows: 2);
         _TakeFramesEvenly(allIdle, _rangerIdleFrames, 4);
 
         _rangerIdle = _rangerIdleFrames.Count > 0 ? _rangerIdleFrames[0] : null;
@@ -244,7 +244,7 @@ public partial class PlayerVfx : Node
         var allAttack = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_attack.png");
         _TakeFramesEvenly(allAttack, _mageAttackFrames, 6);
 
-        var allIdle = Core.TextureUtils.LoadAndSplitSpriteSheet("res://assets/sprites/player/sheets/mage_idle.png");
+        var allIdle = Core.TextureUtils.LoadSpriteSheetGridFrames("res://assets/sprites/player/sheets/mage_idle.png", cols: 2, rows: 2);
         _TakeFramesEvenly(allIdle, _mageIdleFrames, 4);
 
         _mageIdle = _mageIdleFrames.Count > 0 ? _mageIdleFrames[0] : null;

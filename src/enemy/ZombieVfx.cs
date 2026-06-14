@@ -845,7 +845,7 @@ public partial class ZombieVfx : Node
             star.AddThemeFontSizeOverride("font_size", 14);
             _zombie.GetParent().AddChild(star);
 
-            var tw = _zombie.CreateTween();
+            var tw = star.CreateTween();
             tw.SetLoops(2);
             tw.TweenProperty(star, "position:y", star.Position.Y - 10, 0.3f);
             tw.TweenProperty(star, "position:y", star.Position.Y, 0.3f);
@@ -862,7 +862,7 @@ public partial class ZombieVfx : Node
                 if (IsInstanceValid(star))
                     star.QueueFree();
             };
-            _zombie.AddChild(autoFree);
+            star.AddChild(autoFree);
             autoFree.Start();
         }
     }
