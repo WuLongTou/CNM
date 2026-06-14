@@ -127,6 +127,9 @@ public partial class UIManager : Control
         _roundBanner = new RoundBanner();
         AddChild(_roundBanner);
 
+        // 数学系统：波形共振指示器
+        _CreateResonanceIndicator();
+
         _SetupConnections();
         _CreateTooltipPanel();
         _pausePanel = new PausePanel();
@@ -148,6 +151,110 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     // UI Construction
     // ═══════════════════════════════════════════════
+
+
+    // ═══════════════════════════════════════════════
+    // 数学系统 UI
+    // ═══════════════════════════════════════════════
+
+    private ResonanceIndicator? _resonanceIndicator;
+    private Label? _fieldChargeLabel;
+    private Label? _strategyLabel;
+    private Label? _fieldHintLabel;
+
+    private void _CreateResonanceIndicator()
+    {
+        if (!Core.GameConfig.MathSystemsEnabled) return;
+        _resonanceIndicator = new ResonanceIndicator { Name = "ResonanceIndicator", MouseFilter = MouseFilterEnum.Ignore };
+        _resonanceIndicator.SetAnchorsPreset(LayoutPreset.TopRight);
+        _resonanceIndicator.OffsetLeft = -210;
+        _resonanceIndicator.OffsetTop = 58;
+        _resonanceIndicator.OffsetRight = -12;
+        _resonanceIndicator.OffsetBottom = 130;
+        AddChild(_resonanceIndicator);
+    }
+
+    public void BindWaveSystem(ZombieWars.Math.WaveResonanceSystem? waveSystem)
+    {
+        if (_resonanceIndicator != null && waveSystem != null)
+            _resonanceIndicator.Bind(waveSystem);
+    }
+
+    public void UpdateWeaponFrequency(float freq) => _resonanceIndicator?.SetWeaponFrequency(freq);
+
+    public void UpdateFieldCharges(int available, int maxSlots)
+    {
+        if (!Core.GameConfig.MathSystemsEnabled) return;
+        if (_fieldChargeLabel == null)
+        {
+            _fieldChargeLabel = new Label { Name = "FieldChargeLabel" };
+            _fieldChargeLabel.SetAnchorsPreset(LayoutPreset.BottomLeft);
+            _fieldChargeLabel.OffsetLeft = 12;
+            _fieldChargeLabel.OffsetBottom = -12;
+            _fieldChargeLabel.OffsetTop = -40;
+            _fieldChargeLabel.AddThemeFontSizeOverride("font_size", 13);
+            _fieldChargeLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.GoldAccent);
+            _fieldChargeLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+            _fieldChargeLabel.AddThemeConstantOverride("outline_size", 3);
+            AddChild(_fieldChargeLabel);
+        }
+        _fieldChargeLabel.Text = maxSlots <= 0 ? "" : $"⟡ 力场 {available} ⊕⊗⊙  [~放置]";
+    }
+
+    public void UpdateStrategyIndicator(ZombieWars.Math.StrategySystem? strategySys)
+    {
+        if (!Core.GameConfig.MathSystemsEnabled || strategySys == null) return;
+        if (_strategyLabel == null)
+        {
+            _strategyLabel = new Label { Name = "StrategyLabel" };
+            _strategyLabel.SetAnchorsPreset(LayoutPreset.BottomLeft);
+            _strategyLabel.OffsetLeft = 12;
+            _strategyLabel.OffsetBottom = -44;
+            _strategyLabel.OffsetTop = -70;
+            _strategyLabel.AddThemeFontSizeOverride("font_size", 11);
+            _strategyLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.NetherPurple);
+            _strategyLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+            _strategyLabel.AddThemeConstantOverride("outline_size", 2);
+            AddChild(_strategyLabel);
+        }
+        if (!ZombieWars.Math.StrategySystem.IsStrategyActive(strategySys.CurrentRound)) { _strategyLabel.Text = ""; return; }
+        string desc = strategySys.GetCurrentProfile() switch
+        {
+            Core.GameEnums.StrategyProfile.MeleeDominant => "你：近战流 → 敌增坦克型",
+            Core.GameEnums.StrategyProfile.RangedDominant => "你：远程流 → 敌增蜂群型",
+            Core.GameEnums.StrategyProfile.MagicDominant => "你：魔法流 → 敌增远程型",
+            Core.GameEnums.StrategyProfile.Balanced => "你：均衡流",
+            _ => ""
+        };
+        _strategyLabel.Text = $"♟ {desc}  适应{strategySys.AdaptationRate:F0%}";
+    }
+
+    public void ShowFieldPlacementHint(bool show, Core.GameEnums.FieldType? type)
+    {
+        if (_fieldHintLabel == null)
+        {
+            _fieldHintLabel = new Label { Name = "FieldHintLabel" };
+            _fieldHintLabel.SetAnchorsPreset(LayoutPreset.CenterBottom);
+            _fieldHintLabel.OffsetBottom = -120;
+            _fieldHintLabel.OffsetTop = -160;
+            _fieldHintLabel.HorizontalAlignment = HorizontalAlignment.Center;
+            _fieldHintLabel.AddThemeFontSizeOverride("font_size", 16);
+            _fieldHintLabel.AddThemeColorOverride("font_color", AlchemyTheme.Colors.CandleGlow);
+            _fieldHintLabel.AddThemeColorOverride("font_outline_color", AlchemyTheme.Colors.InkBlack);
+            _fieldHintLabel.AddThemeConstantOverride("outline_size", 3);
+            AddChild(_fieldHintLabel);
+        }
+        if (!show) { _fieldHintLabel.Visible = false; return; }
+        string typeDesc = type switch
+        {
+            Core.GameEnums.FieldType.Attractor => "⊕ 吸引（拉拢僵尸）",
+            Core.GameEnums.FieldType.Repulsor => "⊗ 排斥（推开僵尸）",
+            Core.GameEnums.FieldType.Vortex => "⊙ 旋涡（环绕陷阱）",
+            _ => ""
+        };
+        _fieldHintLabel.Text = $"{typeDesc}\n左键放置 · 右键/`取消 · 1/2/3切换";
+        _fieldHintLabel.Visible = true;
+    }
 
     private void _CreateBossHealthBar()
     {

@@ -7,39 +7,40 @@ public static class HandDrawnTheme
 {
     public static class Colors
     {
-        public static readonly Color BattlefieldBg = new(0.078f, 0.039f, 0.039f);
-        public static readonly Color BattlefieldMid = new(0.239f, 0.102f, 0.102f);
-        public static readonly Color BattlefieldAccent = new(0.753f, 0.224f, 0.169f);
-        public static readonly Color BattlefieldBright = new(0.906f, 0.298f, 0.235f);
+        // ══ 炼金术手稿调色板（重构自原血红笔记本主题）══
+        public static readonly Color BattlefieldBg = new(0.063f, 0.047f, 0.039f);
+        public static readonly Color BattlefieldMid = new(0.122f, 0.078f, 0.055f);
+        public static readonly Color BattlefieldAccent = new(0.788f, 0.659f, 0.298f);
+        public static readonly Color BattlefieldBright = new(0.925f, 0.820f, 0.439f);
 
-        public static readonly Color NoteBg = new(0.941f, 0.910f, 0.910f);
-        public static readonly Color NoteBgHover = new(0.96f, 0.94f, 0.94f);
-        public static readonly Color NoteMid = new(0.878f, 0.816f, 0.816f);
-        public static readonly Color NoteBorder = new(0.545f, 0.227f, 0.227f);
-        public static readonly Color NoteText = new(0.290f, 0.102f, 0.102f);
-        public static readonly Color NoteTextDim = new(0.353f, 0.227f, 0.227f);
+        public static readonly Color NoteBg = new(0.831f, 0.769f, 0.659f);        // 羊皮纸
+        public static readonly Color NoteBgHover = new(0.906f, 0.863f, 0.780f);
+        public static readonly Color NoteMid = new(0.659f, 0.596f, 0.471f);
+        public static readonly Color NoteBorder = new(0.412f, 0.372f, 0.282f);
+        public static readonly Color NoteText = new(0.239f, 0.169f, 0.122f);      // 棕墨
+        public static readonly Color NoteTextDim = new(0.459f, 0.372f, 0.282f);
 
-        public static readonly Color BloodRed = new(0.753f, 0.224f, 0.169f);
-        public static readonly Color BloodBright = new(0.906f, 0.298f, 0.235f);
-        public static readonly Color InkBlack = new(0.09f, 0.04f, 0.04f);
-        public static readonly Color PencilGray = new(0.35f, 0.28f, 0.28f);
+        public static readonly Color BloodRed = new(0.545f, 0.227f, 0.184f);      // 铁锈红
+        public static readonly Color BloodBright = new(0.788f, 0.659f, 0.298f);   // 金箔
+        public static readonly Color InkBlack = new(0.102f, 0.078f, 0.063f);
+        public static readonly Color PencilGray = new(0.290f, 0.486f, 0.435f);    // 铜锈绿
 
-        public static readonly Color RarityCommon = new(0.4f, 0.35f, 0.35f);
-        public static readonly Color RarityRare = BloodRed;
-        public static readonly Color RarityEpic = new(0.953f, 0.612f, 0.071f);
-        public static readonly Color RarityCommonBg = new(0.25f, 0.2f, 0.2f, 0.95f);
-        public static readonly Color RarityRareBg = new(0.2f, 0.1f, 0.1f, 0.95f);
-        public static readonly Color RarityEpicBg = new(0.25f, 0.2f, 0.1f, 0.95f);
+        public static readonly Color RarityCommon = new(0.659f, 0.596f, 0.471f);
+        public static readonly Color RarityRare = new(0.290f, 0.486f, 0.435f);    // 铜锈绿
+        public static readonly Color RarityEpic = new(0.788f, 0.659f, 0.298f);    // 金箔
+        public static readonly Color RarityCommonBg = new(0.20f, 0.16f, 0.12f, 0.95f);
+        public static readonly Color RarityRareBg = new(0.12f, 0.18f, 0.16f, 0.95f);
+        public static readonly Color RarityEpicBg = new(0.22f, 0.18f, 0.10f, 0.95f);
 
-        public static readonly Color UpgradeBg = new(0.2f, 0.15f, 0.15f, 0.95f);
-        public static readonly Color UpgradeBorder = new(0.6f, 0.35f, 0.35f);
-        public static readonly Color UpgradeTitle = new(0.85f, 0.65f, 0.65f);
+        public static readonly Color UpgradeBg = new(0.15f, 0.11f, 0.08f, 0.95f);
+        public static readonly Color UpgradeBorder = new(0.55f, 0.42f, 0.25f);
+        public static readonly Color UpgradeTitle = new(0.88f, 0.78f, 0.55f);
 
-        public static readonly Color HpHigh = new(0.65f, 0.35f, 0.35f);
-        public static readonly Color HpMed = new(0.75f, 0.45f, 0.25f);
-        public static readonly Color HpLow = BloodRed;
+        public static readonly Color HpHigh = new(0.290f, 0.486f, 0.435f);        // 铜锈绿
+        public static readonly Color HpMed = new(0.788f, 0.659f, 0.298f);         // 金色
+        public static readonly Color HpLow = new(0.545f, 0.227f, 0.184f);         // 铁锈红
 
-        public static readonly Color NotePaperShadow = new(0f, 0f, 0f, 0.45f);
+        public static readonly Color NotePaperShadow = new(0f, 0f, 0f, 0.50f);
     }
 
     public static StyleBoxFlat MakeNotePanel(

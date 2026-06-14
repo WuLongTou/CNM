@@ -47,6 +47,9 @@ public partial class WeaponCard : Resource
     [Export] public int Rarity { get; set; } = 1;
     [Export] public int Duration { get; set; } = -1;
 
+    // 数学系统：波形共振频率（近战=高频、远程=中频、魔法=低频）
+    [Export] public float Frequency { get; set; } = 0.5f;
+
     public Godot.Collections.Array Tags { get; set; } = new();
 
     public int UpgradeCount { get; set; } = 0;

@@ -476,6 +476,23 @@ public static partial class WeaponFactory
         if (d.ContainsKey("aura")) c.GrantsAura = d["aura"].AsBool();
         if (d.ContainsKey("rarity")) c.Rarity = d["rarity"].AsInt32();
 
+        // 数学系统：波形共振频率（按武器类型+攻速推导，或显式 freq）
+        if (d.ContainsKey("freq"))
+        {
+            c.Frequency = d["freq"].AsSingle();
+        }
+        else
+        {
+            float baseFreq = type switch
+            {
+                WeaponType.Melee => 1.2f,
+                WeaponType.Ranged => 0.7f,
+                WeaponType.Magic => 0.4f,
+                _ => 0.5f
+            };
+            c.Frequency = baseFreq * Mathf.Max(0.5f, c.AttackSpeedModifier);
+        }
+
         // 效果（字符串 enum 名 → enum 值）
         if (d.ContainsKey("melee_fx"))
         {

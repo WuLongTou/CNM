@@ -288,4 +288,50 @@ public static class GameConfig
     // Damage number optimization
     public const int VfxMaxDamageNumbers = 15;
     public const float VfxDamageNumberThrottle = 0.05f;
+
+    // ═══════════════════════════════════════════════
+    // 数学系统 — 波形共振
+    // ═══════════════════════════════════════════════
+
+    public const float WaveBaseAmplitude = 200.0f;
+    public const float WaveAmplitudeGrowth = 15.0f;
+    public const float WaveBaseFrequency = 0.5f;
+    public const float WaveFrequencyGrowth = 0.05f;
+    public const int WaveMaxHarmonics = 5;
+    public const float WaveResonanceWidth = 0.15f;
+    public const float WaveResonanceMaxMultiplier = 2.0f;
+    public const float WaveSpawnVisualRange = 120.0f;
+
+    // ═══════════════════════════════════════════════
+    // 数学系统 — 向量场
+    // ═══════════════════════════════════════════════
+
+    public const int FieldMaxActiveNodes = 3;
+    public const float FieldNodeDuration = 15.0f;
+    public const float FieldAttractorStrength = 150.0f;
+    public const float FieldRepulsorStrength = 200.0f;
+    public const float FieldVortexStrength = 120.0f;
+    public const float FieldSoftening = 10.0f;
+    public const float FieldMaxForce = 300.0f;
+    public const float FieldPreviewRange = 150.0f;
+
+    // ═══════════════════════════════════════════════
+    // 数学系统 — 分形
+    // ═══════════════════════════════════════════════
+
+    public const int FractalMaxDepth = 3;
+    public const float FractalSpeedMultiplier = 1.3f;
+    public const int FractalDefaultBranching = 2;
+
+    // ═══════════════════════════════════════════════
+    // 数学系统 — 博弈论策略
+    // ═══════════════════════════════════════════════
+
+    public const float StrategyMaxAdaptation = 0.5f;
+
+    // ═══════════════════════════════════════════════
+    // 数学系统 — 特性开关（static readonly 避免 const 死代码警告）
+    // ═══════════════════════════════════════════════
+
+    public static readonly bool MathSystemsEnabled = true;
 }

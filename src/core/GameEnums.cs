@@ -41,4 +41,15 @@ public static class GameEnums
         Damage1000, Damage10000, Damage50000,  // 伤害里程碑
         Survive5Min, Survive10Min, Survive20Min, // 生存时间里程碑
     }
+
+    // ══ 数学系统枚举 ══
+
+    /// <summary>力场节点类型</summary>
+    public enum FieldType { Attractor, Repulsor, Vortex }
+
+    /// <summary>波形类型（UI显示用）</summary>
+    public enum WaveType { None, Sine, Fourier2, Fourier3, Fourier5 }
+
+    /// <summary>策略画像（玩家武器偏好分析）</summary>
+    public enum StrategyProfile { Unknown, MeleeDominant, RangedDominant, MagicDominant, Balanced }
 }

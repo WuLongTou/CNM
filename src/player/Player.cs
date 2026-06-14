@@ -173,7 +173,9 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         _HandleDashInput();
         _HandleInvincibility((float)delta);
         Aura?.Handle((float)delta);
-        Combat?.HandleManualAttack();
+        // 放置力场时抑制攻击
+        if (!IsFieldPlacementMode)
+            Combat?.HandleManualAttack();
         _HandleCollisionRepulsion();
         MoveAndSlide();
         _ClampToScreen();
@@ -189,6 +191,85 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
                 GameServices.UI.UpdatePlayerStatus(this);
                 GameServices.UI.ShowTargetSwitchNotification(TargetPriority);
             }
+        }
+
+        // 数学系统：向量场放置交互
+        if (Core.GameConfig.MathSystemsEnabled)
+            _HandleFieldPlacementInput(@event);
+    }
+
+    /// <summary>是否处于力场放置模式（放置时攻击被抑制）</summary>
+    public bool IsFieldPlacementMode { get; private set; }
+
+    private void _HandleFieldPlacementInput(InputEvent @event)
+    {
+        var fieldSystem = GameServices.Game?.FieldSystem;
+        var gm = GameServices.Game;
+        if (fieldSystem == null || gm == null) return;
+        if (gm.CurrentState != Core.GameEnums.GameState.Combat) return;
+
+        // BackQuote（~）：切换放置模式
+        if (@event.IsActionPressed("place_field"))
+        {
+            if (IsFieldPlacementMode)
+            {
+                IsFieldPlacementMode = false;
+                GameServices.UI.ShowFieldPlacementHint(false, null);
+            }
+            else if (fieldSystem.AvailableCharges > 0 && fieldSystem.ActiveNodes.Count < fieldSystem.MaxActiveNodes)
+            {
+                IsFieldPlacementMode = true;
+                GameServices.UI.ShowFieldPlacementHint(true, fieldSystem.SelectedFieldType);
+            }
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        if (!IsFieldPlacementMode) return;
+
+        // 右键取消
+        if (@event is InputEventMouseButton mbC && mbC.Pressed && mbC.ButtonIndex == MouseButton.Right)
+        {
+            IsFieldPlacementMode = false;
+            GameServices.UI.ShowFieldPlacementHint(false, null);
+            GetViewport().SetInputAsHandled();
+            return;
+        }
+
+        // 数字键 1/2/3 切换类型
+        if (@event is InputEventKey k && k.Pressed)
+        {
+            var avail = fieldSystem.GetAvailableFieldTypes();
+            Core.GameEnums.FieldType? pick = k.Keycode switch
+            {
+                Key.Key1 when avail.Count > 0 => avail[0],
+                Key.Key2 when avail.Count > 1 => avail[1],
+                Key.Key3 when avail.Count > 2 => avail[2],
+                _ => null
+            };
+            if (pick.HasValue)
+            {
+                fieldSystem.SelectFieldTypeExplicit(pick.Value);
+                GameServices.UI.ShowFieldPlacementHint(true, fieldSystem.SelectedFieldType);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+        }
+
+        // 左键放置
+        if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left)
+        {
+            if (gm.PlaceFieldNode(GetGlobalMousePosition(), fieldSystem.SelectedFieldType))
+            {
+                if (fieldSystem.AvailableCharges <= 0 || fieldSystem.ActiveNodes.Count >= fieldSystem.MaxActiveNodes)
+                {
+                    IsFieldPlacementMode = false;
+                    GameServices.UI.ShowFieldPlacementHint(false, null);
+                }
+                else
+                    GameServices.UI.ShowFieldPlacementHint(true, fieldSystem.SelectedFieldType);
+            }
+            GetViewport().SetInputAsHandled();
         }
     }
 

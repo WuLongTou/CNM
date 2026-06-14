@@ -10,6 +10,10 @@ using Zombie = ZombieWars.Enemy.Zombie;
 using WeaponDeck = ZombieWars.Weapons.WeaponDeck;
 using UIManager = ZombieWars.UI.UIManager;
 using Background = ZombieWars.World.Background;
+using WaveResonanceSystem = ZombieWars.Math.WaveResonanceSystem;
+using VectorFieldSystem = ZombieWars.Math.VectorFieldSystem;
+using FractalSystem = ZombieWars.Math.FractalSystem;
+using StrategySystem = ZombieWars.Math.StrategySystem;
 
 /// <summary>
 /// Game Manager — orchestrates game state, round flow, zombie spawning, and difficulty scaling.
@@ -56,6 +60,13 @@ public partial class GameManager : Node
 
     public Player? PlayerRef { get; private set; }
     public Zombie? BossZombie { get; private set; }
+
+    // ══ 数学玩法系统 ══
+    public WaveResonanceSystem WaveSystem { get; private set; } = null!;
+    public VectorFieldSystem FieldSystem { get; private set; } = null!;
+    public FractalSystem FractalSys { get; private set; } = null!;
+    public StrategySystem StrategySys { get; private set; } = null!;
+
     private WeaponDeck? _weaponDeck;
     private Player _player = null!;
     private PackedScene _zombieScene = null!;
@@ -105,6 +116,19 @@ public partial class GameManager : Node
     {
         AddToGroup("game_manager");
 
+        // 初始化 4 大数学玩法系统
+        if (GameConfig.MathSystemsEnabled)
+        {
+            WaveSystem = new WaveResonanceSystem { Name = "WaveSystem" };
+            AddChild(WaveSystem);
+            FieldSystem = new VectorFieldSystem { Name = "FieldSystem" };
+            AddChild(FieldSystem);
+            FractalSys = new FractalSystem { Name = "FractalSystem" };
+            AddChild(FractalSys);
+            StrategySys = new StrategySystem { Name = "StrategySystem" };
+            AddChild(StrategySys);
+        }
+
         if (ResourceLoader.Exists("res://scenes/Zombie.tscn"))
         {
             _zombieScene = GD.Load<PackedScene>("res://scenes/Zombie.tscn");
@@ -114,6 +138,17 @@ public partial class GameManager : Node
         GetViewport().SizeChanged += _OnViewportSizeChanged;
 
         await ToSignal(GetTree(), "process_frame");
+
+        // 炼金术阵法装饰层（await 后场景已就绪）
+        if (GameConfig.MathSystemsEnabled)
+        {
+            var deco = new ZombieWars.UI.AlchemyDecoOverlay { Name = "AlchemyDeco" };
+            GetTree().CurrentScene.AddChild(deco);
+        }
+
+        // 绑定波形系统到 UI 指示器
+        if (GameConfig.MathSystemsEnabled && _uiManager != null && WaveSystem != null)
+            _uiManager.BindWaveSystem(WaveSystem);
 
         if (_uiManager != null)
         {
@@ -152,6 +187,18 @@ public partial class GameManager : Node
         {
             _survivalTime += (float)delta;
             _HandleCombat(delta);
+
+            // 数学系统：更新向量场节点衰减 + UI 指示器
+            if (GameConfig.MathSystemsEnabled)
+            {
+                FieldSystem?.Update((float)delta);
+                if (_uiManager != null)
+                {
+                    if (_player?.Combat != null)
+                        _uiManager.UpdateWeaponFrequency(_player.Combat.GetCurrentWeaponFrequency());
+                    _uiManager.UpdateStrategyIndicator(StrategySys);
+                }
+            }
         }
     }
 
@@ -209,6 +256,15 @@ public partial class GameManager : Node
     {
         CurrentRound++;
         CurrentState = GameState.WeaponSelection;
+
+        // 配置 4 大数学玩法系统
+        if (GameConfig.MathSystemsEnabled)
+        {
+            WaveSystem?.ConfigureForRound(CurrentRound);
+            FieldSystem?.ConfigureForRound(CurrentRound);
+            FractalSys?.ConfigureForRound(CurrentRound);
+            StrategySys?.ConfigureForRound(CurrentRound);
+        }
 
         // Reset per-round stats
         _roundKills = 0;
@@ -376,7 +432,16 @@ public partial class GameManager : Node
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange,
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange
         );
-        zombieInstance.GlobalPosition = spawnPos + offset;
+
+        // 数学系统：波形共振——僵尸按傅里叶合成波分布生成
+        Vector2 waveOffset = Vector2.Zero;
+        if (GameConfig.MathSystemsEnabled && WaveSystem != null && WaveSystem.HarmonicCount > 0)
+        {
+            float progress = _zombiesToSpawn > 0 ? (float)_zombiesSpawned / _zombiesToSpawn : 0.0f;
+            waveOffset = WaveSystem.GetSpawnOffset(progress, _zombiesSpawned * 0.5f);
+        }
+
+        zombieInstance.GlobalPosition = spawnPos + offset + waveOffset;
 
         zombieInstance.SetPlayerTarget(_player);
         zombieInstance.Died += _OnZombieDied;
@@ -385,6 +450,13 @@ public partial class GameManager : Node
         var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
         zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
 
+        // 数学系统：分形——R7+ 普通僵尸 25% 概率标记为分形体
+        if (GameConfig.MathSystemsEnabled && FractalSystem.IsFractalActive(CurrentRound)
+            && !zombieInstance.IsElite && GD.Randf() < 0.25f)
+        {
+            zombieInstance.SetFractal(0, (int)GD.RandRange(2, 3));
+        }
+
         _zombiesSpawned++;
         _zombiesAlive++;
 
@@ -392,6 +464,58 @@ public partial class GameManager : Node
 
         var typeName = TypeNames.TryGetValue((int)zombieType, out var name) ? name : "未知";
         LogUtils.Print($"生成僵尸 {_zombiesSpawned}/{_zombiesToSpawn} (类型: {typeName}, 强度: x{roundMult:F2})");
+    }
+
+    /// <summary>
+    /// 生成分形僵尸的子体（由父体死亡触发）。
+    /// </summary>
+    public void SpawnFractalChild(Vector2 pos, int hp, int damage, float speed,
+        ZombieType type, int depth, int branching)
+    {
+        if (_zombieScene == null) return;
+        var child = _zombieScene.Instantiate() as Zombie;
+        if (child == null) return;
+
+        child.ZombieType = type;
+        child.GlobalPosition = pos;
+        child.SetPlayerTarget(_player);
+        child.Died += _OnZombieDied;
+        child.SetFractal(depth, branching);
+
+        GetTree().CurrentScene.AddChild(child);
+
+        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
+        child.ApplyRoundScaling(CurrentRound, roundMult);
+        child.OverrideStats(hp, damage, speed);
+
+        // 深度越深越小越透明
+        float sizeScale = Mathf.Pow(branching, -0.5f * depth);
+        child.Scale = new Vector2(sizeScale, sizeScale);
+        child.Modulate = new Color(1, 1, 1, ZombieWars.Math.FractalSystem.GetDepthAlpha(depth));
+
+        _zombiesAlive++;
+    }
+
+    /// <summary>放置向量场力场节点（玩家请求）</summary>
+    public bool PlaceFieldNode(Vector2 pos, GameEnums.FieldType type)
+    {
+        if (!GameConfig.MathSystemsEnabled || FieldSystem == null) return false;
+        if (CurrentState != GameState.Combat) return false;
+        if (!FieldSystem.PlaceNode(pos, type)) return false;
+
+        var visual = new ZombieWars.World.VectorFieldNode();
+        visual.Setup(type, type switch
+        {
+            GameEnums.FieldType.Attractor => GameConfig.FieldAttractorStrength,
+            GameEnums.FieldType.Repulsor => GameConfig.FieldRepulsorStrength,
+            GameEnums.FieldType.Vortex => GameConfig.FieldVortexStrength,
+            _ => 0.0f
+        }, GameConfig.FieldNodeDuration);
+        visual.GlobalPosition = pos;
+        GetTree().CurrentScene.AddChild(visual);
+
+        _uiManager?.UpdateFieldCharges(FieldSystem.AvailableCharges, FieldSystem.MaxActiveNodes);
+        return true;
     }
 
     private void _SpawnBossZombie()
@@ -436,6 +560,19 @@ public partial class GameManager : Node
         }
 
         if (weights.Count == 0) return ZombieType.Basic;
+
+        // 数学系统：博弈论——根据玩家武器偏好调整出兵权重（纳什均衡）
+        if (GameConfig.MathSystemsEnabled && StrategySys != null
+            && ZombieWars.Math.StrategySystem.IsStrategyActive(CurrentRound))
+        {
+            var baseWeights = new Dictionary<ZombieType, float>();
+            foreach (var kvp in weights)
+                baseWeights[(ZombieType)kvp.Key] = kvp.Value;
+            var adjusted = StrategySys.AdjustWeights(baseWeights);
+            weights.Clear();
+            foreach (var kvp in adjusted)
+                weights[(int)kvp.Key] = kvp.Value;
+        }
 
         var total = 0.0f;
         foreach (var w in weights.Values) total += w;
@@ -764,7 +901,11 @@ public partial class GameManager : Node
         else if (zombie.ZombieType == ZombieType.Swarm || zombie.ZombieType == ZombieType.Fast)
             dropChance = 0.08f;
 
-        if (roll > dropChance) return;
+        // 数学系统：黄金比例——斐波那契击杀点保证掉落（1,2,3,5,8,13,21...）
+        bool goldenDrop = GameConfig.MathSystemsEnabled
+            && ZombieWars.Math.GoldenProgression.IsFibonacciDropPoint(_totalKills + 1);
+
+        if (roll > dropChance && !goldenDrop) return;
 
         string pickupType = GD.Randf() < 0.5f ? "health_potion" : "skill_book";
         SpawnPickup(zombie.GlobalPosition, pickupType);

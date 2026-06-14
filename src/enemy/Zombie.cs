@@ -152,6 +152,11 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     private EliteAffix _eliteAffix = EliteAffix.None;
     private float _eliteRegenTimer;
 
+    // 数学系统：分形
+    public bool IsFractal { get; set; }
+    public int FractalDepth { get; set; }
+    public int FractalBranching { get; set; } = Core.GameConfig.FractalDefaultBranching;
+
     // ═══════════════════════════════════════════════
     // Node References
     // ═══════════════════════════════════════════════
@@ -428,6 +433,19 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         {
             Velocity = (Player.GlobalPosition - GlobalPosition).Normalized() * Speed * _slowMultiplier;
         }
+
+        // 数学系统：向量场——叠加力场力（吸引/排斥/旋涡）偏移路径
+        if (Core.GameConfig.MathSystemsEnabled)
+        {
+            var fieldSystem = Core.GameServices.Game?.FieldSystem;
+            if (fieldSystem != null)
+            {
+                Vector2 fieldForce = fieldSystem.CalculateFieldForce(GlobalPosition);
+                if (fieldForce.LengthSquared() > 0.01f)
+                    Velocity += fieldForce;
+            }
+        }
+
         MoveAndSlide();
     }
 
@@ -905,6 +923,12 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         if (_isDead) return;
         _isDead = true;
 
+        // 数学系统：分形僵尸死亡时递归分裂
+        if (Core.GameConfig.MathSystemsEnabled && IsFractal)
+        {
+            _FractalSplit();
+        }
+
         if (ZombieType == ZombieType.Exploder)
         {
             _Explode();
@@ -1087,6 +1111,49 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         if (IsInstanceValid(projectile))
         {
             projectile.QueueFree();
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    // 数学系统：分形与属性覆盖
+    // ═══════════════════════════════════════════════
+
+    /// <summary>标记为分形僵尸（死亡时递归分裂）</summary>
+    public void SetFractal(int depth, int branching)
+    {
+        IsFractal = true;
+        FractalDepth = depth;
+        FractalBranching = branching;
+    }
+
+    /// <summary>强制覆盖属性（用于分形子体、召唤物）</summary>
+    public void OverrideStats(int hp, int damage, float speed)
+    {
+        MaxHealth = Mathf.Max(1, hp);
+        CurrentHealth = MaxHealth;
+        Damage = Mathf.Max(1, damage);
+        Speed = speed;
+        _vfx?.UpdateStatusLabels();
+    }
+
+    /// <summary>分形僵尸死亡时递归分裂为子体</summary>
+    private void _FractalSplit()
+    {
+        var fractalSystem = GameServices.Game?.GetNodeOrNull<ZombieWars.Math.FractalSystem>("FractalSystem");
+        if (fractalSystem == null) return;
+
+        var result = fractalSystem.CalculateSplit(
+            MaxHealth, Damage, Speed, 1.0f, FractalDepth, FractalBranching);
+        if (result == null) return;
+
+        int childCount = result.ChildCount;
+        for (int i = 0; i < childCount; i++)
+        {
+            float angle = i / (float)childCount * Mathf.Tau;
+            Vector2 offset = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * 30.0f;
+            GameServices.Game?.SpawnFractalChild(
+                GlobalPosition + offset, result.ChildHp, result.ChildDamage,
+                result.ChildSpeed, ZombieType, result.ChildDepth, FractalBranching);
         }
     }
 }

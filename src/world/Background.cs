@@ -37,6 +37,7 @@ public partial class Background : Node2D
     private bool _TryLoadGroundPng()
     {
         string[] paths = {
+            "res://assets/sprites/backgrounds/ground_alchemy_001.jpg",
             "res://assets/sprites/backgrounds/ground_stone.jpg",
             "res://assets/sprites/backgrounds/ground_graveyard.jpg",
             "res://assets/sprites/backgrounds/ground_dungeon.jpg",

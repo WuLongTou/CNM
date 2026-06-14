@@ -344,6 +344,9 @@ public partial class PlayerCombat : Node
         if (isCritical)
             damage *= Player.CritMultiplier;
 
+        // 数学系统：波形共振伤害加成
+        damage = _ApplyWaveResonance(damage, zombie.GlobalPosition);
+
         Vector2 hitPos = zombie.GlobalPosition;
         zombie.TakeDamage((int)damage);
         GameServices.UI.ShowDamageNumber(hitPos, (int)damage, isCritical);
@@ -392,6 +395,19 @@ public partial class PlayerCombat : Node
         var p = Player!;
         GameServices.Audio.PlayZombieDie();
         ZombieWars.Audio.SoundManager.Instance?.NotifyKill();
+
+        // 数学系统：记录击杀武器类型给博弈论策略系统
+        if (Core.GameConfig.MathSystemsEnabled)
+        {
+            var weaponType = p.CurrentAttackType switch
+            {
+                Core.GameEnums.AttackType.Melee => Core.GameEnums.WeaponType.Melee,
+                Core.GameEnums.AttackType.Ranged => Core.GameEnums.WeaponType.Ranged,
+                Core.GameEnums.AttackType.Magic => Core.GameEnums.WeaponType.Magic,
+                _ => Core.GameEnums.WeaponType.Melee
+            };
+            GameServices.Game?.StrategySys?.RecordKill(weaponType);
+        }
 
         // Trigger combo reward
         OnKill();
@@ -1049,5 +1065,37 @@ public partial class PlayerCombat : Node
     private void _NotifyUiStatus()
     {
         GameServices.UI.UpdatePlayerStatus(Player!);
+    }
+
+    // ═══════════════════════════════════════════════
+    // 数学系统：波形共振
+    // ═══════════════════════════════════════════════
+
+    /// <summary>获取当前主武器频率（波形共振匹配用）</summary>
+    public float GetCurrentWeaponFrequency()
+    {
+        if (Player!.ActiveEffects == null || Player.ActiveEffects.Count == 0)
+            return Core.GameConfig.WaveBaseFrequency;
+        foreach (var card in Player.ActiveEffects)
+            if (card != null && card.Category == Core.GameEnums.WeaponCategory.Weapon)
+                return card.Frequency;
+        return Core.GameConfig.WaveBaseFrequency;
+    }
+
+    /// <summary>应用波形共振伤害加成（mult = 1 + 2·exp(-Δ²/(2σ²))）</summary>
+    public float _ApplyWaveResonance(float baseDamage, Vector2 hitPos)
+    {
+        if (!Core.GameConfig.MathSystemsEnabled) return baseDamage;
+        var waveSystem = GameServices.Game?.WaveSystem;
+        if (waveSystem == null || waveSystem.HarmonicCount == 0) return baseDamage;
+
+        float mult = waveSystem.CalculateResonanceMultiplier(GetCurrentWeaponFrequency());
+        if (mult >= 1.5f)
+        {
+            ZombieWars.Vfx.VFXManager.SpawnFloatingLabel(
+                Player!.GetParent(), hitPos,
+                $"共振 ×{mult:F1}!", new Godot.Color(0.95f, 0.82f, 0.27f));
+        }
+        return baseDamage * mult;
     }
 }
