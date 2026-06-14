@@ -543,7 +543,7 @@ public partial class UIManager : Control
         _tooltipPanel = new Panel
         {
             Visible = false,
-            ZIndex = 100,
+            ZIndex = 200,
             MouseFilter = Control.MouseFilterEnum.Ignore,
             ProcessMode = ProcessModeEnum.Always
         };
