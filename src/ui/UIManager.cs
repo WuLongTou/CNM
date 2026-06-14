@@ -954,7 +954,7 @@ public partial class UIManager : Control
                             Name = "IconTex",
                             Texture = wc.IconTexture,
                             ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+                            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
                             CustomMinimumSize = new Vector2(60, 60)
                         };
                         iconContainer.AddChild(texRect);

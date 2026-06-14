@@ -20,6 +20,28 @@ public static class TextureUtils
     private static readonly Dictionary<string, Godot.Collections.Array<Texture2D>> _frameCache = new();
 
     /// <summary>
+    /// Load an image texture directly from the source asset. This avoids runtime
+    /// dependency on Godot's .godot/imported cache in fresh checkouts.
+    /// </summary>
+    public static Texture2D? LoadTexture(string path)
+    {
+        string cacheKey = $"raw:{path}";
+        if (_textureCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        var result = _LoadImportedTexture(path);
+        if (result == null)
+        {
+            var img = _LoadImageFile(path);
+            if (img == null)
+                return null;
+            result = ImageTexture.CreateFromImage(img);
+        }
+        _textureCache[cacheKey] = result;
+        return result;
+    }
+
+    /// <summary>
     /// Load a texture from file and normalize it to standard sprite size.
     /// Results are cached for performance - subsequent calls return cached version.
     /// </summary>
@@ -32,15 +54,9 @@ public static class TextureUtils
         if (!FileAccess.FileExists(path))
             return null;
 
-        var tex = GD.Load<Texture2D>(path);
-        if (tex == null) return null;
-
-        var img = tex.GetImage();
-        if (img == null) return tex;
-
-        // Convert to RGBA8 if needed
-        if (img.GetFormat() != Image.Format.Rgba8)
-            img.Convert(Image.Format.Rgba8);
+        var img = _LoadImage(path);
+        if (img == null)
+            return null;
 
         // Strip white background
         _StripWhiteBackground(img, 0.85f);
@@ -124,17 +140,8 @@ public static class TextureUtils
 
         var frames = new Godot.Collections.Array<Texture2D>();
 
-        if (!FileAccess.FileExists(path))
-            return frames;
-
-        var tex = GD.Load<Texture2D>(path);
-        if (tex == null) return frames;
-
-        var img = tex.GetImage();
+        var img = _LoadImage(path);
         if (img == null) return frames;
-
-        if (img.GetFormat() != Image.Format.Rgba8)
-            img.Convert(Image.Format.Rgba8);
 
         int cellW = img.GetWidth() / cols;
         int cellH = img.GetHeight() / rows;
@@ -181,17 +188,8 @@ public static class TextureUtils
 
         var frames = new Godot.Collections.Array<Texture2D>();
 
-        if (!FileAccess.FileExists(path))
-            return frames;
-
-        var tex = GD.Load<Texture2D>(path);
-        if (tex == null) return frames;
-
-        var img = tex.GetImage();
+        var img = _LoadImage(path);
         if (img == null) return frames;
-
-        if (img.GetFormat() != Image.Format.Rgba8)
-            img.Convert(Image.Format.Rgba8);
 
         // 必须先剥白底再去检测 sprite 区域——否则白色背景像素会被 _FindSpriteRegions
         // 误判为"内容行"，导致整张图被识别为 1 个 region
@@ -260,6 +258,7 @@ public static class TextureUtils
                     contentRow[y] = true;
                     break;
                 }
+
             }
         }
 
@@ -278,6 +277,41 @@ public static class TextureUtils
         }
 
         return result;
+    }
+
+    private static Image? _LoadImage(string path)
+    {
+        var tex = _LoadImportedTexture(path);
+        var img = tex?.GetImage();
+        if (img == null)
+            img = _LoadImageFile(path);
+        if (img == null)
+            return null;
+
+        if (img.GetFormat() != Image.Format.Rgba8)
+            img.Convert(Image.Format.Rgba8);
+
+        return img;
+    }
+
+    private static Texture2D? _LoadImportedTexture(string path)
+    {
+        if (!ResourceLoader.Exists(path))
+            return null;
+
+        return ResourceLoader.Load<Texture2D>(path);
+    }
+
+    private static Image? _LoadImageFile(string path)
+    {
+        if (!FileAccess.FileExists(path))
+            return null;
+
+        var img = Image.LoadFromFile(path);
+        if (img == null || img.GetWidth() <= 0 || img.GetHeight() <= 0)
+            return null;
+
+        return img;
     }
 
     /// Split a horizontal band into individual sprites by scanning columns.

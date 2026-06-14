@@ -1,21 +1,12 @@
-// PlayerInput.cs — Decoupled input handler for the Player node.
-// Attach this as a child of Player (or keep it standalone and reference Player),
-// then read MoveDirection / IsAttackPressed / IsDashPressed / IsCycleTargetPressed
-// from the owning Player's _PhysicsProcess.
-//
-// This keeps input capture separate from movement/combat logic, making both
-// easier to test and port to C# from the original GDScript Player.gd.
-
 using Godot;
-using System;
 using ZombieWars.Core;
 using static ZombieWars.Core.GameEnums;
 
 namespace ZombieWars.Player;
 
 /// <summary>
-/// Captures and exposes input state each frame. Designed to be a child Node
-/// of Player or a sibling accessed via <see cref="PlayerRef"/>.
+/// Captures player-facing input once per physics frame so movement and combat
+/// never query global input directly.
 /// </summary>
 public partial class PlayerInput : Node
 {
@@ -29,8 +20,14 @@ public partial class PlayerInput : Node
     /// <summary>Normalised 2D movement direction from WASD / arrow keys.</summary>
     public Vector2 MoveDirection { get; private set; }
 
-    /// <summary>True on the single frame Space is held or left mouse button is pressed.</summary>
+    /// <summary>True while attack action or left mouse button is held.</summary>
     public bool IsAttackPressed { get; private set; }
+
+    /// <summary>True while the keyboard/gamepad attack action is held.</summary>
+    public bool IsAttackActionPressed { get; private set; }
+
+    /// <summary>True while left mouse button is held.</summary>
+    public bool IsPrimaryMousePressed { get; private set; }
 
     /// <summary>True on the single frame Shift is pressed.</summary>
     public bool IsDashPressed { get; private set; }
@@ -40,6 +37,9 @@ public partial class PlayerInput : Node
 
     /// <summary>True on the single frame H is pressed.</summary>
     public bool IsHelpToggled { get; private set; }
+
+    /// <summary>True only when gameplay input is allowed this frame.</summary>
+    public bool IsCombatEnabled { get; private set; }
 
     // ─────────────────────────────────────────────────────────────────────────
     // Input action names — mirror project.godot [input] section
@@ -68,11 +68,7 @@ public partial class PlayerInput : Node
         ProcessPriority = -10; // Run before the Player node
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // _Input — called before _Process / _PhysicsProcess each frame
-    // ─────────────────────────────────────────────────────────────────────────
-
-    public override void _Input(InputEvent @event)
+    public void CaptureFrameState()
     {
         // 卡片/暂停/Help/GameOver 等非战斗阶段：禁用所有游戏操作输入。
         // 只允许 UIManager 内部处理卡片快捷键（如 1/2/3）。
@@ -80,14 +76,10 @@ public partial class PlayerInput : Node
         // 避免误触移动/攻击破坏页面状态。
         if (_gameManager == null || !IsInstanceValid(_gameManager))
             _gameManager = GetTree().GetFirstNodeInGroup("game_manager") as Core.GameManager;
-        if (_gameManager != null && _gameManager.CurrentState != GameState.Combat)
+        IsCombatEnabled = _gameManager == null || _gameManager.CurrentState == GameState.Combat;
+        if (!IsCombatEnabled)
         {
-            // 清空所有输入状态，确保 Player 不会读到残留输入
-            MoveDirection = Vector2.Zero;
-            IsAttackPressed = false;
-            IsDashPressed = false;
-            IsCycleTargetPressed = false;
-            IsHelpToggled = false;
+            Reset();
             return;
         }
 
@@ -99,11 +91,10 @@ public partial class PlayerInput : Node
         if (MoveDirection.Length() > 1.0f)
             MoveDirection = MoveDirection.Normalized();
 
-        // ── Attack (space bar OR left mouse button just pressed) ──────────
-        bool spaceHeld = Input.IsActionPressed(ACTION_ATTACK);
-        bool leftMouseJustPressed = @event is InputEventMouseButton emb
-            && emb.Pressed && emb.ButtonIndex == MouseButton.Left;
-        IsAttackPressed = spaceHeld || leftMouseJustPressed;
+        // ── Attack (space bar OR left mouse button held) ─────────────────
+        IsAttackActionPressed = Input.IsActionPressed(ACTION_ATTACK);
+        IsPrimaryMousePressed = Input.IsMouseButtonPressed(MouseButton.Left);
+        IsAttackPressed = IsAttackActionPressed || IsPrimaryMousePressed;
 
         // ── Dash — single frame ─────────────────────────────────────────────
         IsDashPressed = Input.IsActionJustPressed(ACTION_DASH);
@@ -137,8 +128,11 @@ public partial class PlayerInput : Node
     /// <summary>Reset all state to zero. Call when the player dies.</summary>
     public void Reset()
     {
+        IsCombatEnabled = false;
         MoveDirection = Vector2.Zero;
         IsAttackPressed = false;
+        IsAttackActionPressed = false;
+        IsPrimaryMousePressed = false;
         IsDashPressed = false;
         IsCycleTargetPressed = false;
         IsHelpToggled = false;

@@ -483,7 +483,7 @@ public static partial class WeaponFactory
         if (_WeaponIconTextures.TryGetValue(name, out var texPath))
         {
             if (FileAccess.FileExists(texPath))
-                c.IconTexture = GD.Load<Texture2D>(texPath);
+                c.IconTexture = TextureUtils.LoadTexture(texPath);
         }
 
         // 属性修改器

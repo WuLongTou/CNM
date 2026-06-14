@@ -2,6 +2,7 @@ namespace ZombieWars.UI;
 
 using System;
 using Godot;
+using ZombieWars.Core;
 
 /// <summary>
 /// 游戏启动欢迎面板：标题 + 副标题 + 玩法说明 + "开始游戏" / "操作说明" 按钮。
@@ -9,6 +10,9 @@ using Godot;
 /// </summary>
 public partial class WelcomePanel : Panel
 {
+    private const string BackgroundArtPath = "res://assets/sprites/ui/alchemy_bg_001.jpg";
+    private const string HeroArtPath = "res://assets/sprites/ui/alchemist_hero_001.jpg";
+
     private Action _onStart = null!;
     private Action _onToggleHelp = null!;
 
@@ -28,6 +32,8 @@ public partial class WelcomePanel : Panel
 
     public override void _Ready()
     {
+        _CreateBackgroundArt();
+
         var marginContainer = new MarginContainer();
         marginContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         marginContainer.AddThemeConstantOverride("margin_left", 50);
@@ -55,6 +61,8 @@ public partial class WelcomePanel : Panel
         subtitle.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
         subtitle.HorizontalAlignment = HorizontalAlignment.Center;
         vbox.AddChild(subtitle);
+
+        _AddHeroArt(vbox);
 
         string[] introTexts = {
             "欢迎来到僵尸大战！",
@@ -114,5 +122,55 @@ public partial class WelcomePanel : Panel
         helpButton.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteBg);
         helpButton.Pressed += _onToggleHelp;
         vbox.AddChild(helpButton);
+    }
+
+    private void _CreateBackgroundArt()
+    {
+        if (!FileAccess.FileExists(BackgroundArtPath))
+            return;
+
+        var texture = TextureUtils.LoadTexture(BackgroundArtPath);
+        if (texture == null)
+            return;
+
+        var art = new TextureRect
+        {
+            Texture = texture,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+            Modulate = new Color(1.0f, 0.82f, 0.72f, 0.28f),
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        art.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(art);
+        MoveChild(art, 0);
+    }
+
+    private void _AddHeroArt(VBoxContainer parent)
+    {
+        if (!FileAccess.FileExists(HeroArtPath))
+            return;
+
+        var texture = TextureUtils.LoadTexture(HeroArtPath);
+        if (texture == null)
+            return;
+
+        var heroWrap = new CenterContainer
+        {
+            CustomMinimumSize = new Vector2(0, 118),
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        var hero = new TextureRect
+        {
+            Texture = texture,
+            CustomMinimumSize = new Vector2(112, 112),
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+            MouseFilter = MouseFilterEnum.Ignore
+        };
+        heroWrap.AddChild(hero);
+        parent.AddChild(heroWrap);
     }
 }

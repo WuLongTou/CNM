@@ -93,17 +93,14 @@ public partial class SoundManager : Node
             "zombie_hit", "zombie_die", "player_hurt", "player_die",
             "weapon_select", "upgrade", "game_over",
             "explosion", "lightning", "charm",
-            "footstep", "dash"
+            "footstep", "dash", "combo_3", "combo_5"
         };
         foreach (var name in files)
         {
             var path = $"res://assets/audio/{name}.wav";
-            if (ResourceLoader.Exists(path))
-            {
-                var stream = GD.Load<AudioStream>(path);
-                if (stream != null)
-                    _sfxCache[name] = stream;
-            }
+            var stream = _LoadWav(path);
+            if (stream != null)
+                _sfxCache[name] = stream;
         }
     }
 
@@ -158,9 +155,10 @@ public partial class SoundManager : Node
     {
         if (_musicPlayer == null) return;
         var path = "res://assets/audio/bg_music.wav";
-        if (ResourceLoader.Exists(path))
+        var stream = _LoadWav(path);
+        if (stream != null)
         {
-            _musicPlayer.Stream = GD.Load<AudioStream>(path);
+            _musicPlayer.Stream = stream;
             _musicPlayer.ProcessMode = Node.ProcessModeEnum.Always;
             if (!_musicPlayer.IsConnected("finished", Callable.From(() => _musicPlayer?.Play())))
                 _musicPlayer.Connect("finished", Callable.From(() => _musicPlayer?.Play()));
@@ -177,5 +175,20 @@ public partial class SoundManager : Node
     {
         if (_musicPlayer != null)
             _musicPlayer.VolumeDb = volumeDb;
+    }
+
+    private static AudioStream? _LoadWav(string path)
+    {
+        if (ResourceLoader.Exists(path))
+        {
+            var imported = ResourceLoader.Load<AudioStream>(path);
+            if (imported != null)
+                return imported;
+        }
+
+        if (!FileAccess.FileExists(path))
+            return null;
+
+        return AudioStreamWav.LoadFromFile(path, new Godot.Collections.Dictionary());
     }
 }

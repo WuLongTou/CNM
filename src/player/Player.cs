@@ -109,6 +109,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public bool IsDead { get; set; } = false;
 
     public PlayerCombat? Combat { get; set; }
+    public PlayerInput? InputHandler { get; private set; }
     public PlayerAura? Aura { get; set; }
     public PlayerVfx? Vfx { get; set; }
     public PlayerBuffSystem? BuffSystem { get; set; }
@@ -145,6 +146,10 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         AddChild(Combat);
         Combat.Setup(this);
 
+        InputHandler = new PlayerInput { Name = "Input" };
+        AddChild(InputHandler);
+        InputHandler.PlayerRef = this;
+
         Aura = new PlayerAura { Name = "Aura" };
         AddChild(Aura);
         Aura.Setup(this);
@@ -158,8 +163,11 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     public override void _PhysicsProcess(double delta)
     {
+        InputHandler?.CaptureFrameState();
+
         if (!_IsCombatInputEnabled())
         {
+            InputHandler?.Reset();
             Velocity = Vector2.Zero;
             return;
         }
@@ -174,6 +182,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         _HandleMovement();
         Vfx?.UpdateWalkAnimation((float)delta);
         _HandleDashInput();
+        _HandleTargetCycleInput();
         _HandleInvincibility((float)delta);
         Aura?.Handle((float)delta);
         // 放置力场时抑制攻击
@@ -187,16 +196,9 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public override void _Input(InputEvent @event)
     {
         if (!_IsCombatInputEnabled())
-            return;
-
-        if (@event is InputEventKey keyEvent && keyEvent.Pressed)
         {
-            if (keyEvent.Keycode == Key.Tab)
-            {
-                TargetPriority = (TargetPriority + 1) % 3;
-                GameServices.UI.UpdatePlayerStatus(this);
-                GameServices.UI.ShowTargetSwitchNotification(TargetPriority);
-            }
+            InputHandler?.Reset();
+            return;
         }
 
         // 数学系统：向量场放置交互
@@ -289,13 +291,8 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     private void _HandleMovement()
     {
-        Vector2 inputVec = Vector2.Zero;
-        if (Input.IsActionPressed("move_right")) inputVec.X += 1;
-        if (Input.IsActionPressed("move_left")) inputVec.X -= 1;
-        if (Input.IsActionPressed("move_down")) inputVec.Y += 1;
-        if (Input.IsActionPressed("move_up")) inputVec.Y -= 1;
-
-        Velocity = inputVec != Vector2.Zero ? inputVec.Normalized() * CurrentSpeed : Vector2.Zero;
+        Vector2 inputVec = InputHandler?.MoveDirection ?? Vector2.Zero;
+        Velocity = inputVec != Vector2.Zero ? inputVec * CurrentSpeed : Vector2.Zero;
     }
 
     private void _ClampToScreen()
@@ -339,7 +336,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     private void _HandleDashInput()
     {
-        if (Input.IsActionJustPressed("dash") && CanDash && Velocity != Vector2.Zero)
+        if (InputHandler?.IsDashPressed == true && CanDash && Velocity != Vector2.Zero)
         {
             IsDashing = true;
             CanDash = false;
@@ -355,6 +352,16 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
                 tw.TweenProperty(Sprite, "modulate", new Color(0.5f, 0.8f, 1.0f, 0.5f), 0.05f);
             }
         }
+    }
+
+    private void _HandleTargetCycleInput()
+    {
+        if (InputHandler?.IsCycleTargetPressed != true)
+            return;
+
+        TargetPriority = (TargetPriority + 1) % 3;
+        GameServices.UI.UpdatePlayerStatus(this);
+        GameServices.UI.ShowTargetSwitchNotification(TargetPriority);
     }
 
     private void _OnDashFinished()

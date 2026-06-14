@@ -56,7 +56,7 @@ public partial class VFXManager : Node
         for (int i = 0; i < EffectSpritePaths.Length; i++)
         {
             if (FileAccess.FileExists(EffectSpritePaths[i]))
-                _effectCache[i] = GD.Load<Texture2D>(EffectSpritePaths[i]);
+                _effectCache[i] = TextureUtils.LoadTexture(EffectSpritePaths[i]);
         }
     }
 

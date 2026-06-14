@@ -141,38 +141,34 @@ public partial class PlayerCombat : Node
         if (!CanAttack && _attackTimer != null && _attackTimer.IsStopped())
             CanAttack = true;
 
+        var input = Player!.InputHandler;
+        if (input == null || !input.IsCombatEnabled)
+            return;
+
+        bool attackActionPressed = input.IsAttackActionPressed;
+        bool mouseAttackPressed = input.IsPrimaryMousePressed && _IsMouseInGameArea();
+
         if (Player!.CurrentAttackType == AttackType.Magic)
         {
             // Magic: require manual trigger, aim at nearest zombie or mouse direction
             if (!CanAttack)
                 return;
-            if (Input.IsActionPressed("attack"))
+            if (attackActionPressed || mouseAttackPressed)
             {
                 _TryMagicAttack();
                 return;
             }
-            if (Input.IsMouseButtonPressed(MouseButton.Left))
-            {
-                Vector2 mousePos = Player.GetViewport().GetMousePosition();
-                if (mousePos.Y > Core.GameConfig.TopUiMargin)
-                    _TryMagicAttack();
-            }
             return;
         }
 
-        if (Input.IsActionPressed("attack") && CanAttack)
+        if ((attackActionPressed || mouseAttackPressed) && CanAttack)
         {
             PerformAttack();
-            return;
-        }
-
-        if (Input.IsMouseButtonPressed(MouseButton.Left))
-        {
-            Vector2 mousePos = Player.GetViewport().GetMousePosition();
-            if (mousePos.Y > Core.GameConfig.TopUiMargin && CanAttack)
-                PerformAttack();
         }
     }
+
+    private bool _IsMouseInGameArea() =>
+        Player!.GetViewport().GetMousePosition().Y > Core.GameConfig.TopUiMargin;
 
     private void _TryMagicAttack()
     {

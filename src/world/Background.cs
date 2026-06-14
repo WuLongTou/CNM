@@ -11,7 +11,11 @@ using ZombieWars.Core;
 /// </summary>
 public partial class Background : Node2D
 {
+    private const string AlchemyAtmospherePath = "res://assets/sprites/backgrounds/atmosphere_blood_moon2.jpg";
+
     private ColorRect? _backgroundRect;
+    private TextureRect? _groundLayer;
+    private TextureRect? _atmosphereLayer;
     private readonly Godot.Collections.Array<TextureRect> _fogLayers = new();
 
     public float Tension { get; set; } = 0.0f;
@@ -24,6 +28,7 @@ public partial class Background : Node2D
         {
             _CreateGroundTexture();
         }
+        _CreateAtmosphereOverlay();
         _CreateFogPatches();
         _CreateFireLights();
         _CreateAshParticles();
@@ -48,7 +53,7 @@ public partial class Background : Node2D
         foreach (string p in paths)
         {
             if (!FileAccess.FileExists(p)) continue;
-            var tex = GD.Load<Texture2D>(p);
+            var tex = TextureUtils.LoadTexture(p);
             if (tex == null) continue;
 
             var rect = new TextureRect
@@ -58,12 +63,39 @@ public partial class Background : Node2D
                 StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
                 Size = _WorldSize,
                 ZIndex = -5,
+                TextureFilter = CanvasItem.TextureFilterEnum.Linear,
                 MouseFilter = Control.MouseFilterEnum.Ignore
             };
-            AddChild(rect);
+            _backgroundRect!.AddChild(rect);
+            _backgroundRect.MoveChild(rect, 0);
+            _groundLayer = rect;
             return true;
         }
         return false;
+    }
+
+    private void _CreateAtmosphereOverlay()
+    {
+        if (!FileAccess.FileExists(AlchemyAtmospherePath))
+            return;
+
+        var tex = TextureUtils.LoadTexture(AlchemyAtmospherePath);
+        if (tex == null)
+            return;
+
+        _atmosphereLayer = new TextureRect
+        {
+            Texture = tex,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+            Size = _WorldSize,
+            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+            Modulate = new Color(1.0f, 0.82f, 0.72f, 0.22f),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+
+        _backgroundRect!.AddChild(_atmosphereLayer);
+        _backgroundRect.MoveChild(_atmosphereLayer, _groundLayer != null ? 1 : 0);
     }
 
     private void _CreateBaseBackground()
@@ -215,6 +247,8 @@ public partial class Background : Node2D
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
         _backgroundRect!.AddChild(groundSprite);
+        _backgroundRect.MoveChild(groundSprite, 0);
+        _groundLayer = groundSprite;
     }
 
     private float _SimpleHash(int x, int y)
@@ -467,6 +501,10 @@ public partial class Background : Node2D
     {
         if (_backgroundRect != null)
             _backgroundRect.Size = GameConfig.WorldSize;
+        if (_groundLayer != null)
+            _groundLayer.Size = GameConfig.WorldSize;
+        if (_atmosphereLayer != null)
+            _atmosphereLayer.Size = GameConfig.WorldSize;
     }
 
     public void SetTension(float value)
