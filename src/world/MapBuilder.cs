@@ -89,7 +89,9 @@ public partial class MapBuilder : Node2D
         _navRegion.BakeNavigationPolygon(false);
     }
 
-    /// <summary>计算旋转矩形的世界坐标轮廓（4 点，顺时针）。</summary>
+    /// <summary>计算旋转矩形的世界坐标轮廓（4 点，逆时针）。
+    /// NavigationPolygon 中外边界为顺时针（实体），障碍轮廓必须逆时针才能被识别为“洞”挖空；
+    /// 两者 winding 相同会导致障碍不被挖洞，导航路径直接穿越障碍。</summary>
     private static Vector2[] _RotatedRectOutline(ObstacleDef def)
     {
         float cos = Mathf.Cos(def.Rotation);
@@ -97,7 +99,7 @@ public partial class MapBuilder : Node2D
         float hx = def.Size.X * 0.5f;
         float hy = def.Size.Y * 0.5f;
         Vector2[] local = {
-            new(-hx, -hy), new(hx, -hy), new(hx, hy), new(-hx, hy)
+            new(-hx, -hy), new(-hx, hy), new(hx, hy), new(hx, -hy)
         };
         var result = new Vector2[4];
         for (int i = 0; i < 4; i++)
