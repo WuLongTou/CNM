@@ -470,7 +470,8 @@ public partial class ZombieAbilitySystem : Node
         // Sound
         GameServices.Audio.PlayExplosion();
 
-        // Kill self
+        // Kill self（标记已处理爆炸，避免 Die() 的 Exploder 分支再次 _Explode 造成双重爆炸）
+        self.SuppressExplodeOnDeath = true;
         self.TakeDamage(self.CurrentHealth);
     }
 

@@ -690,6 +690,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             if (_knightChargeTimer <= 0)
             {
                 _knightCharging = false;
+                _knightBlocking = true; // 修复：冲锋后进入格挡（原代码漏设此标志，格挡分支永不执行）
                 _knightBlockTimer = (float)GD.RandRange(1.5f, 2.5f);
             }
         }
@@ -967,6 +968,8 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     }
 
     private bool _isDead;
+    // 能力系统已处理爆炸时（如 Bomber 的 _TriggerExplosion），置 true 让 Die() 跳过 Exploder 的 _Explode，避免双重爆炸
+    public bool SuppressExplodeOnDeath;
 
     public void Die()
     {
@@ -979,7 +982,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             _FractalSplit();
         }
 
-        if (ZombieType == ZombieType.Exploder)
+        if (ZombieType == ZombieType.Exploder && !SuppressExplodeOnDeath)
         {
             _Explode();
             GameServices.Audio.PlayExplosion();
@@ -1141,6 +1144,12 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
     private void _CompletePoisonSpit(Node target, Node projectile)
     {
+        // 修复：发射者（this）可能在 0.5s 延迟期间已死亡释放，回调访问 Damage 等字段前必须校验自身
+        if (!IsInstanceValid(this))
+        {
+            if (IsInstanceValid(projectile)) projectile.QueueFree();
+            return;
+        }
         if (IsInstanceValid(target))
         {
             if (target is Player player)
