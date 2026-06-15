@@ -41,8 +41,10 @@ internal static class ObstacleDraw
 {
     public static void DrawShadow(CanvasItem c, Vector2 center, float rx, float ry)
     {
-        c.DrawSetTransform(new Vector2(center.X, center.Y), 0f, new Vector2(rx / 8f, ry / 4f));
-        c.DrawCircle(Vector2.Zero, 8f, new Color(0f, 0f, 0f, 0.42f));
+        // 光从左上，阴影投右下：中心右偏 + X 拉长，模拟低角度斜光长投影
+        var pos = new Vector2(center.X + rx * 0.35f, center.Y);
+        c.DrawSetTransform(pos, 0f, new Vector2(rx / 8f * 1.25f, ry / 4f));
+        c.DrawCircle(Vector2.Zero, 8f, new Color(0f, 0f, 0f, 0.40f));
         c.DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
     }
 
@@ -69,6 +71,205 @@ internal static class ObstacleDraw
                 rect.Position.Y + rect.Size.Y * 0.2f,
                 rect.Size.X * 0.18f, rect.Size.Y * 0.5f);
             c.DrawRect(notch, dark.Darkened(0.3f), true);
+        }
+    }
+
+    // ══ 各 variant 专用绘制：让每种障碍一眼可辨 ══
+
+    // 墓碑排（Solid variant 1）：扁矩形内并排圆顶墓碑 + 苔藓底座
+    public static void DrawTombstoneRow(CanvasItem c, Rect2 rect, Color stone, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        var moss = new Color(0.13f, 0.19f, 0.11f);
+        // 地面苔藓底座
+        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 5f, rect.Size.X, 5f), moss, true);
+        c.DrawCircle(new Vector2(rect.Position.X + 4f, rect.End.Y - 3f), 3f, moss);
+        c.DrawCircle(new Vector2(rect.End.X - 4f, rect.End.Y - 3f), 3f, moss);
+
+        int count = Mathf.Max(2, Mathf.RoundToInt(rect.Size.X / 32f));
+        float slot = rect.Size.X / count;
+        float stoneW = Mathf.Min(slot * 0.72f, 22f);
+        float stoneH = Mathf.Min(rect.Size.Y - 6f, 22f);
+        for (int i = 0; i < count; i++)
+        {
+            float cx = rect.Position.X + slot * (i + 0.5f);
+            float by = rect.End.Y - 5f;
+            float topY = by - stoneH;
+            // 碑体 + 圆顶（圆心在碑顶，上半圆凸出形成墓碑轮廓）
+            c.DrawRect(new Rect2(cx - stoneW * 0.5f, topY, stoneW, stoneH), stone, true);
+            c.DrawCircle(new Vector2(cx, topY), stoneW * 0.5f, stone);
+            // 左侧高光
+            c.DrawRect(new Rect2(cx - stoneW * 0.5f, topY, 2f, stoneH), lit, true);
+            // 右侧暗面（圆柱体积感）
+            c.DrawRect(new Rect2(cx + stoneW * 0.5f - 2.5f, topY, 2.5f, stoneH), dark.Darkened(0.15f), true);
+            // 圆顶轮廓
+            c.DrawArc(new Vector2(cx, topY), stoneW * 0.5f, Mathf.Pi, Mathf.Tau, 8, dark);
+            c.DrawRect(new Rect2(cx - stoneW * 0.5f, topY, stoneW, stoneH), dark, false, 1f);
+            // 十字刻痕
+            c.DrawLine(new Vector2(cx, topY + 4f), new Vector2(cx, topY + 13f), dark.Darkened(0.3f), 1.2f);
+            c.DrawLine(new Vector2(cx - 3f, topY + 7.5f), new Vector2(cx + 3f, topY + 7.5f),
+                dark.Darkened(0.3f), 1.2f);
+            // 随机残缺（被砸掉一角）
+            if (rng.Randf() < 0.35f)
+            {
+                float nh = stoneH * rng.RandfRange(0.3f, 0.55f);
+                c.DrawRect(new Rect2(cx - stoneW * 0.5f, topY, stoneW, nh), dark.Darkened(0.4f), true);
+            }
+        }
+    }
+
+    // 枯树（Solid variant 2）：树干 + 向上分叉的枯枝
+    public static void DrawDeadTree(CanvasItem c, Rect2 rect, Color wood, Color woodLit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        float groundY = rect.End.Y;
+        float trunkH = rect.Size.Y * 0.6f;
+        float topY = groundY - trunkH;
+        float trunkW = Mathf.Min(rect.Size.X * 0.3f, 11f);
+        // 树干主体 + 左侧高光 + 右侧暗面
+        c.DrawRect(new Rect2(-trunkW * 0.5f, topY, trunkW, trunkH), wood, true);
+        c.DrawRect(new Rect2(-trunkW * 0.5f, topY, trunkW * 0.32f, trunkH), woodLit, true);
+        c.DrawRect(new Rect2(trunkW * 0.5f - trunkW * 0.3f, topY, trunkW * 0.3f, trunkH), dark, true);
+        // 根部加宽底座
+        c.DrawRect(new Rect2(-trunkW * 0.75f, groundY - 5f, trunkW * 1.5f, 5f), dark, true);
+        // 枯枝（从树干上段两侧伸出，向上倾斜）
+        for (int i = 0; i < 6; i++)
+        {
+            float t = rng.RandfRange(0.4f, 0.92f);
+            float by = groundY - trunkH * t;
+            float side = rng.Randf() < 0.5f ? -1f : 1f;
+            float len = rng.RandfRange(rect.Size.X * 0.24f, rect.Size.X * 0.46f);
+            float ang = rng.RandfRange(0.5f, 1.25f);
+            float ex = side * Mathf.Cos(ang) * len;
+            float ey = by - Mathf.Sin(ang) * len;
+            c.DrawLine(new Vector2(0f, by), new Vector2(ex, ey), wood, 3f);
+            c.DrawLine(new Vector2(0f, by), new Vector2(ex, ey), woodLit, 1.1f);
+            // 末梢小分叉
+            if (rng.Randf() < 0.55f)
+            {
+                float mx = ex * 0.6f;
+                float my = by - Mathf.Sin(ang) * len * 0.6f;
+                float s2 = Mathf.Sign(ex);
+                c.DrawLine(new Vector2(mx, my),
+                    new Vector2(mx + s2 * len * 0.35f, my - len * 0.3f), dark, 1.5f);
+            }
+        }
+    }
+
+    // 古典石柱（Solid variant 3）：柱头 + 凹槽柱身 + 柱础
+    public static void DrawPillar(CanvasItem c, Rect2 rect, Color stone, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        float capW = rect.Size.X;
+        float shaftW = rect.Size.X * 0.66f;
+        float capH = Mathf.Min(rect.Size.Y * 0.16f, 7f);
+        float yTop = rect.Position.Y;
+        float yBot = rect.End.Y;
+        // 柱头
+        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, capH), stone, true);
+        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, 2f), lit, true);
+        // 柱础
+        c.DrawRect(new Rect2(-capW * 0.5f, yBot - capH, capW, capH), stone, true);
+        c.DrawRect(new Rect2(-capW * 0.5f, yBot - 2f, capW, 2f), dark, true);
+        // 柱身
+        float shaftTop = yTop + capH;
+        float shaftBot = yBot - capH;
+        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW, shaftBot - shaftTop), stone, true);
+        // 左侧高光
+        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW * 0.22f, shaftBot - shaftTop), lit, true);
+        // 右侧暗面（圆柱体积感）
+        c.DrawRect(new Rect2(shaftW * 0.5f - shaftW * 0.2f, shaftTop, shaftW * 0.2f, shaftBot - shaftTop), dark, true);
+        // 竖向凹槽
+        int flutes = 3;
+        for (int i = 1; i < flutes; i++)
+        {
+            float x = -shaftW * 0.5f + i * (shaftW / flutes);
+            c.DrawLine(new Vector2(x, shaftTop + 1f), new Vector2(x, shaftBot - 1f), dark, 1.2f);
+        }
+        // 描边
+        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, capH), dark, false, 1f);
+        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW, shaftBot - shaftTop), dark, false, 1f);
+        c.DrawRect(new Rect2(-capW * 0.5f, yBot - capH, capW, capH), dark, false, 1f);
+    }
+
+    // 金属掩体（Solid variant 5）：金属板 + 警告条 + 铆钉 + 反光带
+    public static void DrawMetalBunker(CanvasItem c, Rect2 rect, Color metal, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        c.DrawRect(rect, metal, true);
+        // 顶高光 / 底阴影
+        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, 2.5f), lit, true);
+        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 2.5f, rect.Size.X, 2.5f), dark, true);
+        // 斜向金属反光带
+        c.DrawLine(new Vector2(rect.Position.X, rect.End.Y), new Vector2(rect.End.X, rect.Position.Y),
+            lit.Lightened(0.1f), 2f);
+        // 警告色横条
+        var warn = new Color(0.82f, 0.60f, 0.10f);
+        float midY = rect.Position.Y + rect.Size.Y * 0.5f - 1.5f;
+        c.DrawRect(new Rect2(rect.Position.X, midY, rect.Size.X, 3f), warn, true);
+        // 四角铆钉
+        var rivet = new Color(0.5f, 0.5f, 0.54f);
+        float rx = rect.Size.X * 0.5f - 5f;
+        float ry = rect.Size.Y * 0.5f - 4f;
+        c.DrawCircle(new Vector2(-rx, -ry), 2f, rivet);
+        c.DrawCircle(new Vector2(rx, -ry), 2f, rivet);
+        c.DrawCircle(new Vector2(-rx, ry), 2f, rivet);
+        c.DrawCircle(new Vector2(rx, ry), 2f, rivet);
+        // 描边
+        c.DrawRect(rect, dark, false, 1.5f);
+    }
+
+    // 木栅栏/木板（Destructible 木）：竖板缝 + 木纹 + 铁钉
+    public static void DrawWoodFence(CanvasItem c, Rect2 rect, Color wood, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        c.DrawRect(rect, wood, true);
+        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, 2f), lit, true);
+        // 底部暗面（接地阴影面）
+        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 2f, rect.Size.X, 2f), dark, true);
+        // 竖向板缝
+        int boards = Mathf.Max(2, Mathf.RoundToInt(rect.Size.X / 18f));
+        for (int i = 1; i < boards; i++)
+        {
+            float x = rect.Position.X + i * (rect.Size.X / boards);
+            c.DrawLine(new Vector2(x, rect.Position.Y), new Vector2(x, rect.End.Y), dark, 1.2f);
+        }
+        // 木纹（横向暗线）
+        for (int i = 0; i < 2; i++)
+        {
+            float y = rect.Position.Y + rect.Size.Y * (0.35f + i * 0.3f);
+            c.DrawLine(new Vector2(rect.Position.X + 2f, y), new Vector2(rect.End.X - 2f, y),
+                dark.Darkened(0.2f), 0.8f);
+        }
+        // 四角铁钉
+        var nail = dark.Lightened(0.25f);
+        c.DrawCircle(new Vector2(rect.Position.X + 5f, rect.Position.Y + 3.5f), 1.5f, nail);
+        c.DrawCircle(new Vector2(rect.End.X - 5f, rect.Position.Y + 3.5f), 1.5f, nail);
+        c.DrawCircle(new Vector2(rect.Position.X + 5f, rect.End.Y - 3.5f), 1.5f, nail);
+        c.DrawCircle(new Vector2(rect.End.X - 5f, rect.End.Y - 3.5f), 1.5f, nail);
+    }
+
+    // 粗凿石堆/石墙（Destructible 石）：错位石块 + 凿痕缺口
+    public static void DrawStoneRubble(CanvasItem c, Rect2 rect, Color stone, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        int blocks = Mathf.Max(2, Mathf.RoundToInt(rect.Size.X / 26f));
+        float bw = rect.Size.X / blocks;
+        for (int i = 0; i < blocks; i++)
+        {
+            float x = rect.Position.X + i * bw;
+            float yo = (i % 2) * (rect.Size.Y * 0.12f); // 上下错位
+            var br = new Rect2(x + 1.5f, rect.Position.Y + yo, bw - 3f, rect.Size.Y - yo);
+            c.DrawRect(br, stone, true);
+            c.DrawRect(new Rect2(br.Position.X, br.Position.Y, br.Size.X, 2f), lit, true);
+            c.DrawRect(new Rect2(br.Position.X, br.End.Y - 2f, br.Size.X, 2f), dark, true);
+            // 随机凿痕缺口
+            if (rng.Randf() < 0.4f)
+            {
+                var notch = new Rect2(br.Position.X + br.Size.X * 0.3f, br.Position.Y,
+                    br.Size.X * 0.25f, br.Size.Y * 0.4f);
+                c.DrawRect(notch, dark.Darkened(0.3f), true);
+            }
         }
     }
 }
@@ -114,9 +315,25 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
         var rect = new Rect2(-_size * 0.5f, _size);
         ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 8f);
         var rng = new RandomNumberGenerator { Seed = (ulong)(_variant * 9999 + 7) };
-        ObstacleDraw.DrawStoneBlock(this, rect, _baseCol, _litCol, _darkCol, _variant, rng);
-        // 描边强化轮廓
-        DrawRect(rect, _darkCol.Darkened(0.3f), false, 1.5f);
+        switch (_variant)
+        {
+            case 1: // 墓碑排
+                ObstacleDraw.DrawTombstoneRow(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 2: // 枯树
+                ObstacleDraw.DrawDeadTree(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 3: // 石柱
+                ObstacleDraw.DrawPillar(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 5: // 金属掩体
+                ObstacleDraw.DrawMetalBunker(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            default: // variant 4 / 其他：砖石墙
+                ObstacleDraw.DrawStoneBlock(this, rect, _baseCol, _litCol, _darkCol, _variant, rng);
+                DrawRect(rect, _darkCol.Darkened(0.3f), false, 1.5f);
+                break;
+        }
     }
 }
 
@@ -257,7 +474,10 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
         var lit = isWood ? new Color(0.34f, 0.23f, 0.13f) : new Color(0.44f, 0.41f, 0.34f);
         var dark = isWood ? new Color(0.16f, 0.10f, 0.05f) : new Color(0.20f, 0.18f, 0.14f);
 
-        ObstacleDraw.DrawStoneBlock(this, rect, baseCol, lit, dark, _variant, rng);
+        if (isWood)
+            ObstacleDraw.DrawWoodFence(this, rect, baseCol, lit, dark, rng);
+        else
+            ObstacleDraw.DrawStoneRubble(this, rect, baseCol, lit, dark, rng);
 
         // 按受损程度叠加裂纹
         float dmgRatio = 1f - (float)_health / _maxHealth;
