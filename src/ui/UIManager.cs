@@ -2012,6 +2012,12 @@ public partial class UIManager : Control
         _screenFx?.FlashBossKill();
     }
 
+    /// <summary>黄金掉落：柔和金色微闪（斐波那契掉落时刻）。</summary>
+    public void FlashGoldenDrop()
+    {
+        _screenFx?.FlashGoldenDrop();
+    }
+
     public void AddCombo()
     {
         _screenFx?.AddCombo();

@@ -332,6 +332,9 @@ public partial class GameManager : Node
 
         var roundFactor = Mathf.Sqrt((float)CurrentRound) * 1.5f;
         _zombiesToSpawn = ZombiesPerRoundBase + (int)roundFactor + (CurrentRound - 1) * ZombiesIncreasePerRound;
+        // 数学系统：黄金比例——叠加斐波那契调制，让难度有"黄金呼吸"而非单调线性递增
+        if (GameConfig.MathSystemsEnabled)
+            _zombiesToSpawn = ZombieWars.Math.GoldenProgression.ModulateZombieCount(_zombiesToSpawn, CurrentRound);
         _zombiesToSpawn = Mathf.Min(_zombiesToSpawn, ZombiesMaxPerRound);
         _zombiesSpawned = 0;
         _zombiesAlive = 0;
@@ -1142,6 +1145,10 @@ public partial class GameManager : Node
             && ZombieWars.Math.GoldenProgression.IsFibonacciDropPoint(_totalKills + 1);
 
         if (roll > dropChance && !goldenDrop) return;
+
+        // 黄金掉落可见反馈：柔和金光，让玩家感知"斐波那契时刻"
+        if (goldenDrop)
+            _uiManager?.FlashGoldenDrop();
 
         string pickupType = GD.Randf() < 0.5f ? "health_potion" : "skill_book";
         SpawnPickup(zombie.GlobalPosition, pickupType);

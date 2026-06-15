@@ -210,6 +210,15 @@ void fragment() {
         tw.TweenProperty(_critFlash, "color:a", 0.0f, 0.16f);
     }
 
+    /// <summary>黄金掉落：柔和金色微闪（弱 alpha + 慢淡出），与暴击锐闪区分，提示斐波那契掉落时刻。</summary>
+    public void FlashGoldenDrop()
+    {
+        if (_critFlash == null) return;
+        _critFlash.Color = new Color(1.0f, 0.85f, 0.3f, 0.15f);
+        var tw = CreateTween();
+        tw.TweenProperty(_critFlash, "color:a", 0.0f, 0.3f);
+    }
+
     // ══ Boss 演出层（出场暗化 / 阶段切换 / 击杀强闪）══
 
     private void _CreateBossOverlay()
