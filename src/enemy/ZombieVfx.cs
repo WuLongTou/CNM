@@ -768,7 +768,8 @@ public partial class ZombieVfx : Node
     {
         if (_sprite != null)
         {
-            _sprite.Modulate = Colors.Cyan;
+            // 保留原 alpha（Invisible 僵尸应保持半隐身），只覆盖色调
+            _sprite.Modulate = new Color(Colors.Cyan.R, Colors.Cyan.G, Colors.Cyan.B, _sprite.Modulate.A);
             // Add ice particle effect
             _SpawnStatusParticles(new Color(0.5f, 0.8f, 1.0f), 5, 0.3f);
         }
@@ -778,7 +779,7 @@ public partial class ZombieVfx : Node
     {
         if (_sprite != null)
         {
-            _sprite.Modulate = new Color(0.8f, 0.8f, 1.0f);
+            _sprite.Modulate = new Color(0.8f, 0.8f, 1.0f, _sprite.Modulate.A);
             // Show stun stars
             _SpawnStunStars();
         }
@@ -788,7 +789,7 @@ public partial class ZombieVfx : Node
     {
         if (_sprite != null)
         {
-            _sprite.Modulate = Colors.Purple;
+            _sprite.Modulate = new Color(Colors.Purple.R, Colors.Purple.G, Colors.Purple.B, _sprite.Modulate.A);
             // Add poison drip effect
             _SpawnStatusParticles(new Color(0.4f, 0.9f, 0.3f), 3, 0.5f);
         }
@@ -798,7 +799,7 @@ public partial class ZombieVfx : Node
     {
         if (_sprite != null)
         {
-            _sprite.Modulate = Colors.Magenta;
+            _sprite.Modulate = new Color(Colors.Magenta.R, Colors.Magenta.G, Colors.Magenta.B, _sprite.Modulate.A);
             // Add heart particles
             _SpawnStatusParticles(new Color(1.0f, 0.5f, 0.7f), 4, 0.4f);
         }

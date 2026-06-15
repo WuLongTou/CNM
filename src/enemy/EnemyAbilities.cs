@@ -359,6 +359,9 @@ public partial class ZombieAbilitySystem : Node
 
     private void _OnCloneDeath(Zombie clone)
     {
+        // 父僵尸（AbilitySystem 的 owner）常在 clone 之前死亡：clone 死亡回调时本节点可能已 free，
+        // 访问 _cloneCount 前必须校验自身有效性（Died 是 C# event，不随节点释放自动解绑）。
+        if (!IsInstanceValid(this)) return;
         _cloneCount--;
         // Clones don't clone further (depth limit)
     }
