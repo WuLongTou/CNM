@@ -1979,6 +1979,8 @@ public partial class UIManager : Control
     public void ShakeScreen(float intensity)
     {
         _screenFx?.ShakeScreen(intensity);
+        // 同步驱动游戏摄像机震动 + zoom punch（group 调用，无摄像机时静默忽略）
+        GetTree().CallGroup("game_camera", "AddShake", intensity);
     }
 
     public void FlashAttackColor(Color attackColor)

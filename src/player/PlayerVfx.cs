@@ -434,7 +434,7 @@ public partial class PlayerVfx : Node
         Player!.Shadow = new Sprite2D
         {
             Texture = _MakeShadowTexture(32, 12, new Color(0, 0, 0, 0.5f)),
-            Position = new Vector2(0, 18)
+            Position = new Vector2(6, 18)
         };
         Player.AddChild(Player.Shadow);
     }

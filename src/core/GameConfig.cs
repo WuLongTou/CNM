@@ -44,6 +44,19 @@ public static class GameConfig
     public const float NavAgentRadius = 16.0f;
 
     // ═══════════════════════════════════════════════
+    // Camera System（镜头动感：平滑跟随 + 前瞻 + 震动 + zoom punch + 冲刺）
+    // ═══════════════════════════════════════════════
+
+    public static readonly Godot.Vector2 CameraBaseZoom = new(1.05f, 0.85f); // X 轻微聚焦，Y 压缩做斜俯视
+    public const float CameraSmoothing = 6.5f;        // 跟随平滑系数（指数阻尼，越大越贴）
+    public const float CameraLookaheadFactor = 0.20f; // 速度 → 前瞻距离系数
+    public const float CameraLookaheadMax = 90f;      // 前瞻距离上限（像素）
+    public const float CameraShakeDecay = 16.0f;      // 震动衰减速率
+    public const float CameraShakeToZoom = 0.003f;    // 震动强度 → 相对 zoom punch 转换
+    public const float CameraZoomPunchDecay = 9.0f;   // zoom punch 衰减速率
+    public const float CameraDashZoomOut = 0.08f;     // 冲刺时相对 zoom out（保持斜视比例）
+
+    // ═══════════════════════════════════════════════
     // Player Attributes
     // ═══════════════════════════════════════════════
 
@@ -150,7 +163,7 @@ public static class GameConfig
     // Zombie visuals
     public static readonly Godot.Vector2 ZombieShadowSize = new(28.0f, 10.0f);
     public static readonly Godot.Color ZombieShadowColor = new(0.0f, 0.0f, 0.0f, 0.5f);
-    public static readonly Godot.Vector2 ZombieShadowOffset = new(0.0f, 14.0f);
+    public static readonly Godot.Vector2 ZombieShadowOffset = new(6.0f, 14.0f);
     public static readonly Godot.Color ZombieEliteRingColor = new(1.0f, 0.85f, 0.2f, 0.75f);
     public static readonly Godot.Vector2 ZombieEliteScale = new(1.15f, 1.15f);
     public const int ZombieStatusFontSize = 10;

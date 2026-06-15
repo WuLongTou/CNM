@@ -23,7 +23,7 @@ public partial class Main : Node2D
     private UIManager _uiManager = null!;
     private WeatherSystem? _weatherSystem;
     private AutoTestRunner? _autoTestRunner;
-    private Camera2D _camera = null!;
+    private GameCamera _camera = null!;
     private MapManager _mapManager = null!;
     private MapBuilder _mapBuilder = null!;
 
@@ -124,14 +124,12 @@ public partial class Main : Node2D
 
     private void _SetupCamera()
     {
-        _camera = new Camera2D { Name = "Camera" };
-        _camera.LimitLeft = 0;
-        _camera.LimitTop = 0;
-        _camera.LimitRight = (int)MapContext.CurrentWorldSize.X;
-        _camera.LimitBottom = (int)MapContext.CurrentWorldSize.Y;
+        _camera = new GameCamera { Name = "Camera" };
+        _camera.UpdateLimits(MapContext.CurrentWorldSize);
         _camera.ProcessMode = Node.ProcessModeEnum.Always;
-        // Add directly to player so it follows automatically
-        _player.AddChild(_camera);
+        _camera.Init(_player);
+        // 独立节点：由 GameCamera 自己做平滑跟随，不再硬挂在玩家下
+        AddChild(_camera);
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -156,6 +154,8 @@ public partial class Main : Node2D
         _mapBuilder.Build(map);
         // 玩家回到新地图中心，避免卡入障碍
         _player.GlobalPosition = MapContext.CurrentWorldSize / 2;
+        // 刷新摄像机边界到新地图尺寸
+        _camera.UpdateLimits(MapContext.CurrentWorldSize);
         LogUtils.Print($"[Main] 地图已切换：{map.Name}");
     }
 

@@ -20,10 +20,11 @@ public abstract partial class SceneProp : Node2D
         QueueRedraw();
     }
 
-    // 椭圆地面投影
+    // 方向性地面投影：光从左上，阴影投右下
     protected void DrawGroundShadow(Vector2 center, float rx, float ry)
     {
-        DrawSetTransform(new Vector2(center.X, center.Y), 0f, new Vector2(rx / 8f, ry / 4f));
+        var pos = new Vector2(center.X + rx * 0.35f, center.Y);
+        DrawSetTransform(pos, 0f, new Vector2(rx / 8f * 1.25f, ry / 4f));
         DrawCircle(Vector2.Zero, 8f, ShadowCol);
         DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
     }
