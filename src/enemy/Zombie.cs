@@ -481,6 +481,23 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             }
         }
 
+        // 僵尸间分离力：遍历注册表快照（已缓存、无 List 分配）推开重叠同伴，
+        // 避免堆叠成一点、形成自然包围圈（N 有界，O(N²) 距离计算无 GC 压力）
+        float sepRange = GameConfig.ZombieSeparationRange;
+        float sepRangeSq = sepRange * sepRange;
+        foreach (var other in ZombieRegistry.All)
+        {
+            if (other == this) continue;
+            Vector2 diff = GlobalPosition - other.GlobalPosition;
+            float distSq = diff.LengthSquared();
+            if (distSq < sepRangeSq && distSq > 0.25f)
+            {
+                float dist = Mathf.Sqrt(distSq);
+                float factor = (sepRange - dist) / sepRange;
+                Velocity += (diff / dist) * factor * GameConfig.ZombieSeparationForce * (float)GetPhysicsProcessDeltaTime();
+            }
+        }
+
         MoveAndSlide();
     }
 

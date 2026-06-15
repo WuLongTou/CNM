@@ -42,6 +42,9 @@ public static class GameConfig
     public const float NavAgentPathDesiredDist = 8.0f;
     public const float NavAgentTargetDesiredDist = 12.0f;
     public const float NavAgentRadius = 16.0f;
+    // 僵尸间分离力（避免堆叠成一点，形成自然包围圈）
+    public const float ZombieSeparationRange = 26.0f;
+    public const float ZombieSeparationForce = 150.0f;
 
     // ═══════════════════════════════════════════════
     // Camera System（镜头动感：平滑跟随 + 前瞻 + 震动 + zoom punch + 冲刺）
