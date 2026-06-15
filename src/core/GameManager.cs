@@ -270,6 +270,7 @@ public partial class GameManager : Node
         HitStopController.Instance?.Trigger(GameConfig.HitStopBossSpawnMs);
         _uiManager?.ShakeScreen(12.0f);
         _uiManager?.FlashBossPhase();
+        GameServices.Audio.PlayLightning();
         _uiManager?.ShowRoundBanner(phase == 3 ? "⚠ BOSS 狂暴！ ⚠" : "⚠ BOSS 暴怒！ ⚠");
 
         // 狂暴加速
@@ -624,6 +625,7 @@ public partial class GameManager : Node
         HitStopController.Instance?.Trigger(GameConfig.HitStopBossSpawnMs);
         _uiManager?.ShakeScreen(14.0f);
         _uiManager?.FlashBossSpawn();
+        GameServices.Audio.PlayExplosion();
 
         LogUtils.Print($"BOSS 生成！回合 {CurrentRound}");
     }
@@ -719,6 +721,7 @@ public partial class GameManager : Node
             HitStopController.Instance?.Trigger(GameConfig.HitStopBossKillMs);
             _uiManager?.ShakeScreen(20.0f);
             _uiManager?.FlashBossKill();
+            GameServices.Audio.PlayExplosion();
         }
         else if (zombie.IsElite)
         {
@@ -1148,7 +1151,10 @@ public partial class GameManager : Node
 
         // 黄金掉落可见反馈：柔和金光，让玩家感知"斐波那契时刻"
         if (goldenDrop)
+        {
             _uiManager?.FlashGoldenDrop();
+            GameServices.Audio.PlayUpgrade();
+        }
 
         string pickupType = GD.Randf() < 0.5f ? "health_potion" : "skill_book";
         SpawnPickup(zombie.GlobalPosition, pickupType);
