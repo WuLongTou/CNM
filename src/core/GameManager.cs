@@ -267,7 +267,7 @@ public partial class GameManager : Node
         if (boss == null || !IsInstanceValid(boss)) return;
 
         // 怒吼演出：凝固 + 强震屏 + 橙红爆闪 + 警告横幅
-        HitStopController.Instance?.Trigger(GameConfig.HitStopBossSpawnMs);
+        HitStopController.Instance?.Trigger(GameConfig.HitStopBossPhaseMs);
         _uiManager?.ShakeScreen(12.0f);
         _uiManager?.FlashBossPhase();
         GameServices.Audio.PlayLightning();
@@ -310,6 +310,7 @@ public partial class GameManager : Node
     public void StartNewRound()
     {
         CurrentRound++;
+        _bossPhase = 0; // 防御：每回合重置 Boss 阶段状态机，避免幽灵阶段
         CurrentState = GameState.WeaponSelection;
 
         // 通知地图系统按回合检查切换（每 MapRerollRounds 回合换图）

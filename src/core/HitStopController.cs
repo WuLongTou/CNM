@@ -46,8 +46,12 @@ public partial class HitStopController : Node
 
     public override void _Process(double delta)
     {
-        // delta 在冻结期≈0，故必须用墙钟判断恢复时机
-        if (Engine.TimeScale != 1.0 && Time.GetTicksMsec() >= _frozenUntilMs)
+        if (Engine.TimeScale == 1.0) return;
+
+        // 进入暂停态（卡牌选择 / 暂停 / GameOver）时立即解除凝固：暂停期间 UI 入场 tween
+        // 仍会播放，若 TimeScale≈0 会把它们拉慢数十倍（卡牌十几秒才弹出）。
+        // delta 在冻结期≈0，故恢复判断用墙钟/状态而非 delta。
+        if (GetTree().Paused || Time.GetTicksMsec() >= _frozenUntilMs)
             Engine.TimeScale = 1.0;
     }
 

@@ -239,6 +239,7 @@ public static class GameConfig
     public const int HitStopEliteKillMs = 110;      // 精英怪击杀
     public const int HitStopKillMs = 70;            // 普通击杀
     public const int HitStopBossSpawnMs = 180;      // Boss 出场（配合演出）
+    public const int HitStopBossPhaseMs = 100;      // Boss 阶段切换（战斗中，比出场短）
     public const int HitStopBossKillMs = 220;       // Boss 击杀（慢动作）
 
     // ═══════════════════════════════════════════════
