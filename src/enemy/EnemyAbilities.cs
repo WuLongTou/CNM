@@ -237,10 +237,10 @@ public partial class ZombieAbilitySystem : Node
         Vector2 dir = (toPlayer - from).Normalized();
         Vector2 destination = from + dir * (_teleportDistance * 0.8f);
 
-        // Clamp to screen bounds
-        var screen = _zombie.GetViewport().GetVisibleRect().Size;
-        destination.X = Mathf.Clamp(destination.X, GameConfig.BoundsPadding, screen.X - GameConfig.BoundsPadding);
-        destination.Y = Mathf.Clamp(destination.Y, GameConfig.TopUiMargin, screen.Y - GameConfig.BoundsPadding);
+        // Clamp to world bounds
+        var worldSize = MapContext.CurrentWorldSize;
+        destination.X = Mathf.Clamp(destination.X, GameConfig.BoundsPadding, worldSize.X - GameConfig.BoundsPadding);
+        destination.Y = Mathf.Clamp(destination.Y, GameConfig.TopUiMargin, worldSize.Y - GameConfig.BoundsPadding);
 
         // Spawn warning indicator
         _SpawnTeleportWarning(destination);

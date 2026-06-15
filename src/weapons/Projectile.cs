@@ -234,7 +234,7 @@ public partial class Projectile : CharacterBody2D, IDamager
     {
         if (!IsReturning) return;
 
-        Vector2 worldSize = Core.GameConfig.WorldSize;
+        Vector2 worldSize = Core.MapContext.CurrentWorldSize;
         Vector2 minPos = new(BoundsPadding, BoundsPadding);
         Vector2 maxPos = new(worldSize.X - BoundsPadding, worldSize.Y - BoundsPadding);
         bool bounced = false;

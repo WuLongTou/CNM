@@ -15,14 +15,18 @@ public partial class Background : Node2D
 
     private ColorRect? _backgroundRect;
     private TextureRect? _groundLayer;
+    private TextureRect? _groundOverlay;
     private TextureRect? _atmosphereLayer;
     private readonly Godot.Collections.Array<TextureRect> _fogLayers = new();
+    private MapData? _currentMap;
 
     public float Tension { get; set; } = 0.0f;
 
     public override void _Ready()
     {
         ZIndex = -10;
+        // 尝试获取当前地图（MapManager._Ready 已设置默认）
+        _currentMap = (GetTree().GetFirstNodeInGroup("map_manager") as MapManager)?.Current;
         _CreateBaseBackground();
         _BakeGroundTexture();
         _TryLoadGroundOverlay();
@@ -37,7 +41,7 @@ public partial class Background : Node2D
         SetProcess(false);
     }
 
-    private Vector2 _WorldSize => GameConfig.WorldSize;
+    private Vector2 _WorldSize => MapContext.CurrentWorldSize;
 
     private void _BakeGroundTexture()
     {
@@ -60,12 +64,16 @@ public partial class Background : Node2D
 
     private void _CreateAtmosphereOverlay()
     {
-        if (!FileAccess.FileExists(AlchemyAtmospherePath))
+        string path = _currentMap?.AtmosphereTexturePath ?? AlchemyAtmospherePath;
+        if (!FileAccess.FileExists(path))
             return;
 
-        var tex = TextureUtils.LoadTexture(AlchemyAtmospherePath);
+        var tex = TextureUtils.LoadTexture(path);
         if (tex == null)
             return;
+
+        var tint = _currentMap?.AtmosphereTint ?? new Color(1.0f, 0.82f, 0.72f);
+        float alpha = _currentMap?.AtmosphereAlpha ?? 0.22f;
 
         _atmosphereLayer = new TextureRect
         {
@@ -74,7 +82,7 @@ public partial class Background : Node2D
             StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
             Size = _WorldSize,
             TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-            Modulate = new Color(1.0f, 0.82f, 0.72f, 0.22f),
+            Modulate = new Color(tint.R, tint.G, tint.B, alpha),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
 
@@ -117,35 +125,26 @@ public partial class Background : Node2D
 
     private void _TryLoadGroundOverlay()
     {
-        string[] paths = {
-            "res://assets/sprites/backgrounds/ground_alchemy_001.jpg",
-            "res://assets/sprites/backgrounds/ground_stone.jpg",
-            "res://assets/sprites/backgrounds/ground_graveyard.jpg",
-            "res://assets/sprites/backgrounds/ground_dungeon.jpg",
-            "res://assets/sprites/backgrounds/ground_cemetery.jpg",
-            "res://assets/sprites/backgrounds/ground_ruins.jpg"
-        };
-
-        foreach (string p in paths)
-        {
-            if (!FileAccess.FileExists(p)) continue;
-            var tex = TextureUtils.LoadTexture(p);
-            if (tex == null) continue;
-
-            var rect = new TextureRect
-            {
-                Texture = tex,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-                Size = _WorldSize,
-                ZIndex = -4,
-                TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-                Modulate = new Color(1.0f, 0.95f, 0.90f, 0.16f),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            _backgroundRect!.AddChild(rect);
+        string? path = _currentMap?.GroundTexturePath;
+        if (path == null || !FileAccess.FileExists(path))
             return;
-        }
+        var tex = TextureUtils.LoadTexture(path);
+        if (tex == null)
+            return;
+
+        var tint = _currentMap?.GroundTint ?? new Color(1.0f, 0.95f, 0.90f);
+        _groundOverlay = new TextureRect
+        {
+            Texture = tex,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+            Size = _WorldSize,
+            ZIndex = -4,
+            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+            Modulate = new Color(tint.R, tint.G, tint.B, 0.16f),
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        _backgroundRect!.AddChild(_groundOverlay);
     }
 
     private void _CreateSceneProps()
@@ -520,11 +519,26 @@ public partial class Background : Node2D
     public void UpdateBackgroundSize()
     {
         if (_backgroundRect != null)
-            _backgroundRect.Size = GameConfig.WorldSize;
+            _backgroundRect.Size = MapContext.CurrentWorldSize;
         if (_groundLayer != null)
-            _groundLayer.Size = GameConfig.WorldSize;
+            _groundLayer.Size = MapContext.CurrentWorldSize;
         if (_atmosphereLayer != null)
-            _atmosphereLayer.Size = GameConfig.WorldSize;
+            _atmosphereLayer.Size = MapContext.CurrentWorldSize;
+        if (_groundOverlay != null)
+            _groundOverlay.Size = MapContext.CurrentWorldSize;
+    }
+
+    /// <summary>切换地图时重建氛围/地面叠加层（由 Main 在 MapChanged 时调用）。</summary>
+    public void LoadMap(MapData map)
+    {
+        _currentMap = map;
+        _groundOverlay?.QueueFree();
+        _groundOverlay = null;
+        _atmosphereLayer?.QueueFree();
+        _atmosphereLayer = null;
+        _TryLoadGroundOverlay();
+        _CreateAtmosphereOverlay();
+        UpdateBackgroundSize();
     }
 
     public void SetTension(float value)

@@ -108,6 +108,9 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public bool ShowMeleeRange { get; set; } = true;
     public bool IsDead { get; set; } = false;
 
+    // 外部减速倍率（低矮障碍/陷阱每帧设置，每帧重置为 1.0）
+    public float ExternalSlowMult { get; set; } = 1.0f;
+
     public PlayerCombat? Combat { get; set; }
     public PlayerInput? InputHandler { get; private set; }
     public PlayerAura? Aura { get; set; }
@@ -134,8 +137,8 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         AddChild(Collision);
 
         // Set collision layers for zombie detection
-        CollisionLayer = 0b001; // Layer 1 - zombies detect this
-        CollisionMask = 0b010; // Layer 2 - collide with zombies
+        CollisionLayer = Core.GameConfig.CollisionLayerPlayer; // Layer 1 - zombies detect this
+        CollisionMask = Core.GameConfig.CollisionMaskPlayer; // 碰僵尸 + 固体/可破坏障碍
         AddToGroup("player");
 
         Vfx = new PlayerVfx { Name = "VFX" };
@@ -179,6 +182,8 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
             return;
         }
 
+        // 每帧重置外部减速倍率（低矮障碍/陷阱 Area2D 会覆盖它）
+        ExternalSlowMult = 1.0f;
         _HandleMovement();
         Vfx?.UpdateWalkAnimation((float)delta);
         _HandleDashInput();
@@ -292,13 +297,13 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     private void _HandleMovement()
     {
         Vector2 inputVec = InputHandler?.MoveDirection ?? Vector2.Zero;
-        Velocity = inputVec != Vector2.Zero ? inputVec * CurrentSpeed : Vector2.Zero;
+        Velocity = inputVec != Vector2.Zero ? inputVec * CurrentSpeed * ExternalSlowMult : Vector2.Zero;
     }
 
     private void _ClampToScreen()
     {
         // Use world bounds instead of screen bounds for larger world
-        var worldSize = Core.GameConfig.WorldSize;
+        var worldSize = Core.MapContext.CurrentWorldSize;
         var margin = Core.GameConfig.BoundsPadding;
 
         GlobalPosition = new Vector2(

@@ -12,6 +12,37 @@ public static class GameConfig
 
     public static readonly Godot.Vector2 WorldSize = new(1920, 1080);
 
+    // 碰撞层（物理位掩码）—— 全局统一约定，避免散落魔法数字
+    // Layer 1 = 玩家, Layer 2 = 僵尸, Layer 3 = 固体障碍物, Layer 4 = 可破坏障碍
+    public const uint CollisionLayerPlayer = 0b0001;
+    public const uint CollisionLayerZombie = 0b0010;
+    public const uint CollisionLayerObstacleSolid = 0b0100;
+    public const uint CollisionLayerObstacleDestructible = 0b1000;
+    public const uint CollisionMaskPlayer = CollisionLayerZombie | CollisionLayerObstacleSolid | CollisionLayerObstacleDestructible;
+    public const uint CollisionMaskZombie = CollisionLayerObstacleSolid | CollisionLayerObstacleDestructible;
+
+    // ═══════════════════════════════════════════════
+    // Map System（多地图 + 障碍物 + 导航）
+    // ═══════════════════════════════════════════════
+
+    // 每隔多少回合切换一张新地图（0 表示仅每局开始切换一次）
+    public const int MapRerollRounds = 3;
+    // 障碍物避开中心出生安全区半径（占比）
+    public const float MapSpawnSafeRadiusX = 0.12f;
+    public const float MapSpawnSafeRadiusY = 0.12f;
+    // 可破坏障碍物
+    public const int DestructibleObstacleHealth = 40;
+    public const float DestructibleObstacleShakeOnHit = 2.0f;
+    // 陷阱/危险区域
+    public const float HazardDamagePerSec = 6.0f;
+    public const float HazardSlowMult = 0.55f;
+    // 低矮装饰障碍减速
+    public const float LowObstacleSlowMult = 0.6f;
+    // 导航
+    public const float NavAgentPathDesiredDist = 8.0f;
+    public const float NavAgentTargetDesiredDist = 12.0f;
+    public const float NavAgentRadius = 16.0f;
+
     // ═══════════════════════════════════════════════
     // Player Attributes
     // ═══════════════════════════════════════════════

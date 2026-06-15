@@ -45,7 +45,7 @@ public static class ProceduralGround
         _PaintEdgeMoss(img, detail);
         _PaintGravel(img, seed);
 
-        img.Resize((int)GameConfig.WorldSize.X, (int)GameConfig.WorldSize.Y,
+        img.Resize((int)MapContext.CurrentWorldSize.X, (int)MapContext.CurrentWorldSize.Y,
             Image.Interpolation.Bilinear);
         return img;
     }

@@ -418,7 +418,7 @@ public static class ScenePropPlacer
     public static void Populate(Node2D parent, int seed = 777)
     {
         var rng = new RandomNumberGenerator { Seed = (ulong)seed };
-        var ws = GameConfig.WorldSize;
+        var ws = MapContext.CurrentWorldSize;
 
         bool InBattleZone(Vector2 p)
         {

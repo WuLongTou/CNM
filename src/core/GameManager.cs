@@ -270,6 +270,9 @@ public partial class GameManager : Node
         CurrentRound++;
         CurrentState = GameState.WeaponSelection;
 
+        // 通知地图系统按回合检查切换（每 MapRerollRounds 回合换图）
+        GetTree().CallGroup("map_manager", "OnRoundStarted", CurrentRound);
+
         // 配置 4 大数学玩法系统
         if (GameConfig.MathSystemsEnabled)
         {
@@ -788,7 +791,7 @@ public partial class GameManager : Node
 
     private Vector2 _PickArenaPoint(float marginRatio)
     {
-        var ws = GameConfig.WorldSize;
+        var ws = MapContext.CurrentWorldSize;
         float mx = ws.X * marginRatio;
         float my = ws.Y * marginRatio;
         return new Vector2((float)GD.RandRange(mx, ws.X - mx), (float)GD.RandRange(my, ws.Y - my));
@@ -853,7 +856,7 @@ public partial class GameManager : Node
     private void _UpdateSpawnPoints()
     {
         _spawnPoints.Clear();
-        var worldSize = GameConfig.WorldSize;
+        var worldSize = MapContext.CurrentWorldSize;
         var margin = GameConfig.SpawnMargin;
         var topMargin = GameConfig.SpawnTopMarginFallback;
 
@@ -934,8 +937,8 @@ public partial class GameManager : Node
 
         // Use center spawn
         zombieInstance.GlobalPosition = new Vector2(
-            GameConfig.WorldSize.X / 2.0f + (float)GD.RandRange(-100, 100),
-            GameConfig.WorldSize.Y / 2.0f + (float)GD.RandRange(-100, 100)
+            MapContext.CurrentWorldSize.X / 2.0f + (float)GD.RandRange(-100, 100),
+            MapContext.CurrentWorldSize.Y / 2.0f + (float)GD.RandRange(-100, 100)
         );
 
         var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 1.5f;

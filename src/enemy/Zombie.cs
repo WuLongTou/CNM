@@ -77,6 +77,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     private bool _isStunned;
     private float _stunTimer;
     private float _slowMultiplier = 1.0f;
+    public float MapSlowMult { get; set; } = 1.0f; // 地图低矮障碍/陷阱减速（每帧重置）
     private float _poisonRemaining;
     private float _poisonTickTimer;
     private float _poisonDamage;
@@ -164,6 +165,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     public Sprite2D? Sprite => _vfx?.Sprite;
 
     private CollisionShape2D _collision = null!;
+    private NavigationAgent2D? _navAgent;
     private Area2D _touchDamageArea = null!;
     private ZombieVfx _vfx = null!;
     private ZombieAbilitySystem? _abilitySystem;
@@ -190,7 +192,23 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         CurrentHealth = MaxHealth;
         AddToGroup("zombies");
         ZombieRegistry.Register(this);
-        CollisionLayer = 0b010; // layer 2
+        CollisionLayer = GameConfig.CollisionLayerZombie; // layer 2
+        // 地面僵尸与固体/可破坏障碍碰撞；飞行类（飞船/龙）忽略障碍可穿墙
+        CollisionMask = (ZombieType == ZombieType.Ship || ZombieType == ZombieType.Dragon)
+            ? 0 : GameConfig.CollisionMaskZombie;
+
+        // 地面普通僵尸接入导航寻路（绕开固体/可破坏障碍）；特殊移动类自行处理
+        if (!_selfMovingTypes.Contains(ZombieType))
+        {
+            _navAgent = new NavigationAgent2D
+            {
+                PathDesiredDistance = GameConfig.NavAgentPathDesiredDist,
+                TargetDesiredDistance = GameConfig.NavAgentTargetDesiredDist,
+                Radius = GameConfig.NavAgentRadius,
+                AvoidanceEnabled = false
+            };
+            AddChild(_navAgent);
+        }
 
         // Collision shape
         _collision = new CollisionShape2D();
@@ -289,6 +307,8 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     public override void _PhysicsProcess(double delta)
     {
         float d = (float)delta;
+        // 每帧重置地图减速倍率（低矮障碍/陷阱 Area2D 会覆盖它）
+        MapSlowMult = 1.0f;
 
         if (_isStunned)
         {
@@ -418,28 +438,51 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         ZombieType.Ship, ZombieType.Mech, ZombieType.Knight, ZombieType.Dragon, ZombieType.Swarm
     };
 
+    // 飞行类（穿墙，不受障碍影响）
+    private static readonly HashSet<ZombieType> _flyerTypes = new()
+    {
+        ZombieType.Ship, ZombieType.Dragon
+    };
+
     private void _MoveTowardsPlayer()
     {
         // Types with custom movement already set Velocity and called MoveAndSlide
         if (_selfMovingTypes.Contains(ZombieType))
             return;
 
+        Vector2 target;
         if (_isCharmed)
         {
             var nearest = _FindNearestZombie(GameConfig.CharmSearchRange);
-            if (nearest != null)
-            {
-                Velocity = (nearest.GlobalPosition - GlobalPosition).Normalized() * Speed;
-            }
-            else
+            if (nearest == null)
             {
                 Velocity = Vector2.Zero;
+                MoveAndSlide();
+                return;
             }
+            target = nearest.GlobalPosition;
         }
         else
         {
-            Velocity = (Player.GlobalPosition - GlobalPosition).Normalized() * Speed * _slowMultiplier;
+            target = Player.GlobalPosition;
         }
+
+        // 导航寻路：地面普通僵尸绕开障碍；无导航代理时直线（飞行类由 mask 穿墙）
+        Vector2 nextPos;
+        if (_navAgent != null)
+        {
+            _navAgent.TargetPosition = target;
+            nextPos = _navAgent.GetNextPathPosition();
+        }
+        else
+        {
+            nextPos = target;
+        }
+
+        Vector2 toNext = nextPos - GlobalPosition;
+        Velocity = toNext.LengthSquared() > 1f
+            ? toNext.Normalized() * Speed * _slowMultiplier * MapSlowMult
+            : Vector2.Zero;
 
         // 数学系统：向量场——叠加力场力（吸引/排斥/旋涡）偏移路径
         if (Core.GameConfig.MathSystemsEnabled)

@@ -24,6 +24,8 @@ public partial class Main : Node2D
     private WeatherSystem? _weatherSystem;
     private AutoTestRunner? _autoTestRunner;
     private Camera2D _camera = null!;
+    private MapManager _mapManager = null!;
+    private MapBuilder _mapBuilder = null!;
 
     private Vector2 _screenSize;
 
@@ -53,12 +55,24 @@ public partial class Main : Node2D
         ZombieRegistry.Clear();
         GameServices.Clear();
 
+        // 创建地图系统（多地图 + 障碍物 + 导航），需先于 Background 重建
+        _mapManager = new MapManager { Name = "MapManager" };
+        AddChild(_mapManager);
+        _mapBuilder = new MapBuilder { Name = "MapBuilder" };
+        AddChild(_mapBuilder);
+        _mapManager.SelectInitialRandom();
+
         // Cache typed references to autoloaded/child nodes.
         _background = GetNode<Background>("Background");
         _player = GetNode<PlayerClass>("Player");
         _gameManager = GetNode<GameManager>("GameManager");
         _weaponDeck = GetNode<WeaponDeck>("WeaponDeck");
         _uiManager = GetNode<UIManager>("UILayer/UIManager");
+
+        // 用选定地图构建可交互场景（Background._Ready 已用默认构建氛围，这里按选定地图重建）
+        _background.LoadMap(_mapManager.Current);
+        _mapBuilder.Build(_mapManager.Current);
+        _mapManager.MapChanged += OnMapChanged;
 
         // Setup camera
         _SetupCamera();
@@ -85,7 +99,7 @@ public partial class Main : Node2D
         _gameManager.GameOver += _uiManager.ShowGameOver;
 
         // Center the player in the world.
-        _player.GlobalPosition = GameConfig.WorldSize / 2;
+        _player.GlobalPosition = MapContext.CurrentWorldSize / 2;
 
         // Respond to viewport resizes to keep background covering the screen.
         GetViewport().SizeChanged += OnViewportSizeChanged;
@@ -113,8 +127,8 @@ public partial class Main : Node2D
         _camera = new Camera2D { Name = "Camera" };
         _camera.LimitLeft = 0;
         _camera.LimitTop = 0;
-        _camera.LimitRight = (int)GameConfig.WorldSize.X;
-        _camera.LimitBottom = (int)GameConfig.WorldSize.Y;
+        _camera.LimitRight = (int)MapContext.CurrentWorldSize.X;
+        _camera.LimitBottom = (int)MapContext.CurrentWorldSize.Y;
         _camera.ProcessMode = Node.ProcessModeEnum.Always;
         // Add directly to player so it follows automatically
         _player.AddChild(_camera);
@@ -134,6 +148,15 @@ public partial class Main : Node2D
         _screenSize = GetViewport().GetVisibleRect().Size;
         if (_background != null)
             _background.UpdateBackgroundSize();
+    }
+
+    private void OnMapChanged(MapData map)
+    {
+        _background.LoadMap(map);
+        _mapBuilder.Build(map);
+        // 玩家回到新地图中心，避免卡入障碍
+        _player.GlobalPosition = MapContext.CurrentWorldSize / 2;
+        LogUtils.Print($"[Main] 地图已切换：{map.Name}");
     }
 
     public void ToggleHelp()
