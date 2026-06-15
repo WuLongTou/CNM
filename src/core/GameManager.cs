@@ -722,6 +722,11 @@ public partial class GameManager : Node
             _uiManager?.ShakeScreen(20.0f);
             _uiManager?.FlashBossKill();
             GameServices.Audio.PlayExplosion();
+
+            // Boss 击杀视觉收尾：超大金色冲击波环 + 粒子爆发，史诗级处决感
+            var scene = GetTree().CurrentScene;
+            ZombieWars.Vfx.VFXManager.SpawnImpactRing(scene, zombie.GlobalPosition, 280.0f, new Color(1.0f, 0.92f, 0.55f), 6.0f);
+            ZombieWars.Vfx.VFXManager.SpawnParticleBurst(scene, zombie.GlobalPosition, new Color(1.0f, 0.85f, 0.4f), GameConfig.VfxExplosionParticles);
         }
         else if (zombie.IsElite)
         {
