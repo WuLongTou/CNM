@@ -238,7 +238,9 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         AddChild(_touchDamageArea);
         _touchDamageArea.BodyEntered += _OnTouchDamageAreaEntered;
 
-        // Attack timer
+        // Attack timer：场景未绑定 [Export] 时从子节点兜底（否则 70 范围定时攻击完全失效）
+        if (_attackTimer == null)
+            _attackTimer = GetNodeOrNull<Timer>("AttackTimer");
         if (_attackTimer != null)
         {
             _attackTimer.WaitTime = GameConfig.ZombieAttackCooldown;
@@ -896,6 +898,11 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             _touchDamageCooldown -= (float)delta;
             return;
         }
+
+        // 定时攻击（_attackTimer）可用时，触碰伤害退化为兜底，避免与定时攻击在同一帧双叠加；
+        // 仅在 _attackTimer 失效时才走近距离触碰逻辑。
+        if (_attackTimer != null)
+            return;
 
         if (_isCharmed)
         {
