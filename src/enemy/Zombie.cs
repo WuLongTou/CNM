@@ -117,7 +117,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     // Ship (flying spaceship)
     private float _shipStrafeTimer;
     private float _shipStrafeDir = 1.0f;
-    private Vector2 _shipHomePos;
     private float _shipOrbitRadius = 120.0f;
     private float _shipAngle = 0.0f;
 
@@ -125,7 +124,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     private float _mechStompTimer;
     private float _mechStompCooldown = 3.0f;
     private bool _mechStomping = false;
-    private Vector2 _mechStompTarget;
 
     // Knight (armored warrior)
     private float _knightChargeTimer;
@@ -166,7 +164,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
     private CollisionShape2D _collision = null!;
     private NavigationAgent2D? _navAgent;
-    private Area2D _touchDamageArea = null!;
     private ZombieVfx _vfx = null!;
     private ZombieAbilitySystem? _abilitySystem;
     private float _touchDamageCooldown;
@@ -223,20 +220,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         AddChild(_vfx);
         _vfx.Setup(this);
         _vfx.CreateVisuals();
-
-        // Touch damage area for melee contact damage
-        _touchDamageArea = new Area2D
-        {
-            Monitoring = true,
-            Monitorable = false,
-            CollisionLayer = 0,
-            CollisionMask = 0b001 // layer 1 (player)
-        };
-        var touchShape = new CircleShape2D { Radius = GameConfig.ZombieMeleeTouchRange };
-        var touchCol = new CollisionShape2D { Shape = touchShape };
-        _touchDamageArea.AddChild(touchCol);
-        AddChild(_touchDamageArea);
-        _touchDamageArea.BodyEntered += _OnTouchDamageAreaEntered;
 
         // Attack timer：场景未绑定 [Export] 时从子节点兜底（否则 70 范围定时攻击完全失效）
         if (_attackTimer == null)
@@ -662,8 +645,11 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         {
             _mechStompTimer = _mechStompCooldown;
             _mechStomping = true;
-            _mechStompTarget = GlobalPosition;
             _vfx?.ShowStompShockwave();
+            // 踩踏伤害（从 VFX 归位至此；范围 80，半倍伤害）
+            if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= 80.0f
+                && Player is IDamageable d)
+                d.TakeDamage((int)(Damage * 0.5f));
         }
 
         if (_mechStomping)
@@ -883,12 +869,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
                 _attackTimer?.Start();
             }
         }
-    }
-
-    private void _OnTouchDamageAreaEntered(Node body)
-    {
-        // This is called when player enters our touch damage area
-        // Damage is handled in _Process based on cooldown
     }
 
     private void _HandleTouchDamage(double delta)

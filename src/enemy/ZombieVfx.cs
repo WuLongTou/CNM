@@ -1103,16 +1103,7 @@ public partial class ZombieVfx : Node
             .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
         tw.Parallel().TweenProperty(ring, "modulate:a", 0.0f, 0.5f);
         tw.TweenCallback(Callable.From(ring.QueueFree));
-
-        // Deal damage in area
-        foreach (var p in _zombie.GetTree().GetNodesInGroup("player"))
-        {
-            if (p is Node2D player && _zombie.GlobalPosition.DistanceTo(player.GlobalPosition) <= 80.0f)
-            {
-                if (p is IDamageable d)
-                    d.TakeDamage((int)(_zombie.Damage * 0.5f));
-            }
-        }
+        // 伤害判定已归位至 Zombie._HandleMech（VFX 只负责视觉）
     }
 
     public void ShowChargeEffect()
