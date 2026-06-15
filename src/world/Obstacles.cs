@@ -272,6 +272,128 @@ internal static class ObstacleDraw
             }
         }
     }
+
+    // ══ 陷阱专属绘制：让危险区一眼可辨 ══
+
+    // 毒沼（Hazard variant 1）：暗绿泥浆 + 翻滚气泡 + 毒气 + 中心骷髅警示
+    public static void DrawToxicSwamp(CanvasItem c, Rect2 rect, float pulse, RandomNumberGenerator rng)
+    {
+        var slimeDeep = new Color(0.10f, 0.24f, 0.09f, 0.72f);
+        var slimeMid = new Color(0.16f, 0.38f, 0.13f, 0.68f);
+        var edge = new Color(0.22f, 0.48f, 0.14f, 0.55f + pulse * 0.25f);
+
+        // 底层泥浆：外暗内亮，制造沼泽下凹感
+        c.DrawRect(rect, slimeDeep, true);
+        c.DrawRect(rect.GrowIndividual(-4f, -3f, -4f, -3f), slimeMid, true);
+
+        // 翻滚气泡：随脉动膨胀，带高光
+        for (int i = 0; i < 6; i++)
+        {
+            float bx = rng.RandfRange(rect.Position.X * 0.72f, rect.End.X * 0.72f);
+            float by = rng.RandfRange(rect.Position.Y * 0.72f, rect.End.Y * 0.72f);
+            float br = rng.RandfRange(2f, 4.5f) * (0.65f + pulse * 0.6f);
+            c.DrawCircle(new Vector2(bx, by), br, new Color(0.30f, 0.55f, 0.20f, 0.35f + pulse * 0.2f));
+            c.DrawCircle(new Vector2(bx - br * 0.3f, by - br * 0.3f), br * 0.32f,
+                new Color(0.55f, 0.85f, 0.35f, 0.5f));
+        }
+
+        // 毒气雾团：半透明飘浮
+        for (int i = 0; i < 3; i++)
+        {
+            float mx = rng.RandfRange(rect.Position.X * 0.5f, rect.End.X * 0.5f);
+            float my = rng.RandfRange(rect.Position.Y * 0.5f, rect.End.Y * 0.5f);
+            c.DrawCircle(new Vector2(mx, my), rng.RandfRange(7f, 11f),
+                new Color(0.40f, 0.62f, 0.24f, 0.10f + pulse * 0.08f));
+        }
+
+        c.DrawRect(rect, edge, false, 2f);
+
+        // 中心骷髅警示：致命陷阱的通用标志
+        DrawSkull(c, rect.GetCenter(), Mathf.Min(rect.Size.X, rect.Size.Y) * 0.18f, pulse);
+    }
+
+    // 燃烧地带（Hazard variant 2）：焦土 + 岩浆裂缝 + 动态火焰 + 余烬
+    public static void DrawFireGround(CanvasItem c, Rect2 rect, float pulse, RandomNumberGenerator rng)
+    {
+        var scorched = new Color(0.28f, 0.09f, 0.04f, 0.72f);
+        var ember = new Color(0.45f, 0.16f, 0.05f, 0.50f + pulse * 0.20f);
+
+        c.DrawRect(rect, scorched, true);
+        c.DrawRect(rect.GrowIndividual(-3f, -3f, -3f, -3f), ember, true);
+
+        var lava = new Color(1.0f, 0.42f + pulse * 0.2f, 0.10f, 0.75f);
+        var lavaCore = new Color(1.0f, 0.82f, 0.30f, 0.6f + pulse * 0.3f);
+        // 中心十字岩浆裂缝（脉动明暗）
+        var mid = rect.GetCenter();
+        c.DrawLine(new Vector2(rect.Position.X, mid.Y), new Vector2(rect.End.X, mid.Y), lava, 3f + pulse * 1.5f);
+        c.DrawLine(new Vector2(mid.X, rect.Position.Y), new Vector2(mid.X, rect.End.Y), lava, 2.5f + pulse);
+        c.DrawLine(new Vector2(rect.Position.X, mid.Y), new Vector2(rect.End.X, mid.Y), lavaCore, 1f);
+
+        // 火焰：3 个火苗跳动
+        for (int i = 0; i < 3; i++)
+        {
+            float fx = rng.RandfRange(rect.Position.X * 0.6f, rect.End.X * 0.6f);
+            float fy = rect.End.Y - rng.RandfRange(2f, 8f);
+            float fh = rng.RandfRange(rect.Size.Y * 0.4f, rect.Size.Y * 0.7f) * (0.7f + pulse * 0.5f);
+            float fw = rng.RandfRange(5f, 8f);
+            DrawFlame(c, new Vector2(fx, fy), fw, fh);
+        }
+
+        // 余烬亮点
+        for (int i = 0; i < 5; i++)
+        {
+            float ex = rng.RandfRange(rect.Position.X * 0.7f, rect.End.X * 0.7f);
+            float ey = rng.RandfRange(rect.Position.Y * 0.7f, rect.End.Y * 0.7f);
+            c.DrawCircle(new Vector2(ex, ey), rng.RandfRange(0.8f, 1.8f),
+                new Color(1.0f, 0.6f, 0.2f, 0.6f + pulse * 0.3f));
+        }
+
+        c.DrawRect(rect, new Color(0.85f, 0.35f, 0.10f, 0.6f), false, 2f);
+    }
+
+    // 骷髅头（致命警示符号）
+    private static void DrawSkull(CanvasItem c, Vector2 center, float r, float pulse)
+    {
+        var bone = new Color(0.92f, 0.90f, 0.80f, 0.70f + pulse * 0.2f);
+        var dark = new Color(0.04f, 0.04f, 0.04f, 0.85f);
+        // 颅顶 + 下颌
+        c.DrawCircle(center, r, bone);
+        c.DrawCircle(center + new Vector2(0, r * 0.5f), r * 0.78f, bone);
+        // 眼眶（凹陷黑）
+        c.DrawCircle(center + new Vector2(-r * 0.4f, -r * 0.05f), r * 0.28f, dark);
+        c.DrawCircle(center + new Vector2(r * 0.4f, -r * 0.05f), r * 0.28f, dark);
+        // 鼻孔
+        c.DrawCircle(center + new Vector2(0, r * 0.28f), r * 0.12f, dark);
+        // 牙齿
+        for (int i = -2; i <= 2; i++)
+            c.DrawLine(center + new Vector2(i * r * 0.18f, r * 0.5f),
+                       center + new Vector2(i * r * 0.18f, r * 0.78f), dark, 1.2f);
+    }
+
+    // 火苗：外暗红、内亮黄双层多边形
+    private static void DrawFlame(CanvasItem c, Vector2 basePt, float w, float h)
+    {
+        var outer = new Color(1.0f, 0.35f, 0.10f, 0.75f);
+        var inner = new Color(1.0f, 0.85f, 0.30f, 0.85f);
+        var outerPts = new Vector2[] {
+            basePt + new Vector2(-w, 0),
+            basePt + new Vector2(-w * 0.6f, -h * 0.5f),
+            basePt + new Vector2(-w * 0.2f, -h * 0.8f),
+            basePt + new Vector2(0, -h),
+            basePt + new Vector2(w * 0.3f, -h * 0.7f),
+            basePt + new Vector2(w * 0.7f, -h * 0.4f),
+            basePt + new Vector2(w, 0),
+        };
+        c.DrawColoredPolygon(outerPts, outer);
+        var innerPts = new Vector2[] {
+            basePt + new Vector2(-w * 0.5f, 0),
+            basePt + new Vector2(-w * 0.2f, -h * 0.4f),
+            basePt + new Vector2(0, -h * 0.72f),
+            basePt + new Vector2(w * 0.25f, -h * 0.4f),
+            basePt + new Vector2(w * 0.5f, 0),
+        };
+        c.DrawColoredPolygon(innerPts, inner);
+    }
 }
 
 // ── 固体障碍：StaticBody2D，完全阻挡 ─────────────────────
@@ -583,6 +705,7 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
     private Vector2 _size;
     private int _variant;
     private float _tickTimer;
+    private float _redrawTimer;
 
     public void Setup(in ObstacleDef def)
     {
@@ -608,6 +731,14 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
 
     public override void _PhysicsProcess(double delta)
     {
+        // 定期重绘让脉动动画生效（_Draw 内 pulse 依赖时间，需主动 QueueRedraw）
+        _redrawTimer -= (float)delta;
+        if (_redrawTimer <= 0)
+        {
+            _redrawTimer = 0.1f;
+            QueueRedraw();
+        }
+
         float slow = GameConfig.HazardSlowMult;
         foreach (var body in GetOverlappingBodies())
         {
@@ -639,35 +770,11 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
         var rect = new Rect2(-_size * 0.5f, _size);
         double t = Time.GetTicksMsec() / 1000.0;
         float pulse = 0.5f + 0.5f * Mathf.Sin((float)t * 4f);
+        var rng = new RandomNumberGenerator { Seed = (ulong)(_size.X * 127.0 + _size.Y * 31.0 + _variant * 7L) };
 
         if (_variant == 1)
-        {
-            // 毒沼：绿色脉动
-            DrawRect(rect, new Color(0.10f, 0.22f, 0.10f, 0.35f + pulse * 0.15f), true);
-            DrawRect(rect, new Color(0.20f, 0.45f, 0.15f, 0.5f), false, 2f);
-            // 气泡
-            var rng = new RandomNumberGenerator { Seed = (ulong)(_size.X + _size.Y) };
-            for (int i = 0; i < 6; i++)
-            {
-                float bx = rng.RandfRange(rect.Position.X * 0.7f, rect.End.X * 0.7f);
-                float by = rng.RandfRange(rect.Position.Y * 0.7f, rect.End.Y * 0.7f);
-                DrawCircle(new Vector2(bx, by), rng.RandfRange(1.5f, 3.5f),
-                    new Color(0.30f, 0.55f, 0.20f, 0.35f + pulse * 0.2f));
-            }
-        }
+            ObstacleDraw.DrawToxicSwamp(this, rect, pulse, rng);
         else
-        {
-            // 燃烧地带：橙红脉动
-            DrawRect(rect, new Color(0.30f, 0.10f, 0.03f, 0.40f + pulse * 0.20f), true);
-            DrawRect(rect, new Color(0.85f, 0.35f, 0.10f, 0.6f), false, 2f);
-            var rng = new RandomNumberGenerator { Seed = (ulong)(_size.X * 2 + _variant) };
-            for (int i = 0; i < 8; i++)
-            {
-                float fx = rng.RandfRange(rect.Position.X * 0.7f, rect.End.X * 0.7f);
-                float fy = rng.RandfRange(rect.Position.Y * 0.7f, rect.End.Y * 0.7f);
-                DrawCircle(new Vector2(fx, fy), rng.RandfRange(2f, 4f),
-                    new Color(1.0f, 0.55f + pulse * 0.2f, 0.15f, 0.5f + pulse * 0.2f));
-            }
-        }
+            ObstacleDraw.DrawFireGround(this, rect, pulse, rng);
     }
 }
