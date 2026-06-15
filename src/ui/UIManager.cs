@@ -1988,6 +1988,30 @@ public partial class UIManager : Control
         _screenFx?.FlashAttackColor(attackColor);
     }
 
+    /// <summary>暴击命中全屏锐利快闪（配合命中停顿）。</summary>
+    public void FlashCrit()
+    {
+        _screenFx?.FlashCrit();
+    }
+
+    /// <summary>Boss 出场：全屏深红暗化冲击。</summary>
+    public void FlashBossSpawn()
+    {
+        _screenFx?.FlashBossSpawn();
+    }
+
+    /// <summary>Boss 阶段切换：橙红爆闪。</summary>
+    public void FlashBossPhase()
+    {
+        _screenFx?.FlashBossPhase();
+    }
+
+    /// <summary>Boss 击杀：白金强光爆发。</summary>
+    public void FlashBossKill()
+    {
+        _screenFx?.FlashBossKill();
+    }
+
     public void AddCombo()
     {
         _screenFx?.AddCombo();

@@ -351,6 +351,13 @@ public partial class PlayerCombat : Node
         float shake = isCritical ? 8.0f : 3.0f;
         GameServices.UI.ShakeScreen(shake);
 
+        // 暴击：命中停顿 + 全屏金白快闪，把重击感"砸"出来（普通命中仅震屏，避免高频卡顿）
+        if (isCritical)
+        {
+            HitStopController.Instance?.Trigger(Core.GameConfig.HitStopCritMs);
+            GameServices.UI.FlashCrit();
+        }
+
         if (zombie.CurrentHealth <= 0)
             return;
 
@@ -388,6 +395,9 @@ public partial class PlayerCombat : Node
 
     private void _OnEnemyKilled(Vector2 pos, float damage = 0)
     {
+        // 击杀凝固：短命中停顿放大处决爽感（Boss/精英的更长停顿由 GameManager 覆盖，取 max）
+        HitStopController.Instance?.Trigger(Core.GameConfig.HitStopKillMs);
+
         var p = Player!;
         GameServices.Audio.PlayZombieDie();
         ZombieWars.Audio.SoundManager.Instance?.NotifyKill();

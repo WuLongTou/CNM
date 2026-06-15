@@ -19,6 +19,8 @@ public partial class ScreenEffects : Node
     private ColorRect _damageFlash = null!;
     private ColorRect _lowHpVignette = null!;
     private ColorRect _attackFlash = null!;
+    private ColorRect _critFlash = null!; // 暴击全屏快闪（独立层，最上层，避免与攻击闪光互相覆盖）
+    private ColorRect _bossOverlay = null!; // Boss 出场/击杀的全屏冲击层（最高 ZIndex）
 
     private Label? _comboLabel;
     private int _comboCount;
@@ -38,6 +40,8 @@ public partial class ScreenEffects : Node
         _CreateLowHpVignette();
         _CreateAttackFlash();
         _CreateWarningFlash();
+        _CreateCritFlash();
+        _CreateBossOverlay();
         _InitDamageNumberPool();
     }
 
@@ -181,6 +185,70 @@ void fragment() {
         _attackFlash.Color = new Color(color.R, color.G, color.B, 0.12f);
         var tw = CreateTween();
         tw.TweenProperty(_attackFlash, "color:a", 0.0f, 0.15f);
+    }
+
+    // ══ Crit Flash（暴击全屏锐利快闪，配合命中停顿强化重击感）══
+
+    private void _CreateCritFlash()
+    {
+        _critFlash = new ColorRect
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ZIndex = 42 // 高于 warning(41) / damage(40) / attack(39)，暴击瞬间最抢眼
+        };
+        _critFlash.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _critFlash.Color = new Color(0, 0, 0, 0);
+        AddChild(_critFlash);
+    }
+
+    /// <summary>暴击命中：暖金高亮全屏快闪（0.16s 锐利淡出，比受击红闪更短更亮）。</summary>
+    public void FlashCrit()
+    {
+        if (_critFlash == null) return;
+        _critFlash.Color = new Color(1.0f, 0.92f, 0.55f, 0.32f);
+        var tw = CreateTween();
+        tw.TweenProperty(_critFlash, "color:a", 0.0f, 0.16f);
+    }
+
+    // ══ Boss 演出层（出场暗化 / 阶段切换 / 击杀强闪）══
+
+    private void _CreateBossOverlay()
+    {
+        _bossOverlay = new ColorRect
+        {
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            ZIndex = 43 // 全 UI 最高层，压过一切（tooltip 200 不参与战斗演出）
+        };
+        _bossOverlay.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        _bossOverlay.Color = new Color(0, 0, 0, 0);
+        AddChild(_bossOverlay);
+    }
+
+    /// <summary>Boss 出场：深红暗化冲击后渐隐，配合命中停顿+震屏营造压迫感。</summary>
+    public void FlashBossSpawn()
+    {
+        if (_bossOverlay == null) return;
+        _bossOverlay.Color = new Color(0.18f, 0.0f, 0.0f, 0.55f);
+        var tw = CreateTween();
+        tw.TweenProperty(_bossOverlay, "color:a", 0.0f, 0.45f);
+    }
+
+    /// <summary>Boss 阶段切换：橙红短促爆闪，提示"它变强了"。</summary>
+    public void FlashBossPhase()
+    {
+        if (_bossOverlay == null) return;
+        _bossOverlay.Color = new Color(0.8f, 0.25f, 0.0f, 0.4f);
+        var tw = CreateTween();
+        tw.TweenProperty(_bossOverlay, "color:a", 0.0f, 0.35f);
+    }
+
+    /// <summary>Boss 击杀：白金强光爆发，配合慢动作的胜利仪式感。</summary>
+    public void FlashBossKill()
+    {
+        if (_bossOverlay == null) return;
+        _bossOverlay.Color = new Color(1.0f, 0.95f, 0.7f, 0.7f);
+        var tw = CreateTween();
+        tw.TweenProperty(_bossOverlay, "color:a", 0.0f, 0.5f);
     }
 
     // ══ Warning Flash (for low health / insufficient resources) ══

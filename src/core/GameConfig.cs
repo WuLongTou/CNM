@@ -231,6 +231,17 @@ public static class GameConfig
     public const float ComboMaxBonus = 0.5f;
 
     // ═══════════════════════════════════════════════
+    // HitStop（命中停顿 / 打击感凝固）
+    // ═══════════════════════════════════════════════
+
+    public const float HitStopFrozenScale = 0.03f;  // 冻结期 TimeScale（近0，留一丝喘息避免完全硬切）
+    public const int HitStopCritMs = 45;            // 暴击命中
+    public const int HitStopEliteKillMs = 110;      // 精英怪击杀
+    public const int HitStopKillMs = 70;            // 普通击杀
+    public const int HitStopBossSpawnMs = 180;      // Boss 出场（配合演出）
+    public const int HitStopBossKillMs = 220;       // Boss 击杀（慢动作）
+
+    // ═══════════════════════════════════════════════
     // Audio
     // ═══════════════════════════════════════════════
 

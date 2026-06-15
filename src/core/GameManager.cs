@@ -65,6 +65,7 @@ public partial class GameManager : Node
 
     public Player? PlayerRef { get; private set; }
     public Zombie? BossZombie { get; private set; }
+    private int _bossPhase; // Boss 阶段：0=无/已死，1/2/3=三阶段（66%/33% 血量切换）
 
     // ══ 数学玩法系统 ══
     public WaveResonanceSystem WaveSystem { get; private set; } = null!;
@@ -129,6 +130,10 @@ public partial class GameManager : Node
     {
         AddToGroup("game_manager");
 
+        // 命中停顿控制器（打击感凝固）—— ProcessMode=Always，墙钟驱动，绝不卡死 TimeScale
+        var hitStop = new HitStopController { Name = "HitStop" };
+        AddChild(hitStop);
+
         // 初始化 4 大数学玩法系统
         if (GameConfig.MathSystemsEnabled)
         {
@@ -184,6 +189,7 @@ public partial class GameManager : Node
     {
         if (what == NotificationPredelete)
         {
+            HitStopController.Instance?.Reset();
             AchievementSystem.Instance?.OnGameEnded(_totalKills, _totalDamageDealt, _survivalTime);
         }
     }
@@ -238,6 +244,41 @@ public partial class GameManager : Node
         {
             EndRound();
         }
+
+        _HandleBossPhases();
+    }
+
+    // ── Boss 多阶段：血量跨越 66%/33% 时切换阶段，怒吼 + 加速 + 召唤援军 ──
+    private void _HandleBossPhases()
+    {
+        if (BossZombie == null || !IsInstanceValid(BossZombie)) return;
+        float ratio = (float)BossZombie.CurrentHealth / Mathf.Max(1, BossZombie.MaxHealth);
+
+        if (_bossPhase == 1 && ratio <= 0.66f)
+            _EnterBossPhase(2);
+        else if (_bossPhase == 2 && ratio <= 0.33f)
+            _EnterBossPhase(3);
+    }
+
+    private void _EnterBossPhase(int phase)
+    {
+        _bossPhase = phase;
+        var boss = BossZombie;
+        if (boss == null || !IsInstanceValid(boss)) return;
+
+        // 怒吼演出：凝固 + 强震屏 + 橙红爆闪 + 警告横幅
+        HitStopController.Instance?.Trigger(GameConfig.HitStopBossSpawnMs);
+        _uiManager?.ShakeScreen(12.0f);
+        _uiManager?.FlashBossPhase();
+        _uiManager?.ShowRoundBanner(phase == 3 ? "⚠ BOSS 狂暴！ ⚠" : "⚠ BOSS 暴怒！ ⚠");
+
+        // 狂暴加速
+        boss.Speed *= phase == 3 ? 1.4f : 1.2f;
+
+        // 召唤援军（阶段 3 召唤两波，加大压力）
+        SpawnSwarmGroup(boss.GlobalPosition);
+        if (phase == 3)
+            SpawnSwarmGroup(boss.GlobalPosition);
     }
 
     private void _UpdateEdgeIndicators()
@@ -575,6 +616,12 @@ public partial class GameManager : Node
         _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
         _uiManager?.ShowRoundBanner("⚠ BOSS 来袭 ⚠");
 
+        // 出场演出：命中停顿 + 强震屏 + 全屏暗化，把"Boss 登场"砸出压迫感
+        _bossPhase = 1;
+        HitStopController.Instance?.Trigger(GameConfig.HitStopBossSpawnMs);
+        _uiManager?.ShakeScreen(14.0f);
+        _uiManager?.FlashBossSpawn();
+
         LogUtils.Print($"BOSS 生成！回合 {CurrentRound}");
     }
 
@@ -664,6 +711,15 @@ public partial class GameManager : Node
         {
             pts = (int)(pts * GameConfig.BossScoreMult);
             BossZombie = null;
+            _bossPhase = 0;
+            // 击杀大演出：慢动作凝固 + 极强震屏 + 白金强光，胜利的仪式感
+            HitStopController.Instance?.Trigger(GameConfig.HitStopBossKillMs);
+            _uiManager?.ShakeScreen(20.0f);
+            _uiManager?.FlashBossKill();
+        }
+        else if (zombie.IsElite)
+        {
+            HitStopController.Instance?.Trigger(GameConfig.HitStopEliteKillMs);
         }
 
         Score += pts;
@@ -686,6 +742,8 @@ public partial class GameManager : Node
 
     private void _OnPlayerDied()
     {
+        // 游戏结束立即解除任何命中停顿，避免 GameOver 界面凝固
+        HitStopController.Instance?.Reset();
         CurrentState = GameState.GameOver;
         GameOver?.Invoke();
 
