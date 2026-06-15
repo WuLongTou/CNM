@@ -24,10 +24,8 @@ public partial class Background : Node2D
     {
         ZIndex = -10;
         _CreateBaseBackground();
-        if (!_TryLoadGroundPng())
-        {
-            _CreateGroundTexture();
-        }
+        _BakeGroundTexture();
+        _TryLoadGroundOverlay();
         _CreateAtmosphereOverlay();
         _CreateFogPatches();
         _CreateFireLights();
@@ -35,44 +33,29 @@ public partial class Background : Node2D
         _CreateEmberParticles();
         _CreateAlchemyLandmarks();
         _CreateGroundDecals();
+        _CreateSceneProps();
         SetProcess(false);
     }
 
     private Vector2 _WorldSize => GameConfig.WorldSize;
 
-    private bool _TryLoadGroundPng()
+    private void _BakeGroundTexture()
     {
-        string[] paths = {
-            "res://assets/sprites/backgrounds/ground_alchemy_001.jpg",
-            "res://assets/sprites/backgrounds/ground_stone.jpg",
-            "res://assets/sprites/backgrounds/ground_graveyard.jpg",
-            "res://assets/sprites/backgrounds/ground_dungeon.jpg",
-            "res://assets/sprites/backgrounds/ground_cemetery.jpg",
-            "res://assets/sprites/backgrounds/ground_ruins.jpg"
-        };
-
-        foreach (string p in paths)
+        var img = ProceduralGround.Bake();
+        var tex = ImageTexture.CreateFromImage(img);
+        var groundSprite = new TextureRect
         {
-            if (!FileAccess.FileExists(p)) continue;
-            var tex = TextureUtils.LoadTexture(p);
-            if (tex == null) continue;
-
-            var rect = new TextureRect
-            {
-                Texture = tex,
-                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-                Size = _WorldSize,
-                ZIndex = -5,
-                TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            _backgroundRect!.AddChild(rect);
-            _backgroundRect.MoveChild(rect, 0);
-            _groundLayer = rect;
-            return true;
-        }
-        return false;
+            Texture = tex,
+            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+            StretchMode = TextureRect.StretchModeEnum.Scale,
+            Size = _WorldSize,
+            ZIndex = -5,
+            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+            MouseFilter = Control.MouseFilterEnum.Ignore
+        };
+        _backgroundRect!.AddChild(groundSprite);
+        _backgroundRect.MoveChild(groundSprite, 0);
+        _groundLayer = groundSprite;
     }
 
     private void _CreateAtmosphereOverlay()
@@ -132,124 +115,42 @@ public partial class Background : Node2D
         _backgroundRect.AddChild(vignette);
     }
 
-    private void _CreateGroundTexture()
+    private void _TryLoadGroundOverlay()
     {
-        int w = 640;
-        int h = 360;
-        using var img = Image.CreateEmpty(w, h, false, Image.Format.Rgba8);
-
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                float noiseVal = _SimpleHash(x, y);
-                float baseGrey = 0.11f + noiseVal * 0.04f;
-
-                int blockX = x / 64;
-                int blockY = y / 64;
-                float blockShift = _SimpleHash(blockX * 7 + 3, blockY * 13 + 7) * 0.025f - 0.012f;
-                baseGrey += blockShift;
-
-                float r = baseGrey + noiseVal * 0.008f;
-                float g = baseGrey + noiseVal * 0.005f;
-                float b = baseGrey - noiseVal * 0.006f;
-                img.SetPixel(x, y, new Color(r, g, b, 1.0f));
-            }
-        }
-
-        int tileW = 80;
-        int tileH = 60;
-        for (int y = 0; y < h; y++)
-        {
-            for (int x = 0; x < w; x++)
-            {
-                int yMod = y % tileH;
-                if (yMod <= 1)
-                {
-                    Color c = img.GetPixel(x, y);
-                    img.SetPixel(x, y, c.Darkened(0.25f + _SimpleHash(x, y * 3) * 0.15f));
-                }
-
-                int row = y / tileH;
-                int ofs = (row % 2) * (tileW / 2);
-                int xMod = (x + ofs) % tileW;
-                if (xMod <= 1)
-                {
-                    Color c = img.GetPixel(x, y);
-                    img.SetPixel(x, y, c.Darkened(0.20f + _SimpleHash(x * 5, y) * 0.15f));
-                }
-            }
-        }
-
-        for (int i = 0; i < 12; i++)
-        {
-            int cx = (int)GD.RandRange(20, w - 20);
-            int cy = (int)GD.RandRange(20, h - 20);
-            float angle = (float)GD.RandRange(0.0f, Mathf.Tau);
-            int length = (int)GD.RandRange(30, 100);
-            for (int step = 0; step < length; step++)
-            {
-                int px = cx + (int)(Mathf.Cos(angle) * step + GD.RandRange(-1.0f, 1.0f));
-                int py = cy + (int)(Mathf.Sin(angle) * step + GD.RandRange(-1.0f, 1.0f));
-                if (px >= 0 && px < w && py >= 0 && py < h)
-                {
-                    Color c = img.GetPixel(px, py);
-                    img.SetPixel(px, py, c.Darkened(0.35f));
-                }
-                angle += (float)GD.RandRange(-0.15f, 0.15f);
-            }
-        }
-
-        for (int i = 0; i < 20; i++)
-        {
-            int sx = (int)GD.RandRange(10, w - 10);
-            int sy = (int)GD.RandRange(10, h - 10);
-            int radius = (int)GD.RandRange(8, 25);
-            int stainType = (int)GD.RandRange(0, 2);
-            for (int dy = -radius; dy <= radius; dy++)
-            {
-                for (int dx = -radius; dx <= radius; dx++)
-                {
-                    float d = Mathf.Sqrt(dx * dx + dy * dy);
-                    if (d <= radius)
-                    {
-                        int px = sx + dx;
-                        int py = sy + dy;
-                        if (px >= 0 && px < w && py >= 0 && py < h)
-                        {
-                            float falloff = 1.0f - d / radius;
-                            Color c = img.GetPixel(px, py);
-                            switch (stainType)
-                            {
-                                case 0:
-                                    c = c.Darkened(0.15f * falloff);
-                                    break;
-                                case 1:
-                                    c = c.Lerp(new Color(0.08f, 0.12f, 0.06f), 0.20f * falloff);
-                                    break;
-                                case 2:
-                                    c = c.Lerp(new Color(0.15f, 0.04f, 0.03f), 0.18f * falloff);
-                                    break;
-                            }
-                            img.SetPixel(px, py, c);
-                        }
-                    }
-                }
-            }
-        }
-
-        var tex = ImageTexture.CreateFromImage(img);
-        var groundSprite = new TextureRect
-        {
-            Texture = tex,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-            Size = _WorldSize,
-            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-            MouseFilter = Control.MouseFilterEnum.Ignore
+        string[] paths = {
+            "res://assets/sprites/backgrounds/ground_alchemy_001.jpg",
+            "res://assets/sprites/backgrounds/ground_stone.jpg",
+            "res://assets/sprites/backgrounds/ground_graveyard.jpg",
+            "res://assets/sprites/backgrounds/ground_dungeon.jpg",
+            "res://assets/sprites/backgrounds/ground_cemetery.jpg",
+            "res://assets/sprites/backgrounds/ground_ruins.jpg"
         };
-        _backgroundRect!.AddChild(groundSprite);
-        _backgroundRect.MoveChild(groundSprite, 0);
-        _groundLayer = groundSprite;
+
+        foreach (string p in paths)
+        {
+            if (!FileAccess.FileExists(p)) continue;
+            var tex = TextureUtils.LoadTexture(p);
+            if (tex == null) continue;
+
+            var rect = new TextureRect
+            {
+                Texture = tex,
+                ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
+                StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
+                Size = _WorldSize,
+                ZIndex = -4,
+                TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+                Modulate = new Color(1.0f, 0.95f, 0.90f, 0.16f),
+                MouseFilter = Control.MouseFilterEnum.Ignore
+            };
+            _backgroundRect!.AddChild(rect);
+            return;
+        }
+    }
+
+    private void _CreateSceneProps()
+    {
+        ScenePropPlacer.Populate(this);
     }
 
     private float _SimpleHash(int x, int y)

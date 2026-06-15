@@ -176,7 +176,13 @@ public partial class ZombieVfx : Node
         _walkFrames.Clear();
         int walkCount = Mathf.Min(8, frames.Count);
         for (int i = 0; i < walkCount; i++)
-            _walkFrames.Add(frames[i]);
+        {
+            int idx = walkCount <= 1
+                ? 0
+                : (int)System.Math.Round((double)i * (frames.Count - 1) / (walkCount - 1));
+            if (idx >= frames.Count) idx = frames.Count - 1;
+            _walkFrames.Add(frames[idx]);
+        }
 
         return true;
     }

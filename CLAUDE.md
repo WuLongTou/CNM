@@ -37,8 +37,9 @@ Godot 4.6 + C# 游戏项目（僵尸大战）。
 - **准备合并**：在"开发完成"基础上，按全局「完成前验证」过完整 format → lint →（如有用例）test → build；改动涉及场景/资源时，额外在 Godot 编辑器中验证。
 
 ## 构建 & 测试
-- `/Applications/Godot.app/Contents/MacOS/Godot --headless --export-debug "macOS"` — 导出调试构建
-- `/Applications/Godot.app/Contents/MacOS/Godot --headless --check-only` — 脚本检查
+- `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless --export-debug "macOS"` — 导出调试构建
+- `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless --quit-after 1` — 启动场景冒烟检查
+- `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless -- --autotest` — 自动回归测试
 - `dotnet build` — 编译 C# 脚本
 
 ## 约束
