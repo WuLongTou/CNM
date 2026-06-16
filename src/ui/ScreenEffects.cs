@@ -14,6 +14,7 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 public partial class ScreenEffects : Node
 {
     private float _shakeIntensity;
+    private readonly Dictionary<Label, Tween> _labelTweens = new(); // 跟踪活跃伤害数字的 Tween，复用时 Kill 旧
 
     private ColorRect _damageFlash = null!;
     private ColorRect _lowHpVignette = null!;
@@ -299,6 +300,12 @@ void fragment() {
             // Reuse oldest active label
             label = _activeDamageNumbers[0];
             _activeDamageNumbers.RemoveAt(0);
+            // Kill 旧 Tween：否则其 _ReturnToPool 回调会在新数字显示期间提前回收（高频伤害闪烁/消失根因）
+            if (label != null && _labelTweens.TryGetValue(label, out var oldTw) && oldTw.IsValid())
+            {
+                oldTw.Kill();
+                _labelTweens.Remove(label);
+            }
         }
 
         if (label == null)
@@ -351,6 +358,7 @@ void fragment() {
         _activeDamageNumbers.Add(label);
 
         var tw = CreateTween();
+        _labelTweens[label] = tw; // 跟踪 Tween，供池复用时 Kill
         if (isCritical)
         {
             label.Scale = new Vector2(0.5f, 0.5f);
@@ -388,6 +396,7 @@ void fragment() {
 
         label.Visible = false;
         _activeDamageNumbers.Remove(label);
+        _labelTweens.Remove(label);
         _damageNumberPool.Enqueue(label);
     }
 
