@@ -125,6 +125,11 @@ public partial class Main : Node2D
             LogUtils.Print("[PERFTEST] enabled");
             AddChild(new PerformanceRunner { Name = "PerformanceRunner" });
         }
+        else if (Array.Exists(args, arg => arg == "--evotest"))
+        {
+            LogUtils.Print("[EVOTEST] enabled");
+            AddChild(new EvoTestRunner { Name = "EvoTestRunner" });
+        }
     }
 
     private void _SetupCamera()
