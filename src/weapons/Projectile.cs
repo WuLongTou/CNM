@@ -227,7 +227,8 @@ public partial class Projectile : CharacterBody2D, IDamager
             normal = (Position - node2d.GlobalPosition).Normalized();
         Velocity = Velocity.Bounce(normal);
         BouncesLeft--;
-        _damagedEnemies.Clear();
+        // 不清空命中表：每发每僵尸只命中 1 次（由 _damagedEnemies.Contains 排除保证），
+        // 避免回旋镖/反弹刃撞墙反弹后反复命中同一僵尸刷伤害；BouncesLeft 已限制弹射总数
     }
 
     private void _HandleBoundsBounce()
