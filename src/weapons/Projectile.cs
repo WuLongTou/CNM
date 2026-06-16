@@ -265,12 +265,8 @@ public partial class Projectile : CharacterBody2D, IDamager
         player.RegisterDamageDealt(z, Damage);
 
         new FreezeEffect { Chance = player.FreezeDuration, Duration = 0.8f }.ApplyTo(z);
-        new PoisonEffect
-        {
-            Chance = player.PoisonDamage,
-            Dps = 3.0f + player.PoisonDamage * 0.2f,
-            Duration = 3.0f
-        }.ApplyTo(z);
+        // 远程投射物（弓箭/子弹/弩）不再施加中毒 DOT——命中应是一次性伤害，持续中毒留给
+        // 近战毒刃（PlayerCombat.AttackZombie）与魔法 DOT，避免"远程打一下持续掉血"的不合理感。
     }
 
     private void _CreateHitEffect()

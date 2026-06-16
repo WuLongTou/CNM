@@ -427,14 +427,13 @@ void fragment() {
             bool isHazard = IsPlayerTakingHazardDamage();
             int dmg = isHazard ? (int)GetAcidRainDamagePerTick() : 0;
             string effects = GetEffectsDescription();
-            GetTree().CallGroup(
-                "ui_manager", "update_weather_hud",
+            // 直接调 UIManager（避免 CallGroup snake_case 方法名匹配不确定性），确保天气 HUD 实时更新
+            GameServices.UI?.UpdateWeatherHUD(
                 _GetWeatherName(CurrentWeather),
                 _GetWeatherColor(CurrentWeather),
                 isHazard,
                 dmg,
-                effects
-            );
+                effects);
         }
     }
 

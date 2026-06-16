@@ -29,7 +29,7 @@ public partial class GameCamera : Camera2D
         LimitLeft = 0;
         LimitTop = 0;
         LimitRight = (int)worldSize.X;
-        LimitBottom = (int)worldSize.Y;
+        LimitBottom = (int)(worldSize.Y - GameConfig.BottomUiMargin); // 底部 HUD 区不算游戏区域
     }
 
     public override void _PhysicsProcess(double delta)

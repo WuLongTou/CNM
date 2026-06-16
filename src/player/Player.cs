@@ -308,7 +308,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
         GlobalPosition = new Vector2(
             Mathf.Clamp(GlobalPosition.X, margin, worldSize.X - margin),
-            Mathf.Clamp(GlobalPosition.Y, margin, worldSize.Y - margin)
+            Mathf.Clamp(GlobalPosition.Y, margin, worldSize.Y - Core.GameConfig.BottomUiMargin) // 底部 HUD 区不算游戏区域
         );
     }
 
