@@ -765,9 +765,47 @@ public partial class PlayerCombat : Node
         }
 
         target.EvolveName();
+        bool evolved = _TryEvolveWeapon(target); // 进化系统接线：达阈值自动进阶(3次)/究极化(6次)
         RecalculateStats();
         GameServices.Audio.PlayUpgrade();
-        _ShowApplyFeedback("强化!" + target.CardName, target.CardName, new Color(0.3f, 1.0f, 0.5f));
+        if (!evolved)
+            _ShowApplyFeedback("强化!" + target.CardName, target.CardName, new Color(0.3f, 1.0f, 0.5f));
+    }
+
+    /// <summary>进化系统接线：武器升级达阈值时自动进阶/究极化，替换 ActiveEffects 中的武器卡。</summary>
+    /// <remarks>此前 WeaponEvolutionSystem 代码完整但从未被调用，Ascension/Ultimate 阈值全不生效。</remarks>
+    private bool _TryEvolveWeapon(WeaponCard target)
+    {
+        // 已究极化（TransformUltimate 内部加 ULTIMATE tag）不再进化
+        if (target.Tags.Contains("ULTIMATE")) return false;
+
+        var evo = new WeaponEvolutionSystem();
+        WeaponCard? newCard = null;
+        bool toUltimate = false;
+
+        if (target.UpgradeCount >= WeaponEvolutionSystem.UltimateThreshold)
+        {
+            newCard = evo.TransformUltimate(target);
+            toUltimate = true;
+        }
+        else if (target.UpgradeCount >= WeaponEvolutionSystem.AscensionThreshold && !target.Tags.Contains("ASCENDED"))
+        {
+            newCard = evo.Evolve(target);
+        }
+
+        if (newCard == null) return false;
+
+        int idx = Player!.ActiveEffects.IndexOf(target);
+        if (idx < 0) return false;
+
+        // Ascension 标记防重复进阶；Ultimate 由 TransformUltimate 内部的 ULTIMATE tag 防重复
+        if (!toUltimate) newCard.Tags.Add("ASCENDED");
+        Player!.ActiveEffects[idx] = newCard;
+
+        string label = toUltimate ? "★究极形态★ " : "【进阶】 ";
+        _ShowApplyFeedback(label + newCard.CardName, newCard.CardName,
+            toUltimate ? new Color(1.0f, 0.85f, 0.3f) : new Color(0.4f, 0.9f, 1.0f));
+        return true;
     }
 
     public void RecalculateStats()
