@@ -99,7 +99,11 @@ public partial class Background : Node2D
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
         AddChild(_backgroundRect);
+        _CreateVignette();
+    }
 
+    private void _CreateVignette()
+    {
         var vignette = new TextureRect
         {
             Size = _WorldSize,
@@ -120,7 +124,7 @@ public partial class Background : Node2D
         };
         vignette.Texture = vigTex;
         vignette.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
-        _backgroundRect.AddChild(vignette);
+        _backgroundRect!.AddChild(vignette);
     }
 
     private void _TryLoadGroundOverlay()
@@ -528,16 +532,33 @@ public partial class Background : Node2D
             _groundOverlay.Size = MapContext.CurrentWorldSize;
     }
 
-    /// <summary>切换地图时重建氛围/地面叠加层（由 Main 在 MapChanged 时调用）。</summary>
-    public void LoadMap(MapData map)
+    /// <summary>切换地图时重建全部视觉层（地面/装饰/氛围粒子/灯），避免旧地图主题残留。</summary>
+    public async void LoadMap(MapData map)
     {
         _currentMap = map;
-        _groundOverlay?.QueueFree();
+        // 释放所有视觉层（_backgroundRect 的子节点：vignette/地面/装饰/粒子/灯）
+        if (_backgroundRect != null)
+        {
+            foreach (var child in _backgroundRect.GetChildren())
+                if (child is Node n) n.QueueFree();
+        }
+        _groundLayer = null;
         _groundOverlay = null;
-        _atmosphereLayer?.QueueFree();
         _atmosphereLayer = null;
+        _fogLayers.Clear();
+        // 等一帧让旧节点真正释放，再重建（避免 MoveChild 与待释放节点索引冲突）
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+        _CreateVignette();
+        _BakeGroundTexture();
         _TryLoadGroundOverlay();
         _CreateAtmosphereOverlay();
+        _CreateFogPatches();
+        _CreateFireLights();
+        _CreateAshParticles();
+        _CreateEmberParticles();
+        _CreateAlchemyLandmarks();
+        _CreateGroundDecals();
+        _CreateSceneProps();
         UpdateBackgroundSize();
     }
 
