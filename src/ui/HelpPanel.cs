@@ -37,7 +37,7 @@ public partial class HelpPanel : Panel
         AddChild(center);
 
         var card = new Panel();
-        card.CustomMinimumSize = new Vector2(700, 560);
+        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(700, 560), ResponsiveUi.ViewportSize(this));
         card.MouseFilter = MouseFilterEnum.Stop;
         var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 10f);
         cardStyle.ShadowOffset = new Vector2(4, 4);

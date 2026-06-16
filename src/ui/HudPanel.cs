@@ -286,7 +286,7 @@ public partial class HudPanel : Panel
     {
         _healthBar.MaxValue = maxHealth;
         _healthBar.Value = currentHealth;
-        float healthPercent = (float)currentHealth / maxHealth;
+        float healthPercent = maxHealth > 0 ? (float)currentHealth / maxHealth : 0f;
 
         var hpColor = healthPercent > GameConfig.HealthHighThreshold ? HandDrawnTheme.Colors.HpHigh
             : healthPercent > GameConfig.HealthMedThreshold ? HandDrawnTheme.Colors.HpMed
