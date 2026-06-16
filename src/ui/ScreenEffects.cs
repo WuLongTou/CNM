@@ -14,7 +14,6 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 public partial class ScreenEffects : Node
 {
     private float _shakeIntensity;
-    private Vector2 _originalPos;
 
     private ColorRect _damageFlash = null!;
     private ColorRect _lowHpVignette = null!;
@@ -63,19 +62,8 @@ public partial class ScreenEffects : Node
 
     public void ProcessEffects(float delta)
     {
-        if (_shakeIntensity > 0)
-        {
-            _shakeIntensity = Mathf.Max(0, _shakeIntensity - GameConfig.ShakeDecay * delta);
-            var offset = new Vector2(
-                (float)GD.RandRange(-_shakeIntensity, _shakeIntensity),
-                (float)GD.RandRange(-_shakeIntensity, _shakeIntensity));
-            if (GetParent() is Node2D parentNode)
-                parentNode.Position = _originalPos + offset;
-        }
-        else if (GetParent() is Node2D p && p.Position != _originalPos)
-        {
-            p.Position = _originalPos;
-        }
+        // 屏幕震动由 GameCamera(game_camera 组)负责；ScreenEffects 父节点是 Control 非 Node2D，
+        // 原 Position 震动分支永不执行，已移除（含 _originalPos/SetOriginalPos）。
 
         if (_comboTimer > 0)
         {
@@ -94,8 +82,6 @@ public partial class ScreenEffects : Node
         // Clean up inactive damage numbers
         _activeDamageNumbers.RemoveAll(l => !IsInstanceValid(l) || !l.Visible);
     }
-
-    public void SetOriginalPos(Vector2 pos) => _originalPos = pos;
 
     // ══ Screen Shake ══
 
