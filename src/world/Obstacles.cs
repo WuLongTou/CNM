@@ -289,8 +289,8 @@ internal static class ObstacleDraw
         // 翻滚气泡：随脉动膨胀，带高光
         for (int i = 0; i < 6; i++)
         {
-            float bx = rng.RandfRange(rect.Position.X * 0.72f, rect.End.X * 0.72f);
-            float by = rng.RandfRange(rect.Position.Y * 0.72f, rect.End.Y * 0.72f);
+            float bx = rng.RandfRange(rect.Position.X, rect.End.X);
+            float by = rng.RandfRange(rect.Position.Y, rect.End.Y);
             float br = rng.RandfRange(2f, 4.5f) * (0.65f + pulse * 0.6f);
             c.DrawCircle(new Vector2(bx, by), br, new Color(0.30f, 0.55f, 0.20f, 0.35f + pulse * 0.2f));
             c.DrawCircle(new Vector2(bx - br * 0.3f, by - br * 0.3f), br * 0.32f,
@@ -300,8 +300,8 @@ internal static class ObstacleDraw
         // 毒气雾团：半透明飘浮
         for (int i = 0; i < 3; i++)
         {
-            float mx = rng.RandfRange(rect.Position.X * 0.5f, rect.End.X * 0.5f);
-            float my = rng.RandfRange(rect.Position.Y * 0.5f, rect.End.Y * 0.5f);
+            float mx = rng.RandfRange(rect.Position.X, rect.End.X);
+            float my = rng.RandfRange(rect.Position.Y, rect.End.Y);
             c.DrawCircle(new Vector2(mx, my), rng.RandfRange(7f, 11f),
                 new Color(0.40f, 0.62f, 0.24f, 0.10f + pulse * 0.08f));
         }
@@ -332,7 +332,7 @@ internal static class ObstacleDraw
         // 火焰：3 个火苗跳动
         for (int i = 0; i < 3; i++)
         {
-            float fx = rng.RandfRange(rect.Position.X * 0.6f, rect.End.X * 0.6f);
+            float fx = rng.RandfRange(rect.Position.X, rect.End.X);
             float fy = rect.End.Y - rng.RandfRange(2f, 8f);
             float fh = rng.RandfRange(rect.Size.Y * 0.4f, rect.Size.Y * 0.7f) * (0.7f + pulse * 0.5f);
             float fw = rng.RandfRange(5f, 8f);
@@ -342,8 +342,8 @@ internal static class ObstacleDraw
         // 余烬亮点
         for (int i = 0; i < 5; i++)
         {
-            float ex = rng.RandfRange(rect.Position.X * 0.7f, rect.End.X * 0.7f);
-            float ey = rng.RandfRange(rect.Position.Y * 0.7f, rect.End.Y * 0.7f);
+            float ex = rng.RandfRange(rect.Position.X, rect.End.X);
+            float ey = rng.RandfRange(rect.Position.Y, rect.End.Y);
             c.DrawCircle(new Vector2(ex, ey), rng.RandfRange(0.8f, 1.8f),
                 new Color(1.0f, 0.6f, 0.2f, 0.6f + pulse * 0.3f));
         }
@@ -678,8 +678,8 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
             // 反光高光
             for (int i = 0; i < 4; i++)
             {
-                float hx = rng.RandfRange(rect.Position.X * 0.6f, rect.End.X * 0.6f);
-                float hy = rng.RandfRange(rect.Position.Y * 0.6f, rect.End.Y * 0.6f);
+                float hx = rng.RandfRange(rect.Position.X, rect.End.X);
+                float hy = rng.RandfRange(rect.Position.Y, rect.End.Y);
                 DrawCircle(new Vector2(hx, hy), rng.RandfRange(1.5f, 3f),
                     new Color(0.30f, 0.40f, 0.45f, 0.4f));
             }
