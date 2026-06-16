@@ -864,6 +864,13 @@ public partial class PlayerCombat : Node
         _attackTimer.Stop();
         CanAttack = true;
         _UpdateAttackRange(Player.WeaponRangeModifier);
+        // 应用 BuffSystem 的 SpeedBoost/DamageBoost 加成（buff 不持久存字段，每次重算实时反映，
+        // 避免被卡片/装备触发的 RecalculateStats 抹掉——此前技能书/药水的加伤加速 buff 完全失效）
+        if (Player.BuffSystem != null)
+        {
+            Player.CurrentSpeed *= Mathf.Max(0.1f, 1.0f + Player.BuffSystem.GetSpeedModifier());
+            Player.CurrentDamage *= Mathf.Max(0.1f, 1.0f + Player.BuffSystem.GetDamageModifier());
+        }
         Player.CurrentHealth = Math.Clamp(Player.CurrentHealth, 0, Player.MaxHealth);
     }
 

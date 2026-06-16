@@ -321,11 +321,10 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.SpeedBoost:
-                _player.CurrentSpeed = _player.BaseSpeed * buff.Value;
-                break;
-
             case BuffType.DamageBoost:
-                _player.CurrentDamage = _player.BaseDamage * buff.Value;
+                // 通过 RecalculateStats 统一重算（含装备加成 + buff modifier），
+                // 避免直接赋值丢失装备加成、且被下次卡片重算抹掉
+                _player.Combat?.RecalculateStats();
                 break;
         }
     }
@@ -365,11 +364,8 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.SpeedBoost:
-                _RecalculateSpeed();
-                break;
-
             case BuffType.DamageBoost:
-                _RecalculateDamage();
+                _player.Combat?.RecalculateStats();
                 break;
         }
     }
