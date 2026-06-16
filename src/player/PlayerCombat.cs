@@ -46,7 +46,6 @@ public partial class PlayerCombat : Node
 {
     public Player? Player { get; set; }
 
-    private Area2D _attackArea = null!;
     private Timer _attackTimer = null!;
     public Timer AttackTimer => _attackTimer;
 
@@ -109,23 +108,7 @@ public partial class PlayerCombat : Node
     public void Setup(Player p)
     {
         Player = p;
-        _SetupAttackArea();
         _SetupAttackTimer();
-    }
-
-    private void _SetupAttackArea()
-    {
-        _attackArea = new Area2D
-        {
-            CollisionLayer = 0,
-            CollisionMask = 0b010 // layer 2 — detect zombies
-        };
-        Player!.AddChild(_attackArea);
-        var col = new CollisionShape2D();
-        var shape = new CircleShape2D();
-        shape.Radius = Core.GameConfig.BaseAttackRange;
-        col.Shape = shape;
-        _attackArea.AddChild(col);
     }
 
     private void _SetupAttackTimer()
@@ -863,7 +846,6 @@ public partial class PlayerCombat : Node
         _attackTimer.WaitTime = Player.AttackCooldown;
         _attackTimer.Stop();
         CanAttack = true;
-        _UpdateAttackRange(Player.WeaponRangeModifier);
         // 应用 BuffSystem 的 SpeedBoost/DamageBoost 加成（buff 不持久存字段，每次重算实时反映，
         // 避免被卡片/装备触发的 RecalculateStats 抹掉——此前技能书/药水的加伤加速 buff 完全失效）
         if (Player.BuffSystem != null)
@@ -1017,15 +999,6 @@ public partial class PlayerCombat : Node
                 p.DotDamage += level * 5;
                 break;
         }
-    }
-
-    private void _UpdateAttackRange(float rangeMod)
-    {
-        if (_attackArea == null)
-            return;
-
-        if (_attackArea.GetChild(0) is CollisionShape2D col && col.Shape is CircleShape2D circleShape)
-            circleShape.Radius = Core.GameConfig.BaseAttackRange * Math.Max(Core.GameConfig.MinRangeMult, rangeMod);
     }
 
     private bool _CanPayHealthCost()

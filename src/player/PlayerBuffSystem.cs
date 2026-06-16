@@ -370,20 +370,6 @@ public partial class PlayerBuffSystem : Node
         }
     }
 
-    private void _RecalculateSpeed()
-    {
-        if (_player == null) return;
-        float mod = 1.0f + GetSpeedModifier();
-        _player.CurrentSpeed = _player.BaseSpeed * Mathf.Max(0.1f, mod);
-    }
-
-    private void _RecalculateDamage()
-    {
-        if (_player == null) return;
-        float mod = 1.0f + GetDamageModifier();
-        _player.CurrentDamage = _player.BaseDamage * Mathf.Max(0.1f, mod);
-    }
-
     // ═══════════════════════════════════════════════════
     // Visual Overlay
     // ═══════════════════════════════════════════════════
