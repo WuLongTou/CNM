@@ -120,6 +120,11 @@ public partial class Main : Node2D
             _autoTestRunner = new AutoTestRunner { Name = "AutoTestRunner" };
             AddChild(_autoTestRunner);
         }
+        else if (Array.Exists(args, arg => arg == "--perftest"))
+        {
+            LogUtils.Print("[PERFTEST] enabled");
+            AddChild(new PerformanceRunner { Name = "PerformanceRunner" });
+        }
     }
 
     private void _SetupCamera()
