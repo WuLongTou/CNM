@@ -93,9 +93,10 @@ public sealed partial class WaveResonanceSystem : Node
         float t = progress * MathFormulas.TwoPi + harmonicOffset;
         float rawOffset = MathFormulas.FourierSynthesis(t, _harmonicAmplitudes, _harmonicFreqMultipliers, _harmonicPhases);
 
-        // 归一化到 [-1, 1] 后乘以可视幅度，避免振幅叠加导致生成位置过远
-        // 振幅总和 = Amplitude · Σ(1/i)，约 2.28·Amplitude，用它做归一化基准
-        float normalization = Mathf.Max(Amplitude * 2.28f, 1.0f);
+        // 归一化基准 = 谐波振幅总和（动态按实际谐波数，避免硬编码 2.28 在 WaveMaxHarmonics 改变后失效）
+        float harmonicSum = 0.0f;
+        foreach (var a in _harmonicAmplitudes) harmonicSum += Mathf.Abs(a);
+        float normalization = Mathf.Max(harmonicSum, 1.0f);
         float normalized = rawOffset / normalization;
         float visualOffset = normalized * GameConfig.WaveSpawnVisualRange; // ±像素范围
 

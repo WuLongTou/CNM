@@ -100,6 +100,8 @@ public sealed partial class StrategySystem : Node
     {
         _killHistory.Enqueue((CurrentRound, weaponType));
         UpdateKillCounts();
+        // 立即清理过期记录，不依赖 ConfigureForRound，避免回合切换同帧时 CurrentRound 时序偏差
+        TrimOldKills();
     }
 
     /// <summary>
