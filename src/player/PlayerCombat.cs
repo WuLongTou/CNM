@@ -1123,12 +1123,14 @@ public partial class PlayerCombat : Node
     /// <summary>获取当前主武器频率（波形共振匹配用）</summary>
     public float GetCurrentWeaponFrequency()
     {
+        // 无武器时返回 0（明显不匹配任何波形谐波/基频 0.5~0.8），高斯匹配趋 0 → 不触发共振。
+        // 此前回退 WaveBaseFrequency 导致无武器玩家全程"白嫖"共振伤害加成。
         if (Player!.ActiveEffects == null || Player.ActiveEffects.Count == 0)
-            return Core.GameConfig.WaveBaseFrequency;
+            return 0.0f;
         foreach (var card in Player.ActiveEffects)
             if (card != null && card.Category == Core.GameEnums.WeaponCategory.Weapon)
                 return card.Frequency;
-        return Core.GameConfig.WaveBaseFrequency;
+        return 0.0f;
     }
 
     /// <summary>应用波形共振伤害加成（mult = 1 + 2·exp(-Δ²/(2σ²))）</summary>
