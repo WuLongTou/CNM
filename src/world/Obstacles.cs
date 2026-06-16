@@ -468,6 +468,7 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     private int _health;
     private float _shakeTime;
     private float _biteTick; // 僵尸啃咬累计
+    private Area2D? _biteArea; // 僵尸啃咬监测区（替代全局距离，避免跨障碍误伤）
     private Vector2 _drawShake;
 
     int IDamageable.CurrentHealth => _health;
@@ -489,7 +490,7 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
         AddChild(col);
 
         // 僵尸啃咬监测区（检测 layer 2 僵尸接触）
-        var biteArea = new Area2D
+        _biteArea = new Area2D
         {
             Monitoring = true,
             Monitorable = false,
@@ -498,8 +499,8 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
         };
         var biteCol = new CollisionShape2D();
         biteCol.Shape = new RectangleShape2D { Size = def.Size * 1.1f };
-        biteArea.AddChild(biteCol);
-        AddChild(biteArea);
+        _biteArea.AddChild(biteCol);
+        AddChild(_biteArea);
     }
 
     public override void _Ready()
@@ -524,20 +525,13 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
             QueueRedraw();
         }
 
-        // 僵尸啃咬：检测接触的僵尸，每秒掉血
+        // 僵尸啃咬：用 biteArea 重叠检测（替代全局距离，避免跨障碍误伤），每 0.5s 掉血
         _biteTick += d;
         if (_biteTick >= 0.5f)
         {
             _biteTick = 0;
-            foreach (var z in ZombieRegistry.All)
-            {
-                if (!IsInstanceValid(z)) continue;
-                if (GlobalPosition.DistanceSquaredTo(z.GlobalPosition) < (_size.Length() * 0.5f + 24f) * (_size.Length() * 0.5f + 24f))
-                {
-                    TakeDamage(4);
-                    break;
-                }
-            }
+            if (_biteArea != null && _biteArea.GetOverlappingBodies().Count > 0)
+                TakeDamage(4);
         }
     }
 
