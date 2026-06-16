@@ -245,7 +245,15 @@ void fragment() {
     public void ChangeWeather(WeatherType type, WeatherIntensity intensity)
     {
         if (CurrentWeather == type && Intensity == intensity)
+        {
+            // 相同天气早退时仍要重启 OneShot timer，否则超时后天气自动切换永久停摆
+            if (_weatherChangeTimer != null)
+            {
+                _weatherChangeTimer.WaitTime = _GetWeatherDuration(type);
+                _weatherChangeTimer.Start();
+            }
             return;
+        }
 
         _StopAllWeatherEffects();
         _StartWeatherEffects(type, intensity);
