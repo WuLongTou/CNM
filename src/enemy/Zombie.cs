@@ -1050,6 +1050,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
     public void ApplyStun(float duration)
     {
+        if (duration <= 0) return;
         _isStunned = true;
         _stunTimer = duration;
         _vfx?.ShowStunned();
@@ -1057,8 +1058,10 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
     public void ApplyPoison(float damagePerSecond, float duration)
     {
-        _poisonDamage = damagePerSecond;
-        _poisonRemaining = duration;
+        if (damagePerSecond <= 0 || duration <= 0) return;
+        // 取更高 dps（避免弱毒覆盖强毒）、duration 续期取更长，对齐 ApplyBurn 的叠加策略
+        if (damagePerSecond > _poisonDamage) _poisonDamage = damagePerSecond;
+        if (duration > _poisonRemaining) _poisonRemaining = duration;
         _poisonTickTimer = GameConfig.ZombiePoisonTick;
         _vfx?.ShowPoisoned();
     }

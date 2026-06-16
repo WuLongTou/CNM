@@ -160,7 +160,7 @@ public partial class MagicMissile : Area2D, IDamager
 
         _DealDamage(z);
 
-        if (ChainCount > 0 && _chainTargets.Count < ChainCount)
+        if (ChainCount > 0) // 还有剩余连锁次数就继续（_ChainLightning 内 ChainCount-- 递减限制总数）
         {
             _ChainLightning(z);
         }
@@ -177,7 +177,8 @@ public partial class MagicMissile : Area2D, IDamager
         if (Shooter is Player p)
             p.RegisterDamageDealt(zombie, Damage);
 
-        new CharmEffect { Chance = 100, Duration = CharmDuration }.ApplyTo(zombie);
+        if (CharmDuration > 0)
+            new CharmEffect { Chance = 100, Duration = CharmDuration }.ApplyTo(zombie);
 
         if (PushForce > 0)
         {
@@ -185,13 +186,16 @@ public partial class MagicMissile : Area2D, IDamager
             zombie.Velocity += pushDir * PushForce;
         }
 
-        new StunEffect { Chance = 100, Duration = StunDuration }.ApplyTo(zombie);
-        new PoisonEffect
-        {
-            Chance = 100,
-            Dps = DotDamage,
-            Duration = GameConfig.MissilePoisonDuration
-        }.ApplyTo(zombie);
+        // 仅在玩家点出对应天赋（属性>0）时施加，避免空效果干扰 VFX/音效 + 弱毒覆盖强毒
+        if (StunDuration > 0)
+            new StunEffect { Chance = 100, Duration = StunDuration }.ApplyTo(zombie);
+        if (DotDamage > 0)
+            new PoisonEffect
+            {
+                Chance = 100,
+                Dps = DotDamage,
+                Duration = GameConfig.MissilePoisonDuration
+            }.ApplyTo(zombie);
 
         _chainTargets.Add(zombie);
     }
