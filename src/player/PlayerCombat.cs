@@ -1035,7 +1035,13 @@ public partial class PlayerCombat : Node
     private void _PayHealthCost()
     {
         if (Player!.HealthCostPerAttack > 0)
-            Player.TakeDamage(Player.HealthCostPerAttack);
+        {
+            // 生命消耗走独立扣血路径：不走 TakeDamage，否则每次攻击都白送无敌帧 + 受击震屏/音效/红屏噪音
+            Player.CurrentHealth = Math.Max(0, Player.CurrentHealth - Player.HealthCostPerAttack);
+            Player.FireHealthChanged(Player.CurrentHealth);
+            if (Player.CurrentHealth <= 0 && !Player.IsDead)
+                Player.Die();
+        }
     }
 
     public void ApplyLifesteal(float damage)

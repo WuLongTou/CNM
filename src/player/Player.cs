@@ -425,7 +425,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
             GameServices.UI.FlashDamage();
             GameServices.UI.ShakeScreen(5.0f);
             InvincibleTimer = InvincibleDuration;
-            VFXManager.FlashHurt(this, Sprite!);
+            if (Sprite != null) VFXManager.FlashHurt(this, Sprite);
             Vfx?.PlayHurtAnim();
             GameServices.Audio.PlayPlayerHurt();
             Vfx?.UpdateStatusDisplays();
@@ -446,7 +446,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         // Check if player has any thorns/counterattack ability
         // For now, we give a small chance to reflect damage
         float counterChance = 0.15f; // 15% chance to counter
-        if (GD.Randf() < counterChance && attacker != null)
+        if (GD.Randf() < counterChance && attacker != null && IsInstanceValid(attacker) && !attacker.IsDead)
         {
             int counterDamage = (int)(CurrentDamage * 0.3f);
             if (counterDamage > 0)
@@ -486,6 +486,10 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         if (Collision != null) Collision.Disabled = true;
         _dashTimer?.Stop();
         _dashCooldownTimer?.Stop();
+        // 重置残留状态，避免复活/重开时进入冲刺分支或保留无敌帧
+        IsDashing = false;
+        CanDash = false;
+        InvincibleTimer = 0.0f;
         Combat?.AttackTimer.Stop();
         if (Combat != null)
             Combat.CanAttack = true;
