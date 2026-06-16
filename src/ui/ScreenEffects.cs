@@ -283,7 +283,7 @@ void fragment() {
         if (amount > 0 && _damageNumberThrottleTimer > 0 &&
             pos.DistanceTo(_lastDamagePos) < 30)
         {
-            // Skip this damage number - will be handled by aggregation
+            // Skip this damage number - 节流丢弃：同位置 0.05s 内的伤害数字静默忽略，防止密集重叠（无聚合）
             return;
         }
         _damageNumberThrottleTimer = DamageNumberThrottle;
