@@ -81,7 +81,10 @@ public partial class ScreenEffects : Node
         {
             _comboTimer -= delta;
             if (_comboTimer <= 0)
+            {
                 _comboCount = 0;
+                _UpdateComboDisplay(); // 连击结束及时刷新，避免标签永久残留
+            }
         }
 
         // Update damage number throttle

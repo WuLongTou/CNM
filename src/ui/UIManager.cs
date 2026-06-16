@@ -1750,6 +1750,10 @@ public partial class UIManager : Control
     {
         var viewport = ResponsiveUi.ViewportSize(this);
         HideRoundBanner();
+        // 关闭可能打开的模态面板，避免遮挡回合结算卡（Help/Equipment ZIndex 170 高于 RoundSummary 55）
+        _helpPanel?.Close();
+        _equipmentPanel?.Close();
+        _HideTooltip();
 
         if (_roundSummaryPanel != null && IsInstanceValid(_roundSummaryPanel))
             _roundSummaryPanel.QueueFree();
@@ -1953,6 +1957,11 @@ public partial class UIManager : Control
         HideRoundSummary();
         if (_weaponSelectionPanel != null && _weaponSelectionPanel.Visible)
             HideWeaponSelection();
+        // 关闭可能打开的模态面板，避免遮挡 GameOver（Help/Equipment ZIndex 170 高于 GameOver 50）
+        _helpPanel?.Close();
+        _equipmentPanel?.Close();
+        if (_pausePanel != null) _pausePanel.Visible = false;
+        _HideTooltip();
 
         // Pause game to prevent input during transition
         GetTree().Paused = true;
