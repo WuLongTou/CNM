@@ -42,6 +42,9 @@ public sealed partial class GoldenProgression : Node
     /// R1=1, R2=2, R3=1.5, R4=1.667, R5=1.6, R6=1.625...
     /// 自然收敛到 φ ≈ 1.618
     /// </summary>
+    // 注：DifficultyMultiplier/CalculateDifficultyMultiplier 当前未接入难度曲线——黄金比例
+    // 已通过 ModulateZombieCount(波次数量斐波那契调制) + IsFibonacciDropPoint(掉落) 生效。
+    // 此处保留供未来按斐波那契比率调难度倍率时使用，避免文档"调难度"描述误导。
     public static float CalculateDifficultyMultiplier(int round)
     {
         if (round <= 1) return 1.0f;

@@ -239,7 +239,7 @@ public sealed class FieldNodeState
     {
         get
         {
-            float ratio = PlacedTime / Duration;
+            float ratio = Duration > 0 ? PlacedTime / Duration : 1.0f;
             // 后30%生命期开始衰减（SmoothStep）
             if (ratio < 0.7f) return 1.0f;
             return 1.0f - MathFormulas.SmoothStep(0.7f, 1.0f, ratio);
