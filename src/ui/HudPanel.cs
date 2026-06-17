@@ -49,6 +49,7 @@ public partial class HudPanel : Panel
     private readonly Dictionary<string, Button> _effectIcons = new();
     private Button _soundToggleButton = null!;
     private Label _debuffLabel = null!;  // 常驻 debuff 提示：中毒/燃烧等
+    private Label _hazardLabel = null!;  // 陷阱（毒沼/燃烧地带）持续伤害提示
     private Label _weaponNameLabel = null!;
 
     // ── 低血量闪烁 tween ────────────────────────────────────
@@ -129,6 +130,14 @@ public partial class HudPanel : Panel
         _debuffLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         _debuffLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
         topRow.AddChild(_debuffLabel);
+
+        // 陷阱（玩家踩入毒沼/燃烧地带）持续伤害提示
+        _hazardLabel = new Label { Text = "" };
+        _hazardLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
+        _hazardLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.5f, 0.2f));  // 橙红警示
+        _hazardLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+        _hazardLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        topRow.AddChild(_hazardLabel);
 
         // 分数靠右
         _scoreLabel = new Label
@@ -364,6 +373,13 @@ public partial class HudPanel : Panel
         {
             _debuffLabel.Text = "";
         }
+    }
+
+    /// <summary>陷阱持续伤害提示（玩家踩入毒沼/燃烧地带时由 HazardZone 推送，UIManager 定时清除）。</summary>
+    public void ShowHazard(string text)
+    {
+        if (_hazardLabel != null)
+            _hazardLabel.Text = text;
     }
 
     public void UpdateScore(int newScore)

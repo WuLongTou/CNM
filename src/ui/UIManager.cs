@@ -82,6 +82,7 @@ public partial class UIManager : Control
     private PausePanel? _pausePanel;
     private bool _pauseLockedByUpgrade;
     private bool _userPaused;
+    private float _hazardTimer;  // 陷阱 HUD 提示残留时间（玩家离开陷阱区后倒计时清除）
     private Label _currentWeaponLabel = null!;
 
     private RoundBanner? _roundBanner;
@@ -712,6 +713,14 @@ public partial class UIManager : Control
     {
         if (_tooltipPanel != null && _tooltipPanel.Visible)
             _PositionTooltip();
+
+        // 陷阱 HUD 提示倒计时清除（玩家离开陷阱区后 0.6s 自动消失）
+        if (_hazardTimer > 0)
+        {
+            _hazardTimer -= (float)delta;
+            if (_hazardTimer <= 0)
+                _hudPanel?.ShowHazard("");
+        }
 
         if (_gameManager != null && _gameManager.PlayerRef != null)
         {
@@ -2145,6 +2154,13 @@ public partial class UIManager : Control
     public void UpdateWeatherHUD(string weatherName, Color weatherColor, bool isHazard, int damagePerTick, string effectsDesc)
     {
         _hudPanel?.UpdateWeather(weatherName, weatherColor, isHazard, damagePerTick, effectsDesc);
+    }
+
+    /// <summary>陷阱持续伤害 HUD 提示（HazardZone 伤害玩家时调用，0.6s 无更新则清除）。</summary>
+    public void UpdateHazardHUD(string text)
+    {
+        _hudPanel?.ShowHazard(text);
+        _hazardTimer = 0.6f;  // 略大于 HazardZone tick(0.5s)，玩家离开后自动消失
     }
 
     public void TriggerBossAtmosphere()

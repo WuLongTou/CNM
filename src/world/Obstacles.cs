@@ -747,10 +747,15 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
         if (_tickTimer > 0) return;
         _tickTimer = 0.5f;
         float dmg = GameConfig.HazardDamagePerSec * 0.5f;
+        int dmgInt = (int)Mathf.Ceil(dmg);
         foreach (var body in GetOverlappingBodies())
         {
             if (body is IDamageable d && !d.IsDead)
-                d.TakeDamage((int)Mathf.Ceil(dmg));
+            {
+                d.TakeDamage(dmgInt);
+                if (body is PlayerClass)
+                    GameServices.UI?.UpdateHazardHUD($"⚠ 危险地带 -{dmgInt}/s");
+            }
         }
     }
 
