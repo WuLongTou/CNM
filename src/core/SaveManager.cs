@@ -79,6 +79,63 @@ public partial class SaveManager : Node
         Instance._SaveGame();
     }
 
+    // ══ 跨局成长：金币 + 永久升级（meta progression）══
+
+    public static void AddCoins(int amount)
+    {
+        if (Instance == null || amount <= 0) return;
+        int coins = Instance._saveData.ContainsKey("coins") ? (int)Instance._saveData["coins"] : 0;
+        Instance._saveData["coins"] = coins + amount;
+        Instance._SaveGame();
+    }
+
+    public static int GetCoins()
+    {
+        if (Instance == null) return 0;
+        return Instance._saveData.ContainsKey("coins") ? (int)Instance._saveData["coins"] : 0;
+    }
+
+    public static int GetPermLevel(string key)
+    {
+        if (Instance == null) return 0;
+        string k = $"perm_{key}_level";
+        return Instance._saveData.ContainsKey(k) ? (int)Instance._saveData[k] : 0;
+    }
+
+    public static int GetPermCost(string key) => (GetPermLevel(key) + 1) * 100;
+
+    public static bool UpgradePerm(string key)
+    {
+        if (Instance == null) return false;
+        int cost = GetPermCost(key);
+        int coins = GetCoins();
+        if (coins < cost) return false;
+        Instance._saveData["coins"] = coins - cost;
+        string k = $"perm_{key}_level";
+        Instance._saveData[k] = GetPermLevel(key) + 1;
+        Instance._SaveGame();
+        return true;
+    }
+
+    /// <summary>应用永久升级到玩家（新局开始时调用）：血+20/级、伤+10%/级、速+5%/级。</summary>
+    public static void ApplyPermBuffs(ZombieWars.Player.Player player)
+    {
+        if (Instance == null || player == null) return;
+        int hpLevel = GetPermLevel("health");
+        int dmgLevel = GetPermLevel("damage");
+        int spdLevel = GetPermLevel("speed");
+        if (hpLevel > 0)
+        {
+            player.MaxHealth += hpLevel * 20;
+            player.BaseMaxHealth = player.MaxHealth;
+            player.CurrentHealth = player.MaxHealth;
+        }
+        if (dmgLevel > 0)
+            player.BaseDamage *= 1.0f + dmgLevel * 0.1f;
+        if (spdLevel > 0)
+            player.BaseSpeed *= 1.0f + spdLevel * 0.05f;
+    }
+
     private Godot.Collections.Array _CheckAchievements()
     {
         var unlocked = _saveData.ContainsKey("unlocked_achievements")

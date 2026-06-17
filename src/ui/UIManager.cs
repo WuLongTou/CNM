@@ -52,6 +52,7 @@ public partial class UIManager : Control
     private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
     private EquipmentPanel _equipmentPanel = null!;
+    private MetaUpgradePanel? _metaPanel;  // 跨局永久升级面板
     private WelcomePanel? _welcomePanel;
     private ProgressBar _bossHealthBar = null!;
     private Label _bossHealthLabel = null!;
@@ -133,6 +134,8 @@ public partial class UIManager : Control
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
         _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
         AddChild(_equipmentPanel);
+        _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
+        AddChild(_metaPanel);
         _welcomePanel = new WelcomePanel();
         _welcomePanel.ZIndex = 160;
         _welcomePanel.Setup(onStart: _StartGame, onToggleHelp: _ToggleControlsPanel);
@@ -2154,6 +2157,12 @@ public partial class UIManager : Control
     public void UpdateWeatherHUD(string weatherName, Color weatherColor, bool isHazard, int damagePerTick, string effectsDesc)
     {
         _hudPanel?.UpdateWeather(weatherName, weatherColor, isHazard, damagePerTick, effectsDesc);
+    }
+
+    /// <summary>打开跨局永久升级面板（GameOverUI 的"永久升级"按钮调用）。</summary>
+    public void ShowMetaUpgrade()
+    {
+        _metaPanel?.Open();
     }
 
     /// <summary>陷阱持续伤害 HUD 提示（HazardZone 伤害玩家时调用，0.6s 无更新则清除）。</summary>

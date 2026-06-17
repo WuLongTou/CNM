@@ -123,6 +123,10 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         CurrentHealth = MaxHealth;
         CurrentDamage = BaseDamage;
         CurrentSpeed = BaseSpeed;
+        // 应用跨局永久升级（血/伤/速），更新基础值后同步当前值
+        SaveManager.ApplyPermBuffs(this);
+        CurrentDamage = BaseDamage;
+        CurrentSpeed = BaseSpeed;
 
         Sprite = new Sprite2D
         {

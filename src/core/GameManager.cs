@@ -779,6 +779,8 @@ public partial class GameManager : Node
 
         SaveManager.SaveHighScore(Score);
         SaveManager.AddRoundsSurvived(CurrentRound);
+        // 跨局成长：按得分与击杀结算金币（得分/50 + 总击杀），供永久升级消费
+        SaveManager.AddCoins(Score / 50 + _totalKills);
     }
 
     private void _ChooseRoundDirective()
