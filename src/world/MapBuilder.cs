@@ -43,13 +43,27 @@ public partial class MapBuilder : Node2D
             if (child is Node n) n.QueueFree();
 
         // 创建新障碍
-        foreach (var def in map.Obstacles)
+        foreach (var rawDef in map.Obstacles)
         {
+            // 世界放大后障碍物同比例放大，避免大场景里障碍显得过小过稀
+            var def = rawDef;
+            def.Size *= GameConfig.WorldScale;
+
+            // 统一兜底：过滤任何与出生安全区重叠的障碍。
+            // 各地图生成时虽有 InSpawnSafeZone 检查，但只查障碍中心点、且部分地图
+            // （地牢/大教堂/废墟的固定墙体）完全跳过检查，导致大墙体边缘把玩家围住。
+            // 这里用障碍四角+中心采样 + 安全区中心点是否落在障碍内，做最终拦截。
+            if (_OverlapsSpawnSafeZone(def, map.WorldSize))
+                continue;
+
             var node = ObstacleFactory.Create(def);
             _obstacleLayer.AddChild(node);
             if (def.Kind is ObstacleKind.Solid or ObstacleKind.Destructible)
                 _solidRefs.Add((def, node));
         }
+
+        // 放置探索奖励（宝箱 + 祭坛）—— 大场景探索动机
+        _SpawnExplorationProps(map.WorldSize);
 
         // 等一帧让旧节点 free 后再烘焙，避免导航引用已失效的碰撞
         CallDeferred(nameof(_BakeNavigation));
@@ -109,5 +123,86 @@ public partial class MapBuilder : Node2D
                 local[i].X * sin + local[i].Y * cos);
         }
         return result;
+    }
+
+    /// <summary>放置探索奖励：宝箱（触碰开启掉落拾取物）+ 祭坛（触碰获得增益）。</summary>
+    private void _SpawnExplorationProps(Vector2 ws)
+    {
+        // 宝箱：大世界放更多，每张图散布若干
+        int chestCount = 3 + (int)GameConfig.WorldScale;
+        for (int i = 0; i < chestCount; i++)
+        {
+            var chest = new Chest
+            {
+                GlobalPosition = _RandomPosAwayFromCenter(ws),
+                LootCount = (int)GD.RandRange(2, 3)
+            };
+            _obstacleLayer.AddChild(chest);
+        }
+
+        // 祭坛：每张图 1~2 个，随机增益类型
+        int altarCount = GameConfig.WorldScale >= 2f ? 2 : 1;
+        var boons = System.Enum.GetValues(typeof(Altar.BoonKind));
+        for (int i = 0; i < altarCount; i++)
+        {
+            var altar = new Altar
+            {
+                GlobalPosition = _RandomPosAwayFromCenter(ws),
+                Boon = (Altar.BoonKind)boons.GetValue((int)GD.RandRange(0, boons.Length - 1))!
+            };
+            _obstacleLayer.AddChild(altar);
+        }
+    }
+
+    /// <summary>在地图内随机取一个远离出生安全区的位置。</summary>
+    private static Vector2 _RandomPosAwayFromCenter(Vector2 ws)
+    {
+        Vector2 pos;
+        int tries = 0;
+        do
+        {
+            pos = new Vector2(
+                (float)GD.RandRange(ws.X * 0.08, ws.X * 0.92),
+                (float)GD.RandRange(ws.Y * 0.08, ws.Y * 0.65));
+            tries++;
+        } while (_InSafeEllipse(pos, ws) && tries < 20);
+        return pos;
+    }
+
+    /// <summary>
+    /// 障碍是否与中心出生安全椭圆重叠（Build 时兜底过滤，避免把玩家围住）。
+    /// 检测障碍的采样点是否落入安全椭圆，以及安全椭圆中心是否被障碍覆盖
+    /// （长墙横穿中心、四角却在椭圆外的情形）。
+    /// </summary>
+    private static bool _OverlapsSpawnSafeZone(ObstacleDef def, Vector2 ws)
+    {
+        float cos = Mathf.Cos(def.Rotation), sin = Mathf.Sin(def.Rotation);
+        float hx = def.Size.X * 0.5f, hy = def.Size.Y * 0.5f;
+        Vector2[] localPts = {
+            new(0, 0),
+            new(hx, hy), new(hx, -hy), new(-hx, hy), new(-hx, -hy),
+            new(hx, 0), new(-hx, 0), new(0, hy), new(0, -hy)
+        };
+        foreach (var lp in localPts)
+        {
+            var wp = def.Position + new Vector2(lp.X * cos - lp.Y * sin, lp.X * sin + lp.Y * cos);
+            if (_InSafeEllipse(wp, ws)) return true;
+        }
+        return _PointInRotatedRect(ws * 0.5f, def);
+    }
+
+    private static bool _InSafeEllipse(Vector2 p, Vector2 ws)
+    {
+        var nx = (p.X / ws.X - 0.5f) / GameConfig.MapSpawnSafeRadiusX;
+        var ny = (p.Y / ws.Y - 0.5f) / GameConfig.MapSpawnSafeRadiusY;
+        return nx * nx + ny * ny < 1f;
+    }
+
+    private static bool _PointInRotatedRect(Vector2 p, ObstacleDef def)
+    {
+        float cos = Mathf.Cos(-def.Rotation), sin = Mathf.Sin(-def.Rotation);
+        var d = p - def.Position;
+        var local = new Vector2(d.X * cos - d.Y * sin, d.X * sin + d.Y * cos);
+        return Mathf.Abs(local.X) <= def.Size.X * 0.5f && Mathf.Abs(local.Y) <= def.Size.Y * 0.5f;
     }
 }

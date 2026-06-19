@@ -259,23 +259,22 @@ public partial class PlayerCombat : Node
         if (!_CanPayHealthCost())
             return;
 
-        Vector2 mousePos = Player!.GetViewport().GetMousePosition();
         Zombie? target = _FindTargetZombie(Core.GameConfig.RangedAttackRange);
 
         if (target == null)
         {
-            // No target: fire toward mouse direction
-            if (mousePos.Y > Core.GameConfig.TopUiMargin)
-            {
-                _BeginAttack(notifyUi: true);
-                _FireProjectile(mousePos);
-                Player.Vfx?.CreateMuzzleFlash((mousePos - Player.GlobalPosition).Normalized());
-                Player.Vfx?.ShowAttackEffect(mousePos, Player.CurrentAttackType);
-            }
+            // 无目标：弹道方向跟随角色朝向（而非鼠标）
+            _BeginAttack(notifyUi: true);
+            bool faceLeft = Player!.Vfx?.FacingLeft ?? false;
+            var fireTarget = Player.GlobalPosition + new Vector2(faceLeft ? -500f : 500f, 0f);
+            _FireProjectile(fireTarget);
+            Player.Vfx?.CreateMuzzleFlash(new Vector2(faceLeft ? -1f : 1f, 0f));
+            Player.Vfx?.ShowAttackEffect(fireTarget, Player.CurrentAttackType);
             return;
         }
 
         _BeginAttack(notifyUi: true);
+        Player!.Vfx?.FaceToward(target.GlobalPosition); // 弹道朝向目标
         if (Player!.MultiShotCount > 1)
         {
             var targets = _GetNearestZombies(Core.GameConfig.RangedAttackRange, Player.MultiShotCount);
@@ -318,6 +317,7 @@ public partial class PlayerCombat : Node
 
     public void AttackZombie(Zombie zombie)
     {
+        Player!.Vfx?.FaceToward(zombie.GlobalPosition); // 攻击朝向被攻击的敌人
         float damage = Player!.CurrentDamage;
         bool isCritical = GD.Randf() < (Player.CriticalChance / 100.0f);
         if (isCritical)

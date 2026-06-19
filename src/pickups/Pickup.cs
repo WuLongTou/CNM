@@ -18,6 +18,7 @@ public abstract partial class Pickup : Area2D
     {
         CollisionLayer = 0;
         CollisionMask = 0b001; // player layer
+        AddToGroup("pickup"); // 供磁铁(MagnetPickup)批量吸引
 
         BodyEntered += _OnBodyEntered;
 
@@ -25,7 +26,9 @@ public abstract partial class Pickup : Area2D
         {
             Shape = new CircleShape2D { Radius = 16.0f }
         };
-        AddChild(col);
+        // deferred 添加碰撞体：拾取物常在物理回调链（僵尸死亡掉落）中创建，
+        // 立即 AddChild 会触发 "Can't change state while flushing queries" 错误。
+        Callable.From(() => AddChild(col)).CallDeferred();
 
         _CreateSprite();
         _basePos = GlobalPosition;
@@ -135,6 +138,14 @@ public abstract partial class Pickup : Area2D
         t.Timeout += () => particles.QueueFree();
         particles.AddChild(t);
         t.Start();
+    }
+
+    /// <summary>磁铁吸引：把浮动基准点移到目标附近，浮动动画会自然过渡过去。</summary>
+    public void MagnetTo(Vector2 target)
+    {
+        _basePos = target + new Vector2(
+            (float)GD.RandRange(-25, 25),
+            (float)GD.RandRange(-25, 25));
     }
 
     protected abstract void _CreateSprite();

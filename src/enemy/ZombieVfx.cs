@@ -157,7 +157,10 @@ public partial class ZombieVfx : Node
         if (!FileAccess.FileExists(sheetPath))
             return false;
 
-        var frames = TextureUtils.LoadAndSplitSpriteSheet(sheetPath);
+        // 敌人 2.5D 俯视 walk 图为「1行8列」瘦长站立全身像（角色约 1:7+）。
+        // 保持比例会缩成细竖条，故用投影分割 + trim 后**强制横向拉伸**到 ~45% 画布宽，
+        // 让角色清晰可辨（横向变形优于不可见的细条）。
+        var frames = TextureUtils.LoadAndStretchSplitFrames(sheetPath, widthRatio: 0.45f);
         if (frames == null || frames.Count == 0)
             return false;
 

@@ -456,9 +456,11 @@ public static class ScenePropPlacer
         }
 
         var props = new List<SceneProp>();
+        // 大场景：装饰物数量随世界放大，避免大地图空旷
+        int n = Mathf.Max(1, (int)Core.GameConfig.WorldScale);
 
         // 枯树:边缘带密集
-        for (int i = 0; i < 14; i++)
+        for (int i = 0; i < 14 * n; i++)
         {
             var t = new DeadTreeProp(rng.RandiRange(1, 999999));
             t.Position = RandomEdgePos(0.7f);
@@ -466,21 +468,21 @@ public static class ScenePropPlacer
             props.Add(t);
         }
         // 墓碑
-        for (int i = 0; i < 10; i++)
+        for (int i = 0; i < 10 * n; i++)
         {
             var g = new TombstoneProp(rng.RandiRange(1, 999999));
             g.Position = RandomEdgePos(0.55f);
             props.Add(g);
         }
         // 骨头堆
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 8 * n; i++)
         {
             var b = new BonePileProp(rng.RandiRange(1, 999999));
             b.Position = RandomEdgePos(0.4f);
             props.Add(b);
         }
         // 栅栏段:成对分布在边缘
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < 5 * n; i++)
         {
             var f = new FenceProp(rng.RandiRange(1, 999999));
             f.Position = RandomEdgePos(0.8f);
@@ -488,22 +490,22 @@ public static class ScenePropPlacer
             props.Add(f);
         }
         // 废墟墙
-        for (int i = 0; i < 4; i++)
+        for (int i = 0; i < 4 * n; i++)
         {
             var r = new RuinWallProp(rng.RandiRange(1, 999999));
             r.Position = RandomEdgePos(0.8f);
             r.Rotation = rng.RandfRange(-0.25f, 0.25f);
             props.Add(r);
         }
-        // 篝火:少量,均匀
-        for (int i = 0; i < 3; i++)
+        // 篝火:适度增加（带发光，不宜过多）
+        for (int i = 0; i < 3 + n; i++)
         {
             var c = new CampfireProp(rng.RandiRange(1, 999999));
             c.Position = RandomEdgePos(0.5f);
             props.Add(c);
         }
         // 火把:沿边缘
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 6 * n; i++)
         {
             var tr = new TorchProp(rng.RandiRange(1, 999999));
             tr.Position = RandomEdgePos(0.85f);

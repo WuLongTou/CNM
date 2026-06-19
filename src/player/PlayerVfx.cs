@@ -30,6 +30,16 @@ public partial class PlayerVfx : Node
     /// </summary>
     public bool FacingLeft => _facingLeft;
 
+    /// <summary>朝向某个世界坐标（攻击时转向目标，而非只跟移动方向）。</summary>
+    public void FaceToward(Vector2 worldPos)
+    {
+        if (Player?.Sprite == null) return;
+        bool left = worldPos.X < Player.GlobalPosition.X;
+        if (left == _facingLeft) return;
+        _facingLeft = left;
+        Player.Sprite.FlipH = left;
+    }
+
     private float _trailTimer = 0.0f;
     private float _footstepTimer = 0.0f;
     private const float FootstepInterval = 0.28f;
@@ -101,9 +111,8 @@ public partial class PlayerVfx : Node
         _TintImage(hurtImg, new Color(1.5f, 0.4f, 0.3f));
         _hurtFrame = ImageTexture.CreateFromImage(hurtImg);
 
-        var dashImg = img.Duplicate() as Image;
-        _TintImage(dashImg, new Color(0.2f, 0.1f, 0.1f, 0.6f));
-        _dashFrame = ImageTexture.CreateFromImage(dashImg);
+        // dash 不再变黑，保持正常外观（冲刺速度感由残影 SpawnDashTrail 表现）
+        _dashFrame = _idleFrame;
     }
 
     // Per-weapon-type sprite caches
@@ -194,6 +203,18 @@ public partial class PlayerVfx : Node
         }
     }
 
+    /// <summary>
+    /// 将一组帧统一水平翻转，把"默认朝左"的精灵归一化为"默认朝右"。
+    /// 当前这批 2.5D 俯视玩家精灵默认面朝左（与代码"默认朝右"的约定相反，
+    /// 表现为行走方向与人物朝向正好相反）。俯视精灵左右重心近乎对称，
+    /// FramesFaceLeft 无法可靠判断，故在加载后手动翻转归一化。
+    /// </summary>
+    private static void _NormalizeFaceRight(Godot.Collections.Array<Texture2D> frames)
+    {
+        for (int i = 0; i < frames.Count; i++)
+            frames[i] = Core.TextureUtils.FlipHorizontal(frames[i]);
+    }
+
     private static void _LoadWarriorSprites()
     {
         _warriorWalkFrames.Clear();
@@ -208,6 +229,10 @@ public partial class PlayerVfx : Node
 
         var allIdle = Core.TextureUtils.LoadSpriteSheetGridFrames("res://assets/sprites/player/sheets/warrior_idle.png", cols: 2, rows: 2);
         _TakeFramesEvenly(allIdle, _warriorIdleFrames, 4);
+
+        _NormalizeFaceRight(_warriorWalkFrames);
+        _NormalizeFaceRight(_warriorAttackFrames);
+        _NormalizeFaceRight(_warriorIdleFrames);
 
         _warriorIdle = _warriorIdleFrames.Count > 0 ? _warriorIdleFrames[0] : null;
         _warriorBase = _warriorWalkFrames.Count > 0 ? _warriorWalkFrames[0] : null;
@@ -228,6 +253,10 @@ public partial class PlayerVfx : Node
         var allIdle = Core.TextureUtils.LoadSpriteSheetGridFrames("res://assets/sprites/player/sheets/ranger_idle.png", cols: 2, rows: 2);
         _TakeFramesEvenly(allIdle, _rangerIdleFrames, 4);
 
+        _NormalizeFaceRight(_rangerWalkFrames);
+        _NormalizeFaceRight(_rangerAttackFrames);
+        _NormalizeFaceRight(_rangerIdleFrames);
+
         _rangerIdle = _rangerIdleFrames.Count > 0 ? _rangerIdleFrames[0] : null;
         _rangerBase = _rangerWalkFrames.Count > 0 ? _rangerWalkFrames[0] : null;
     }
@@ -246,6 +275,10 @@ public partial class PlayerVfx : Node
 
         var allIdle = Core.TextureUtils.LoadSpriteSheetGridFrames("res://assets/sprites/player/sheets/mage_idle.png", cols: 2, rows: 2);
         _TakeFramesEvenly(allIdle, _mageIdleFrames, 4);
+
+        _NormalizeFaceRight(_mageWalkFrames);
+        _NormalizeFaceRight(_mageAttackFrames);
+        _NormalizeFaceRight(_mageIdleFrames);
 
         _mageIdle = _mageIdleFrames.Count > 0 ? _mageIdleFrames[0] : null;
         _mageBase = _mageWalkFrames.Count > 0 ? _mageWalkFrames[0] : null;

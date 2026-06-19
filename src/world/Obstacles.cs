@@ -573,6 +573,22 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
         debris.ProcessMaterial = mat;
         GetParent().AddChild(debris);
 
+        // 可破坏障碍有概率掉落拾取物——给"破坏环境"以探索奖励
+        if (GD.Randf() < 0.30f)
+        {
+            string[] types = { "health_potion", "shield_orb", "magnet" };
+            string type = types[(int)GD.RandRange(0, types.Length - 1)];
+            Node? pickup = type switch
+            {
+                "health_potion" => new ZombieWars.Pickups.HealthPotion { GlobalPosition = GlobalPosition },
+                "shield_orb" => new ZombieWars.Pickups.ShieldOrb { GlobalPosition = GlobalPosition },
+                "magnet" => new ZombieWars.Pickups.MagnetPickup { GlobalPosition = GlobalPosition },
+                _ => null
+            };
+            if (pickup != null)
+                GetTree().CurrentScene.AddChild(pickup);
+        }
+
         // 通知地图重建导航（移除该障碍后区域可通行）
         GetTree().CallGroup("map_builder", "RequestNavRebuild");
         QueueFree();

@@ -270,6 +270,27 @@ public partial class Background : Node2D
             flicker.TweenProperty(light, "modulate:a", (float)GD.RandRange(0.5f, 0.7f), (float)GD.RandRange(0.3f, 0.7f));
             flicker.TweenProperty(light, "modulate:a", 1.0f, (float)GD.RandRange(0.2f, 0.4f));
             flicker.TweenProperty(light, "modulate:a", (float)GD.RandRange(0.6f, 0.85f), (float)GD.RandRange(0.4f, 0.9f));
+
+            // 真 PointLight2D：给障碍物/角色打暖色光，让场景有明暗层次（2.5D 氛围）
+            var lightGrad = new Gradient
+            {
+                Colors = new[] { new Color(1f, 0.85f, 0.5f), new Color(0.5f, 0.25f, 0.1f), Colors.Black },
+                Offsets = new[] { 0f, 0.4f, 1f }
+            };
+            var lightTex = new GradientTexture2D { Gradient = lightGrad, Width = 128, Height = 128 };
+            var pl = new PointLight2D
+            {
+                Position = scaledPos,
+                Texture = lightTex,
+                Color = c,
+                Energy = 0.7f,
+                TextureScale = Mathf.Max(1f, s / 48f),
+                ShadowEnabled = false,
+            };
+            AddChild(pl);
+            var plFlicker = CreateTween().SetLoops();
+            plFlicker.TweenProperty(pl, "energy", 0.5f, (float)GD.RandRange(0.3f, 0.7f));
+            plFlicker.TweenProperty(pl, "energy", 0.9f, (float)GD.RandRange(0.2f, 0.4f));
         }
     }
 
@@ -289,14 +310,17 @@ public partial class Background : Node2D
         {
             EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box,
             EmissionBoxExtents = new Vector3(ws.X * 0.55f, ws.Y * 0.55f, 0),
-            Direction = new Vector3(0.2f, -1, 0),
-            Spread = 30.0f,
-            InitialVelocityMin = 3.0f,
-            InitialVelocityMax = 12.0f,
-            Gravity = new Vector3(0, -2, 0),
+            Direction = new Vector3(0.1f, -1, 0),
+            Spread = 90.0f,
+            InitialVelocityMin = 1.0f,
+            InitialVelocityMax = 4.0f,
+            Gravity = new Vector3(0, -0.5f, 0),
             ScaleMin = 0.6f,
             ScaleMax = 1.8f,
-            Color = new Color(0.55f, 0.50f, 0.42f, 0.35f)
+            Color = new Color(0.55f, 0.50f, 0.42f, 0.35f),
+            TurbulenceEnabled = true,
+            TurbulenceInfluenceMin = 0.3f,
+            TurbulenceInfluenceMax = 0.7f
         };
 
         var colorRamp = new Gradient
@@ -332,12 +356,15 @@ public partial class Background : Node2D
             EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box,
             EmissionBoxExtents = new Vector3(ws.X * 0.55f, ws.Y * 0.55f, 0),
             Direction = new Vector3(0.1f, -1, 0),
-            Spread = 25.0f,
-            InitialVelocityMin = 8.0f,
-            InitialVelocityMax = 22.0f,
-            Gravity = new Vector3(0, -5, 0),
+            Spread = 70.0f,
+            InitialVelocityMin = 3.0f,
+            InitialVelocityMax = 8.0f,
+            Gravity = new Vector3(0, -2.0f, 0),
             ScaleMin = 0.8f,
-            ScaleMax = 2.5f
+            ScaleMax = 2.5f,
+            TurbulenceEnabled = true,
+            TurbulenceInfluenceMin = 0.4f,
+            TurbulenceInfluenceMax = 0.9f
         };
 
         var colorRamp = new Gradient

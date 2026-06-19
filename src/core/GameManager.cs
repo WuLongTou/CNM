@@ -337,7 +337,8 @@ public partial class GameManager : Node
         // 数学系统：黄金比例——叠加斐波那契调制，让难度有"黄金呼吸"而非单调线性递增
         if (GameConfig.MathSystemsEnabled)
             _zombiesToSpawn = ZombieWars.Math.GoldenProgression.ModulateZombieCount(_zombiesToSpawn, CurrentRound);
-        _zombiesToSpawn = Mathf.Min(_zombiesToSpawn, ZombiesMaxPerRound);
+        // 大场景：刷怪上限随世界面积放大，保持敌人密度（否则大地图敌人太稀疏）
+        _zombiesToSpawn = Mathf.Min(_zombiesToSpawn, (int)(ZombiesMaxPerRound * Core.GameConfig.WorldScale));
         _zombiesSpawned = 0;
         _zombiesAlive = 0;
 
@@ -938,17 +939,22 @@ public partial class GameManager : Node
         var leftEdge = margin;
         var rightEdge = worldSize.X - margin;
 
-        // Top and bottom edges
-        for (int i = 0; i < 6; i++)
-            _spawnPoints.Add(new Vector2(i * worldSize.X / 5.0f, topEdge));
-        for (int i = 0; i < 6; i++)
-            _spawnPoints.Add(new Vector2(i * worldSize.X / 5.0f, bottomEdge));
-
-        // Left and right edges
-        for (int i = 0; i < 5; i++)
-            _spawnPoints.Add(new Vector2(leftEdge, topEdge + i * (worldSize.Y - topEdge - bottomEdge) / 4.0f));
-        for (int i = 0; i < 5; i++)
-            _spawnPoints.Add(new Vector2(rightEdge, topEdge + i * (worldSize.Y - topEdge - bottomEdge) / 4.0f));
+        // 大场景：边缘刷怪点密度随世界放大，让敌人从更多方向涌入而非只从远处几个点
+        int hSteps = 5 + (int)(4 * Core.GameConfig.WorldScale);  // 顶/底横向等分
+        int vSteps = 4 + (int)(4 * Core.GameConfig.WorldScale);  // 左/右纵向等分
+        for (int i = 0; i <= hSteps; i++)
+        {
+            float t = i / (float)hSteps;
+            _spawnPoints.Add(new Vector2(t * worldSize.X, topEdge));
+            _spawnPoints.Add(new Vector2(t * worldSize.X, bottomEdge));
+        }
+        float vSpan = worldSize.Y - topEdge - bottomEdge;
+        for (int i = 0; i <= vSteps; i++)
+        {
+            float t = i / (float)vSteps;
+            _spawnPoints.Add(new Vector2(leftEdge, topEdge + t * vSpan));
+            _spawnPoints.Add(new Vector2(rightEdge, topEdge + t * vSpan));
+        }
     }
 
     private void _OnViewportSizeChanged()

@@ -260,13 +260,16 @@ public partial class MagicMissile : Area2D, IDamager
         glow.DefaultColor = new Color(0.4f, 0.5f, 1.0f, 0.3f);
         GetParent().AddChild(glow);
 
-        var tween = CreateTween();
-        tween.SetParallel(true);
-        tween.TweenProperty(lightning, "modulate:a", 0.0f, 0.25f);
-        tween.TweenProperty(glow, "modulate:a", 0.0f, 0.25f);
-        tween.SetParallel(false);
-        tween.TweenCallback(Callable.From(lightning.QueueFree));
-        tween.TweenCallback(Callable.From(glow.QueueFree));
+        // 清理 tween 必须绑定在特效节点自身（而非 MagicMissile）上——
+        // lightning/glow 挂在场景层，而 MagicMissile 命中后会 QueueFree；
+        // 若 tween 绑定导弹，导弹销毁后 tween 随之失效，闪电特效就会残留在地图上。
+        var lightningTw = lightning.CreateTween();
+        lightningTw.TweenProperty(lightning, "modulate:a", 0.0f, 0.25f);
+        lightningTw.TweenCallback(Callable.From(lightning.QueueFree));
+
+        var glowTw = glow.CreateTween();
+        glowTw.TweenProperty(glow, "modulate:a", 0.0f, 0.25f);
+        glowTw.TweenCallback(Callable.From(glow.QueueFree));
     }
 
     private void _CreateMagicExplosion()

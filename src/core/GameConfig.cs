@@ -10,7 +10,10 @@ public static class GameConfig
     // World Settings
     // ═══════════════════════════════════════════════
 
-    public static readonly Godot.Vector2 WorldSize = new(1920, 1080);
+    // 大场景世界尺寸（2 屏宽 × 2 屏高，相机跟随玩家滚动探索）
+    public static readonly Godot.Vector2 WorldSize = new(3840, 2160);
+    // 障碍物/装饰物相对原始 1920×1080 设计的缩放因子（世界放大后同比例放大，避免空旷）
+    public const float WorldScale = 2.0f;
 
     // 碰撞层（物理位掩码）—— 全局统一约定，避免散落魔法数字
     // Layer 1 = 玩家, Layer 2 = 僵尸, Layer 3 = 固体障碍物, Layer 4 = 可破坏障碍
@@ -27,9 +30,9 @@ public static class GameConfig
 
     // 每隔多少回合切换一张新地图（0 表示仅每局开始切换一次）
     public const int MapRerollRounds = 3;
-    // 障碍物避开中心出生安全区半径（占比）
-    public const float MapSpawnSafeRadiusX = 0.12f;
-    public const float MapSpawnSafeRadiusY = 0.12f;
+    // 障碍物避开中心出生安全区半径（占比）。过小会导致大尺寸墙体边缘侵入出生点把玩家围住。
+    public const float MapSpawnSafeRadiusX = 0.18f;
+    public const float MapSpawnSafeRadiusY = 0.18f;
     // 可破坏障碍物
     public const int DestructibleObstacleHealth = 40;
     public const float DestructibleObstacleShakeOnHit = 2.0f;

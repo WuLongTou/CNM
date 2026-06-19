@@ -182,9 +182,9 @@ public static class TextureUtils
     /// frames and avoids projection-split jump cuts.
     /// </summary>
     public static Godot.Collections.Array<Texture2D> LoadSpriteSheetGridFrames(
-        string path, int cols = 4, int rows = 4, int maxFrames = 0)
+        string path, int cols = 4, int rows = 4, int maxFrames = 0, float stretchX = 1.0f)
     {
-        string cacheKey = $"grid:{path}_{cols}x{rows}_{maxFrames}";
+        string cacheKey = $"grid:{path}_{cols}x{rows}_{maxFrames}_{stretchX}";
         if (_frameCache.TryGetValue(cacheKey, out var cached))
             return cached;
 
@@ -194,6 +194,12 @@ public static class TextureUtils
             return frames;
 
         _StripWhiteBackground(img, 0.85f);
+
+        // 横向拉伸整图：把极瘦长（如 1:7 站立全身）的角色拉宽到接近正常比例，
+        // 避免缩进 96×96 画布后变成几像素宽的不可见竖条。
+        if (stretchX > 1.0f)
+            img.Resize((int)(img.GetWidth() * stretchX), img.GetHeight(),
+                Image.Interpolation.Nearest);
 
         int cellW = img.GetWidth() / cols;
         int cellH = img.GetHeight() / rows;
@@ -270,6 +276,60 @@ public static class TextureUtils
             region = _TrimTransparent(region);
             region = _ResizeToFit(region, NormalSpriteSize);
             frames.Add(ImageTexture.CreateFromImage(region));
+        }
+
+        _frameCache[cacheKey] = frames;
+        return frames;
+    }
+
+    /// <summary>
+    /// 投影分割精灵图，trim 每个 sprite 后**强制横向拉伸**到固定宽高比。
+    /// 专用于「极瘦长（如 1:7+ 站立全身）」的角色图——保持比例会缩成几像素宽的
+    /// 细竖条；强制拉伸让角色占满画布宽度（横向变形但清晰可辨）。
+    /// </summary>
+    public static Godot.Collections.Array<Texture2D> LoadAndStretchSplitFrames(
+        string path, float widthRatio = 0.45f)
+    {
+        string cacheKey = $"stretchsplit:{path}_{widthRatio}";
+        if (_frameCache.TryGetValue(cacheKey, out var cached))
+            return cached;
+
+        var frames = new Godot.Collections.Array<Texture2D>();
+        var img = _LoadImage(path);
+        if (img == null) return frames;
+
+        _StripWhiteBackground(img, 0.85f);
+        var regions = _FindSpriteRegions(img);
+
+        int targetW = Mathf.Max(8, (int)(NormalSpriteSize * widthRatio));
+        for (int i = 0; i < regions.Count; i++)
+        {
+            var region = img.GetRegion(regions[i]);
+            if (_IsMostlyTransparent(region)) continue;
+
+            _StripWhiteBackground(region, 0.85f);
+            region = _TrimTransparent(region);
+
+            // 强制横向拉伸到 targetW × NormalSpriteSize（不保持原比例）
+            if (region.GetWidth() != targetW || region.GetHeight() != NormalSpriteSize)
+                region.Resize(targetW, NormalSpriteSize, Image.Interpolation.Nearest);
+
+            // 居中到 NormalSpriteSize × NormalSpriteSize 画布
+            var canvas = Image.CreateEmpty(NormalSpriteSize, NormalSpriteSize, false, Image.Format.Rgba8);
+            canvas.BlendRect(region, new Rect2I(0, 0, targetW, NormalSpriteSize),
+                new Vector2I((NormalSpriteSize - targetW) / 2, 0));
+            frames.Add(ImageTexture.CreateFromImage(canvas));
+        }
+
+        // 无 region 兜底：整图 trim 后强制拉伸
+        if (frames.Count == 0)
+        {
+            img = _TrimTransparent(img);
+            img.Resize(targetW, NormalSpriteSize, Image.Interpolation.Nearest);
+            var canvas = Image.CreateEmpty(NormalSpriteSize, NormalSpriteSize, false, Image.Format.Rgba8);
+            canvas.BlendRect(img, new Rect2I(0, 0, targetW, NormalSpriteSize),
+                new Vector2I((NormalSpriteSize - targetW) / 2, 0));
+            frames.Add(ImageTexture.CreateFromImage(canvas));
         }
 
         _frameCache[cacheKey] = frames;
@@ -461,7 +521,9 @@ public static class TextureUtils
     public static int GetCacheSize() => _textureCache.Count;
 
     /// <summary>
-    /// Resize an image to fit within maxSize while maintaining aspect ratio.
+    /// Resize an image to fit within maxSize (保持比例),并居中到 maxSize×maxSize 画布。
+    /// 统一纹理尺寸让锚点稳定；竖长(如站立全身)或横长角色居中显示，
+    /// 避免被压成不可见的细竖条。
     /// </summary>
     private static Image _ResizeToFit(Image img, int maxSize)
     {
@@ -478,7 +540,17 @@ public static class TextureUtils
 
         if (copy.GetWidth() != newW || copy.GetHeight() != newH)
             copy.Resize(newW, newH, Image.Interpolation.Nearest);
-        return copy;
+
+        // 已铺满则无需画布化
+        if (newW >= maxSize && newH >= maxSize)
+            return copy;
+
+        // 居中到 maxSize×maxSize 透明画布
+        var canvas = Image.CreateEmpty(maxSize, maxSize, false, Image.Format.Rgba8);
+        int ox = (maxSize - newW) / 2;
+        int oy = (maxSize - newH) / 2;
+        canvas.BlendRect(copy, new Rect2I(0, 0, newW, newH), new Vector2I(ox, oy));
+        return canvas;
     }
 
     /// <summary>
@@ -532,20 +604,24 @@ public static class TextureUtils
         int w = img.GetWidth();
         int h = img.GetHeight();
 
-        // 统计背景颜色倾向（排除全透明像素）
+        // 采样图像"内圈"（跳过最外圈若干像素的边框线）判断背景色倾向。
+        // 2.5D 俯视贴图常带一圈黑色边框，若采样最外圈会被黑边误导；
+        // 采内圈能采到真正的背景区（浅灰背景 or 纯黑背景）。
+        int offset = Mathf.Min(10, Mathf.Min(w / 4, h / 4));
         int darkPixels = 0, brightPixels = 0;
-        for (int x = 0; x < w; x++)
+        int innerW = w - 2 * offset;
+        int innerH = h - 2 * offset;
+        int stepX = Mathf.Max(1, innerW / 64);
+        int stepY = Mathf.Max(1, innerH / 64);
+        for (int x = offset; x < w - offset; x += stepX)
         {
-            for (int y = 0; y < h; y++)
-            {
-                var c = img.GetPixel(x, y);
-                if (c.A < 0.01f) continue;
-                float brightness = (c.R + c.G + c.B) / 3.0f;
-                if (brightness > threshold)
-                    brightPixels++;
-                else if (brightness < (1.0f - threshold))
-                    darkPixels++;
-            }
+            _ClassifyEdgePixel(img.GetPixel(x, offset), threshold, ref darkPixels, ref brightPixels);
+            _ClassifyEdgePixel(img.GetPixel(x, h - 1 - offset), threshold, ref darkPixels, ref brightPixels);
+        }
+        for (int y = offset; y < h - offset; y += stepY)
+        {
+            _ClassifyEdgePixel(img.GetPixel(offset, y), threshold, ref darkPixels, ref brightPixels);
+            _ClassifyEdgePixel(img.GetPixel(w - 1 - offset, y), threshold, ref darkPixels, ref brightPixels);
         }
 
         // 根据背景倾向选择处理模式
@@ -556,32 +632,51 @@ public static class TextureUtils
             for (int y = 0; y < h; y++)
             {
                 var c = img.GetPixel(x, y);
-                float brightness = (c.R + c.G + c.B) / 3.0f;
 
+                // 纯黑像素一律剥离：黑底背景 / 黑色边框 / 帧间分隔线。
+                // 无论图是黑底还是亮底，纯黑几乎不会是角色主体色，剥离安全。
+                // 这一步对「浅灰背景+黑色分隔线」的敌人图尤为关键——
+                // 否则黑色分隔线会残留，让敌人显示成黑色方块。
+                if (c.R < 0.12f && c.G < 0.12f && c.B < 0.12f)
+                {
+                    img.SetPixel(x, y, new Color(c.R, c.G, c.B, 0.0f));
+                    continue;
+                }
+
+                // 亮底图：额外剥离浅灰/白背景。
+                // 低饱和(sat<0.02)的纯灰/白是背景→完全透明；
+                // 仍有色彩的像素（角色亮部高光/金属反光）→按亮度渐变保留，避免误伤。
                 if (stripBright)
                 {
-                    // 处理亮色背景（白/米黄/暗红纹理等）。
-                    // 注意：不能用 "R/G/B 三通道都 > threshold" 严格判断，
-                    // 因为 aged-paper 风格的背景往往是米黄/暗红色，R、G 高但 B 略低。
-                    // 改用 "min(R,G,B) > threshold - 0.10" 容差判断：min 高说明是亮背景，
-                    // 任一通道偏低则说明是角色本色（红/绿/蓝等），保留。
+                    float brightness = (c.R + c.G + c.B) / 3.0f;
                     float minChannel = Mathf.Min(c.R, Mathf.Min(c.G, c.B));
                     if (brightness > threshold && minChannel > (threshold - 0.10f))
                     {
-                        float alpha = Mathf.Clamp((1.0f - brightness) / (1.0f - threshold), 0.0f, 1.0f);
+                        float maxChannel = Mathf.Max(c.R, Mathf.Max(c.G, c.B));
+                        float sat = maxChannel - minChannel;
+                        float alpha = sat < 0.02f
+                            ? 0.0f
+                            : Mathf.Clamp((1.0f - brightness) / (1.0f - threshold), 0.0f, 1.0f);
                         img.SetPixel(x, y, new Color(c.R, c.G, c.B, alpha * c.A));
-                    }
-                }
-                else
-                {
-                    // 处理黑色/暗色背景：检测纯黑背景像素并设为透明
-                    if (c.R < 0.12f && c.G < 0.12f && c.B < 0.12f)
-                    {
-                        img.SetPixel(x, y, new Color(c.R, c.G, c.B, 0.0f));
                     }
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// 将单个边缘像素按亮度归类为"深色背景"或"亮色背景"，用于 _StripWhiteBackground
+    /// 的背景色倾向统计。
+    /// </summary>
+    private static void _ClassifyEdgePixel(Color c, float threshold,
+        ref int darkPixels, ref int brightPixels)
+    {
+        if (c.A < 0.01f) return;
+        float brightness = (c.R + c.G + c.B) / 3.0f;
+        if (brightness > threshold)
+            brightPixels++;
+        else if (brightness < (1.0f - threshold))
+            darkPixels++;
     }
 
     public static Image FlipHorizontal(Image src)

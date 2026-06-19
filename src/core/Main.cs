@@ -140,6 +140,14 @@ public partial class Main : Node2D
         _camera.Init(_player);
         // 独立节点：由 GameCamera 自己做平滑跟随，不再硬挂在玩家下
         AddChild(_camera);
+
+        // 视差远景：大场景滚动时远山慢移，产生纵深层次感
+        AddChild(new ZombieWars.World.ParallaxBackdrop());
+
+        // 小地图：大场景导航，显示玩家/敌人/宝箱/祭坛位置
+        var miniMap = new ZombieWars.UI.MiniMap();
+        AddChild(miniMap);
+        miniMap.Setup(_player);
     }
 
     public override void _UnhandledInput(InputEvent @event)
