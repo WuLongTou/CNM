@@ -298,6 +298,14 @@ public partial class ZombieVfx : Node
         _shadow.Texture = _MakeEllipseTexture(w, h, GameConfig.ZombieShadowColor);
         _shadow.Position = GameConfig.ZombieShadowOffset;
         _zombie.AddChild(_shadow);
+
+        // 脚底光环（红色径向渐变，群战中快速辨识敌人位置）
+        var glow = new Sprite2D
+        {
+            Texture = _MakeEllipseTexture(40, 40, new Color(0.85f, 0.15f, 0.1f, 0.30f)),
+            ZIndex = -2
+        };
+        _zombie.AddChild(glow);
     }
 
     private void _InitTextureCache()

@@ -92,11 +92,13 @@ public partial class MapBuilder : Node2D
             new(pad, ws.Y - pad)
         });
 
-        // 每个仍存活的固体/可破坏障碍挖一个洞
+        // 每个仍存活的固体/可破坏障碍挖一个洞（轮廓略大于视觉，与碰撞体对齐）
         foreach (var (def, node) in _solidRefs)
         {
             if (!IsInstanceValid(node)) continue;
-            navPoly.AddOutline(_RotatedRectOutline(def));
+            var padded = def;
+            padded.Size *= 1.12f;
+            navPoly.AddOutline(_RotatedRectOutline(padded));
         }
 
         _navRegion.NavigationPolygon = navPoly;

@@ -470,6 +470,15 @@ public partial class PlayerVfx : Node
             Position = new Vector2(6, 18)
         };
         Player.AddChild(Player.Shadow);
+
+        // 脚底光环（蓝色圆形径向渐变，方便在暗色场景中快速定位玩家）
+        var glow = new Sprite2D
+        {
+            Texture = _MakeShadowTexture(48, 48, new Color(0.3f, 0.5f, 1f, 0.35f)),
+            Position = new Vector2(6, 24),
+            ZIndex = -2
+        };
+        Player.AddChild(glow);
     }
 
     private Texture2D _MakeShadowTexture(int w, int h, Color color)
@@ -1282,7 +1291,7 @@ public partial class PlayerVfx : Node
     public void UpdateStatusDisplays()
     {
         if (Player!.HealthDisplay != null)
-            Player.HealthDisplay.Text = Player.CurrentHealth + "/" + Player.MaxHealth;
+            Player.HealthDisplay.Text = $"❤️{Player.CurrentHealth}/{Player.MaxHealth}";
 
         if (Player.AttackTypeDisplay != null)
         {
@@ -1300,13 +1309,13 @@ public partial class PlayerVfx : Node
 
     private void _CreateMeleeRangeIndicator()
     {
-        Player!.MeleeRangeIndicator = new Node2D { ZIndex = -1 };
+        Player!.MeleeRangeIndicator = new Node2D { ZIndex = 1 };
         Player.AddChild(Player.MeleeRangeIndicator);
 
         var sprite = new Sprite2D { Name = "RangeSprite" };
         int s = (int)(Core.GameConfig.BaseAttackRange * Player.WeaponRangeModifier * 2);
         sprite.Texture = _MakeRangeTexture(s);
-        sprite.Modulate = sprite.Modulate with { A = 0.3f };
+        sprite.Modulate = sprite.Modulate with { A = 0.45f };
         Player.MeleeRangeIndicator.AddChild(sprite);
     }
 
@@ -1341,10 +1350,15 @@ public partial class PlayerVfx : Node
             for (int y = 0; y < size; y++)
             {
                 float dist = new Vector2(x - center, y - center).Length();
-                if (dist >= radius - 2 && dist <= radius)
-                    img.SetPixel(x, y, new Color(0.3f, 0.8f, 1.0f, 0.6f));
-                else if (dist < radius - 2)
-                    img.SetPixel(x, y, new Color(0.2f, 0.6f, 0.9f, 0.1f));
+                if (dist <= radius)
+                {
+                    float norm = dist / radius;
+                    // 边框亮蓝，向内渐变透明
+                    float alpha = norm > 0.85f
+                        ? 0.55f * (1.0f - (norm - 0.85f) / 0.15f)
+                        : 0.20f * (1.0f - norm * 0.6f);
+                    img.SetPixel(x, y, new Color(0.3f, 0.8f, 1.0f, alpha));
+                }
             }
         }
         return ImageTexture.CreateFromImage(img);

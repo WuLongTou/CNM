@@ -271,14 +271,14 @@ public partial class HudPanel : Panel
         statRow.Alignment = BoxContainer.AlignmentMode.Center;
         bottomStack.AddChild(statRow);
 
-        _weaponNameLabel = _MakeStatLabel("武器: 基础近战", new Color(0.86f, 0.78f, 0.55f), UiFontSmall);
-        _attackTypeLabel = _MakeStatLabel("类型: 近战", new Color(0.72f, 0.78f, 0.92f), UiFontSmall);
-        _targetPriorityLabel = _MakeStatLabel("目标: 最近", new Color(0.65f, 0.82f, 0.88f), UiFontSmall);
-        _damageLabel = _MakeStatLabel("伤害 12/次", new Color(0.92f, 0.70f, 0.52f), UiFontSmall);
-        _attackIntervalLabel = _MakeStatLabel("间隔 0.45s", new Color(0.78f, 0.72f, 0.92f), UiFontSmall);
-        _critLabel = _MakeStatLabel("暴击 0%", new Color(0.95f, 0.70f, 0.35f), UiFontSmall);
-        _lifestealLabel = _MakeStatLabel("吸血 0%", new Color(0.85f, 0.45f, 0.45f), UiFontSmall);
-        _speedLabel = _MakeStatLabel("移速 220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
+        _weaponNameLabel = _MakeStatLabel("🗡基础近战", new Color(0.86f, 0.78f, 0.55f), UiFontSmall);
+        _attackTypeLabel = _MakeStatLabel("⚔近战", new Color(0.72f, 0.78f, 0.92f), UiFontSmall);
+        _targetPriorityLabel = _MakeStatLabel("🎯最近", new Color(0.65f, 0.82f, 0.88f), UiFontSmall);
+        _damageLabel = _MakeStatLabel("💥12/次", new Color(0.92f, 0.70f, 0.52f), UiFontSmall);
+        _attackIntervalLabel = _MakeStatLabel("⏱0.45s", new Color(0.78f, 0.72f, 0.92f), UiFontSmall);
+        _critLabel = _MakeStatLabel("🎲0%", new Color(0.95f, 0.70f, 0.35f), UiFontSmall);
+        _lifestealLabel = _MakeStatLabel("🩸0%", new Color(0.85f, 0.45f, 0.45f), UiFontSmall);
+        _speedLabel = _MakeStatLabel("👟220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
 
         statRow.AddChild(_weaponNameLabel);
         statRow.AddChild(_attackTypeLabel);
@@ -289,8 +289,8 @@ public partial class HudPanel : Panel
         statRow.AddChild(_lifestealLabel);
         statRow.AddChild(_speedLabel);
 
-        var hudHint = _MakeStatLabel("H 帮助 · C 装备 · Tab 目标", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
-        hudHint.TooltipText = "打开帮助可查看 HUD 每个项目的含义；打开装备可查看每件装备的详细效果。";
+        var hudHint = _MakeStatLabel("❓H · 🗡C · 🎯Tab", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
+        hudHint.TooltipText = "H 帮助 · C 装备 · Tab 切换目标";
         statRow.AddChild(hudHint);
     }
 
@@ -411,7 +411,7 @@ public partial class HudPanel : Panel
 
     public void UpdateAttackInterval(float interval, float cooldown)
     {
-        _attackIntervalLabel.Text = $"间隔 {interval:F2}s";
+        _attackIntervalLabel.Text = $"⏱{interval:F2}s";
         string intervalText = $"{interval:F2}s";
         string cooldownText = cooldown > 0 ? $"{cooldown:F2}s" : "就绪";
         _attackIntervalLabel.TooltipText = $"攻击间隔: 每 {intervalText} 可攻击一次\n下次可攻击: {cooldownText}";
@@ -421,18 +421,18 @@ public partial class HudPanel : Panel
     {
         string attackTypeText = _GetAttackTypeText(player.CurrentAttackType);
         string weaponName = _GetCurrentWeaponName(player);
-        _weaponNameLabel.Text = $"武器: {_Shorten(weaponName, 12)}";
-        _attackTypeLabel.Text = $"类型: {attackTypeText}";
-        _damageLabel.Text = $"伤害 {Mathf.RoundToInt(player.CurrentDamage)}/次";
-        _critLabel.Text = $"暴击 {Mathf.RoundToInt(player.CriticalChance)}%";
-        _lifestealLabel.Text = $"吸血 {Mathf.RoundToInt(player.LifeStealPercent)}%";
-        _speedLabel.Text = $"移速 {Mathf.RoundToInt(player.CurrentSpeed)}";
+        _weaponNameLabel.Text = $"🗡{_Shorten(weaponName, 10)}";
+        _attackTypeLabel.Text = $"⚔{attackTypeText}";
+        _damageLabel.Text = $"💥{Mathf.RoundToInt(player.CurrentDamage)}/次";
+        _critLabel.Text = $"🎲{Mathf.RoundToInt(player.CriticalChance)}%";
+        _lifestealLabel.Text = $"🩸{Mathf.RoundToInt(player.LifeStealPercent)}%";
+        _speedLabel.Text = $"👟{Mathf.RoundToInt(player.CurrentSpeed)}";
         _targetPriorityLabel.Text = player.TargetPriority switch
         {
-            0 => "目标: 最近",
-            1 => "目标: 最远",
-            2 => "目标: 密集",
-            _ => "目标: 最近"
+            0 => "🎯最近",
+            1 => "🎯最远",
+            2 => "🎯密集",
+            _ => "🎯最近"
         };
         _UpdateStatusTooltips(player);
         UpdateEffects(player);

@@ -96,10 +96,11 @@ public partial class ResonanceIndicator : Control
 
     public override void _Process(double delta)
     {
-        if (_waveSystem == null || !IsVisibleInTree()) return;
+        if (_waveSystem == null) return;
 
-        UpdateWaveform();
         UpdateStatus();
+        if (!Visible) return;
+        UpdateWaveform();
     }
 
     private float _phase = 0.0f;
@@ -165,10 +166,11 @@ public partial class ResonanceIndicator : Control
 
         if (_waveSystem.HarmonicCount == 0)
         {
-            _statusLabel.Text = "暂无尸潮波形";
-            _statusLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteTextDim);
+            Visible = false;
             return;
         }
+
+        Visible = true;
 
         float mult = _waveSystem.CalculateResonanceMultiplier(_weaponFrequency);
         string waveDesc = _waveSystem.HarmonicCount switch

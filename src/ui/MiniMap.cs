@@ -42,11 +42,17 @@ public partial class MiniMap : CanvasLayer
         drawer.DrawRect(new Rect2(origin - Vector2.One, MapSize + 2, MapSize + 2), new Color(0.55f, 0.42f, 0.18f, 0.15f), filled: false, width: 3f);
         drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.65f, 0.50f, 0.25f, 0.85f), filled: false, width: 2f);
 
-        // 敌人（红点）
+        // 世界边缘线（红色细框标识活动区域边界）
+        var worldTopLeft = Map(Vector2.Zero);
+        var worldBottomRight = Map(ws);
+        drawer.DrawRect(new Rect2(worldTopLeft, worldBottomRight - worldTopLeft),
+            new Color(0.6f, 0.2f, 0.15f, 0.35f), filled: false, width: 1);
+
+        // 敌人（红点，加大以提升警示性）
         foreach (var z in ZombieRegistry.All)
         {
             if (GodotObject.IsInstanceValid(z))
-                drawer.DrawCircle(Map(z.GlobalPosition), 1.4f, new Color(0.9f, 0.22f, 0.18f, 0.85f));
+                drawer.DrawCircle(Map(z.GlobalPosition), 2.2f, new Color(0.9f, 0.22f, 0.18f, 0.85f));
         }
         // 宝箱（金）
         foreach (var n in drawer.GetTree().GetNodesInGroup("mm_chest"))

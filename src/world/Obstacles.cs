@@ -415,7 +415,8 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
         CollisionMask = 0;
 
         var col = new CollisionShape2D();
-        col.Shape = new RectangleShape2D { Size = def.Size };
+        // 碰撞体略大于视觉尺寸，防止角色视觉穿模
+        col.Shape = new RectangleShape2D { Size = def.Size * 1.12f };
         AddChild(col);
 
         // 按变体选材质色

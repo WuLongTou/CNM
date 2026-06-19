@@ -246,10 +246,11 @@ public partial class Background : Node2D
                 Colors = new[]
                 {
                     new Color(c.R, c.G, c.B, a),
-                    new Color(c.R * 0.6f, c.G * 0.3f, c.B * 0.1f, a * 0.3f),
+                    new Color(c.R * 0.7f, c.G * 0.4f, c.B * 0.15f, a * 0.6f),
+                    new Color(c.R * 0.4f, c.G * 0.2f, c.B * 0.05f, a * 0.25f),
                     Colors.Transparent
                 },
-                Offsets = new[] { 0.0f, 0.45f, 1.0f }
+                Offsets = new[] { 0.0f, 0.35f, 0.65f, 1.0f }
             };
 
             var gradTex = new GradientTexture2D { Gradient = grad, Width = s, Height = s };
@@ -271,11 +272,17 @@ public partial class Background : Node2D
             flicker.TweenProperty(light, "modulate:a", 1.0f, (float)GD.RandRange(0.2f, 0.4f));
             flicker.TweenProperty(light, "modulate:a", (float)GD.RandRange(0.6f, 0.85f), (float)GD.RandRange(0.4f, 0.9f));
 
-            // 真 PointLight2D：给障碍物/角色打暖色光，让场景有明暗层次（2.5D 氛围）
+            // 真 PointLight2D：给障碍物/角色打暖色光，5 阶径向渐变实现软边缘过渡
             var lightGrad = new Gradient
             {
-                Colors = new[] { new Color(1f, 0.85f, 0.5f), new Color(0.5f, 0.25f, 0.1f), Colors.Black },
-                Offsets = new[] { 0f, 0.4f, 1f }
+                Colors = new[] {
+                    new Color(1f, 0.85f, 0.5f),   // 中心暖黄
+                    new Color(0.8f, 0.55f, 0.2f), // 内圈暖橙
+                    new Color(0.5f, 0.25f, 0.1f), // 中圈深琥珀
+                    new Color(0.12f, 0.06f, 0.02f, 0.4f), // 外圈过渡半透明
+                    Colors.Transparent             // 边缘完全透明
+                },
+                Offsets = new[] { 0f, 0.25f, 0.5f, 0.78f, 1f }
             };
             var lightTex = new GradientTexture2D { Gradient = lightGrad, Width = 128, Height = 128 };
             var pl = new PointLight2D
