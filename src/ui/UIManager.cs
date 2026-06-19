@@ -152,6 +152,7 @@ public partial class UIManager : Control
         _SetupConnections();
         _CreateTooltipPanel();
         _pausePanel = new PausePanel();
+        _pausePanel.ResumeRequested += () => SetUserPaused(false);
         AddChild(_pausePanel);
         _SetGameplayHudVisible(false);
         GetViewport().SizeChanged += _OnUiViewportSizeChanged;

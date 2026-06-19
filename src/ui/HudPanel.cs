@@ -265,7 +265,7 @@ public partial class HudPanel : Panel
         helpBtn.Pressed += _onToggleHelp;
         bottomRow.AddChild(helpBtn);
 
-        // 第二行：把原本藏起来的战斗关键数值直接展示，避免玩家不知道当前 build 在做什么。
+        // 第二行：战斗数值——分组布局，用竖线分隔攻击/防御/机动三组
         var statRow = new HBoxContainer();
         statRow.AddThemeConstantOverride("separation", UiSpacingMedium);
         statRow.Alignment = BoxContainer.AlignmentMode.Center;
@@ -280,18 +280,38 @@ public partial class HudPanel : Panel
         _lifestealLabel = _MakeStatLabel("🩸0%", new Color(0.85f, 0.45f, 0.45f), UiFontSmall);
         _speedLabel = _MakeStatLabel("👟220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
 
+        // 组 1：武器信息
         statRow.AddChild(_weaponNameLabel);
         statRow.AddChild(_attackTypeLabel);
         statRow.AddChild(_targetPriorityLabel);
+        statRow.AddChild(_MakeStatDivider());
+
+        // 组 2：攻击属性
         statRow.AddChild(_damageLabel);
         statRow.AddChild(_attackIntervalLabel);
         statRow.AddChild(_critLabel);
+        statRow.AddChild(_MakeStatDivider());
+
+        // 组 3：防御/机动
         statRow.AddChild(_lifestealLabel);
         statRow.AddChild(_speedLabel);
 
         var hudHint = _MakeStatLabel("❓H · 🗡C · 🎯Tab", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
         hudHint.TooltipText = "H 帮助 · C 装备 · Tab 切换目标";
+        hudHint.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        hudHint.HorizontalAlignment = HorizontalAlignment.Right;
         statRow.AddChild(hudHint);
+    }
+
+    /// <summary>竖线分隔符，用于状态栏分组。</summary>
+    private static VSeparator _MakeStatDivider()
+    {
+        var sep = new VSeparator
+        {
+            CustomMinimumSize = new Vector2(2, 14),
+            Modulate = new Color(1, 1, 1, 0.25f)
+        };
+        return sep;
     }
 
     // ═══ Public API ═══

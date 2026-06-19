@@ -64,21 +64,21 @@ public partial class HelpPanel : Panel
 
         var titleLabel = new Label
         {
-            Text = "帮助与 HUD 说明",
+            Text = "📖 帮助与说明",
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        titleLabel.AddThemeFontSizeOverride("font_size", 22);
-        titleLabel.AddThemeColorOverride("font_color", BloodBright);
-        titleLabel.AddThemeConstantOverride("outline_size", 2);
+        titleLabel.AddThemeFontSizeOverride("font_size", 24);
+        titleLabel.AddThemeColorOverride("font_color", BattlefieldBright);
+        titleLabel.AddThemeConstantOverride("outline_size", 3);
         titleLabel.AddThemeColorOverride("font_outline_color", InkBlack);
         titleRow.AddChild(titleLabel);
 
         var closeHint = new Label
         {
-            Text = "按 H / ESC 关闭"
+            Text = "[ H / ESC 关闭 ]"
         };
         closeHint.AddThemeFontSizeOverride("font_size", 12);
-        closeHint.AddThemeColorOverride("font_color", NoteText);
+        closeHint.AddThemeColorOverride("font_color", new Color(NoteText, 0.7f));
         closeHint.VerticalAlignment = VerticalAlignment.Center;
         titleRow.AddChild(closeHint);
 
@@ -156,19 +156,35 @@ public partial class HelpPanel : Panel
     {
         var normal = new StyleBoxFlat
         {
-            BgColor = active ? new Color(NoteBorder, 0.8f) : new Color(NoteBg, 0.6f),
-            BorderColor = active ? BloodBright : new Color(NoteBorder, 0.4f),
-            BorderWidthBottom = active ? 3 : 1,
-            BorderWidthLeft = 1,
-            BorderWidthRight = 1,
-            BorderWidthTop = 1,
-            CornerRadiusTopLeft = 4,
-            CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4,
-            CornerRadiusBottomRight = 4
+            BgColor = active ? new Color(BloodBright, 0.85f) : new Color(InkBlack, 0.5f),
+            BorderColor = active ? BattlefieldBright : new Color(NoteBorder, 0.3f),
+            BorderWidthBottom = active ? 2 : 0,
+            BorderWidthLeft = 0,
+            BorderWidthRight = 0,
+            BorderWidthTop = 0,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            ContentMarginLeft = 6,
+            ContentMarginRight = 6,
+            ContentMarginTop = 4,
+            ContentMarginBottom = 4
         };
         btn.AddThemeStyleboxOverride("normal", normal);
-        btn.AddThemeStyleboxOverride("hover", normal);
+
+        var hover = new StyleBoxFlat
+        {
+            BgColor = active ? new Color(BloodBright, 0.9f) : new Color(InkBlack, 0.7f),
+            BorderColor = active ? BattlefieldBright : new Color(NoteBorder, 0.5f),
+            BorderWidthBottom = active ? 2 : 0,
+            CornerRadiusTopLeft = 6,
+            CornerRadiusTopRight = 6,
+            ContentMarginLeft = 6,
+            ContentMarginRight = 6,
+            ContentMarginTop = 4,
+            ContentMarginBottom = 4
+        };
+        btn.AddThemeStyleboxOverride("hover", hover);
+        btn.AddThemeStyleboxOverride("pressed", hover);
         btn.AddThemeColorOverride("font_color", active ? NoteBg : NoteText);
         btn.AddThemeFontSizeOverride("font_size", 14);
     }
@@ -334,19 +350,37 @@ public partial class HelpPanel : Panel
 
     private void _AddSectionLabel(string text)
     {
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 6) };
+        var spacer = new Control { CustomMinimumSize = new Vector2(0, 8) };
         _contentContainer.AddChild(spacer);
+
+        var banner = new Panel();
+        banner.CustomMinimumSize = new Vector2(0, 26);
+        banner.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        var bannerStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(BloodBright, 0.15f),
+            BorderWidthBottom = 2,
+            BorderColor = new Color(BloodBright, 0.5f),
+            ContentMarginLeft = 12,
+            ContentMarginRight = 8,
+            ContentMarginTop = 3,
+            ContentMarginBottom = 3
+        };
+        banner.AddThemeStyleboxOverride("panel", bannerStyle);
+        _contentContainer.AddChild(banner);
 
         var label = new Label
         {
-            Text = text,
-            HorizontalAlignment = HorizontalAlignment.Center
+            Text = "▎ " + text,
+            VerticalAlignment = VerticalAlignment.Center
         };
-        label.AddThemeFontSizeOverride("font_size", 13);
-        label.AddThemeColorOverride("font_color", NoteText);
-        _contentContainer.AddChild(label);
+        label.AddThemeFontSizeOverride("font_size", 15);
+        label.AddThemeColorOverride("font_color", BattlefieldBright);
+        label.AddThemeConstantOverride("outline_size", 2);
+        label.AddThemeColorOverride("font_outline_color", InkBlack);
+        banner.AddChild(label);
 
-        var spacer2 = new Control { CustomMinimumSize = new Vector2(0, 2) };
+        var spacer2 = new Control { CustomMinimumSize = new Vector2(0, 4) };
         _contentContainer.AddChild(spacer2);
     }
 
@@ -354,17 +388,17 @@ public partial class HelpPanel : Panel
     {
         var cardStyle = new StyleBoxFlat
         {
-            BgColor = new Color(NoteBg, 0.75f),
-            BorderWidthLeft = 3,
-            BorderColor = new Color(accentColor, 0.7f),
+            BgColor = new Color(NoteBg, 0.55f),
+            BorderWidthLeft = 4,
+            BorderColor = new Color(accentColor, 0.8f),
             CornerRadiusTopLeft = 4,
             CornerRadiusTopRight = 4,
             CornerRadiusBottomLeft = 4,
             CornerRadiusBottomRight = 4,
-            ContentMarginLeft = 10,
-            ContentMarginRight = 10,
-            ContentMarginTop = 6,
-            ContentMarginBottom = 6
+            ContentMarginLeft = 14,
+            ContentMarginRight = 12,
+            ContentMarginTop = 8,
+            ContentMarginBottom = 8
         };
 
         var card = new PanelContainer();
@@ -372,21 +406,16 @@ public partial class HelpPanel : Panel
         card.AddThemeStyleboxOverride("panel", cardStyle);
         _contentContainer.AddChild(card);
 
-        var hbox = new HBoxContainer();
-        hbox.AddThemeConstantOverride("separation", 10);
-        hbox.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        card.AddChild(hbox);
+        var vbox = new VBoxContainer();
+        vbox.AddThemeConstantOverride("separation", 3);
+        card.AddChild(vbox);
 
-        var titleLabel = new Label
-        {
-            Text = title,
-            CustomMinimumSize = new Vector2(120, 0)
-        };
-        titleLabel.AddThemeFontSizeOverride("font_size", 13);
+        var titleLabel = new Label { Text = title };
+        titleLabel.AddThemeFontSizeOverride("font_size", 14);
         titleLabel.AddThemeColorOverride("font_color", accentColor);
         titleLabel.AddThemeConstantOverride("outline_size", 1);
-        titleLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.3f));
-        hbox.AddChild(titleLabel);
+        titleLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.4f));
+        vbox.AddChild(titleLabel);
 
         var contentLabel = new Label
         {
@@ -396,9 +425,9 @@ public partial class HelpPanel : Panel
         };
         contentLabel.AddThemeFontSizeOverride("font_size", 12);
         contentLabel.AddThemeColorOverride("font_color", NoteText);
-        hbox.AddChild(contentLabel);
+        vbox.AddChild(contentLabel);
 
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 2) };
+        var spacer = new Control { CustomMinimumSize = new Vector2(0, 3) };
         _contentContainer.AddChild(spacer);
     }
 }

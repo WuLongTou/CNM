@@ -1,13 +1,18 @@
 namespace ZombieWars.UI;
 
 using Godot;
+using System;
+using static ZombieWars.UI.HandDrawnTheme;
+using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 /// <summary>
-/// 全屏暂停遮罩 + 居中"暂停中"提示卡。仅在 Visible 时拦截视线与点击。
-/// 状态由调用方（UIManager）通过 Show / Hide 显式控制。
+/// 全屏暂停遮罩 + 居中提示卡（含继续按钮）。
+/// 状态由调用方（UIManager）通过 Visible 显式控制。
 /// </summary>
 public partial class PausePanel : Panel
 {
+    public event Action? ResumeRequested;
+
     public PausePanel()
     {
         Name = "PausePanel";
@@ -17,7 +22,7 @@ public partial class PausePanel : Panel
         ProcessMode = ProcessModeEnum.Always;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
 
-        var styleBox = new StyleBoxFlat { BgColor = new Color(HandDrawnTheme.Colors.BattlefieldBg, 0.7f) };
+        var styleBox = new StyleBoxFlat { BgColor = new Color(BattlefieldBg, 0.75f) };
         AddThemeStyleboxOverride("panel", styleBox);
     }
 
@@ -28,32 +33,60 @@ public partial class PausePanel : Panel
         center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(center);
 
-        var pauseCard = new Panel();
-        pauseCard.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(260, 120), viewport, 0.72f, 0.38f);
-        pauseCard.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.Center);
-        var pauseCardStyle = HandDrawnTheme.MakeNotePanel(borderRadius: 5f, shadowSize: 8f);
-        pauseCard.AddThemeStyleboxOverride("panel", pauseCardStyle);
-        center.AddChild(pauseCard);
+        var card = new Panel();
+        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(320, 220), viewport, 0.72f, 0.5f);
+        var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 10f);
+        cardStyle.ShadowOffset = new Vector2(3, 3);
+        card.AddThemeStyleboxOverride("panel", cardStyle);
+        center.AddChild(card);
 
-        var pauseVbox = new VBoxContainer();
-        pauseVbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        pauseCard.AddChild(pauseVbox);
+        var margin = new MarginContainer();
+        margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(30, viewport, 18));
+        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(30, viewport, 18));
+        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(24, viewport, 16));
+        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(24, viewport, 16));
+        card.AddChild(margin);
 
-        var pauseMargin = new MarginContainer();
-        pauseMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        pauseMargin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(30, viewport, 16));
-        pauseMargin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(30, viewport, 16));
-        pauseMargin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(20, viewport, 10));
-        pauseMargin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(20, viewport, 10));
-        pauseVbox.AddChild(pauseMargin);
+        var vbox = new VBoxContainer();
+        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(16, viewport, 10));
+        margin.AddChild(vbox);
 
-        var pauseLabel = new Label
+        var titleLabel = new Label
         {
-            Text = "⏸ 暂停中\n按 ESC 继续",
+            Text = "⏸ 暂停中",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        pauseLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(28, viewport, 20));
-        pauseLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteText);
-        pauseMargin.AddChild(pauseLabel);
+        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(28, viewport, 22));
+        titleLabel.AddThemeColorOverride("font_color", BattlefieldBright);
+        titleLabel.AddThemeConstantOverride("outline_size", 3);
+        titleLabel.AddThemeColorOverride("font_outline_color", InkBlack);
+        vbox.AddChild(titleLabel);
+
+        var resumeBtn = new Button
+        {
+            Text = "▶ 继续 [ESC]",
+            CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(40, viewport, 32)),
+            FocusMode = FocusModeEnum.None
+        };
+        resumeBtn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewport, 13));
+        var (n, h, _) = MakeButtonStyles(
+            new Color(BattlefieldBg, 0.9f), new Color(BattlefieldMid, 0.95f),
+            BattlefieldAccent, radius: 5);
+        resumeBtn.AddThemeStyleboxOverride("normal", n);
+        resumeBtn.AddThemeStyleboxOverride("hover", h);
+        resumeBtn.AddThemeStyleboxOverride("pressed", h);
+        resumeBtn.AddThemeColorOverride("font_color", BattlefieldBright);
+        resumeBtn.Pressed += () => ResumeRequested?.Invoke();
+        vbox.AddChild(resumeBtn);
+
+        var hintLabel = new Label
+        {
+            Text = "H 帮助 · C 装备",
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        hintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(12, viewport, 10));
+        hintLabel.AddThemeColorOverride("font_color", new Color(NoteText, 0.5f));
+        vbox.AddChild(hintLabel);
     }
 }

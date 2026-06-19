@@ -141,33 +141,40 @@ public partial class GameOverUI : Control
         _AddStatRow(statsBox, "获得金币", $"+{coinsEarned}", new Color(1.0f, 0.8f, 0.2f));
         _AddStatRow(statsBox, "金币余额", SaveManager.GetCoins().ToString(), new Color(1.0f, 0.85f, 0.3f));
 
-        // Achievements section
-        var achievementsLabel = new Label
-        {
-            Text = "━━ 成就 ━━",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        achievementsLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(12, viewport, 9));
-        achievementsLabel.AddThemeColorOverride("font_color", NoteTextDim);
-        vbox.AddChild(achievementsLabel);
+        // Achievements section（只在有成就解锁时显示）
+        int achievementCount = 0;
+        if (roundCount >= 10) achievementCount++;
+        if (kills >= 100) achievementCount++;
+        if (totalScore >= 1000) achievementCount++;
+        if (roundCount >= 20) achievementCount++;
 
-        // Achievement badges
-        var achievementsBox = new HBoxContainer
+        if (achievementCount > 0)
         {
-            Alignment = BoxContainer.AlignmentMode.Center
-        };
-        achievementsBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(10, viewport, 4));
-        vbox.AddChild(achievementsBox);
+            var achievementsLabel = new Label
+            {
+                Text = "━━ 成就 ━━",
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            achievementsLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(12, viewport, 9));
+            achievementsLabel.AddThemeColorOverride("font_color", NoteTextDim);
+            vbox.AddChild(achievementsLabel);
 
-        // Check and display achievements
-        if (roundCount >= 10)
-            _AddAchievementBadge(achievementsBox, "🌟", "坚持10波", new Color(1.0f, 0.85f, 0.3f));
-        if (kills >= 100)
-            _AddAchievementBadge(achievementsBox, "💀", "击杀100", new Color(0.7f, 0.7f, 0.7f));
-        if (totalScore >= 1000)
-            _AddAchievementBadge(achievementsBox, "🏅", "得分1000", new Color(0.9f, 0.75f, 0.3f));
-        if (roundCount >= 20)
-            _AddAchievementBadge(achievementsBox, "👑", "坚持20波", new Color(1.0f, 0.9f, 0.4f));
+            var achievementsBox = new HBoxContainer
+            {
+                Alignment = BoxContainer.AlignmentMode.Center
+            };
+            achievementsBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(10, viewport, 4));
+            vbox.AddChild(achievementsBox);
+
+            if (roundCount >= 10)
+                _AddAchievementBadge(achievementsBox, "🌟", "坚持10波", new Color(1.0f, 0.85f, 0.3f));
+            if (kills >= 100)
+                _AddAchievementBadge(achievementsBox, "💀", "击杀100", new Color(0.7f, 0.7f, 0.7f));
+            if (totalScore >= 1000)
+                _AddAchievementBadge(achievementsBox, "🏅", "得分1000", new Color(0.9f, 0.75f, 0.3f));
+            if (roundCount >= 20)
+                _AddAchievementBadge(achievementsBox, "👑", "坚持20波", new Color(1.0f, 0.9f, 0.4f));
+        }
 
         // Tips for next run
         var tipsLabel = new Label
