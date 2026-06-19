@@ -222,7 +222,7 @@ public partial class GameOverUI : Control
         panelTw.TweenProperty(content, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.5f)
             .SetTrans(Tween.TransitionType.Cubic);
 
-        var titleTw = CreateTween().SetLoops();
+        var titleTw = CreateTween().SetLoops(999999);
         titleTw.TweenProperty(title, Node2D.PropertyName.Modulate.ToString(), new Color(1.0f, 0.85f, 0.85f), 1.2f)
             .SetTrans(Tween.TransitionType.Sine);
         titleTw.TweenProperty(title, Node2D.PropertyName.Modulate.ToString(), new Color(1, 1, 1), 1.2f)

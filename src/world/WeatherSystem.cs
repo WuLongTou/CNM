@@ -160,11 +160,12 @@ void fragment() {
         };
         var rainMat = new ParticleProcessMaterial
         {
+            Direction = new Vector3(0, 1, 0),
             Gravity = new Vector3(0, 800, 0),
             InitialVelocityMin = 300,
             InitialVelocityMax = 500,
             Color = new Color(0.5f, 0.6f, 0.8f, 0.5f),
-            Spread = 0.1f
+            Spread = 0.15f
         };
         _rainParticles.ProcessMaterial = rainMat;
         AddChild(_rainParticles);
@@ -179,11 +180,12 @@ void fragment() {
         };
         var acidMat = new ParticleProcessMaterial
         {
+            Direction = new Vector3(0, 1, 0),
             Gravity = new Vector3(0, 600, 0),
             InitialVelocityMin = 200,
             InitialVelocityMax = 400,
             Color = new Color(0.5f, 0.9f, 0.1f, 0.55f),
-            Spread = 0.1f
+            Spread = 0.15f
         };
         _acidParticles.ProcessMaterial = acidMat;
         AddChild(_acidParticles);
@@ -198,6 +200,7 @@ void fragment() {
         };
         var fogMat = new ParticleProcessMaterial
         {
+            Direction = new Vector3(1, 0, 0),
             Gravity = new Vector3(20, 0, 0),
             InitialVelocityMin = 10,
             InitialVelocityMax = 40,
@@ -359,6 +362,10 @@ void fragment() {
     /// 返回当前天气的游戏效果摘要，用于 HUD 实时显示。
     /// 只包含与默认值不同的效果，避免晴天时显示一堆 0。
     /// </summary>
+    /// <summary>
+    /// 返回 BBCode 着色的效果描述，供 HUD 顶部 RichTextLabel 直接渲染。
+    /// 正面效果（对玩家有利）→ 绿色(#4caf50)，负面效果 → 红色(#e74c3c)。
+    /// </summary>
     public string GetEffectsDescription()
     {
         var parts = new System.Collections.Generic.List<string>();
@@ -367,23 +374,25 @@ void fragment() {
         if (!Mathf.IsEqualApprox(speedMod, 1.0f))
         {
             int pct = Mathf.RoundToInt((speedMod - 1.0f) * 100);
-            parts.Add($"僵尸速{pct:+#;-#}%");
+            string color = speedMod < 1f ? "#4caf50" : "#e74c3c";
+            parts.Add($"[color={color}]僵尸速{pct:+#;-#}%[/color]");
         }
 
         float dmgMod = GetPlayerDamageModifier();
         if (!Mathf.IsEqualApprox(dmgMod, 1.0f))
         {
             int pct = Mathf.RoundToInt((dmgMod - 1.0f) * 100);
-            parts.Add($"伤害{pct:+#;-#}%");
+            string color = dmgMod > 1f ? "#4caf50" : "#e74c3c";
+            parts.Add($"[color={color}]伤害{pct:+#;-#}%[/color]");
         }
 
         float stealth = GetZombieStealthBonus();
         if (stealth > 0.01f)
-            parts.Add($"隐匿+{Mathf.RoundToInt(stealth * 100)}%");
+            parts.Add($"[color=#e74c3c]隐匿+{Mathf.RoundToInt(stealth * 100)}%[/color]");
 
         float vis = GetVisibilityFactor();
         if (vis < 0.95f)
-            parts.Add($"能见度{Mathf.RoundToInt(vis * 100)}%");
+            parts.Add($"[color=#e74c3c]能见度{Mathf.RoundToInt(vis * 100)}%[/color]");
 
         return string.Join(" ", parts);
     }
@@ -540,31 +549,46 @@ void fragment() {
     private void _StartRain(WeatherIntensity intensity)
     {
         if (_rainParticles == null) return;
+        float mult = IntensityMultipliers[(int)intensity];
 
+        var mat = (ParticleProcessMaterial)_rainParticles.ProcessMaterial;
+        mat.EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box;
+        mat.EmissionBoxExtents = new Vector3(MapContext.CurrentWorldSize.X, 100, 0);
+
+        _rainParticles.Lifetime = 1.6f;
         _rainParticles.Visible = true;
         _rainParticles.Emitting = true;
-        _rainParticles.Amount = (int)(200 * IntensityMultipliers[(int)intensity]);
+        _rainParticles.Amount = (int)(200 * mult);
     }
 
     private void _StartAcidRain(WeatherIntensity intensity)
     {
         if (_acidParticles == null) return;
+        float mult = IntensityMultipliers[(int)intensity];
 
+        var mat = (ParticleProcessMaterial)_acidParticles.ProcessMaterial;
+        mat.EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box;
+        mat.EmissionBoxExtents = new Vector3(MapContext.CurrentWorldSize.X, 100, 0);
+
+        _acidParticles.Lifetime = 1.8f;
         _acidParticles.Visible = true;
         _acidParticles.Emitting = true;
-        _acidParticles.Amount = (int)(150 * IntensityMultipliers[(int)intensity]);
+        _acidParticles.Amount = (int)(150 * mult);
     }
 
     private void _StartFog(WeatherIntensity intensity)
     {
         if (_fogParticles == null) return;
-
-        _fogParticles.Visible = true;
-        _fogParticles.Emitting = true;
-        _fogParticles.Amount = (int)(80 * IntensityMultipliers[(int)intensity]);
+        float mult = IntensityMultipliers[(int)intensity];
 
         var mat = (ParticleProcessMaterial)_fogParticles.ProcessMaterial;
-        mat.Color = new Color(0.8f, 0.8f, 0.85f, 0.25f * IntensityMultipliers[(int)intensity]);
+        mat.EmissionShape = ParticleProcessMaterial.EmissionShapeEnum.Box;
+        mat.EmissionBoxExtents = new Vector3(MapContext.CurrentWorldSize.X, MapContext.CurrentWorldSize.Y, 0);
+
+        _fogParticles.Lifetime = 8.0f;
+        _fogParticles.Visible = true;
+        _fogParticles.Emitting = true;
+        _fogParticles.Amount = (int)(80 * mult);
     }
 
     // ═══════════════════════════════════════════════════

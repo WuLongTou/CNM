@@ -129,6 +129,9 @@ public partial class UIManager : Control
         _CreateBossHealthBar();
 
         _CreateWeaponSelectionPanel();
+        // 预暖：让面板在欢迎屏背后渲染一帧，避免首次选卡时 JIT/纹理/布局卡顿
+        _weaponSelectionPanel.Visible = true;
+        CallDeferred(nameof(_PostWarmWeaponPanel));
         _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 170 };
         AddChild(_helpPanel);
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
@@ -314,6 +317,13 @@ public partial class UIManager : Control
         AddChild(_bossHealthLabel);
     }
 
+    /// <summary>预暖结束后隐藏武器面板，玩家不可见。</summary>
+    private void _PostWarmWeaponPanel()
+    {
+        if (IsInstanceValid(_weaponSelectionPanel))
+            _weaponSelectionPanel.Visible = false;
+    }
+
     private void _CreateWeaponSelectionPanel()
     {
         var viewport = ResponsiveUi.ViewportSize(this);
@@ -349,16 +359,34 @@ public partial class UIManager : Control
         mainVbox.AddChild(titleLabel);
         _weaponSelectionTitleLabel = titleLabel;
 
+        var weaponSlotPanel = new Panel();
+        weaponSlotPanel.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewport, 0.9f), 0);
+        weaponSlotPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var slotStyle = MakeNotePanel(borderRadius: 3f, shadowSize: 2f);
+        slotStyle.BgColor = new Color(0.12f, 0.08f, 0.06f, 0.6f);
+        slotStyle.BorderColor = new Color(0.35f, 0.25f, 0.15f, 0.4f);
+        slotStyle.BorderWidthBottom = 1;
+        slotStyle.BorderWidthTop = 1;
+        slotStyle.BorderWidthLeft = 1;
+        slotStyle.BorderWidthRight = 1;
+        weaponSlotPanel.AddThemeStyleboxOverride("panel", slotStyle);
+        var slotMargin = new MarginContainer();
+        slotMargin.AddThemeConstantOverride("margin_left", 8);
+        slotMargin.AddThemeConstantOverride("margin_right", 8);
+        slotMargin.AddThemeConstantOverride("margin_top", 4);
+        slotMargin.AddThemeConstantOverride("margin_bottom", 4);
+        weaponSlotPanel.AddChild(slotMargin);
+
         _currentWeaponLabel = new Label
         {
-            Text = "当前武器: 无",
+            Text = "⚔ 当前武器: 无",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewport, 0.9f), 0)
+            HorizontalAlignment = HorizontalAlignment.Center
         };
-        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 12));
-        _currentWeaponLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.9f));
-        _currentWeaponLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        mainVbox.AddChild(_currentWeaponLabel);
+        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 13));
+        _currentWeaponLabel.AddThemeColorOverride("font_color", new Color(0.86f, 0.78f, 0.55f));
+        slotMargin.AddChild(_currentWeaponLabel);
+        mainVbox.AddChild(weaponSlotPanel);
 
         // Description
         var descLabel = new Label
@@ -468,16 +496,19 @@ public partial class UIManager : Control
             typeLabel.AddThemeColorOverride("font_color", NoteText);
             cardVbox.AddChild(typeLabel);
 
-            // 5. Description (keywords only)
-            var desc = new Label
+            // 5. Description (keywords with BBCode coloring)
+            var desc = new RichTextLabel
             {
                 Name = "Desc",
                 Text = "",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                AutowrapMode = TextServer.AutowrapMode.WordSmart
+                BbcodeEnabled = true,
+                FitContent = true,
+                AutowrapMode = TextServer.AutowrapMode.WordSmart,
+                ScrollActive = false,
+                MouseFilter = Control.MouseFilterEnum.Ignore,
             };
-            desc.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(13, viewport, 10));
-            desc.AddThemeColorOverride("font_color", NoteText);
+            desc.AddThemeFontSizeOverride("normal_font_size", ResponsiveUi.Font(15, viewport, 11));
+            desc.AddThemeColorOverride("default_color", NoteText);
             cardVbox.AddChild(desc);
 
             // Spacer
@@ -502,22 +533,22 @@ public partial class UIManager : Control
             var hintLabel = new Label
             {
                 Name = "Hint",
-                Text = "悬停查看详情",
+                Text = "ⓘ 悬停查看详情",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
             hintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewport, 9));
-            hintLabel.AddThemeColorOverride("font_color", NoteText);
+            hintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.45f));
             cardVbox.AddChild(hintLabel);
         }
 
         // Keyboard hint label
         var keyboardHintLabel = new Label
         {
-            Text = "💡 按 [1] [2] [3] 选择 | 按 [Enter] 或 [Delete] 跳过",
+            Text = "💡 [1] [2] [3] 选择  |  [Enter] 或 [Delete] 跳过",
             HorizontalAlignment = HorizontalAlignment.Center
         };
-        keyboardHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 10));
-        keyboardHintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.6f, 0.7f));
+        keyboardHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 11));
+        keyboardHintLabel.AddThemeColorOverride("font_color", new Color(0.65f, 0.6f, 0.55f));
         mainVbox.AddChild(keyboardHintLabel);
         _weaponKeyboardHintLabel = keyboardHintLabel;
 
@@ -527,17 +558,27 @@ public partial class UIManager : Control
 
         _skipButton = new Button
         {
-            Text = "跳过升级",
-            CustomMinimumSize = ResponsiveUi.Size(150, 40, viewport, 30)
+            Text = "⏭ 跳过 [Delete]",
+            CustomMinimumSize = ResponsiveUi.Size(240, 44, viewport, 36)
         };
-        _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 12));
-        var skipNormal = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
-        skipNormal.BgColor = new Color(0.25f, 0.2f, 0.2f, 0.9f);
+        _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 13));
+        var skipNormal = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
+        skipNormal.BgColor = new Color(0.35f, 0.25f, 0.22f, 0.92f);
+        skipNormal.BorderColor = new Color(0.55f, 0.35f, 0.25f, 0.7f);
+        skipNormal.BorderWidthBottom = 2;
+        skipNormal.BorderWidthTop = 2;
+        skipNormal.BorderWidthLeft = 2;
+        skipNormal.BorderWidthRight = 2;
         _skipButton.AddThemeStyleboxOverride("normal", skipNormal);
-        var skipHover = MakeNotePanel(borderRadius: 3f, shadowSize: 3f);
-        skipHover.BgColor = new Color(0.35f, 0.28f, 0.28f, 0.9f);
+        var skipHover = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
+        skipHover.BgColor = new Color(0.50f, 0.35f, 0.28f, 0.95f);
+        skipHover.BorderColor = new Color(0.75f, 0.50f, 0.35f, 0.9f);
+        skipHover.BorderWidthBottom = 2;
+        skipHover.BorderWidthTop = 2;
+        skipHover.BorderWidthLeft = 2;
+        skipHover.BorderWidthRight = 2;
         _skipButton.AddThemeStyleboxOverride("hover", skipHover);
-        _skipButton.AddThemeColorOverride("font_color", NoteBg);
+        _skipButton.AddThemeColorOverride("font_color", new Color(0.9f, 0.75f, 0.6f));
         skipContainer.AddChild(_skipButton);
     }
 
@@ -951,7 +992,7 @@ public partial class UIManager : Control
                 var typeNode = (Label)vbox.GetNode("Type");
                 var iconContainer = vbox.GetNodeOrNull<Control>("IconContainer");
                 var iconNode = iconContainer?.GetNodeOrNull<Label>("Icon");
-                var descNode = (Label)vbox.GetNode("Desc");
+                var descNode = (RichTextLabel)vbox.GetNode("Desc");
                 var rarityNode = (Label)vbox.GetNode("Rarity");
 
                 titleNode.Text = wc.CardName;
@@ -966,25 +1007,25 @@ public partial class UIManager : Control
                 else
                     typeNode.Text = "装备";
 
-                // Keywords
+                // Keywords with BBCode coloring
                 var keywords = new List<string>();
-                if (wc.DamageModifier > 1.0f) keywords.Add("伤害↑");
-                else if (wc.DamageModifier < 1.0f) keywords.Add("伤害↓");
-                if (wc.AttackSpeedModifier > 1.0f) keywords.Add("攻速↑");
-                else if (wc.AttackSpeedModifier < 1.0f) keywords.Add("攻速↓");
-                if (wc.HealthModifier > 0) keywords.Add("生命↑");
-                else if (wc.HealthModifier < 0) keywords.Add("生命↓");
-                if (wc.SpeedModifier > 0) keywords.Add("速度↑");
-                if (wc.CriticalBonus > 0) keywords.Add("暴击");
-                if (wc.LifeStealBonus > 0) keywords.Add("吸血");
-                if (wc.FreezeBonus > 0) keywords.Add("冰冻");
-                if (wc.PoisonBonus > 0) keywords.Add("中毒");
-                if (wc.GrantsAura) keywords.Add("护盾");
-                if (wc.HealthCost > 0) keywords.Add("⚠消耗生命");
+                if (wc.DamageModifier > 1.0f) keywords.Add("[color=#e6b800]伤害↑[/color]");
+                else if (wc.DamageModifier < 1.0f) keywords.Add("[color=#e74c3c]伤害↓[/color]");
+                if (wc.AttackSpeedModifier > 1.0f) keywords.Add("[color=#e6b800]攻速↑[/color]");
+                else if (wc.AttackSpeedModifier < 1.0f) keywords.Add("[color=#e74c3c]攻速↓[/color]");
+                if (wc.HealthModifier > 0) keywords.Add("[color=#4caf50]生命↑[/color]");
+                else if (wc.HealthModifier < 0) keywords.Add("[color=#e74c3c]生命↓[/color]");
+                if (wc.SpeedModifier > 0) keywords.Add("[color=#e6b800]速度↑[/color]");
+                if (wc.CriticalBonus > 0) keywords.Add("[color=#e6b800]暴击[/color]");
+                if (wc.LifeStealBonus > 0) keywords.Add("[color=#ce5c5c]吸血[/color]");
+                if (wc.FreezeBonus > 0) keywords.Add("[color=#5b9bd5]冰冻[/color]");
+                if (wc.PoisonBonus > 0) keywords.Add("[color=#7baf5b]中毒[/color]");
+                if (wc.GrantsAura) keywords.Add("[color=#5b9bd5]护盾[/color]");
+                if (wc.HealthCost > 0) keywords.Add("[color=#e74c3c]⚠消耗生命[/color]");
                 if (wc.MeleeEffects.Count > 0 || wc.RangedEffects.Count > 0 || wc.MagicEffects.Count > 0)
-                    keywords.Add("特效");
+                    keywords.Add("[color=#8a8acc]特效[/color]");
 
-                descNode.Text = keywords.Count > 0 ? string.Join(" ", keywords) : "基础";
+                descNode.Text = keywords.Count > 0 ? string.Join(" ", keywords) : "[color=#666666]基础[/color]";
                 rarityNode.Text = WeaponFormatter.GetRarityText(wc.Rarity);
 
                 if (iconContainer != null && wc.IconTexture != null)
@@ -1069,7 +1110,7 @@ public partial class UIManager : Control
                 var dimText = new Color(0.6f, 0.5f, 0.5f);
                 categoryNode.AddThemeColorOverride("font_color", dimText);
                 typeNode.AddThemeColorOverride("font_color", dimText);
-                descNode.AddThemeColorOverride("font_color", dimText);
+                descNode.AddThemeColorOverride("default_color", dimText);
                 var hintNode = (Label)vbox.GetNode("Hint");
                 hintNode.AddThemeColorOverride("font_color", new Color(0.45f, 0.38f, 0.38f));
 
@@ -1136,9 +1177,9 @@ public partial class UIManager : Control
         var effectText = effects.Count > 0 ? string.Join(" | ", effects) : "无特效";
         effectText = _TruncateText(effectText, 36);
         if (weaponName == "无")
-            _currentWeaponLabel.Text = "当前武器: 无";
+            _currentWeaponLabel.Text = "⚔ 当前武器: 无";
         else
-            _currentWeaponLabel.Text = $"当前武器: {weaponName} ({weaponTypeText}) | {effectText}";
+            _currentWeaponLabel.Text = $"⚔ {weaponName} ({weaponTypeText}) | {effectText}";
     }
 
     private string _TruncateText(string text, int maxLen)
@@ -1297,7 +1338,7 @@ public partial class UIManager : Control
         var titleNode = (Label)vbox.GetNode("Title");
         var typeNode = (Label)vbox.GetNode("Type");
         var iconNode = vbox.FindChild("Icon", true, false) as Label;
-        var descNode = (Label)vbox.GetNode("Desc");
+        var descNode = (RichTextLabel)vbox.GetNode("Desc");
         var rarityNode = (Label)vbox.GetNode("Rarity");
 
         categoryNode.Text = "【强化卡】";
@@ -1305,7 +1346,7 @@ public partial class UIManager : Control
         typeNode.Text = "强化已有装备";
         if (iconNode != null) iconNode.Text = upgrade.Icon;
         upgrade.SyncDescription();
-        descNode.Text = upgrade.Description;
+        descNode.Text = _UpgradeDescToBBCode(upgrade.Description);
         rarityNode.Text = "升级";
 
         var upBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
@@ -1320,6 +1361,29 @@ public partial class UIManager : Control
         var hoverBorder = ColorUtils.Lighten(upBorder, 0.2f);
         var hoverStyle = MakeCardPanel(hoverBg, hoverBorder);
         button.AddThemeStyleboxOverride("hover", hoverStyle);
+    }
+
+    /// <summary>转换升级卡描述为 BBCode 着色版本：正面增益金色，副作用红色。</summary>
+    private static string _UpgradeDescToBBCode(string plain)
+    {
+        var result = plain;
+        // 正面数值标记（伤害/攻速/暴击/吸血/冰冻/中毒后的 +N 或 +N%）
+        result = System.Text.RegularExpressions.Regex.Replace(result,
+            @"(\+[\d.]+%?)", m => $"[color=#d4a04a]{m.Value}[/color]");
+        // 生命值正面标记（生命+数字）
+        result = System.Text.RegularExpressions.Regex.Replace(result,
+            @"(生命\+[\d]+)", m => $"[color=#4caf50]{m.Value}[/color]");
+        // 负面/副作用标记（消耗生命/生命负值/速度负值）
+        result = System.Text.RegularExpressions.Regex.Replace(result,
+            @"(消耗生命\+[\d]+)", m => $"[color=#e74c3c]{m.Value}[/color]");
+        result = System.Text.RegularExpressions.Regex.Replace(result,
+            @"(生命[\-\d]+)", m => $"[color=#e74c3c]{m.Value}[/color]");
+        result = System.Text.RegularExpressions.Regex.Replace(result,
+            @"(速度[\-\d]+)", m => $"[color=#e74c3c]{m.Value}[/color]");
+        // 特效强化标记
+        result = System.Text.RegularExpressions.Regex.Replace(result,
+            @"(特效强化)", m => $"[color=#8a8acc]{m.Value}[/color]");
+        return result;
     }
 
     // ═══════════════════════════════════════════════
@@ -1938,9 +2002,9 @@ public partial class UIManager : Control
         UpdateLowHpVignette(healthPercent);
     }
 
-    public void UpdateZombiesDisplay(int zombiesRemaining, int totalZombies)
+    public void UpdateZombiesDisplay(int alive, int total)
     {
-        _hudPanel?.UpdateZombies(zombiesRemaining, totalZombies);
+        _hudPanel?.UpdateZombies(alive, total);
     }
 
     public void UpdatePlayerStatus(Player player)

@@ -205,7 +205,7 @@ public partial class Background : Node2D
             _backgroundRect!.AddChild(fog);
             _fogLayers.Add(fog);
 
-            var drift = CreateTween().SetLoops();
+            var drift = CreateTween().SetLoops(999999);
             float dx = (float)GD.RandRange(20.0f, 50.0f);
             float dt = (float)GD.RandRange(12.0f, 25.0f);
             drift.TweenProperty(fog, "position:x", fog.Position.X + dx, dt)
@@ -213,7 +213,7 @@ public partial class Background : Node2D
             drift.TweenProperty(fog, "position:x", fog.Position.X - dx, dt)
                  .SetTrans(Tween.TransitionType.Sine);
 
-            var alphaTw = CreateTween().SetLoops();
+            var alphaTw = CreateTween().SetLoops(999999);
             alphaTw.TweenProperty(fog, "modulate:a", (float)GD.RandRange(0.5f, 0.75f), (float)GD.RandRange(6.0f, 12.0f))
                    .SetTrans(Tween.TransitionType.Sine);
             alphaTw.TweenProperty(fog, "modulate:a", (float)GD.RandRange(1.0f, 1.3f), (float)GD.RandRange(6.0f, 12.0f))
@@ -266,7 +266,7 @@ public partial class Background : Node2D
             light.Material = mat;
             _backgroundRect!.AddChild(light);
 
-            var flicker = CreateTween().SetLoops();
+            var flicker = CreateTween().SetLoops(999999);
             flicker.TweenProperty(light, "modulate:a", (float)GD.RandRange(0.5f, 0.7f), (float)GD.RandRange(0.3f, 0.7f));
             flicker.TweenProperty(light, "modulate:a", 1.0f, (float)GD.RandRange(0.2f, 0.4f));
             flicker.TweenProperty(light, "modulate:a", (float)GD.RandRange(0.6f, 0.85f), (float)GD.RandRange(0.4f, 0.9f));
@@ -288,7 +288,7 @@ public partial class Background : Node2D
                 ShadowEnabled = false,
             };
             AddChild(pl);
-            var plFlicker = CreateTween().SetLoops();
+            var plFlicker = CreateTween().SetLoops(999999);
             plFlicker.TweenProperty(pl, "energy", 0.5f, (float)GD.RandRange(0.3f, 0.7f));
             plFlicker.TweenProperty(pl, "energy", 0.9f, (float)GD.RandRange(0.2f, 0.4f));
         }
@@ -521,7 +521,7 @@ public partial class Background : Node2D
             }
             rune.AddChild(spokes);
 
-            var pulse = CreateTween().SetLoops();
+            var pulse = CreateTween().SetLoops(999999);
             pulse.TweenProperty(rune, "modulate:a", 0.46f, 2.4f + i * 0.5f).SetTrans(Tween.TransitionType.Sine);
             pulse.TweenProperty(rune, "modulate:a", 0.20f, 2.8f + i * 0.4f).SetTrans(Tween.TransitionType.Sine);
         }

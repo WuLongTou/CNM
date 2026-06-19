@@ -31,15 +31,16 @@ public partial class MiniMap : CanvasLayer
     {
         if (_player == null || !GodotObject.IsInstanceValid(_player)) return;
         var vp = drawer.GetViewport().GetVisibleRect();
-        // 右下角，避开底部 HUD
-        var origin = new Vector2(vp.Size.X - MapSize - 20, vp.Size.Y - MapSize - 130);
+        // 右下角，避开底部 HUD（上调留空，避免与右下按钮重叠）
+        var origin = new Vector2(vp.Size.X - MapSize - 20, vp.Size.Y - MapSize - 160);
         var ws = MapContext.CurrentWorldSize;
         float sc = MapSize / Mathf.Max(ws.X, ws.Y);
         Vector2 Map(Vector2 world) => origin + new Vector2(world.X * sc, world.Y * sc);
 
-        // 背景 + 边框
-        drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.05f, 0.04f, 0.03f, 0.65f), filled: true);
-        drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.55f, 0.42f, 0.18f, 0.8f), filled: false, width: 2f);
+        // 背景 + 外发光 + 边框
+        drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.05f, 0.04f, 0.03f, 0.60f), filled: true);
+        drawer.DrawRect(new Rect2(origin - Vector2.One, MapSize + 2, MapSize + 2), new Color(0.55f, 0.42f, 0.18f, 0.15f), filled: false, width: 3f);
+        drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.65f, 0.50f, 0.25f, 0.85f), filled: false, width: 2f);
 
         // 敌人（红点）
         foreach (var z in ZombieRegistry.All)

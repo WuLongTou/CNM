@@ -37,7 +37,7 @@ public partial class Altar : Area2D
             ZIndex = 15
         };
         AddChild(beam);
-        var beamTw = beam.CreateTween().SetLoops();
+        var beamTw = beam.CreateTween().SetLoops(999999);
         beamTw.TweenProperty(beam, "modulate:a", 0.35f, 1.3f);
         beamTw.TweenProperty(beam, "modulate:a", 0.85f, 1.3f);
     }

@@ -550,7 +550,7 @@ public partial class ZombieVfx : Node
     private void _StartIdleAnimation()
     {
         var tw = _zombie.CreateTween();
-        tw.SetLoops();
+        tw.SetLoops(999999);
 
         switch (_zombie.ZombieType)
         {
@@ -695,7 +695,7 @@ public partial class ZombieVfx : Node
         _zombie.AddChild(_eliteRing);
 
         var tw = _zombie.CreateTween();
-        tw.SetLoops();
+        tw.SetLoops(999999);
         tw.TweenProperty(_eliteRing, "rotation", Mathf.Pi * 2, 3.0f);
     }
 

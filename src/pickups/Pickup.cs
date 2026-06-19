@@ -86,7 +86,7 @@ public abstract partial class Pickup : Area2D
     private void _StartFloatAnimation()
     {
         var tw = CreateTween();
-        tw.SetLoops();
+        tw.SetLoops(999999);
         tw.TweenProperty(_sprite, "offset:y", -12.0f, 0.8f).SetTrans(Tween.TransitionType.Sine);
         tw.TweenProperty(_sprite, "offset:y", 0.0f, 0.8f).SetTrans(Tween.TransitionType.Sine);
     }

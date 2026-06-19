@@ -32,7 +32,7 @@ public partial class HudPanel : Panel
     private Label _roundLabel = null!;
     private Label _zombiesLabel = null!;
     private Label _scoreLabel = null!;
-    private Label _weatherLabel = null!;
+    private RichTextLabel _weatherLabel = null!;
 
     // ── Row 2: 属性行 ───────────────────────────────────────
     private Label _damageLabel = null!;
@@ -115,12 +115,17 @@ public partial class HudPanel : Panel
         _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
         topRow.AddChild(_zombiesLabel);
 
-        // 常驻天气显示：酸雨/暴风时变红警示
-        _weatherLabel = new Label { Text = "天气 晴" };
-        _weatherLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _weatherLabel.AddThemeColorOverride("font_color", new Color(0.8f, 0.8f, 0.5f));
-        _weatherLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _weatherLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        // 常驻天气显示：酸雨/暴风时变红警示（Label + BBCode 着色）
+        _weatherLabel = new RichTextLabel
+        {
+            Text = "天气 晴",
+            BbcodeEnabled = true,
+            ScrollActive = false,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+            CustomMinimumSize = new Vector2(0, 0),
+        };
+        _weatherLabel.AddThemeFontSizeOverride("normal_font_size", UiFontSmall);
+        _weatherLabel.AddThemeColorOverride("default_color", new Color(0.8f, 0.8f, 0.5f));
         topRow.AddChild(_weatherLabel);
 
         // 常驻 debuff 提示：中毒/燃烧等持续掉血状态，避免"莫名其妙掉血"
@@ -309,7 +314,7 @@ public partial class HudPanel : Panel
             if (_lowHealthTween == null || !_lowHealthTween.IsRunning())
             {
                 _lowHealthTween = CreateTween();
-                _lowHealthTween.SetLoops();
+                _lowHealthTween.SetLoops(999999);
                 _lowHealthTween.TweenProperty(_healthBar, Control.PropertyName.Modulate.ToString() + ":a", 0.6f, 0.35f);
                 _lowHealthTween.TweenProperty(_healthBar, Control.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.35f);
             }
@@ -328,23 +333,24 @@ public partial class HudPanel : Panel
         _roundLabel.TooltipText = $"当前回合: {roundNumber}\n每回合开始前会抽取强化卡。";
     }
 
-    public void UpdateZombies(int zombiesRemaining, int totalZombies)
+    public void UpdateZombies(int alive, int total)
     {
-        _zombiesLabel.Text = $"僵尸: {zombiesRemaining}/{totalZombies}";
-        _zombiesLabel.TooltipText = $"本回合剩余僵尸: {zombiesRemaining}\n本回合总量: {totalZombies}";
+        _zombiesLabel.Text = $"僵尸: {alive}/{total}";
+        _zombiesLabel.TooltipText = $"当前存活: {alive}\n本回合总量: {total}";
     }
 
     /// <summary>
     /// 更新常驻天气显示。WeatherSystem 在 _OnWeatherTick 末尾每 0.5s 调用一次，
     /// 保证玩家随时能看到当前天气（特别是酸雨持续掉血时不会再"莫名其妙"）。
+    /// effectsDesc 已由调用方用 BBCode 着色（正面绿、负面红）。
     /// </summary>
     public void UpdateWeather(string name, Color color, bool isHazard, int damagePerTick, string effectsDesc)
     {
         string icon = isHazard ? "⚠ " : "";
-        string dmg = (isHazard && damagePerTick > 0) ? $" -{damagePerTick}/tick" : "";
+        string dmg = (isHazard && damagePerTick > 0) ? $" [color=#e74c3c]-{damagePerTick}/tick[/color]" : "";
         string effects = !string.IsNullOrEmpty(effectsDesc) ? $" {effectsDesc}" : "";
-        _weatherLabel.Text = $"天气: {icon}{name}{dmg}{effects}";
-        _weatherLabel.AddThemeColorOverride("font_color", color);
+        string colorHtml = "#" + color.ToHtml(false);
+        _weatherLabel.Text = $"[color={colorHtml}]天气: {icon}{name}{dmg}[/color]{effects}";
         _weatherLabel.TooltipText = isHazard
             ? $"当前天气: {name}\n危险天气会持续影响战斗。{(damagePerTick > 0 ? $"\n每次天气结算造成 {damagePerTick} 点伤害。" : "")}\n{effectsDesc}"
             : $"当前天气: {name}\n{effectsDesc}";

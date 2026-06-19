@@ -48,6 +48,7 @@ public partial class GameManager : Node
     private int _zombiesToSpawn;
     private int _zombiesSpawned;
     private int _zombiesAlive;
+    private int _currentRoundTotalZombies; // 本回合总僵尸数（含天气额外生成）
     private float _spawnTimer;
     private float _currentSpawnInterval;
 
@@ -341,6 +342,7 @@ public partial class GameManager : Node
         _zombiesToSpawn = Mathf.Min(_zombiesToSpawn, (int)(ZombiesMaxPerRound * Core.GameConfig.WorldScale));
         _zombiesSpawned = 0;
         _zombiesAlive = 0;
+        _currentRoundTotalZombies = 0;
 
         _currentSpawnInterval = Mathf.Max(SpawnIntervalMin, SpawnInterval * Mathf.Pow(0.94f, Mathf.Max(0, CurrentRound - 1)));
         if (_roundDirective == RoundDirective.SwarmSurge)
@@ -361,7 +363,7 @@ public partial class GameManager : Node
         if (_uiManager != null)
         {
             _uiManager.UpdateRoundDisplay(CurrentRound);
-            _uiManager.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
+            _uiManager.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
             if (_player != null)
             {
                 _uiManager.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
@@ -535,11 +537,12 @@ public partial class GameManager : Node
 
         _zombiesSpawned++;
         _zombiesAlive++;
+        _currentRoundTotalZombies++;
 
         if (_roundDirective == RoundDirective.SwarmSurge && _zombiesSpawned % 4 == 0 && !zombieInstance.IsBoss)
             _TrySpawnSwarmGroup(zombieInstance.GlobalPosition);
 
-        _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
 
         var typeName = TypeNames.TryGetValue((int)zombieType, out var name) ? name : "未知";
         LogUtils.Print($"生成僵尸 {_zombiesSpawned}/{_zombiesToSpawn} (类型: {typeName}, 强度: x{roundMult:F2})");
@@ -573,6 +576,7 @@ public partial class GameManager : Node
         child.Modulate = new Color(1, 1, 1, ZombieWars.Math.FractalSystem.GetDepthAlpha(depth));
 
         _zombiesAlive++;
+        _currentRoundTotalZombies++;
     }
 
     /// <summary>放置向量场力场节点（玩家请求）</summary>
@@ -618,8 +622,9 @@ public partial class GameManager : Node
 
         _zombiesSpawned++;
         _zombiesAlive++;
+        _currentRoundTotalZombies++;
 
-        _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
         _uiManager?.ShowRoundBanner("⚠ BOSS 来袭 ⚠");
 
         // 出场演出：命中停顿 + 强震屏 + 全屏暗化，把"Boss 登场"砸出压迫感
@@ -696,6 +701,7 @@ public partial class GameManager : Node
             var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.8f;
             swarm.ApplyRoundScaling(CurrentRound, roundMult);
             _zombiesAlive++;
+            _currentRoundTotalZombies++;
         }
     }
 
@@ -739,7 +745,7 @@ public partial class GameManager : Node
 
         SaveManager.AddKill();
 
-        _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
         _uiManager?.UpdateScoreDisplay(Score);
         _uiManager?.AddCombo();
         _uiManager?.ShowKillEffect(zombie.GlobalPosition, pts);
@@ -898,7 +904,7 @@ public partial class GameManager : Node
         root.AddChild(outer);
         root.AddChild(inner);
 
-        var pulse = root.CreateTween().SetLoops();
+        var pulse = root.CreateTween().SetLoops(999999);
         pulse.TweenProperty(root, "scale", new Vector2(1.06f, 1.06f), 0.7f).SetTrans(Tween.TransitionType.Sine);
         pulse.TweenProperty(root, "scale", Vector2.One, 0.7f).SetTrans(Tween.TransitionType.Sine);
     }
@@ -976,7 +982,7 @@ public partial class GameManager : Node
 
     public int GetCurrentRound() => CurrentRound;
     public int GetZombiesRemaining() => _zombiesAlive;
-    private int _GetRemainingZombies() => Mathf.Max(0, _zombiesToSpawn - _zombiesSpawned + _zombiesAlive);
+    private int _GetRemainingZombies() => Mathf.Max(0, _zombiesToSpawn - _zombiesSpawned) + _zombiesAlive;
 
     public void SpawnMinionZombie(Vector2 pos)
     {
@@ -996,7 +1002,8 @@ public partial class GameManager : Node
         minion.ApplyRoundScaling(CurrentRound, roundMult * 0.6f);
 
         _zombiesAlive++;
-        _uiManager?.UpdateZombiesDisplay(_GetRemainingZombies(), _zombiesToSpawn);
+        _currentRoundTotalZombies++;
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
     }
 
     /// <summary>Called by WeatherSystem during storm to spawn an extra zombie.</summary>
@@ -1025,6 +1032,7 @@ public partial class GameManager : Node
         GetTree().CurrentScene.AddChild(zombieInstance);
         ZombieRegistry.Register(zombieInstance);
         _zombiesAlive++;
+        _currentRoundTotalZombies++;
     }
 
     /// <summary>Called by WeatherSystem when weather changes.</summary>
@@ -1048,7 +1056,7 @@ public partial class GameManager : Node
         SaveManager.AddKill();
 
         _uiManager?.UpdateScoreDisplay(Score);
-        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _zombiesToSpawn);
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
         _uiManager?.AddCombo();
         if (_player?.Combat != null)
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
@@ -1083,6 +1091,7 @@ public partial class GameManager : Node
             var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.7f;
             ship.ApplyRoundScaling(CurrentRound, roundMult);
             _zombiesAlive++;
+            _currentRoundTotalZombies++;
         }
     }
 
