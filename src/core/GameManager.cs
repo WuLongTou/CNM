@@ -174,6 +174,9 @@ public partial class GameManager : Node
             // 在欢迎画面期间预加载武器图标纹理，避免首次选卡时卡顿
             _weaponDeck?.PreWarmTextures();
 
+            // JIT 预热：预实例化关键战斗类，避免首次战斗时 JIT 编译卡顿
+            _JitWarmup();
+
             while (_uiManager != null && _IsWelcomeVisible())
             {
                 await ToSignal(GetTree(), "process_frame");
@@ -187,6 +190,45 @@ public partial class GameManager : Node
         AchievementSystem.Instance?.ResetRoundStats();
 
         StartNewRound();
+    }
+
+    /// <summary>
+    /// JIT 预热：在欢迎画面期间预实例化/调用关键战斗类和方法，
+    /// 触发 .NET JIT 编译，避免首次战斗时一次性编译 Zombie/Projectile 等类导致卡顿。
+    /// </summary>
+    private void _JitWarmup()
+    {
+        if (_zombieScene == null) return;
+
+        // 预实例化一只僵尸并立即释放，触发 Zombie._Ready / ZombieVfx 等类的 JIT 编译
+        try
+        {
+            var dummy = _zombieScene.Instantiate() as Zombie;
+            if (dummy != null)
+            {
+                dummy.ZombieType = ZombieType.Basic;
+                dummy.GlobalPosition = new Vector2(-9999, -9999);
+                GetTree().CurrentScene.AddChild(dummy);
+                dummy.QueueFree();
+            }
+        }
+        catch { /* 预热失败不影响游戏 */ }
+
+        // 预创建一个投射物并释放，触发 Projectile._PhysicsProcess JIT
+        try
+        {
+            var proj = new ZombieWars.Weapons.Projectile
+            {
+                GlobalPosition = new Vector2(-9999, -9999)
+            };
+            GetTree().CurrentScene.AddChild(proj);
+            proj.QueueFree();
+        }
+        catch { }
+
+        // 预调用 RecalculateStats 确保 PlayerCombat 方法链已 JIT
+        try { _player?.Combat?.RecalculateStats(); }
+        catch { }
     }
 
     public override void _Notification(int what)

@@ -66,11 +66,15 @@ public partial class MiniMap : CanvasLayer
             if (n is Node2D nd && GodotObject.IsInstanceValid(nd))
                 drawer.DrawCircle(Map(nd.GlobalPosition), 2.6f, new Color(0.4f, 0.8f, 1f));
         }
-        // 玩家（白点 + 朝向短线）
+        // 玩家（白点 + 朝向短线，跟随实际移动方向）
         var pp = Map(_player.GlobalPosition);
         drawer.DrawCircle(pp, 3.2f, Colors.White);
-        bool faceLeft = _player.Vfx?.FacingLeft ?? (_player.Velocity.X < 0);
-        float dir = faceLeft ? Mathf.Pi : 0f;
+        var vel = _player.Velocity;
+        float dir;
+        if (vel.LengthSquared() > 4f)
+            dir = Mathf.Atan2(vel.Y, vel.X);  // 移动中：指向移动方向
+        else
+            dir = (_player.Vfx?.FacingLeft ?? false) ? Mathf.Pi : 0f;  // 静止：指向朝向
         var tip = pp + new Vector2(Mathf.Cos(dir), Mathf.Sin(dir)) * 9f;
         drawer.DrawLine(pp, tip, Colors.White, 2f);
     }

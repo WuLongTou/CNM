@@ -57,6 +57,9 @@ public partial class PlayerVfx : Node
     private Texture2D? _attackFallback;
     private Sprite2D? _outlineSprite;
 
+    // 色调变体缓存（按武器类型），避免每次切换武器都重新逐像素着色
+    private static readonly System.Collections.Generic.Dictionary<AttackType, (Texture2D idle, Texture2D attack, Texture2D hurt)> _variantCache = new();
+
     public void Setup(Player p)
     {
         Player = p;
@@ -89,14 +92,27 @@ public partial class PlayerVfx : Node
     private void _GenerateStateVariantsDeferred()
     {
         if (_baseTexture == null || Player?.Sprite == null) return;
+
+        // 命中缓存则直接复用，避免重复逐像素着色
+        if (_variantCache.TryGetValue(_lastAttackType, out var cached))
+        {
+            _idleFrame = cached.idle;
+            _attackFrame = cached.attack;
+            _hurtFrame = cached.hurt;
+            _dashFrame = _idleFrame;
+            if (_walkFrames.Count == 0)
+                Player.Sprite.Texture = _idleFrame;
+            Player.Sprite.Scale = Vector2.One;
+            Player.Sprite.FlipH = _facingLeft;
+            return;
+        }
+
         var baseImg = _baseTexture.GetImage();
         if (baseImg == null) return;
 
-        // Work on a copy so we don't mutate the original texture
         var img = baseImg.Duplicate() as Image;
         if (img == null) return;
 
-        // Use the processed (potentially resized) image for all states
         _idleFrame = ImageTexture.CreateFromImage(img);
         if (_walkFrames.Count == 0)
             Player.Sprite.Texture = _idleFrame;
@@ -111,8 +127,10 @@ public partial class PlayerVfx : Node
         _TintImage(hurtImg, new Color(1.5f, 0.4f, 0.3f));
         _hurtFrame = ImageTexture.CreateFromImage(hurtImg);
 
-        // dash 不再变黑，保持正常外观（冲刺速度感由残影 SpawnDashTrail 表现）
         _dashFrame = _idleFrame;
+
+        // 缓存本次生成的变体
+        _variantCache[_lastAttackType] = (_idleFrame, _attackFrame, _hurtFrame);
     }
 
     // Per-weapon-type sprite caches
@@ -170,11 +188,45 @@ public partial class PlayerVfx : Node
 
         // Invalidate texture cache so re-loaded PNGs get fresh processing
         Core.TextureUtils.ClearCache();
+        _variantCache.Clear();
         _LoadWarriorSprites();
         _LoadRangerSprites();
         _LoadMageSprites();
         // 所有精灵加载完成后再标记，避免加载失败时误判
         _allSpritesLoaded = true;
+
+        // 预生成三种武器类型的色调变体，避免首次选卡切换武器时卡顿
+        _PreGenerateAllVariants();
+    }
+
+    /// <summary>为三种武器类型预生成色调变体（攻击/受伤），缓存后切换武器零开销。</summary>
+    private void _PreGenerateAllVariants()
+    {
+        AttackType[] types = { AttackType.Melee, AttackType.Ranged, AttackType.Magic };
+        AttackType saved = _lastAttackType;
+        foreach (var atk in types)
+        {
+            if (_variantCache.ContainsKey(atk)) continue;
+            Texture2D? baseTex = atk switch
+            {
+                AttackType.Ranged => _rangerBase,
+                AttackType.Magic => _mageBase,
+                _ => _warriorBase
+            };
+            if (baseTex == null) continue;
+            var baseImg = baseTex.GetImage();
+            if (baseImg == null) continue;
+            var img = baseImg.Duplicate() as Image;
+            if (img == null) continue;
+            var idle = ImageTexture.CreateFromImage(img);
+            var atkImg = img.Duplicate() as Image;
+            _TintImage(atkImg, new Color(1.3f, 1.1f, 0.7f));
+            var attack = ImageTexture.CreateFromImage(atkImg);
+            var hurtImg = img.Duplicate() as Image;
+            _TintImage(hurtImg, new Color(1.5f, 0.4f, 0.3f));
+            var hurt = ImageTexture.CreateFromImage(hurtImg);
+            _variantCache[atk] = (idle, attack, hurt);
+        }
     }
 
     /// <summary>
