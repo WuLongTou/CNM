@@ -241,7 +241,7 @@ public partial class PlayerBuffSystem : Node
 
     /// <summary>
     /// 返回当前所有活跃 debuff 的总伤害速率（每秒扣血）。
-    /// HudPanel 用它在顶部显示"⚠ 中毒 -X/s"标签，让玩家知道为什么会持续掉血。
+    /// HudPanel 用它在顶部显示"[!] 中毒 -X/s"标签，让玩家知道为什么会持续掉血。
     /// </summary>
     public float GetActiveDebuffDamagePerSecond()
     {

@@ -169,7 +169,7 @@ public partial class GameOverUI : Control
             if (roundCount >= 10)
                 _AddAchievementBadge(achievementsBox, "🌟", "坚持10波", new Color(1.0f, 0.85f, 0.3f));
             if (kills >= 100)
-                _AddAchievementBadge(achievementsBox, "💀", "击杀100", new Color(0.7f, 0.7f, 0.7f));
+                _AddAchievementBadge(achievementsBox, "魂", "击杀100", new Color(0.7f, 0.7f, 0.7f));
             if (totalScore >= 1000)
                 _AddAchievementBadge(achievementsBox, "🏅", "得分1000", new Color(0.9f, 0.75f, 0.3f));
             if (roundCount >= 20)
@@ -255,14 +255,14 @@ public partial class GameOverUI : Control
     private string _GetTipForNextRun(int rounds, int kills)
     {
         if (rounds < 3)
-            return "💡 提示: 多尝试不同的武器组合，找到适合你的流派！";
+            return "※ 提示: 多尝试不同的武器组合，找到适合你的流派！";
         if (rounds < 7)
-            return "💡 提示: 注意走位和闪避，避免被包围！";
+            return "※ 提示: 注意走位和闪避，避免被包围！";
         if (kills < 50)
-            return "💡 提示: 优先获取范围伤害装备来提高清怪效率！";
+            return "※ 提示: 优先获取范围伤害装备来提高清怪效率！";
         if (rounds < 10)
-            return "💡 提示: 吸血和护盾装备能有效提高生存能力！";
-        return "💡 提示: 继续保持！你已经非常强了！";
+            return "※ 提示: 吸血和护盾装备能有效提高生存能力！";
+        return "※ 提示: 继续保持！你已经非常强了！";
     }
 
     private void _AddStatRow(VBoxContainer parent, string labelText, string valueText, Color color)

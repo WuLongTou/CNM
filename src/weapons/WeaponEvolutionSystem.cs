@@ -598,9 +598,9 @@ public partial class WeaponEvolutionSystem : Node
     private static string _GetIconForType(WeaponType type) =>
         type switch
         {
-            WeaponType.Melee => "⚔️",
-            WeaponType.Ranged => "🏹",
+            WeaponType.Melee => "剑",
+            WeaponType.Ranged => "弓",
             WeaponType.Magic => "🔮",
-            _ => "❓"
+            _ => "?"
         };
 }

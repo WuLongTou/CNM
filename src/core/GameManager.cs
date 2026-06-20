@@ -275,7 +275,7 @@ public partial class GameManager : Node
         _uiManager?.ShakeScreen(12.0f);
         _uiManager?.FlashBossPhase();
         GameServices.Audio.PlayLightning();
-        _uiManager?.ShowRoundBanner(phase == 3 ? "⚠ BOSS 狂暴！ ⚠" : "⚠ BOSS 暴怒！ ⚠");
+        _uiManager?.ShowRoundBanner(phase == 3 ? "BOSS 狂暴！" : "BOSS 暴怒！");
 
         // 狂暴加速
         boss.Speed *= phase == 3 ? 1.4f : 1.2f;
@@ -628,7 +628,7 @@ public partial class GameManager : Node
         _currentRoundTotalZombies++;
 
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
-        _uiManager?.ShowRoundBanner("⚠ BOSS 来袭 ⚠");
+        _uiManager?.ShowRoundBanner("BOSS 来袭");
 
         // 出场演出：命中停顿 + 强震屏 + 全屏暗化，把"Boss 登场"砸出压迫感
         _bossPhase = 1;

@@ -1291,7 +1291,7 @@ public partial class PlayerVfx : Node
     public void UpdateStatusDisplays()
     {
         if (Player!.HealthDisplay != null)
-            Player.HealthDisplay.Text = $"❤️{Player.CurrentHealth}/{Player.MaxHealth}";
+            Player.HealthDisplay.Text = $"心️{Player.CurrentHealth}/{Player.MaxHealth}";
 
         if (Player.AttackTypeDisplay != null)
         {

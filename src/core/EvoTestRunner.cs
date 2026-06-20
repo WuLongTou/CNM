@@ -69,7 +69,7 @@ public partial class EvoTestRunner : Node
         if (ultimate)
             LogUtils.Print($"[EVO] ✓ 究极化触发成功: {final.CardName} (伤害×{final.DamageModifier:F1}, 攻速×{final.AttackSpeedModifier:F1})");
         else if (ascended)
-            LogUtils.PrintErr("[EVO] ⚠ 仅进阶未究极化（检查 Ultimate 阈值/防反复逻辑）");
+            LogUtils.PrintErr("[EVO] [!] 仅进阶未究极化（检查 Ultimate 阈值/防反复逻辑）");
         else
             LogUtils.PrintErr("[EVO] ✗ 进化完全未触发（接线失败）");
 

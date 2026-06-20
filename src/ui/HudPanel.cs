@@ -271,14 +271,14 @@ public partial class HudPanel : Panel
         statRow.Alignment = BoxContainer.AlignmentMode.Center;
         bottomStack.AddChild(statRow);
 
-        _weaponNameLabel = _MakeStatLabel("🗡基础近战", new Color(0.86f, 0.78f, 0.55f), UiFontSmall);
-        _attackTypeLabel = _MakeStatLabel("⚔近战", new Color(0.72f, 0.78f, 0.92f), UiFontSmall);
-        _targetPriorityLabel = _MakeStatLabel("🎯最近", new Color(0.65f, 0.82f, 0.88f), UiFontSmall);
-        _damageLabel = _MakeStatLabel("💥12/次", new Color(0.92f, 0.70f, 0.52f), UiFontSmall);
-        _attackIntervalLabel = _MakeStatLabel("⏱0.45s", new Color(0.78f, 0.72f, 0.92f), UiFontSmall);
-        _critLabel = _MakeStatLabel("🎲0%", new Color(0.95f, 0.70f, 0.35f), UiFontSmall);
-        _lifestealLabel = _MakeStatLabel("🩸0%", new Color(0.85f, 0.45f, 0.45f), UiFontSmall);
-        _speedLabel = _MakeStatLabel("👟220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
+        _weaponNameLabel = _MakeStatLabel("刀 基础近战", new Color(0.86f, 0.78f, 0.55f), UiFontSmall);
+        _attackTypeLabel = _MakeStatLabel("剑 近战", new Color(0.72f, 0.78f, 0.92f), UiFontSmall);
+        _targetPriorityLabel = _MakeStatLabel("弩 最近", new Color(0.65f, 0.82f, 0.88f), UiFontSmall);
+        _damageLabel = _MakeStatLabel("伤 12/次", new Color(0.92f, 0.70f, 0.52f), UiFontSmall);
+        _attackIntervalLabel = _MakeStatLabel("隔 0.45s", new Color(0.78f, 0.72f, 0.92f), UiFontSmall);
+        _critLabel = _MakeStatLabel("爆 0%", new Color(0.95f, 0.70f, 0.35f), UiFontSmall);
+        _lifestealLabel = _MakeStatLabel("血 0%", new Color(0.85f, 0.45f, 0.45f), UiFontSmall);
+        _speedLabel = _MakeStatLabel("速 220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
 
         // 组 1：武器信息
         statRow.AddChild(_weaponNameLabel);
@@ -296,7 +296,7 @@ public partial class HudPanel : Panel
         statRow.AddChild(_lifestealLabel);
         statRow.AddChild(_speedLabel);
 
-        var hudHint = _MakeStatLabel("❓H · 🗡C · 🎯Tab", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
+        var hudHint = _MakeStatLabel("? H(帮助) · C(装备) · Tab(切目标)", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
         hudHint.TooltipText = "H 帮助 · C 装备 · Tab 切换目标";
         hudHint.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         hudHint.HorizontalAlignment = HorizontalAlignment.Right;
@@ -366,7 +366,7 @@ public partial class HudPanel : Panel
     /// </summary>
     public void UpdateWeather(string name, Color color, bool isHazard, int damagePerTick, string effectsDesc)
     {
-        string icon = isHazard ? "⚠ " : "";
+        string icon = isHazard ? "(!) " : "";
         string dmg = (isHazard && damagePerTick > 0) ? $" [color=#e74c3c]-{damagePerTick}/tick[/color]" : "";
         string effects = !string.IsNullOrEmpty(effectsDesc) ? $" {effectsDesc}" : "";
         string colorHtml = "#" + color.ToHtml(false);
@@ -393,7 +393,7 @@ public partial class HudPanel : Panel
         string desc = buffSystem.GetActiveDebuffDescription();
         if (dps > 0 && desc.Length > 0)
         {
-            _debuffLabel.Text = $"⚠ {desc} -{dps:F0}/s";
+            _debuffLabel.Text = $"{desc} -{dps:F0}/s";
         }
         else
         {
@@ -431,7 +431,7 @@ public partial class HudPanel : Panel
 
     public void UpdateAttackInterval(float interval, float cooldown)
     {
-        _attackIntervalLabel.Text = $"⏱{interval:F2}s";
+        _attackIntervalLabel.Text = $"隔{interval:F2}s";
         string intervalText = $"{interval:F2}s";
         string cooldownText = cooldown > 0 ? $"{cooldown:F2}s" : "就绪";
         _attackIntervalLabel.TooltipText = $"攻击间隔: 每 {intervalText} 可攻击一次\n下次可攻击: {cooldownText}";
@@ -441,18 +441,18 @@ public partial class HudPanel : Panel
     {
         string attackTypeText = _GetAttackTypeText(player.CurrentAttackType);
         string weaponName = _GetCurrentWeaponName(player);
-        _weaponNameLabel.Text = $"🗡{_Shorten(weaponName, 10)}";
-        _attackTypeLabel.Text = $"⚔{attackTypeText}";
-        _damageLabel.Text = $"💥{Mathf.RoundToInt(player.CurrentDamage)}/次";
-        _critLabel.Text = $"🎲{Mathf.RoundToInt(player.CriticalChance)}%";
-        _lifestealLabel.Text = $"🩸{Mathf.RoundToInt(player.LifeStealPercent)}%";
-        _speedLabel.Text = $"👟{Mathf.RoundToInt(player.CurrentSpeed)}";
+        _weaponNameLabel.Text = $"刀 {_Shorten(weaponName, 10)}";
+        _attackTypeLabel.Text = $"剑 {attackTypeText}";
+        _damageLabel.Text = $"伤 {Mathf.RoundToInt(player.CurrentDamage)}/次";
+        _critLabel.Text = $"爆 {Mathf.RoundToInt(player.CriticalChance)}%";
+        _lifestealLabel.Text = $"血 {Mathf.RoundToInt(player.LifeStealPercent)}%";
+        _speedLabel.Text = $"速 {Mathf.RoundToInt(player.CurrentSpeed)}";
         _targetPriorityLabel.Text = player.TargetPriority switch
         {
-            0 => "🎯最近",
-            1 => "🎯最远",
-            2 => "🎯密集",
-            _ => "🎯最近"
+            0 => "弩 最近",
+            1 => "弩 最远",
+            2 => "弩 密集",
+            _ => "弩 最近"
         };
         _UpdateStatusTooltips(player);
         UpdateEffects(player);
@@ -505,7 +505,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "❄️",
+                ["icon"] = "冰",
                 ["name"] = "冰霜护盾",
                 ["type"] = "buff",
                 ["color"] = new Color(0.3f, 0.8f, 1.0f),
@@ -516,7 +516,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "💥",
+                ["icon"] = "伤",
                 ["name"] = "暴击",
                 ["type"] = "stat",
                 ["color"] = new Color(1.0f, 0.6f, 0.2f),
@@ -527,7 +527,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "🩸",
+                ["icon"] = "血",
                 ["name"] = "吸血",
                 ["type"] = "stat",
                 ["color"] = new Color(0.9f, 0.3f, 0.3f),
@@ -538,7 +538,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "🧊",
+                ["icon"] = "冻",
                 ["name"] = "冰冻",
                 ["type"] = "stat",
                 ["color"] = new Color(0.4f, 0.8f, 1.0f),
@@ -549,7 +549,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "☠️",
+                ["icon"] = "毒",
                 ["name"] = "中毒",
                 ["type"] = "stat",
                 ["color"] = new Color(0.4f, 0.9f, 0.3f),
@@ -560,7 +560,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "🛡️",
+                ["icon"] = "盾",
                 ["name"] = "护盾",
                 ["type"] = "buff",
                 ["color"] = new Color(0.6f, 0.8f, 1.0f),
@@ -571,7 +571,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "🌀",
+                ["icon"] = "涡",
                 ["name"] = "闪避",
                 ["type"] = "buff",
                 ["color"] = new Color(0.5f, 0.9f, 0.5f),

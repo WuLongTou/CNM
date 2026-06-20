@@ -771,7 +771,7 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
             {
                 d.TakeDamage(dmgInt);
                 if (body is PlayerClass)
-                    GameServices.UI?.UpdateHazardHUD($"⚠ 危险地带 -{dmgInt}/s");
+                    GameServices.UI?.UpdateHazardHUD($"危险地带 -{dmgInt}/s");
             }
         }
     }

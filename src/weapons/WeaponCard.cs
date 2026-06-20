@@ -50,7 +50,7 @@ public partial class WeaponCard : Resource
 
     [Export] public TargetPriority TargetPriority { get; set; } = TargetPriority.Nearest;
 
-    [Export] public string Icon { get; set; } = "⚔️";
+    [Export] public string Icon { get; set; } = "剑";
     public string IconTexturePath { get; set; } = "";
     private Texture2D? _iconTexture;
     [Export] public Texture2D? IconTexture

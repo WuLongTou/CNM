@@ -13,7 +13,7 @@ public partial class MetaUpgradePanel : Control
     private VBoxContainer _rowsBox = null!;
 
     private static readonly string[] Keys = { "health", "damage", "speed" };
-    private static readonly string[] Names = { "❤ 生命上限", "⚔ 伤害", "👟 移动速度" };
+    private static readonly string[] Names = { "心 生命上限", "剑 伤害", "靴 移动速度" };
     private static readonly string[] Descs = { "+20/级", "+10%/级", "+5%/级" };
 
     public override void _Ready()

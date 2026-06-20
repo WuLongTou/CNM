@@ -47,9 +47,9 @@ public partial class VectorFieldNode : Node2D
 
     private static string GetSymbol(FieldType type) => type switch
     {
-        FieldType.Attractor => "⊕",  // 向内
-        FieldType.Repulsor => "⊗",   // 向外
-        FieldType.Vortex => "⊙",     // 旋转
+        FieldType.Attractor => "[+]",  // 向内
+        FieldType.Repulsor => "[x]",   // 向外
+        FieldType.Vortex => "[o]",     // 旋转
         _ => "?"
     };
 

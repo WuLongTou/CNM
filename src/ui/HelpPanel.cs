@@ -213,8 +213,8 @@ public partial class HelpPanel : Panel
         _AddSectionLabel("-- 顶部信息栏 --");
         _AddInfoCard("回合", "当前第几回合。每回合开始前会抽强化卡，回合越高敌人越强。", new Color(0.85f, 0.72f, 0.35f));
         _AddInfoCard("僵尸", "格式为 剩余/本回合总量。\n清完本回合僵尸后进入结算和下一次强化。", new Color(0.75f, 0.55f, 0.55f));
-        _AddInfoCard("天气", "显示当前天气。带 ⚠ 的天气会造成危险效果，例如持续掉血或额外刷怪。", new Color(0.55f, 0.75f, 0.95f));
-        _AddInfoCard("负面状态", "中毒、燃烧等持续掉血状态会在顶部显示，例如 ⚠ 中毒 -5/s。", new Color(0.9f, 0.35f, 0.85f));
+        _AddInfoCard("天气", "显示当前天气。危险天气会造成危险效果，例如持续掉血或额外刷怪。", new Color(0.55f, 0.75f, 0.95f));
+        _AddInfoCard("负面状态", "中毒、燃烧等持续掉血状态会在顶部显示，例如: 中毒 -5/s。", new Color(0.9f, 0.35f, 0.85f));
         _AddInfoCard("分数", "击杀僵尸、精英和 BOSS 获得分数。BOSS 和精英给分更高。", new Color(0.95f, 0.55f, 0.45f));
 
         _AddSectionLabel("-- 底部战斗栏 --");
@@ -227,7 +227,7 @@ public partial class HelpPanel : Panel
         _AddInfoCard("暴击 / 吸血 / 移速", "暴击提高爆发伤害；吸血会按伤害比例回血；移速影响走位和拉怪。", new Color(0.80f, 0.65f, 0.45f));
 
         _AddSectionLabel("-- 特殊系统提示 --");
-        _AddInfoCard("力场", "左下角显示可用力场次数。\n按 ` 进入放置模式，左键放置，右键取消。⊕吸引、⊗排斥、⊙旋涡。", new Color(0.75f, 0.65f, 0.95f));
+        _AddInfoCard("力场", "左下角显示可用力场次数。\n按 ` 进入放置模式，左键放置，右键取消。[+]吸引、[x]排斥、[o]旋涡。", new Color(0.75f, 0.65f, 0.95f));
         _AddInfoCard("共振", "右上角共振指示器展示武器频率与尸潮波形的接近程度。\n越接近共振，部分伤害加成越明显。", new Color(0.45f, 0.85f, 0.95f));
         _AddInfoCard("装备面板", "按 C 或点击底部【装备】打开，查看身体部位槽位和每件装备的完整效果。", new Color(0.6f, 0.7f, 0.9f));
     }

@@ -112,14 +112,14 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "铁剑" }, { "desc", "平衡的近战武器，适合新手" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "⚔️" }, { "rarity", 1 }
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "剑" }, { "rarity", 1 }
         },
 
         // 战斧
         new GodotDictionary
         {
             { "name", "战斧" }, { "desc", "高伤害低攻速" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🪓" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "斧" }, { "rarity", 2 },
             { "tags", new GodotArray {"铁剑"} }, { "dmg", 1.5f }, { "asp", 0.7f },
             { "melee_fx", new GodotDictionary { { "SPLASH", 1 } } }
         },
@@ -128,7 +128,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "双刀" }, { "desc", "高攻速多目标" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🗡️" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "刀" }, { "rarity", 2 },
             { "tags", new GodotArray {"铁剑"} }, { "dmg", 0.7f }, { "asp", 1.5f }, { "hp", -10f },
             { "melee_fx", new GodotDictionary { { "MULTI_TARGET", 1 } } }
         },
@@ -137,7 +137,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "淬毒短刀" }, { "desc", "近战带毒持续伤害" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🗡️" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "刀" }, { "rarity", 2 },
             { "tags", new GodotArray {"双刀"} }, { "dmg", 0.8f }, { "asp", 1.4f }, { "psn", 10f },
             { "melee_fx", new GodotDictionary { { "MULTI_TARGET", 1 } } }
         },
@@ -146,7 +146,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "巨斧" }, { "desc", "超高伤害溅射" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "🪓" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "斧" }, { "rarity", 3 },
             { "tags", new GodotArray {"战斧"} }, { "dmg", 1.8f }, { "asp", 0.6f }, { "hcost", 5 },
             { "melee_fx", new GodotDictionary { { "SPLASH", 2 }, { "KNOCKBACK", 1 } } }
         },
@@ -155,7 +155,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "长枪" }, { "desc", "穿透多目标" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "🔱" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "枪" }, { "rarity", 3 },
             { "tags", new GodotArray {"巨斧"} }, { "dmg", 1.4f }, { "asp", 0.8f },
             { "melee_fx", new GodotDictionary { { "MULTI_TARGET", 2 }, { "KNOCKBACK", 1 } } }
         },
@@ -164,7 +164,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "死神镰刀" }, { "desc", "击杀爆炸并获得护盾" },
-            { "type", (int)ME }, { "cat", (int)W }, { "tier", 4 }, { "upcat", "武器" }, { "icon", "⚰️" }, { "rarity", 4 },
+            { "type", (int)ME }, { "cat", (int)W }, { "tier", 4 }, { "upcat", "武器" }, { "icon", "镰" }, { "rarity", 4 },
             { "tags", new GodotArray {"长枪"} }, { "dmg", 2.0f }, { "asp", 0.9f }, { "hcost", 10 },
             { "melee_fx", new GodotDictionary { { "KILL_EXPLOSION", 2 }, { "KILL_SHIELD", 1 } } }
         },
@@ -174,7 +174,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "弓箭" }, { "desc", "基础远程武器" },
-            { "type", (int)RA }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "🏹" }, { "rarity", 1 },
+            { "type", (int)RA }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "弓" }, { "rarity", 1 },
             { "dmg", 0.9f }, { "asp", 0.8f }, { "cd", 0.6f }
         },
 
@@ -182,7 +182,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "重弩" }, { "desc", "连发武器" },
-            { "type", (int)RA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🎯" }, { "rarity", 2 },
+            { "type", (int)RA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "弩" }, { "rarity", 2 },
             { "tags", new GodotArray {"弓箭"} }, { "dmg", 0.8f }, { "asp", 0.7f }, { "cd", 0.8f },
             { "ranged_fx", new GodotDictionary { { "MULTI_SHOT", 1 } } }
         },
@@ -191,7 +191,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "散弹枪" }, { "desc", "扇形攻击" },
-            { "type", (int)RA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🔫" }, { "rarity", 2 },
+            { "type", (int)RA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "铳" }, { "rarity", 2 },
             { "tags", new GodotArray {"弓箭"} }, { "dmg", 0.6f }, { "asp", 0.6f }, { "cd", 1.0f },
             { "ranged_fx", new GodotDictionary { { "MULTI_SHOT", 2 } } }
         },
@@ -200,7 +200,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "狙击弩" }, { "desc", "超高伤害穿透" },
-            { "type", (int)RA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "🎯" }, { "rarity", 3 },
+            { "type", (int)RA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "弩" }, { "rarity", 3 },
             { "tags", new GodotArray {"重弩"} }, { "dmg", 2.2f }, { "asp", 0.4f }, { "cd", 1.5f },
             { "ranged_fx", new GodotDictionary { { "PIERCING", 2 } } }
         },
@@ -209,7 +209,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "轨迹弩" }, { "desc", "路径伤害" },
-            { "type", (int)RA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "➰" }, { "rarity", 2 },
+            { "type", (int)RA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "轨" }, { "rarity", 2 },
             { "tags", new GodotArray {"重弩"} }, { "dmg", 1.0f }, { "asp", 0.75f }, { "cd", 0.7f },
             { "ranged_fx", new GodotDictionary { { "TRAJECTORY_DAMAGE", 1 } } }
         },
@@ -218,7 +218,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "回旋镖" }, { "desc", "弹道返回" },
-            { "type", (int)RA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "🪃" }, { "rarity", 2 },
+            { "type", (int)RA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "镖" }, { "rarity", 2 },
             { "tags", new GodotArray {"散弹枪"} }, { "dmg", 0.7f }, { "asp", 0.8f }, { "cd", 0.6f },
             { "ranged_fx", new GodotDictionary { { "RETURNING", 1 } } }
         },
@@ -228,7 +228,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "法杖" }, { "desc", "基础魔法武器" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "🪄" }, { "rarity", 1 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "杖" }, { "rarity", 1 },
             { "asp", 0.5f }, { "magic_fx", new GodotDictionary { { "DOT", 1 } } }
         },
 
@@ -236,7 +236,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "火球法杖" }, { "desc", "连锁击退" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🔥" }, { "rarity", 2 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "炎" }, { "rarity", 2 },
             { "tags", new GodotArray {"法杖"} }, { "dmg", 1.2f }, { "asp", 0.5f },
             { "magic_fx", new GodotDictionary { { "CHAIN", 1 }, { "PUSH", 1 } } }
         },
@@ -245,7 +245,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "魅惑法杖" }, { "desc", "让敌人互相攻击" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "💖" }, { "rarity", 2 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "魅" }, { "rarity", 2 },
             { "tags", new GodotArray {"法杖"} }, { "dmg", 0.8f }, { "asp", 0.6f },
             { "magic_fx", new GodotDictionary { { "CHARM", 3 } } }
         },
@@ -254,7 +254,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "冰霜法杖" }, { "desc", "定身敌人" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "❄️" }, { "rarity", 2 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "冰" }, { "rarity", 2 },
             { "tags", new GodotArray {"火球法杖"} }, { "dmg", 0.9f }, { "asp", 0.55f },
             { "magic_fx", new GodotDictionary { { "STUN", 2 } } }
         },
@@ -263,7 +263,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "雷电法杖" }, { "desc", "强力连锁" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "⚡" }, { "rarity", 3 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "雷" }, { "rarity", 3 },
             { "tags", new GodotArray {"火球法杖"} }, { "dmg", 1.3f }, { "asp", 0.45f },
             { "magic_fx", new GodotDictionary { { "CHAIN", 3 } } }
         },
@@ -272,7 +272,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "死神法杖" }, { "desc", "死亡连锁" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 4 }, { "upcat", "武器" }, { "icon", "💀" }, { "rarity", 4 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 4 }, { "upcat", "武器" }, { "icon", "魂" }, { "rarity", 4 },
             { "tags", new GodotArray {"雷电法杖"} }, { "dmg", 1.5f }, { "asp", 0.4f }, { "hcost", 15 },
             { "magic_fx", new GodotDictionary { { "CHAIN", 4 }, { "DOT", 3 } } }
         },
@@ -281,7 +281,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "力场法杖" }, { "desc", "范围击退所有敌人" },
-            { "type", (int)MA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "🌀" }, { "rarity", 2 },
+            { "type", (int)MA }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "涡" }, { "rarity", 2 },
             { "tags", new GodotArray {"法杖"} }, { "dmg", 0.9f }, { "asp", 0.55f },
             { "magic_fx", new GodotDictionary { { "PUSH", 2 } } }
         },
@@ -291,14 +291,14 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "生命药水" }, { "desc", "提高生命上限" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "buff" }, { "icon", "🧪" }, { "rarity", 1 }, { "hp", 30f }
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "buff" }, { "icon", "药" }, { "rarity", 1 }, { "hp", 30f }
         },
 
         // 敏捷靴
         new GodotDictionary
         {
             { "name", "敏捷靴" }, { "desc", "提升速度" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "鞋子" }, { "icon", "👢" }, { "rarity", 1 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "鞋子" }, { "icon", "靴" }, { "rarity", 1 },
             { "spd_mod", 20f }, { "hp", -5f }
         },
 
@@ -306,7 +306,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "攻击宝石" }, { "desc", "提升伤害" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "特效" }, { "icon", "💎" }, { "rarity", 1 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "特效" }, { "icon", "玉" }, { "rarity", 1 },
             { "dmg", 1.15f }, { "hp", -10f }
         },
 
@@ -314,7 +314,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "暴击指环" }, { "desc", "提升暴击率" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "戒指" }, { "icon", "💍" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "戒指" }, { "icon", "戒" }, { "rarity", 2 },
             { "crit", 12f }
         },
 
@@ -322,7 +322,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "吸血护符" }, { "desc", "攻击附带吸血效果" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "🧿" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "符" }, { "rarity", 2 },
             { "ls", 6f }
         },
 
@@ -330,7 +330,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "寒霜徽章" }, { "desc", "增加冻结几率" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "特效" }, { "icon", "❄️" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "特效" }, { "icon", "冰" }, { "rarity", 2 },
             { "frz", 15f }
         },
 
@@ -346,7 +346,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "冰霜护盾" }, { "desc", "开启环绕护盾" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "护甲" }, { "icon", "🛡️" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "护甲" }, { "icon", "盾" }, { "rarity", 3 },
             { "aura", true }
         },
 
@@ -354,14 +354,14 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "铁盔" }, { "desc", "提高生命上限" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "头盔" }, { "icon", "⛑️" }, { "hp", 15f }
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "头盔" }, { "icon", "盔" }, { "hp", 15f }
         },
 
         // 皮甲
         new GodotDictionary
         {
             { "name", "皮甲" }, { "desc", "提高生命上限，略降速度" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "护甲" }, { "icon", "🧥" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 1 }, { "upcat", "护甲" }, { "icon", "衣" },
             { "hp", 20f }, { "spd_mod", -5f }
         },
 
@@ -369,7 +369,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "疾风护符" }, { "desc", "提升攻击速度" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "💨" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "风" },
             { "asp", 1.2f }
         },
 
@@ -385,7 +385,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "狂战士护腕" }, { "desc", "大幅提升伤害，但降低生命上限" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "💪" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "力" },
             { "dmg", 1.35f }, { "hp", -20f }
         },
 
@@ -393,7 +393,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "猎人印记" }, { "desc", "增加暴击并提升伤害" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "buff" }, { "icon", "🎯" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "buff" }, { "icon", "弩" },
             { "crit", 15f }, { "dmg", 1.1f }
         },
 
@@ -401,7 +401,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "幽灵斗篷" }, { "desc", "提升移动速度，代价是少量生命上限" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "👻" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "幽" },
             { "spd_mod", 30f }, { "hp", -5f }
         },
 
@@ -409,7 +409,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "荆棘护甲" }, { "desc", "受伤时有几率反弹伤害给攻击者" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "🌿" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "棘" }, { "rarity", 2 },
             { "hp", 20f }, { "thorns", 35f }, { "thorns_r", 50f }
         },
 
@@ -417,7 +417,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "闪避护符" }, { "desc", "有概率完全闪避伤害" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "💨" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "风" }, { "rarity", 2 },
             { "spd_mod", 15f }, { "hp", 5f }, { "dodge", 12f }
         },
 
@@ -425,7 +425,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "生命汲取" }, { "desc", "大幅提升吸血效果和生命上限" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "buff" }, { "icon", "🩸" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "buff" }, { "icon", "血" }, { "rarity", 3 },
             { "ls", 12f }, { "hp", 15f }
         },
 
@@ -433,7 +433,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "穿甲弹" }, { "desc", "子弹可贯穿更多敌人" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "💎" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "玉" }, { "rarity", 3 },
             { "dmg", 1.1f }, { "crit", 8f }, { "pierce", 2 }
         },
 
@@ -441,7 +441,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "弹跳之刃" }, { "desc", "远程武器可弹跳攻击多个目标" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "🪃" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "镖" }, { "rarity", 3 },
             { "dmg", 1.05f }, { "asp", 1.1f }, { "bounce", 2 }
         },
 
@@ -449,7 +449,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "毁灭之息" }, { "desc", "攻击造成范围溅射伤害" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 4 }, { "upcat", "buff" }, { "icon", "🔥" }, { "rarity", 4 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 4 }, { "upcat", "buff" }, { "icon", "炎" }, { "rarity", 4 },
             { "dmg", 1.25f }, { "hp", -15f }, { "splash", 45f }
         },
 
@@ -457,7 +457,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "钢铁意志" }, { "desc", "减少受到的负面效果持续时间" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "护甲" }, { "icon", "🛡️" }, { "rarity", 3 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "护甲" }, { "icon", "盾" }, { "rarity", 3 },
             { "hp", 25f }, { "frz", 5f }, { "ten", 40f }
         },
     };
@@ -477,7 +477,7 @@ public static partial class WeaponFactory
         c.Category = (WeaponCategory)d["cat"].AsInt32();
         c.Tier = d.ContainsKey("tier") ? d["tier"].AsInt32() : 1;
         c.UpgradeCategory = d.ContainsKey("upcat") ? d["upcat"].AsString() : "";
-        c.Icon = d.ContainsKey("icon") ? d["icon"].AsString() : "⚔️";
+        c.Icon = d.ContainsKey("icon") ? d["icon"].AsString() : "剑";
 
         // 记录图标纹理路径（懒加载，避免启动时同步加载 27+ 纹理）
         if (_WeaponIconTextures.TryGetValue(name, out var texPath))

@@ -223,7 +223,7 @@ public partial class UIManager : Control
         }
         _fieldChargeLabel.Text = maxSlots <= 0
             ? ""
-            : $"力场: {available}/{maxSlots}  `放置  ⊕吸引 ⊗排斥 ⊙旋涡";
+            : $"力场: {available}/{maxSlots}  `放置  [+]吸引 [x]排斥 [o]旋涡";
     }
 
     public void UpdateStrategyIndicator(ZombieWars.Math.StrategySystem? strategySys)
@@ -252,7 +252,7 @@ public partial class UIManager : Control
             Core.GameEnums.StrategyProfile.Balanced => "敌人适应: 你的流派均衡",
             _ => ""
         };
-        _strategyLabel.Text = $"♟ {desc}  强度 {strategySys.AdaptationRate:F0%}";
+        _strategyLabel.Text = $"[策] {desc}  强度 {strategySys.AdaptationRate:F0%}";
     }
 
     public void ShowFieldPlacementHint(bool show, Core.GameEnums.FieldType? type)
@@ -274,9 +274,9 @@ public partial class UIManager : Control
         if (!show) { _fieldHintLabel.Visible = false; return; }
         string typeDesc = type switch
         {
-            Core.GameEnums.FieldType.Attractor => "⊕ 吸引（拉拢僵尸）",
-            Core.GameEnums.FieldType.Repulsor => "⊗ 排斥（推开僵尸）",
-            Core.GameEnums.FieldType.Vortex => "⊙ 旋涡（环绕陷阱）",
+            Core.GameEnums.FieldType.Attractor => "[+] 吸引（拉拢僵尸）",
+            Core.GameEnums.FieldType.Repulsor => "[x] 排斥（推开僵尸）",
+            Core.GameEnums.FieldType.Vortex => "[o] 旋涡（环绕陷阱）",
             _ => ""
         };
         _fieldHintLabel.Text = $"{typeDesc}\n左键放置力场 · 右键或 ` 取消 · 1/2/3 切换力场类型";
@@ -352,7 +352,7 @@ public partial class UIManager : Control
         // Title
         var titleLabel = new Label
         {
-            Text = "⚔️ 选择本回合强化 ⚔️"
+            Text = "【 选择本回合强化 】"
         };
         titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(32, viewport, 22));
         titleLabel.AddThemeColorOverride("font_color", BloodBright);
@@ -380,7 +380,7 @@ public partial class UIManager : Control
 
         _currentWeaponLabel = new Label
         {
-            Text = "⚔ 当前武器: 无",
+            Text = "剑 当前武器: 无",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             HorizontalAlignment = HorizontalAlignment.Center
         };
@@ -480,7 +480,7 @@ public partial class UIManager : Control
             var iconLabel = new Label
             {
                 Name = "Icon",
-                Text = "⚔️",
+                Text = "剑",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
             iconLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
@@ -534,7 +534,7 @@ public partial class UIManager : Control
             var hintLabel = new Label
             {
                 Name = "Hint",
-                Text = "ⓘ 悬停查看详情",
+                Text = "(i) 悬停查看详情",
                 HorizontalAlignment = HorizontalAlignment.Center
             };
             hintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewport, 9));
@@ -545,7 +545,7 @@ public partial class UIManager : Control
         // Keyboard hint label
         var keyboardHintLabel = new Label
         {
-            Text = "💡 [1] [2] [3] 选择  |  [Enter] 或 [Delete] 跳过",
+            Text = "※ [1] [2] [3] 选择  |  [Enter] 或 [Delete] 跳过",
             HorizontalAlignment = HorizontalAlignment.Center
         };
         keyboardHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 11));
@@ -559,7 +559,7 @@ public partial class UIManager : Control
 
         _skipButton = new Button
         {
-            Text = "⏭ 跳过 [Delete]",
+            Text = ">> 跳过 [Delete]",
             CustomMinimumSize = ResponsiveUi.Size(240, 44, viewport, 36)
         };
         _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 13));
@@ -1022,7 +1022,7 @@ public partial class UIManager : Control
                 if (wc.FreezeBonus > 0) keywords.Add("[color=#5b9bd5]冰冻[/color]");
                 if (wc.PoisonBonus > 0) keywords.Add("[color=#7baf5b]中毒[/color]");
                 if (wc.GrantsAura) keywords.Add("[color=#5b9bd5]护盾[/color]");
-                if (wc.HealthCost > 0) keywords.Add("[color=#e74c3c]⚠消耗生命[/color]");
+                if (wc.HealthCost > 0) keywords.Add("[color=#e74c3c]消耗生命[/color]");
                 if (wc.MeleeEffects.Count > 0 || wc.RangedEffects.Count > 0 || wc.MagicEffects.Count > 0)
                     keywords.Add("[color=#8a8acc]特效[/color]");
 
@@ -1178,9 +1178,9 @@ public partial class UIManager : Control
         var effectText = effects.Count > 0 ? string.Join(" | ", effects) : "无特效";
         effectText = _TruncateText(effectText, 36);
         if (weaponName == "无")
-            _currentWeaponLabel.Text = "⚔ 当前武器: 无";
+            _currentWeaponLabel.Text = "剑 当前武器: 无";
         else
-            _currentWeaponLabel.Text = $"⚔ {weaponName} ({weaponTypeText}) | {effectText}";
+            _currentWeaponLabel.Text = $"剑 {weaponName} ({weaponTypeText}) | {effectText}";
     }
 
     private string _TruncateText(string text, int maxLen)
@@ -1656,7 +1656,7 @@ public partial class UIManager : Control
                        weapon.AttackSpeedModifier < 1.0f;
         if (hasRisk)
         {
-            bb += "[color=#ff6666]【⚠ 风险提示】[/color]\n";
+            bb += "[color=#ff6666]【风险提示】[/color]\n";
             if (weapon.HealthCost > 0)
                 bb += $"  [color=#e74c3c]● 每次攻击消耗 {weapon.HealthCost} 点生命[/color]\n";
             if (weapon.HealthModifier < 0)
@@ -1683,7 +1683,7 @@ public partial class UIManager : Control
                 }
             }
             if (!string.IsNullOrEmpty(currentWeaponName) && currentWeaponName != weapon.CardName)
-                bb += $"[color=#e0a040]⚔ 将替换当前武器: {currentWeaponName}[/color]\n";
+                bb += $"[color=#e0a040]剑 将替换当前武器: {currentWeaponName}[/color]\n";
         }
 
         return bb;

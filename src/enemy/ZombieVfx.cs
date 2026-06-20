@@ -730,14 +730,14 @@ public partial class ZombieVfx : Node
     {
         if (_healthLabel != null)
         {
-            _healthLabel.Text = $"❤️{_zombie.CurrentHealth}/{_zombie.MaxHealth}";
+            _healthLabel.Text = $"心️{_zombie.CurrentHealth}/{_zombie.MaxHealth}";
         }
         if (_attackLabel != null)
         {
             // Add ranged indicator for archers
-            string damageText = $"⚔️{_zombie.Damage}";
+            string damageText = $"剑{_zombie.Damage}";
             if (_zombie.ZombieType == ZombieType.Archer)
-                damageText += " 🏹";
+                damageText += " 弓";
             _attackLabel.Text = damageText;
         }
     }
