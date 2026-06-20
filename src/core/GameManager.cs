@@ -171,6 +171,9 @@ public partial class GameManager : Node
 
         if (_uiManager != null)
         {
+            // 在欢迎画面期间预加载武器图标纹理，避免首次选卡时卡顿
+            _weaponDeck?.PreWarmTextures();
+
             while (_uiManager != null && _IsWelcomeVisible())
             {
                 await ToSignal(GetTree(), "process_frame");

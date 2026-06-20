@@ -113,7 +113,7 @@ public static class GameConfig
     // Screen bounds
     public const float BoundsPadding = 22.0f;
     public const float TopUiMargin = 56.0f;
-    public const float BottomUiMargin = 100.0f; // 底部 HUD 区不算游戏区域（玩家/相机不进入，worldSpace 留白）
+    public const float BottomUiMargin = 100.0f; // 底部 HUD 预留空间（UI 参考值，不再限制玩家/相机移动）
 
     // Animation
     public const float WalkAnimSpeed = 0.06f; // Faster for smoother animation (was 0.1f)

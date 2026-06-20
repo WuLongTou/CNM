@@ -479,11 +479,10 @@ public static partial class WeaponFactory
         c.UpgradeCategory = d.ContainsKey("upcat") ? d["upcat"].AsString() : "";
         c.Icon = d.ContainsKey("icon") ? d["icon"].AsString() : "⚔️";
 
-        // 加载武器图标纹理
+        // 记录图标纹理路径（懒加载，避免启动时同步加载 27+ 纹理）
         if (_WeaponIconTextures.TryGetValue(name, out var texPath))
         {
-            if (FileAccess.FileExists(texPath))
-                c.IconTexture = TextureUtils.LoadTexture(texPath);
+            c.IconTexturePath = texPath;
         }
 
         // 属性修改器

@@ -10,9 +10,9 @@ using ZombieWars.Core;
 /// </summary>
 public static class ProceduralGround
 {
-    // 烘焙分辨率(放大到 WorldSize 显示,双线性放大让地面有自然柔和过渡)
-    private const int BakeW = 960;
-    private const int BakeH = 540;
+    // 烘焙分辨率（降低至 640×360 仍保持双线性放大到 WorldSize，减少 ~55% 像素处理）
+    private const int BakeW = 640;
+    private const int BakeH = 360;
 
     // 中心战斗区鹅卵石椭圆半径占比
     private const float InnerRadiusX = 0.42f;
@@ -82,7 +82,7 @@ public static class ProceduralGround
         float rx = w * InnerRadiusX;
         float ry = h * InnerRadiusY;
 
-        float spacing = 15f;
+        float spacing = 18f;
         for (float py = spacing * 0.5f; py < h; py += spacing)
         {
             int row = (int)(py / spacing);
@@ -150,7 +150,7 @@ public static class ProceduralGround
         float cx = w * 0.5f;
         float cy = h * 0.5f;
 
-        int count = 9;
+        int count = 7;
         for (int i = 0; i < count; i++)
         {
             float angle = (i / (float)count) * Mathf.Tau + rng.RandfRange(-0.2f, 0.2f);
@@ -171,7 +171,7 @@ public static class ProceduralGround
         }
 
         // 散布的短裂缝
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 10; i++)
         {
             float sx = rng.RandfRange(20, w - 20);
             float sy = rng.RandfRange(20, h - 20);
@@ -222,7 +222,7 @@ public static class ProceduralGround
         var rng = new RandomNumberGenerator { Seed = (ulong)(seed + 3) };
         int w = img.GetWidth();
         int h = img.GetHeight();
-        for (int i = 0; i < 16; i++)
+        for (int i = 0; i < 10; i++)
         {
             int sx = (int)rng.RandfRange(15, w - 15);
             int sy = (int)rng.RandfRange(15, h - 15);
@@ -283,7 +283,7 @@ public static class ProceduralGround
         var rng = new RandomNumberGenerator { Seed = (ulong)(seed + 4) };
         int w = img.GetWidth();
         int h = img.GetHeight();
-        for (int i = 0; i < 320; i++)
+        for (int i = 0; i < 200; i++)
         {
             int x = (int)rng.RandfRange(2, w - 2);
             int y = (int)rng.RandfRange(2, h - 2);

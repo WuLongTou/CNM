@@ -31,6 +31,14 @@ public partial class Background : Node2D
         _BakeGroundTexture();
         _TryLoadGroundOverlay();
         _CreateAtmosphereOverlay();
+        SetProcess(false);
+        // 非核心视觉（雾/火光/粒子/地标/装饰物）延迟到下一帧创建，避免阻塞启动
+        CallDeferred(nameof(_DeferredVisualSetup));
+    }
+
+    private void _DeferredVisualSetup()
+    {
+        if (!IsInstanceValid(this)) return;
         _CreateFogPatches();
         _CreateFireLights();
         _CreateAshParticles();
@@ -38,7 +46,6 @@ public partial class Background : Node2D
         _CreateAlchemyLandmarks();
         _CreateGroundDecals();
         _CreateSceneProps();
-        SetProcess(false);
     }
 
     private Vector2 _WorldSize => MapContext.CurrentWorldSize;
@@ -174,7 +181,6 @@ public partial class Background : Node2D
             new() { { "pos", new Vector2(0.70f, 0.60f) }, { "size", 500 }, { "color", new Color(0.10f, 0.08f, 0.06f, 0.05f) } },
             new() { { "pos", new Vector2(0.40f, 0.80f) }, { "size", 380 }, { "color", new Color(0.08f, 0.10f, 0.07f, 0.05f) } },
             new() { { "pos", new Vector2(0.85f, 0.20f) }, { "size", 350 }, { "color", new Color(0.10f, 0.09f, 0.06f, 0.04f) } },
-            new() { { "pos", new Vector2(0.30f, 0.45f) }, { "size", 420 }, { "color", new Color(0.11f, 0.08f, 0.06f, 0.04f) } },
         };
 
         foreach (var cfg in configs)
@@ -230,7 +236,6 @@ public partial class Background : Node2D
             new() { { "pos", new Vector2(0.08f, 0.30f) }, { "color", new Color(0.95f, 0.45f, 0.10f) }, { "alpha", 0.10f }, { "size", 180 } },
             new() { { "pos", new Vector2(0.88f, 0.25f) }, { "color", new Color(0.85f, 0.35f, 0.08f) }, { "alpha", 0.08f }, { "size", 140 } },
             new() { { "pos", new Vector2(0.55f, 0.80f) }, { "color", new Color(0.80f, 0.25f, 0.05f) }, { "alpha", 0.07f }, { "size", 120 } },
-            new() { { "pos", new Vector2(0.22f, 0.85f) }, { "color", new Color(0.90f, 0.50f, 0.12f) }, { "alpha", 0.09f }, { "size", 160 } },
         };
 
         foreach (var cfg in configs)
@@ -395,7 +400,7 @@ public partial class Background : Node2D
     {
         var ws = _WorldSize;
 
-        for (int i = 0; i < 12; i++)
+        for (int i = 0; i < 8; i++)
         {
             int s = (int)GD.RandRange(20, 50);
             var decal = new TextureRect
@@ -537,7 +542,7 @@ public partial class Background : Node2D
     private void _CreateRuinMarkers()
     {
         var ws = _WorldSize;
-        for (int i = 0; i < 18; i++)
+        for (int i = 0; i < 10; i++)
         {
             var marker = new ColorRect
             {
@@ -586,14 +591,9 @@ public partial class Background : Node2D
         _BakeGroundTexture();
         _TryLoadGroundOverlay();
         _CreateAtmosphereOverlay();
-        _CreateFogPatches();
-        _CreateFireLights();
-        _CreateAshParticles();
-        _CreateEmberParticles();
-        _CreateAlchemyLandmarks();
-        _CreateGroundDecals();
-        _CreateSceneProps();
         UpdateBackgroundSize();
+        // 非核心视觉延迟到下一帧
+        CallDeferred(nameof(_DeferredVisualSetup));
     }
 
     public void SetTension(float value)

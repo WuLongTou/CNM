@@ -4,6 +4,7 @@ using Godot;
 using Godot.Collections;
 using System;
 using System.Collections.Generic;
+using ZombieWars.Core;
 using static ZombieWars.Core.GameEnums;
 using Player = ZombieWars.Player.Player;
 
@@ -88,6 +89,19 @@ public partial class WeaponDeck : Node
         }
 
         return new Array<WeaponCard>(drawn);
+    }
+
+    /// <summary>预加载所有武器图标纹理，利用 TextureUtils 缓存避免首次选卡卡顿。</summary>
+    public void PreWarmTextures()
+    {
+        if (_allWeapons.Count == 0) return;
+        foreach (var w in _allWeapons)
+        {
+            if (!string.IsNullOrEmpty(w.IconTexturePath) && FileAccess.FileExists(w.IconTexturePath))
+            {
+                TextureUtils.LoadTexture(w.IconTexturePath);
+            }
+        }
     }
 
     public WeaponCard? GetRandomWeapon()

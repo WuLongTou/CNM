@@ -31,24 +31,24 @@ public partial class MiniMap : CanvasLayer
     {
         if (_player == null || !GodotObject.IsInstanceValid(_player)) return;
         var vp = drawer.GetViewport().GetVisibleRect();
-        // 右下角，避开底部 HUD（上调留空，避免与右下按钮重叠）
-        var origin = new Vector2(vp.Size.X - MapSize - 20, vp.Size.Y - MapSize - 160);
         var ws = MapContext.CurrentWorldSize;
+        // 按世界宽高比缩放，让小地图铺满世界区域而非留大片空白
         float sc = MapSize / Mathf.Max(ws.X, ws.Y);
+        float mapW = ws.X * sc;
+        float mapH = ws.Y * sc;
+        // 右下角，水平居中于 MapSize 框内
+        var origin = new Vector2(vp.Size.X - MapSize - 20, vp.Size.Y - mapH - 160);
         Vector2 Map(Vector2 world) => origin + new Vector2(world.X * sc, world.Y * sc);
 
-        // 背景 + 外发光 + 边框
-        drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.05f, 0.04f, 0.03f, 0.60f), filled: true);
-        drawer.DrawRect(new Rect2(origin - Vector2.One, MapSize + 2, MapSize + 2), new Color(0.55f, 0.42f, 0.18f, 0.15f), filled: false, width: 3f);
-        drawer.DrawRect(new Rect2(origin, MapSize, MapSize), new Color(0.65f, 0.50f, 0.25f, 0.85f), filled: false, width: 2f);
+        // 背景 + 边框（按世界实际比例绘制，不再画正方形留空白）
+        drawer.DrawRect(new Rect2(origin - Vector2.One, mapW + 2, mapH + 2),
+            new Color(0.55f, 0.42f, 0.18f, 0.15f), filled: false, width: 3f);
+        drawer.DrawRect(new Rect2(origin, mapW, mapH),
+            new Color(0.05f, 0.04f, 0.03f, 0.60f), filled: true);
+        drawer.DrawRect(new Rect2(origin, mapW, mapH),
+            new Color(0.65f, 0.50f, 0.25f, 0.85f), filled: false, width: 2f);
 
-        // 世界边缘线（红色细框标识活动区域边界）
-        var worldTopLeft = Map(Vector2.Zero);
-        var worldBottomRight = Map(ws);
-        drawer.DrawRect(new Rect2(worldTopLeft, worldBottomRight - worldTopLeft),
-            new Color(0.6f, 0.2f, 0.15f, 0.35f), filled: false, width: 1);
-
-        // 敌人（红点，加大以提升警示性）
+        // 敌人（红点）
         foreach (var z in ZombieRegistry.All)
         {
             if (GodotObject.IsInstanceValid(z))

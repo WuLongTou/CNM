@@ -51,7 +51,13 @@ public partial class WeaponCard : Resource
     [Export] public TargetPriority TargetPriority { get; set; } = TargetPriority.Nearest;
 
     [Export] public string Icon { get; set; } = "⚔️";
-    [Export] public Texture2D? IconTexture { get; set; } = null;
+    public string IconTexturePath { get; set; } = "";
+    private Texture2D? _iconTexture;
+    [Export] public Texture2D? IconTexture
+    {
+        get => _iconTexture ??= _LoadIconTexture();
+        set => _iconTexture = value;
+    }
     [Export] public int Rarity { get; set; } = 1;
     [Export] public int Duration { get; set; } = -1;
 
@@ -78,6 +84,15 @@ public partial class WeaponCard : Resource
         MagicEffectLevels = new Godot.Collections.Dictionary();
         Tags = cardTags ?? new Godot.Collections.Array();
         return this;
+    }
+
+    private Texture2D? _LoadIconTexture()
+    {
+        if (string.IsNullOrEmpty(IconTexturePath))
+            return null;
+        if (!FileAccess.FileExists(IconTexturePath))
+            return null;
+        return TextureUtils.LoadTexture(IconTexturePath);
     }
 
     public string GetEffectDescription()

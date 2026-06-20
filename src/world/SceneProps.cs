@@ -460,7 +460,7 @@ public static class ScenePropPlacer
         int n = Mathf.Max(1, (int)Core.GameConfig.WorldScale);
 
         // 枯树:边缘带密集
-        for (int i = 0; i < 14 * n; i++)
+        for (int i = 0; i < 10 * n; i++)
         {
             var t = new DeadTreeProp(rng.RandiRange(1, 999999));
             t.Position = RandomEdgePos(0.7f);
@@ -468,21 +468,21 @@ public static class ScenePropPlacer
             props.Add(t);
         }
         // 墓碑
-        for (int i = 0; i < 10 * n; i++)
+        for (int i = 0; i < 8 * n; i++)
         {
             var g = new TombstoneProp(rng.RandiRange(1, 999999));
             g.Position = RandomEdgePos(0.55f);
             props.Add(g);
         }
         // 骨头堆
-        for (int i = 0; i < 8 * n; i++)
+        for (int i = 0; i < 6 * n; i++)
         {
             var b = new BonePileProp(rng.RandiRange(1, 999999));
             b.Position = RandomEdgePos(0.4f);
             props.Add(b);
         }
         // 栅栏段:成对分布在边缘
-        for (int i = 0; i < 5 * n; i++)
+        for (int i = 0; i < 4 * n; i++)
         {
             var f = new FenceProp(rng.RandiRange(1, 999999));
             f.Position = RandomEdgePos(0.8f);
@@ -498,14 +498,14 @@ public static class ScenePropPlacer
             props.Add(r);
         }
         // 篝火:适度增加（带发光，不宜过多）
-        for (int i = 0; i < 3 + n; i++)
+        for (int i = 0; i < 2 + n; i++)
         {
             var c = new CampfireProp(rng.RandiRange(1, 999999));
             c.Position = RandomEdgePos(0.5f);
             props.Add(c);
         }
         // 火把:沿边缘
-        for (int i = 0; i < 6 * n; i++)
+        for (int i = 0; i < 4 * n; i++)
         {
             var tr = new TorchProp(rng.RandiRange(1, 999999));
             tr.Position = RandomEdgePos(0.85f);
