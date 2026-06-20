@@ -90,6 +90,11 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public float InvincibleTimer { get; set; } = 0.0f;
     public float InvincibleDuration { get; set; } = Core.GameConfig.InvincibleDuration;
 
+    public float ThornsChance { get; set; } = 0.0f;
+    public float ThornsRatio { get; set; } = 0.0f;
+    public float DodgeChance { get; set; } = 0.0f;
+    public float Tenacity { get; set; } = 0.0f;
+
     // Multi-hit tracking for achievements
     public int ConsecutiveHits { get; set; } = 0;
     public int MaxComboThisRound { get; set; } = 0;
@@ -412,6 +417,12 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         if (IsDead || InvincibleTimer > 0)
             return;
 
+        if (DodgeChance > 0 && attacker != null && GD.Randf() < DodgeChance / 100.0f)
+        {
+            VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "闪避!", new Color(1.0f, 0.95f, 0.3f));
+            return;
+        }
+
         if (ShieldAmount > 0)
         {
             int blocked = Math.Min(ShieldAmount, amount);
@@ -435,7 +446,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
             Vfx?.UpdateStatusDisplays();
 
             // Counterattack: thorns-like damage when hit
-            _TryCounterattack(attacker);
+            _TryCounterattack(attacker, amount);
 
             if ((float)CurrentHealth / (float)MaxHealth <= Core.GameConfig.HealthLowThreshold)
                 VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "危险！", Colors.Red);
@@ -445,19 +456,19 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         }
     }
 
-    private void _TryCounterattack(Zombie? attacker)
+    private void _TryCounterattack(Zombie? attacker, int damageTaken)
     {
-        // Check if player has any thorns/counterattack ability
-        // For now, we give a small chance to reflect damage
-        float counterChance = 0.15f; // 15% chance to counter
-        if (GD.Randf() < counterChance && attacker != null && IsInstanceValid(attacker) && !attacker.IsDead)
+        if (ThornsChance <= 0 || attacker == null || !IsInstanceValid(attacker) || attacker.IsDead)
+            return;
+
+        if (GD.Randf() < ThornsChance / 100.0f)
         {
-            int counterDamage = (int)(CurrentDamage * 0.3f);
-            if (counterDamage > 0)
+            int reflect = (int)(damageTaken * ThornsRatio / 100.0f);
+            if (reflect > 0)
             {
-                attacker.TakeDamage(counterDamage);
-                GameServices.UI.ShowDamageNumber(attacker.GlobalPosition, counterDamage, false);
-                VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "反击!", new Color(1.0f, 0.5f, 0.3f));
+                attacker.TakeDamage(reflect);
+                GameServices.UI.ShowDamageNumber(attacker.GlobalPosition, reflect, false);
+                VFXManager.SpawnFloatingLabel(GetParent(), GlobalPosition, "反伤!", new Color(1.0f, 0.5f, 0.3f));
             }
         }
     }

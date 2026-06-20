@@ -31,6 +31,14 @@ public partial class WeaponCard : Resource
     [Export] public float PoisonBonus { get; set; } = 0.0f;
     [Export] public bool GrantsAura { get; set; } = false;
 
+    [Export] public float ThornsChance { get; set; } = 0.0f;
+    [Export] public float ThornsRatio { get; set; } = 0.0f;
+    [Export] public float DodgeChance { get; set; } = 0.0f;
+    [Export] public int PiercingBonus { get; set; } = 0;
+    [Export] public int BounceBonus { get; set; } = 0;
+    [Export] public float SplashBonus { get; set; } = 0.0f;
+    [Export] public float Tenacity { get; set; } = 0.0f;
+
     public Godot.Collections.Array MeleeEffects { get; set; } = new();
     public Godot.Collections.Dictionary MeleeEffectLevels { get; set; } = new();
 
@@ -212,114 +220,22 @@ public partial class WeaponCard : Resource
     }
 
     public static string GetMeleeEffectDesc(MeleeEffect effect, int level)
-    {
-        switch (effect)
-        {
-            case MeleeEffect.Splash:
-                return $"溅射 Lv.{level} (范围+{level * 20}%)";
-            case MeleeEffect.MultiTarget:
-                return $"多目标 Lv.{level} (同时攻击{1 + level}个)";
-            case MeleeEffect.KillExplosion:
-                return $"击杀AOE Lv.{level} (周围+{level * 50}伤害)";
-            case MeleeEffect.KillShield:
-                return $"击杀护盾 Lv.{level} (获得+{level * 20}护盾)";
-            case MeleeEffect.Knockback:
-                return $"击退 Lv.{level} (推开{level * 50}像素)";
-            default:
-                return "";
-        }
-    }
+        => EffectCatalog.GetSummary(effect, level);
 
     public static string GetMeleeEffectDetail(MeleeEffect effect, int level)
-    {
-        switch (effect)
-        {
-            case MeleeEffect.Splash:
-                return "攻击时伤害波及周围敌人，范围随等级提升。\n等级1: +20%范围 | 等级2: +40%范围 | 等级3: +60%范围";
-            case MeleeEffect.MultiTarget:
-                return "一次攻击可命中多个敌人，近战清场神技。\n等级1: 2个目标 | 等级2: 3个目标 | 等级3: 4个目标";
-            case MeleeEffect.KillExplosion:
-                return "击杀僵尸时发生爆炸，对周围所有僵尸造成伤害。\n等级1: 50伤害 | 等级2: 100伤害 | 等级3: 150伤害";
-            case MeleeEffect.KillShield:
-                return "击杀僵尸时获得临时护盾，可抵挡伤害。\n等级1: +20护盾 | 等级2: +40护盾 | 等级3: +60护盾";
-            case MeleeEffect.Knockback:
-                return "攻击时将敌人击退，使其暂时无法靠近。\n等级1: 50像素 | 等级2: 100像素 | 等级3: 150像素";
-            default:
-                return "";
-        }
-    }
+        => EffectCatalog.GetDetail(effect, level);
 
     public static string GetRangedEffectDesc(RangedEffect effect, int level)
-    {
-        switch (effect)
-        {
-            case RangedEffect.MultiShot:
-                return $"多发 Lv.{level} (发射{1 + level}发)";
-            case RangedEffect.TrajectoryDamage:
-                return $"路径伤害 Lv.{level} (途经{level * 30}%伤害)";
-            case RangedEffect.Returning:
-                return $"反弹 Lv.{level} (反弹{level}次)";
-            case RangedEffect.Piercing:
-                return $"穿透 Lv.{level} (穿透{level}个敌人)";
-            default:
-                return "";
-        }
-    }
+        => EffectCatalog.GetSummary(effect, level);
 
     public static string GetRangedEffectDetail(RangedEffect effect, int level)
-    {
-        switch (effect)
-        {
-            case RangedEffect.MultiShot:
-                return "同时发射多发子弹，大幅提高DPS。\n等级1: 2发 | 等级2: 3发 | 等级3: 4发";
-            case RangedEffect.TrajectoryDamage:
-                return "子弹飞行轨迹上的敌人也会受到伤害。\n等级1: 30%伤害 | 等级2: 60%伤害 | 等级3: 90%伤害";
-            case RangedEffect.Returning:
-                return "子弹命中敌人或边界后反弹继续飞行。\n等级1: 1次 | 等级2: 2次 | 等级3: 3次";
-            case RangedEffect.Piercing:
-                return "子弹可穿透敌人继续飞行，攻击后续目标。\n等级1: 穿透1个 | 等级2: 穿透2个 | 等级3: 穿透3个";
-            default:
-                return "";
-        }
-    }
+        => EffectCatalog.GetDetail(effect, level);
 
     public static string GetMagicEffectDesc(MagicEffect effect, int level)
-    {
-        switch (effect)
-        {
-            case MagicEffect.Charm:
-                return $"魅惑 Lv.{level} (持续{level * 5}秒)";
-            case MagicEffect.Push:
-                return $"击退 Lv.{level} (推开{level * 80}像素)";
-            case MagicEffect.Stun:
-                return $"定身 Lv.{level} (持续{level * 1.5}秒)";
-            case MagicEffect.Chain:
-                return $"连锁 Lv.{level} (传递{level + 1}次)";
-            case MagicEffect.Dot:
-                return $"持续伤害 Lv.{level} (每秒{level * 5}伤害)";
-            default:
-                return "";
-        }
-    }
+        => EffectCatalog.GetSummary(effect, level);
 
     public static string GetMagicEffectDetail(MagicEffect effect, int level)
-    {
-        switch (effect)
-        {
-            case MagicEffect.Charm:
-                return "使敌人陷入混乱，攻击其他僵尸。\n持续时间随等级提升，坦克僵尸魅惑时间减少40%。\n等级1: 5秒 | 等级2: 10秒 | 等级3: 15秒";
-            case MagicEffect.Push:
-                return "强大的冲击波将敌人推开较远距离。\n等级1: 80像素 | 等级2: 160像素 | 等级3: 240像素";
-            case MagicEffect.Stun:
-                return "使敌人暂时无法移动和攻击。\n等级1: 1.5秒 | 等级2: 3秒 | 等级3: 4.5秒";
-            case MagicEffect.Chain:
-                return "伤害在敌人之间连锁跳跃。\n等级1: 2个目标 | 等级2: 3个目标 | 等级3: 4个目标";
-            case MagicEffect.Dot:
-                return "使敌人持续受到火焰/毒液伤害。\n等级1: 5 DPS | 等级2: 10 DPS | 等级3: 15 DPS";
-            default:
-                return "";
-        }
-    }
+        => EffectCatalog.GetDetail(effect, level);
 
     public string GetEffectDetail(string effectName, string effectType, int level)
     {

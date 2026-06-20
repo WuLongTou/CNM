@@ -1569,6 +1569,37 @@ public partial class UIManager : Control
             hasStats = true;
         }
 
+        if (weapon.ThornsChance > 0)
+        {
+            bb += $"  [color=#c08060]● 反伤: {Mathf.RoundToInt(weapon.ThornsChance)}%几率 ({Mathf.RoundToInt(weapon.ThornsRatio)}%反弹)[/color]\n";
+            hasStats = true;
+        }
+        if (weapon.DodgeChance > 0)
+        {
+            bb += $"  [color=#80d080]● 闪避: +{Mathf.RoundToInt(weapon.DodgeChance)}%[/color]\n";
+            hasStats = true;
+        }
+        if (weapon.PiercingBonus > 0)
+        {
+            bb += $"  [color=#a0a0d0]● 穿透: +{weapon.PiercingBonus}[/color]\n";
+            hasStats = true;
+        }
+        if (weapon.BounceBonus > 0)
+        {
+            bb += $"  [color=#a0a0d0]● 弹跳: +{weapon.BounceBonus}[/color]\n";
+            hasStats = true;
+        }
+        if (weapon.SplashBonus > 0)
+        {
+            bb += $"  [color=#d0a070]● 溅射: +{Mathf.RoundToInt(weapon.SplashBonus)}半径[/color]\n";
+            hasStats = true;
+        }
+        if (weapon.Tenacity > 0)
+        {
+            bb += $"  [color=#a0c0c0]● 减控: -{Mathf.RoundToInt(weapon.Tenacity)}%负面时长[/color]\n";
+            hasStats = true;
+        }
+
         if (weapon.GrantsAura)
         {
             if (player?.Aura != null && player.Aura.Active)

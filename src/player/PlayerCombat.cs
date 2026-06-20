@@ -706,6 +706,13 @@ public partial class PlayerCombat : Node
         target.LifeStealBonus += upgrade.LifeStealDelta;
         target.FreezeBonus += upgrade.FreezeDelta;
         target.PoisonBonus += upgrade.PoisonDelta;
+        target.ThornsChance += upgrade.ThornsChanceDelta;
+        target.ThornsRatio += upgrade.ThornsRatioDelta;
+        target.DodgeChance += upgrade.DodgeChanceDelta;
+        target.PiercingBonus += (int)upgrade.PiercingBonusDelta;
+        target.BounceBonus += (int)upgrade.BounceBonusDelta;
+        target.SplashBonus += upgrade.SplashBonusDelta;
+        target.Tenacity += upgrade.TenacityDelta;
 
         foreach (System.Collections.Generic.KeyValuePair<Variant, Variant> kvp in upgrade.EffectUpgrades)
         {
@@ -837,6 +844,10 @@ public partial class PlayerCombat : Node
         Player.PushForce = 0.0f;
         Player.StunDuration = 0.0f;
         Player.DotDamage = 0.0f;
+        Player.ThornsChance = 0.0f;
+        Player.ThornsRatio = 0.0f;
+        Player.DodgeChance = 0.0f;
+        Player.Tenacity = 0.0f;
 
         WeaponCard? currentWeapon = null;
         foreach (var e in Player.ActiveEffects)
@@ -917,6 +928,24 @@ public partial class PlayerCombat : Node
             Player.FreezeDuration = Math.Max(Player.FreezeDuration, weapon.FreezeBonus);
         if (weapon.PoisonBonus > 0)
             Player.PoisonDamage = Math.Max(Player.PoisonDamage, weapon.PoisonBonus);
+
+        if (weapon.ThornsChance > 0)
+            Player.ThornsChance = Math.Max(Player.ThornsChance, weapon.ThornsChance);
+        if (weapon.ThornsRatio > 0)
+            Player.ThornsRatio = Math.Max(Player.ThornsRatio, weapon.ThornsRatio);
+        if (weapon.DodgeChance > 0)
+            Player.DodgeChance = Math.Max(Player.DodgeChance, weapon.DodgeChance);
+        if (weapon.PiercingBonus > 0)
+            Player.PiercingCount += weapon.PiercingBonus;
+        if (weapon.BounceBonus > 0)
+        {
+            Player.ReturningProjectiles = true;
+            Player.BounceCount = Math.Max(Player.BounceCount, weapon.BounceBonus);
+        }
+        if (weapon.SplashBonus > 0)
+            Player.SplashRadius = Math.Max(Player.SplashRadius, weapon.SplashBonus);
+        if (weapon.Tenacity > 0)
+            Player.Tenacity = Math.Max(Player.Tenacity, weapon.Tenacity);
         if (weapon.GrantsAura)
         {
             if (Player.Aura!.Active)
@@ -973,71 +1002,13 @@ public partial class PlayerCombat : Node
     }
 
     private void _ApplyMeleeEffect(int effect, int level)
-    {
-        var p = Player!;
-        switch (effect)
-        {
-            case (int)MeleeEffect.Splash:
-                p.SplashRadius = 30.0f + level * 10.0f;
-                break;
-            case (int)MeleeEffect.MultiTarget:
-                p.MeleeTargetCount = Math.Max(p.MeleeTargetCount, 1 + level);
-                break;
-            case (int)MeleeEffect.KillExplosion:
-                p.KillExplosionDamage += level * 50;
-                break;
-            case (int)MeleeEffect.KillShield:
-                p.KillShieldAmount += level * 20;
-                break;
-            case (int)MeleeEffect.Knockback:
-                p.KnockbackForce += level * 50;
-                break;
-        }
-    }
+        => EffectCatalog.Apply((MeleeEffect)effect, level, Player!);
 
     private void _ApplyRangedEffect(int effect, int level)
-    {
-        var p = Player!;
-        switch (effect)
-        {
-            case (int)RangedEffect.MultiShot:
-                p.MultiShotCount = Math.Max(p.MultiShotCount, 1 + level);
-                break;
-            case (int)RangedEffect.TrajectoryDamage:
-                p.TrajectoryDamageRatio = Math.Max(p.TrajectoryDamageRatio, level * 0.3f);
-                break;
-            case (int)RangedEffect.Returning:
-                p.ReturningProjectiles = true;
-                p.BounceCount = Math.Max(p.BounceCount, level);
-                break;
-            case (int)RangedEffect.Piercing:
-                p.PiercingCount += level;
-                break;
-        }
-    }
+        => EffectCatalog.Apply((RangedEffect)effect, level, Player!);
 
     private void _ApplyMagicEffect(int effect, int level)
-    {
-        var p = Player!;
-        switch (effect)
-        {
-            case (int)MagicEffect.Charm:
-                p.CharmDuration = Math.Max(p.CharmDuration, level * 5.0f);
-                break;
-            case (int)MagicEffect.Push:
-                p.PushForce += level * 80;
-                break;
-            case (int)MagicEffect.Stun:
-                p.StunDuration = Math.Max(p.StunDuration, level * 1.5f);
-                break;
-            case (int)MagicEffect.Chain:
-                p.ChainCount = Math.Max(p.ChainCount, level);
-                break;
-            case (int)MagicEffect.Dot:
-                p.DotDamage += level * 5;
-                break;
-        }
-    }
+        => EffectCatalog.Apply((MagicEffect)effect, level, Player!);
 
     private bool _CanPayHealthCost()
     {

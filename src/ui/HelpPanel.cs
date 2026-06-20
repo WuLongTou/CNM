@@ -302,6 +302,10 @@ public partial class HelpPanel : Panel
         _AddSectionLabel("-- 装备 --");
         _AddInfoCard("装备", "被动增强角色属性\n不会替换当前武器\n可与武器叠加装备", new Color(0.6f, 0.8f, 0.6f));
 
+        _AddSectionLabel("-- 装备特殊效果 --");
+        _AddInfoCard("防御类", "反伤: 受伤时有几率反弹伤害给攻击者\n闪避: 有概率完全躲避一次攻击\n减控: 缩短受到的负面效果持续时间", new Color(0.5f, 0.8f, 0.7f));
+        _AddInfoCard("攻击类", "穿透: 子弹可贯穿更多敌人\n弹跳: 子弹反弹攻击多个目标\n溅射: 攻击波及周围敌人", new Color(0.85f, 0.6f, 0.4f));
+
         _AddSectionLabel("-- 武器特效 --");
         _AddInfoCard("近战特效", "溅射: 攻击波及周围敌人\n多目标: 同时攻击多个目标\n击杀爆炸: 击杀时产生爆炸\n击杀护盾: 击杀时获得护盾\n击退: 击退敌人", new Color(0.85f, 0.5f, 0.5f));
         _AddInfoCard("远程特效", "多射: 发射多枚子弹\n轨迹伤害: 子弹路径造成伤害\n回旋: 子弹可返回\n穿透: 子弹穿透敌人", new Color(0.5f, 0.65f, 0.85f));

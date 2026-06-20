@@ -77,6 +77,9 @@ public partial class PlayerBuffSystem : Node
 
         bool isDebuff = _IsDebuff(type);
 
+        if (isDebuff && _player.Tenacity > 0)
+            duration *= Mathf.Max(0.1f, 1.0f - _player.Tenacity / 100.0f);
+
         // Prevent duplicate debuffs; refresh duration instead
         if (isDebuff && _activeBuffs.TryGetValue(type, out var existing))
         {

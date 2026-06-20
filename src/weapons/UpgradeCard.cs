@@ -46,6 +46,13 @@ public partial class UpgradeCard : WeaponCard
     public float LifeStealDelta { get; set; } = 0.0f;
     public float FreezeDelta { get; set; } = 0.0f;
     public float PoisonDelta { get; set; } = 0.0f;
+    public float ThornsChanceDelta { get; set; } = 0.0f;
+    public float ThornsRatioDelta { get; set; } = 0.0f;
+    public float DodgeChanceDelta { get; set; } = 0.0f;
+    public float PiercingBonusDelta { get; set; } = 0.0f;
+    public float BounceBonusDelta { get; set; } = 0.0f;
+    public float SplashBonusDelta { get; set; } = 0.0f;
+    public float TenacityDelta { get; set; } = 0.0f;
 
     public Godot.Collections.Dictionary EffectUpgrades { get; set; } = new();
 
@@ -80,6 +87,20 @@ public partial class UpgradeCard : WeaponCard
             parts.Add($"冰冻+{(int)FreezeDelta}%");
         if (PoisonDelta > 0)
             parts.Add($"中毒+{(int)PoisonDelta}%");
+        if (ThornsChanceDelta > 0)
+            parts.Add($"反伤几率+{(int)ThornsChanceDelta}%");
+        if (ThornsRatioDelta > 0)
+            parts.Add($"反伤比例+{(int)ThornsRatioDelta}%");
+        if (DodgeChanceDelta > 0)
+            parts.Add($"闪避+{(int)DodgeChanceDelta}%");
+        if (PiercingBonusDelta > 0)
+            parts.Add($"穿透+{(int)PiercingBonusDelta}");
+        if (BounceBonusDelta > 0)
+            parts.Add($"弹跳+{(int)BounceBonusDelta}");
+        if (SplashBonusDelta > 0)
+            parts.Add($"溅射+{(int)SplashBonusDelta}");
+        if (TenacityDelta > 0)
+            parts.Add($"减控+{(int)TenacityDelta}%");
 
         foreach (long fxKey in EffectUpgrades.Keys)
         {

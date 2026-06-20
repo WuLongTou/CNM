@@ -405,20 +405,20 @@ public static partial class WeaponFactory
             { "spd_mod", 30f }, { "hp", -5f }
         },
 
-        // 反伤护甲 - NEW: 受伤时反弹伤害
+        // 荆棘护甲
         new GodotDictionary
         {
-            { "name", "荆棘护甲" }, { "desc", "受伤时反弹部分伤害给攻击者" },
+            { "name", "荆棘护甲" }, { "desc", "受伤时有几率反弹伤害给攻击者" },
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "护甲" }, { "icon", "🌿" }, { "rarity", 2 },
-            { "hp", 20f }
+            { "hp", 20f }, { "thorns", 35f }, { "thorns_r", 50f }
         },
 
-        // 闪避护符 - NEW: 额外闪避能力
+        // 闪避护符
         new GodotDictionary
         {
-            { "name", "闪避护符" }, { "desc", "略微提升移动速度和闪避能力" },
+            { "name", "闪避护符" }, { "desc", "有概率完全闪避伤害" },
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "buff" }, { "icon", "💨" }, { "rarity", 2 },
-            { "spd_mod", 15f }, { "hp", 5f }
+            { "spd_mod", 15f }, { "hp", 5f }, { "dodge", 12f }
         },
 
         // 生命汲取 - NEW: 提升吸血效果
@@ -429,36 +429,36 @@ public static partial class WeaponFactory
             { "ls", 12f }, { "hp", 15f }
         },
 
-        // 穿甲弹 - NEW: 穿透效果增强
+        // 穿甲弹
         new GodotDictionary
         {
-            { "name", "穿甲弹" }, { "desc", "提升穿透能力，子弹可贯穿更多敌人" },
+            { "name", "穿甲弹" }, { "desc", "子弹可贯穿更多敌人" },
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "💎" }, { "rarity", 3 },
-            { "dmg", 1.1f }, { "crit", 8f }
+            { "dmg", 1.1f }, { "crit", 8f }, { "pierce", 2 }
         },
 
-        // 弹跳之刃 - NEW: 弹道跳跃能力
+        // 弹跳之刃
         new GodotDictionary
         {
             { "name", "弹跳之刃" }, { "desc", "远程武器可弹跳攻击多个目标" },
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "特效" }, { "icon", "🪃" }, { "rarity", 3 },
-            { "dmg", 1.05f }, { "asp", 1.1f }
+            { "dmg", 1.05f }, { "asp", 1.1f }, { "bounce", 2 }
         },
 
-        // 毁灭之息 - NEW: 范围伤害提升
+        // 毁灭之息
         new GodotDictionary
         {
-            { "name", "毁灭之息" }, { "desc", "大幅提升范围伤害效果" },
+            { "name", "毁灭之息" }, { "desc", "攻击造成范围溅射伤害" },
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 4 }, { "upcat", "buff" }, { "icon", "🔥" }, { "rarity", 4 },
-            { "dmg", 1.25f }, { "hp", -15f }
+            { "dmg", 1.25f }, { "hp", -15f }, { "splash", 45f }
         },
 
-        // 钢铁意志 - NEW: 减少负面效果
+        // 钢铁意志
         new GodotDictionary
         {
-            { "name", "钢铁意志" }, { "desc", "提升生命上限并减少控制效果持续时间" },
+            { "name", "钢铁意志" }, { "desc", "减少受到的负面效果持续时间" },
             { "type", (int)ME }, { "cat", (int)E }, { "tier", 3 }, { "upcat", "护甲" }, { "icon", "🛡️" }, { "rarity", 3 },
-            { "hp", 25f }, { "frz", 5f }
+            { "hp", 25f }, { "frz", 5f }, { "ten", 40f }
         },
     };
 
@@ -498,6 +498,13 @@ public static partial class WeaponFactory
         if (d.ContainsKey("psn")) c.PoisonBonus = d["psn"].AsSingle();
         if (d.ContainsKey("hcost")) c.HealthCost = d["hcost"].AsInt32();
         if (d.ContainsKey("aura")) c.GrantsAura = d["aura"].AsBool();
+        if (d.ContainsKey("thorns")) c.ThornsChance = d["thorns"].AsSingle();
+        if (d.ContainsKey("thorns_r")) c.ThornsRatio = d["thorns_r"].AsSingle();
+        if (d.ContainsKey("dodge")) c.DodgeChance = d["dodge"].AsSingle();
+        if (d.ContainsKey("pierce")) c.PiercingBonus = d["pierce"].AsInt32();
+        if (d.ContainsKey("bounce")) c.BounceBonus = d["bounce"].AsInt32();
+        if (d.ContainsKey("splash")) c.SplashBonus = d["splash"].AsSingle();
+        if (d.ContainsKey("ten")) c.Tenacity = d["ten"].AsSingle();
         if (d.ContainsKey("rarity")) c.Rarity = d["rarity"].AsInt32();
 
         // 数学系统：波形共振频率（按武器类型+攻速推导，或显式 freq）
@@ -608,6 +615,13 @@ public static partial class WeaponFactory
             if (card.LifeStealBonus > 0) score++;
             if (card.FreezeBonus > 0) score++;
             if (card.PoisonBonus > 0) score++;
+            if (card.ThornsChance > 0) score++;
+            if (card.ThornsRatio > 0) score++;
+            if (card.DodgeChance > 0) score++;
+            if (card.PiercingBonus > 0) score++;
+            if (card.BounceBonus > 0) score++;
+            if (card.SplashBonus > 0) score++;
+            if (card.Tenacity > 0) score++;
             if (card.GrantsAura) score += 2;
             score += card.MeleeEffects.Count;
             score += card.RangedEffects.Count;

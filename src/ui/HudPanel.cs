@@ -520,7 +520,7 @@ public partial class HudPanel : Panel
                 ["name"] = "暴击",
                 ["type"] = "stat",
                 ["color"] = new Color(1.0f, 0.6f, 0.2f),
-                ["tooltip"] = $"【暴击】\n几率: {Mathf.RoundToInt(player.CriticalChance)}%\n伤害: x2.0"
+                ["tooltip"] = $"【暴击】\n几率: {Mathf.RoundToInt(player.CriticalChance)}%\n伤害: x{Mathf.Snapped(CritMultiplier, 0.1f)}"
             });
         }
         if (player.LifeStealPercent > 0)
@@ -565,6 +565,39 @@ public partial class HudPanel : Panel
                 ["type"] = "buff",
                 ["color"] = new Color(0.6f, 0.8f, 1.0f),
                 ["tooltip"] = $"【护盾】\n剩余: {player.ShieldAmount}\n效果: 吸收伤害"
+            });
+        }
+        if (player.DodgeChance > 0)
+        {
+            activeItems.Add(new Godot.Collections.Dictionary
+            {
+                ["icon"] = "🌀",
+                ["name"] = "闪避",
+                ["type"] = "buff",
+                ["color"] = new Color(0.5f, 0.9f, 0.5f),
+                ["tooltip"] = $"【闪避】\n几率: {Mathf.RoundToInt(player.DodgeChance)}%\n效果: 有概率完全躲避伤害"
+            });
+        }
+        if (player.ThornsChance > 0)
+        {
+            activeItems.Add(new Godot.Collections.Dictionary
+            {
+                ["icon"] = "🌵",
+                ["name"] = "反伤",
+                ["type"] = "buff",
+                ["color"] = new Color(0.8f, 0.6f, 0.4f),
+                ["tooltip"] = $"【反伤】\n几率: {Mathf.RoundToInt(player.ThornsChance)}%\n反弹: 受伤的{Mathf.RoundToInt(player.ThornsRatio)}%"
+            });
+        }
+        if (player.Tenacity > 0)
+        {
+            activeItems.Add(new Godot.Collections.Dictionary
+            {
+                ["icon"] = "⚜️",
+                ["name"] = "减控",
+                ["type"] = "buff",
+                ["color"] = new Color(0.7f, 0.75f, 0.7f),
+                ["tooltip"] = $"【减控】\n减免: {Mathf.RoundToInt(player.Tenacity)}%\n效果: 缩短受到的负面效果持续时间"
             });
         }
 

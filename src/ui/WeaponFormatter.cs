@@ -114,6 +114,18 @@ public static partial class WeaponFormatter
             text += "暴击: +" + (int)weapon.CriticalBonus + "%\n";
         if (weapon.LifeStealBonus > 0)
             text += "吸血: +" + (int)weapon.LifeStealBonus + "%\n";
+        if (weapon.ThornsChance > 0)
+            text += "反伤: " + Mathf.RoundToInt(weapon.ThornsChance) + "%几率 (" + Mathf.RoundToInt(weapon.ThornsRatio) + "%反弹)\n";
+        if (weapon.DodgeChance > 0)
+            text += "闪避: +" + Mathf.RoundToInt(weapon.DodgeChance) + "%\n";
+        if (weapon.PiercingBonus > 0)
+            text += "穿透: +" + weapon.PiercingBonus + "\n";
+        if (weapon.BounceBonus > 0)
+            text += "弹跳: +" + weapon.BounceBonus + "\n";
+        if (weapon.SplashBonus > 0)
+            text += "溅射: +" + Mathf.RoundToInt(weapon.SplashBonus) + "半径\n";
+        if (weapon.Tenacity > 0)
+            text += "减控: -" + Mathf.RoundToInt(weapon.Tenacity) + "%负面时长\n";
 
         return text;
     }
@@ -242,11 +254,15 @@ public static partial class WeaponFormatter
         {
             foreach (int effectKey in meleeLevels.Keys)
                 effectLines.Add("• " + WeaponCard.GetMeleeEffectDesc((MeleeEffect)effectKey, meleeLevels[effectKey]));
+            if (player.SplashRadius > 0)
+                effectLines.Add("• 溅射半径: " + Mathf.RoundToInt(player.SplashRadius));
         }
         else if (player.CurrentAttackType == AttackType.Ranged)
         {
             foreach (int effectKey in rangedLevels.Keys)
                 effectLines.Add("• " + WeaponCard.GetRangedEffectDesc((RangedEffect)effectKey, rangedLevels[effectKey]));
+            if (player.PiercingCount > 0)
+                effectLines.Add("• 穿透: " + player.PiercingCount + "个敌人");
             if (player.ReturningProjectiles && player.BounceCount > 0)
                 effectLines.Add("• 反弹次数: " + player.BounceCount);
         }

@@ -44,7 +44,7 @@ public partial class WeaponEvolutionSystem : Node
             ("战斧", "冰霜法杖"),
             new FusionRecipe(
                 "元素双刃剑",
-                "融合了烈焰与寒冰之力的双持武器，攻击附带火与冰的双重效果",
+                "融合战斧与法杖之力，近战溅射并使敌人持续灼烧",
                 WeaponType.Melee,
                 new MeleeEffect[] { MeleeEffect.Splash },
                 new MagicEffect[] { MagicEffect.Dot },
@@ -113,7 +113,7 @@ public partial class WeaponEvolutionSystem : Node
             ("双刀", "淬毒短刀"),
             new FusionRecipe(
                 "致命之刃",
-                "致命之刃：暴击时吸取敌人生命，击杀回复大量生命",
+                "致命之刃：击杀敌人时引发爆炸并获得护盾",
                 WeaponType.Melee,
                 new MeleeEffect[] { MeleeEffect.KillShield, MeleeEffect.KillExplosion },
                 new Godot.Collections.Dictionary<long, int>
@@ -164,7 +164,7 @@ public partial class WeaponEvolutionSystem : Node
             ("重弩", "重弩"),
             new FusionRecipe(
                 "弹幕加农",
-                "同时发射6发子弹形成弹幕覆盖",
+                "同时发射4发子弹形成弹幕覆盖，途经轨迹亦造成伤害",
                 WeaponType.Ranged,
                 new RangedEffect[] { RangedEffect.MultiShot, RangedEffect.TrajectoryDamage },
                 new Godot.Collections.Dictionary<long, int>
@@ -181,7 +181,7 @@ public partial class WeaponEvolutionSystem : Node
             ("雷电法杖", "雷电法杖"),
             new FusionRecipe(
                 "雷霆之神杖",
-                "连锁闪电跳跃10次，每次伤害递增",
+                "连锁闪电命中4个目标，每次连锁伤害衰减，并附带持续灼烧",
                 WeaponType.Magic,
                 new MagicEffect[] { MagicEffect.Chain, MagicEffect.Dot },
                 new Godot.Collections.Dictionary<long, int>
@@ -198,7 +198,7 @@ public partial class WeaponEvolutionSystem : Node
             ("冰霜法杖", "寒霜徽章"),
             new FusionRecipe(
                 "绝对零度之杖",
-                "冻结所有命中敌人3秒，范围极大",
+                "冻结命中敌人4.5秒，并以冲击波推开周围敌人",
                 WeaponType.Magic,
                 new[] { MagicEffect.Stun, MagicEffect.Push },
                 new Godot.Collections.Dictionary<long, int>

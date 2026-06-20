@@ -19,6 +19,13 @@ public static partial class UpgradeGenerator
         ("life_steal", 1.0f, 3.0f),
         ("freeze", 2.0f, 5.0f),
         ("poison", 2.0f, 5.0f),
+        ("thorns_chance", 3.0f, 8.0f),
+        ("thorns_ratio", 5.0f, 12.0f),
+        ("dodge", 2.0f, 4.0f),
+        ("pierce", 1.0f, 2.0f),
+        ("bounce", 1.0f, 2.0f),
+        ("splash", 5.0f, 12.0f),
+        ("tenacity", 5.0f, 12.0f),
     };
 
     private static readonly (UpgradeCard.TradeoffType, float, float)[] _TRADEOFFS = {
@@ -83,6 +90,27 @@ public static partial class UpgradeGenerator
                 case "poison":
                     if (target.PoisonBonus > 0) weight = 2.0f;
                     break;
+                case "thorns_chance":
+                    if (target.ThornsChance > 0) weight = 2.0f;
+                    break;
+                case "thorns_ratio":
+                    if (target.ThornsRatio > 0) weight = 2.0f;
+                    break;
+                case "dodge":
+                    if (target.DodgeChance > 0) weight = 2.0f;
+                    break;
+                case "pierce":
+                    if (target.PiercingBonus > 0) weight = 2.0f;
+                    break;
+                case "bounce":
+                    if (target.BounceBonus > 0) weight = 2.0f;
+                    break;
+                case "splash":
+                    if (target.SplashBonus > 0) weight = 2.0f;
+                    break;
+                case "tenacity":
+                    if (target.Tenacity > 0) weight = 2.0f;
+                    break;
             }
             weighted.Add((dim.Name, dim.Min, dim.Max, weight));
         }
@@ -129,6 +157,27 @@ public static partial class UpgradeGenerator
                 break;
             case "poison":
                 card.PoisonDelta = val;
+                break;
+            case "thorns_chance":
+                card.ThornsChanceDelta = val;
+                break;
+            case "thorns_ratio":
+                card.ThornsRatioDelta = val;
+                break;
+            case "dodge":
+                card.DodgeChanceDelta = val;
+                break;
+            case "pierce":
+                card.PiercingBonusDelta = val;
+                break;
+            case "bounce":
+                card.BounceBonusDelta = val;
+                break;
+            case "splash":
+                card.SplashBonusDelta = val;
+                break;
+            case "tenacity":
+                card.TenacityDelta = val;
                 break;
         }
     }
@@ -197,9 +246,11 @@ public static partial class UpgradeGenerator
             return UpgradeCard.UpgradeDirection.Crit;
         if (card.LifeStealDelta > 0)
             return UpgradeCard.UpgradeDirection.Leech;
-        if (card.HealthDelta > 0)
+        if (card.HealthDelta > 0 || card.ThornsChanceDelta > 0 || card.ThornsRatioDelta > 0
+            || card.DodgeChanceDelta > 0 || card.TenacityDelta > 0)
             return UpgradeCard.UpgradeDirection.Defense;
-        if (card.EffectUpgrades.Count > 0 || card.FreezeDelta > 0 || card.PoisonDelta > 0)
+        if (card.EffectUpgrades.Count > 0 || card.FreezeDelta > 0 || card.PoisonDelta > 0
+            || card.PiercingBonusDelta > 0 || card.BounceBonusDelta > 0 || card.SplashBonusDelta > 0)
             return UpgradeCard.UpgradeDirection.Effect;
         return UpgradeCard.UpgradeDirection.Damage;
     }
