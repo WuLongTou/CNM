@@ -500,14 +500,6 @@ public partial class GameManager : Node
         if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
         _transitioningToCombat = true;
 
-        // 立即隐藏选卡面板（最轻量操作，给玩家即时反馈）
-        _uiManager?.HideWeaponSelection();
-
-        // 等一帧再执行武器效果应用，避免点击瞬间 JIT + 节点创建堆积卡顿
-        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
-
-        if (CurrentState == GameState.GameOver) return;
-
         if (_player != null)
         {
             if (card != null && card.GetType().Name.Contains("UpgradeCard"))
@@ -522,6 +514,7 @@ public partial class GameManager : Node
             _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
         }
 
+        _uiManager?.HideWeaponSelection();
         _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
