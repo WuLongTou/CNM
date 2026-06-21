@@ -115,17 +115,20 @@ public partial class HudPanel : Panel
         _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
         topRow.AddChild(_zombiesLabel);
 
-        // 常驻天气显示：酸雨/暴风时变红警示（Label + BBCode 着色）
+        // 常驻天气显示
         _weatherLabel = new RichTextLabel
         {
-            Text = "天气 晴",
+            Text = "天气: 晴",
             BbcodeEnabled = true,
             ScrollActive = false,
             MouseFilter = Control.MouseFilterEnum.Ignore,
-            CustomMinimumSize = new Vector2(0, 0),
+            CustomMinimumSize = new Vector2(120, 18),
+            FitContent = true,
         };
         _weatherLabel.AddThemeFontSizeOverride("normal_font_size", UiFontSmall);
         _weatherLabel.AddThemeColorOverride("default_color", new Color(0.8f, 0.8f, 0.5f));
+        _weatherLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+        _weatherLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
         topRow.AddChild(_weatherLabel);
 
         // 常驻 debuff 提示：中毒/燃烧等持续掉血状态，避免"莫名其妙掉血"
@@ -161,12 +164,16 @@ public partial class HudPanel : Panel
         // ═══ 底栏：装备图标 / HP条 / 状态 / 按钮 ═══
         var bottomPanel = new Panel();
         bottomPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomWide);
-        bottomPanel.OffsetTop = -82;
-        bottomPanel.CustomMinimumSize = new Vector2(0, 82);
+        bottomPanel.OffsetTop = -88;
+        bottomPanel.CustomMinimumSize = new Vector2(0, 88);
         bottomPanel.MouseFilter = MouseFilterEnum.Ignore;
-        var bottomStyle = HandDrawnTheme.MakeDarkPanel(0.90f);
-        bottomStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
-        bottomStyle.BorderWidthTop = 1;
+        // 游戏风格底栏：暗色羊皮纸 + 血色顶边 + 渐变阴影
+        var bottomStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.06f, 0.04f, 0.03f, 0.92f),
+            BorderColor = new Color(0.45f, 0.15f, 0.10f, 0.6f),
+            BorderWidthTop = 2,
+        };
         bottomPanel.AddThemeStyleboxOverride("panel", bottomStyle);
         AddChild(bottomPanel);
 
@@ -281,20 +288,21 @@ public partial class HudPanel : Panel
         _speedLabel = _MakeStatLabel("速 220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
 
         // 组 1：武器信息
-        statRow.AddChild(_weaponNameLabel);
-        statRow.AddChild(_attackTypeLabel);
-        statRow.AddChild(_targetPriorityLabel);
+        statRow.AddChild(_MakeStatGroup(new Control[] {
+            _weaponNameLabel, _attackTypeLabel, _targetPriorityLabel
+        }));
         statRow.AddChild(_MakeStatDivider());
 
         // 组 2：攻击属性
-        statRow.AddChild(_damageLabel);
-        statRow.AddChild(_attackIntervalLabel);
-        statRow.AddChild(_critLabel);
+        statRow.AddChild(_MakeStatGroup(new Control[] {
+            _damageLabel, _attackIntervalLabel, _critLabel
+        }));
         statRow.AddChild(_MakeStatDivider());
 
         // 组 3：防御/机动
-        statRow.AddChild(_lifestealLabel);
-        statRow.AddChild(_speedLabel);
+        statRow.AddChild(_MakeStatGroup(new Control[] {
+            _lifestealLabel, _speedLabel
+        }));
 
         var hudHint = _MakeStatLabel("? H(帮助) · C(装备) · Tab(切目标)", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
         hudHint.TooltipText = "H 帮助 · C 装备 · Tab 切换目标";
@@ -675,6 +683,78 @@ public partial class HudPanel : Panel
         lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
         lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
         return lbl;
+    }
+
+    /// <summary>游戏风格的属性芯片：带暗色背景 + 主题色边框的紧凑标签。</summary>
+    private static Control _MakeStatChip(string text, Color accentColor, int fontSize = UiFontSmall)
+    {
+        var chip = new Panel();
+        chip.MouseFilter = Control.MouseFilterEnum.Ignore;
+        chip.CustomMinimumSize = new Vector2(0, 20);
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(0.10f, 0.08f, 0.06f, 0.70f),
+            BorderColor = new Color(accentColor.R, accentColor.G, accentColor.B, 0.30f),
+            BorderWidthLeft = 1,
+            BorderWidthRight = 1,
+            CornerRadiusTopLeft = 3,
+            CornerRadiusTopRight = 3,
+            CornerRadiusBottomLeft = 3,
+            CornerRadiusBottomRight = 3,
+            ContentMarginLeft = 5,
+            ContentMarginRight = 5,
+            ContentMarginTop = 1,
+            ContentMarginBottom = 1,
+        };
+        chip.AddThemeStyleboxOverride("panel", style);
+
+        var lbl = new Label
+        {
+            Text = text,
+            VerticalAlignment = VerticalAlignment.Center,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            MouseFilter = Control.MouseFilterEnum.Ignore,
+        };
+        lbl.AddThemeFontSizeOverride("font_size", fontSize);
+        lbl.AddThemeColorOverride("font_color", accentColor);
+        lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
+        lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
+        chip.AddChild(lbl);
+        return chip;
+    }
+
+    /// <summary>将一组统计标签包裹在暗色面板中，形成游戏风格的属性区块。</summary>
+    private static Panel _MakeStatGroup(Control[] children)
+    {
+        var panel = new Panel();
+        panel.MouseFilter = Control.MouseFilterEnum.Ignore;
+        var style = new StyleBoxFlat
+        {
+            BgColor = new Color(0.05f, 0.03f, 0.02f, 0.50f),
+            BorderColor = new Color(0.20f, 0.12f, 0.08f, 0.35f),
+            BorderWidthLeft = 1,
+            BorderWidthRight = 1,
+            CornerRadiusTopLeft = 3,
+            CornerRadiusTopRight = 3,
+            CornerRadiusBottomLeft = 3,
+            CornerRadiusBottomRight = 3,
+            ContentMarginLeft = 4,
+            ContentMarginRight = 4,
+            ContentMarginTop = 1,
+            ContentMarginBottom = 1,
+        };
+        panel.AddThemeStyleboxOverride("panel", style);
+        var hbox = new HBoxContainer();
+        hbox.AddThemeConstantOverride("separation", 6);
+        hbox.MouseFilter = Control.MouseFilterEnum.Ignore;
+        foreach (var c in children)
+        {
+            c.AddThemeConstantOverride("outline_size", UiOutlineNorm);
+            c.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.8f));
+            hbox.AddChild(c);
+        }
+        panel.AddChild(hbox);
+        return panel;
     }
 
     private static string _GetAttackTypeText(AttackType attackType) => attackType switch

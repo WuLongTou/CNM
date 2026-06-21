@@ -4,6 +4,7 @@ using Godot;
 using ZombieWars.Core;
 using ZombieWars.Enemy;
 using ZombieWars.Player;
+using static ZombieWars.Core.GameEnums;
 
 /// <summary>
 /// 小地图（右下角）：缩略显示整个大世界，标注玩家/敌人/宝箱/祭坛位置。
@@ -17,10 +18,19 @@ public partial class MiniMap : CanvasLayer
 
     public void Setup(Player player) => _player = player;
 
+    public override void _Process(double delta)
+    {
+        // 进入战斗后才显示小地图
+        var game = Core.GameServices.GameOrNull;
+        if (game != null)
+            Visible = game.CurrentState == GameState.Combat;
+    }
+
     public override void _Ready()
     {
         Layer = 95;
         Name = "MiniMap";
+        Visible = false; // 游戏开始前隐藏
         _drawer.MiniMap = this;
         _drawer.MouseFilter = Control.MouseFilterEnum.Ignore;
         _drawer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -83,6 +93,17 @@ public partial class MiniMap : CanvasLayer
     {
         public MiniMap? MiniMap;
         public override void _Process(double delta) => QueueRedraw();
-        public override void _Draw() => MiniMap?.Render(this);
+        public override void _Draw()
+        {
+            // 游戏未开始（非 Combat 状态）时不绘制
+            var game = Core.GameServices.GameOrNull;
+            if (game == null) return;
+            if (game.CurrentState == GameState.WeaponSelection && game.CurrentRound <= 1)
+            {
+                // 第 1 回合选卡期间也不显示（欢迎画面刚关闭）
+                if (!MiniMap?.Visible ?? true) return;
+            }
+            MiniMap?.Render(this);
+        }
     }
 }
