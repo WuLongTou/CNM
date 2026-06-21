@@ -767,11 +767,15 @@ public partial class UIManager : Control
                 _hudPanel?.ShowHazard("");
         }
 
+        // HUD 更新：只在值变化时赋值，避免每帧无意义的字符串分配和 canvas 重绘
         if (_gameManager != null && _gameManager.PlayerRef != null)
         {
-            _UpdateDashDisplay(_gameManager.PlayerRef);
-            _UpdateAttackIntervalDisplay(_gameManager.PlayerRef);
-            _hudPanel?.UpdateDebuffStatus(_gameManager.PlayerRef);
+            var p = _gameManager.PlayerRef;
+            _hudPanel?.UpdateDashCooldown(p.CanDash ? 0.0f : (float)(p.DashCooldownTimer?.TimeLeft ?? 0.0));
+            float interval = Mathf.Snapped(p.AttackCooldown, 0.1f);
+            float atkCd = (p.Combat != null && p.Combat.AttackTimer.TimeLeft >= 0.05f) ? (float)p.Combat.AttackTimer.TimeLeft : 0.0f;
+            _hudPanel?.UpdateAttackInterval(interval, atkCd);
+            _hudPanel?.UpdateDebuffStatus(p);
         }
 
         // Boss health bar

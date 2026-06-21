@@ -39,7 +39,7 @@ public partial class Projectile : CharacterBody2D, IDamager
         };
         _hitArea.AddChild(col);
         AddChild(_hitArea);
-        _hitArea.BodyEntered += OnBodyEntered;
+        // BodyEntered 由 _CheckHitscan 统一处理，Area2D 信号只保留 AreaEntered（可破坏障碍等非物理目标）
         _hitArea.AreaEntered += OnAreaEntered;
 
         // Visual: use sprite if provided, otherwise fallback to Line2D
@@ -177,13 +177,6 @@ public partial class Projectile : CharacterBody2D, IDamager
                 }
             }
         }
-    }
-
-    public void OnBodyEntered(Node body)
-    {
-        if (body is not Zombie z || _damagedEnemies.Contains(z))
-            return;
-        _HitZombie(z);
     }
 
     public void OnAreaEntered(Area2D area)

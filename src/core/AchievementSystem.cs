@@ -48,6 +48,9 @@ public partial class AchievementSystem : Node
 
     public override void _Process(double delta)
     {
+        // GameOver 后停止统计，避免生存时间虚高
+        if (GameServices.GameOrNull == null || GameServices.GameOrNull.CurrentState == GameState.GameOver)
+            return;
         _survivalTime += (float)delta;
     }
 

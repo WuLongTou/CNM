@@ -171,10 +171,15 @@ public partial class GameManager : Node
 
         if (_uiManager != null)
         {
-            // 在欢迎画面期间预加载武器图标纹理，避免首次选卡时卡顿
+            // 预生成所有地图的地面纹理（每张图 ~50ms 像素处理，分散到欢迎画面期间完成）
+            var allMaps = ZombieWars.World.MapLibrary.BuildAll();
+            ZombieWars.World.ProceduralGround.PreGenerateAll(
+                System.Array.ConvertAll(allMaps.ToArray(), m => m.Seed));
+
+            // 预加载武器图标纹理
             _weaponDeck?.PreWarmTextures();
 
-            // JIT 预热：预实例化关键战斗类，避免首次战斗时 JIT 编译卡顿
+            // JIT 预热
             _JitWarmup();
 
             while (_uiManager != null && _IsWelcomeVisible())
@@ -194,41 +199,61 @@ public partial class GameManager : Node
 
     /// <summary>
     /// JIT 预热：在欢迎画面期间预实例化/调用关键战斗类和方法，
-    /// 触发 .NET JIT 编译，避免首次战斗时一次性编译 Zombie/Projectile 等类导致卡顿。
+    /// 触发 .NET JIT 编译，避免首次选卡/战斗时一次性编译导致卡顿。
     /// </summary>
     private void _JitWarmup()
     {
-        if (_zombieScene == null) return;
-
-        // 预实例化一只僵尸并立即释放，触发 Zombie._Ready / ZombieVfx 等类的 JIT 编译
+        // 预实例化 Zombie/Projectile，触发类型 JIT
         try
         {
-            var dummy = _zombieScene.Instantiate() as Zombie;
+            var dummy = _zombieScene?.Instantiate() as Zombie;
             if (dummy != null)
             {
                 dummy.ZombieType = ZombieType.Basic;
-                dummy.GlobalPosition = new Vector2(-9999, -9999);
-                GetTree().CurrentScene.AddChild(dummy);
                 dummy.QueueFree();
             }
         }
-        catch { /* 预热失败不影响游戏 */ }
+        catch { }
 
-        // 预创建一个投射物并释放，触发 Projectile._PhysicsProcess JIT
         try
         {
-            var proj = new ZombieWars.Weapons.Projectile
-            {
-                GlobalPosition = new Vector2(-9999, -9999)
-            };
-            GetTree().CurrentScene.AddChild(proj);
+            var proj = new ZombieWars.Weapons.Projectile();
             proj.QueueFree();
         }
         catch { }
 
-        // 预调用 RecalculateStats 确保 PlayerCombat 方法链已 JIT
-        try { _player?.Combat?.RecalculateStats(); }
-        catch { }
+        // 预热选卡点击的完整调用链：ApplyWeaponEffect → RecalculateStats →
+        // ShowUpgradeEffect → SpawnFloatingLabel → UpdatePlayerStatus → UpdateEffects
+        // 这些方法首次调用时 JIT 编译耗时显著，提前触发后正式选卡时零开销。
+        if (_player != null && _weaponDeck != null)
+        {
+            try
+            {
+                var warmupCard = _weaponDeck.GetRandomWeapon();
+                if (warmupCard != null)
+                {
+                    _player.ApplyWeaponEffect(warmupCard);
+                    // 立即移除预热用的卡片，恢复初始状态
+                    var kept = new Godot.Collections.Array<ZombieWars.Weapons.WeaponCard>();
+                    foreach (var e in _player.ActiveEffects)
+                    {
+                        if (e != warmupCard)
+                            kept.Add(e);
+                    }
+                    _player.ActiveEffects = kept;
+                    _player.Combat?.RecalculateStats();
+                }
+            }
+            catch { }
+
+            // 预热 VFX 反馈方法（创建即时销毁的临时节点，只触发 JIT 不留副作用）
+            try { _player.Vfx?.ShowUpgradeEffect(); } catch { }
+            try { ZombieWars.Vfx.VFXManager.SpawnFloatingLabel(
+                GetTree().CurrentScene, _player.GlobalPosition, "warmup", Colors.Gray, 1); } catch { }
+            try { _uiManager?.UpdatePlayerStatus(_player); } catch { }
+            try { _uiManager?.ShowRoundBanner("warmup"); _uiManager?.HideRoundBanner(); } catch { }
+            try { GameServices.Audio.PlayWeaponSelect(); } catch { }
+        }
     }
 
     public override void _Notification(int what)
@@ -441,23 +466,30 @@ public partial class GameManager : Node
         if (_endingRound) return;
         _endingRound = true;
 
-        CurrentState = GameState.RoundTransition;
-        RoundEnded?.Invoke(CurrentRound);
+        try
+        {
+            CurrentState = GameState.RoundTransition;
+            RoundEnded?.Invoke(CurrentRound);
 
-        AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
-        AchievementSystem.Instance?.ResetRoundStats();
+            AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
+            AchievementSystem.Instance?.ResetRoundStats();
 
-        LogUtils.Print($"第 {CurrentRound} 回合结束！");
+            LogUtils.Print($"第 {CurrentRound} 回合结束！");
 
-        _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
+            _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
 
-        await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
+            await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
 
-        _uiManager?.HideRoundSummary();
-        await ToSignal(GetTree().CreateTimer(0.4f), Timer.SignalName.Timeout);
+            _uiManager?.HideRoundSummary();
+            await ToSignal(GetTree().CreateTimer(0.4f), Timer.SignalName.Timeout);
 
-        GameServices.Audio.ResetKillStreak();
-        _endingRound = false;
+            GameServices.Audio.ResetKillStreak();
+        }
+        finally
+        {
+            _endingRound = false;
+        }
+
         StartNewRound();
     }
 
@@ -467,6 +499,14 @@ public partial class GameManager : Node
     {
         if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
         _transitioningToCombat = true;
+
+        // 立即隐藏选卡面板（最轻量操作，给玩家即时反馈）
+        _uiManager?.HideWeaponSelection();
+
+        // 等一帧再执行武器效果应用，避免点击瞬间 JIT + 节点创建堆积卡顿
+        await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
+
+        if (CurrentState == GameState.GameOver) return;
 
         if (_player != null)
         {
@@ -482,11 +522,11 @@ public partial class GameManager : Node
             _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
         }
 
-        _uiManager?.HideWeaponSelection();
         _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
         _transitioningToCombat = false;
+        if (CurrentState == GameState.GameOver) return;
         CurrentState = GameState.Combat;
         _ActivateRoundDirective();
         WeaponSelectionEnded?.Invoke();
@@ -505,6 +545,7 @@ public partial class GameManager : Node
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
         _transitioningToCombat = false;
+        if (CurrentState == GameState.GameOver) return;
         CurrentState = GameState.Combat;
         _ActivateRoundDirective();
         WeaponSelectionEnded?.Invoke();
@@ -564,7 +605,13 @@ public partial class GameManager : Node
             waveOffset = WaveSystem.GetSpawnOffset(progress, _zombiesSpawned * 0.5f);
         }
 
-        zombieInstance.GlobalPosition = spawnPos + offset + waveOffset;
+        // 世界边界 clamp：waveOffset 可能把僵尸推出世界外
+        var worldSize = MapContext.CurrentWorldSize;
+        var finalPos = spawnPos + offset + waveOffset;
+        finalPos = new Vector2(
+            Mathf.Clamp(finalPos.X, GameConfig.SpawnMargin, worldSize.X - GameConfig.SpawnMargin),
+            Mathf.Clamp(finalPos.Y, GameConfig.SpawnTopMarginFallback, worldSize.Y - GameConfig.SpawnMargin));
+        zombieInstance.GlobalPosition = finalPos;
 
         zombieInstance.SetPlayerTarget(_player);
         zombieInstance.Died += _OnZombieDied;
@@ -589,8 +636,12 @@ public partial class GameManager : Node
 
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
 
-        var typeName = TypeNames.TryGetValue((int)zombieType, out var name) ? name : "未知";
-        LogUtils.Print($"生成僵尸 {_zombiesSpawned}/{_zombiesToSpawn} (类型: {typeName}, 强度: x{roundMult:F2})");
+        // 仅 Boss/精英/分形时打印日志，普通僵尸生成不刷屏
+        if (zombieInstance.IsBoss || zombieInstance.IsElite || zombieInstance.IsFractal)
+        {
+            var typeName = TypeNames.TryGetValue((int)zombieType, out var name) ? name : "未知";
+            LogUtils.Print($"生成僵尸 {_zombiesSpawned}/{_zombiesToSpawn} (类型: {typeName}, 强度: x{roundMult:F2})");
+        }
     }
 
     /// <summary>
@@ -814,11 +865,7 @@ public partial class GameManager : Node
         foreach (var zombie in ZombieRegistry.All)
         {
             if (IsInstanceValid(zombie))
-            {
-                zombie.SetPhysicsProcess(false);
-                zombie.SetProcess(false);
-            }
-
+                zombie.QueueFree();
         }
 
         _spawnTimer = 999999.0f;
@@ -833,6 +880,7 @@ public partial class GameManager : Node
         SaveManager.AddRoundsSurvived(CurrentRound);
         // 跨局成长：按得分与击杀结算金币（得分/50 + 总击杀），供永久升级消费
         SaveManager.AddCoins(Score / 50 + _totalKills);
+        SaveManager.Flush(); // 游戏结束立即写盘，避免数据丢失
     }
 
     private void _ChooseRoundDirective()

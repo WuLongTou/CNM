@@ -404,7 +404,8 @@ void fragment() {
     public override void _Process(double delta)
     {
         // 模态硬约束：非战斗状态（卡片/暂停/GameOver）不推进天气，避免玩家在 UI 页被酸雨和闪电击杀
-        if (GameServices.Game.CurrentState != GameState.Combat)
+        var game = GameServices.GameOrNull;
+        if (game == null || game.CurrentState != GameState.Combat)
             return;
         float d = (float)delta;
 

@@ -10,6 +10,9 @@ public partial class SaveManager : Node
     private const string SAVE_FILE_PATH = "user://zvs_save.dat";
 
     private Godot.Collections.Dictionary _saveData = new();
+    private bool _dirty;
+    private float _flushTimer;
+    private const float FlushInterval = 3.0f; // 节流：最多每 3 秒写盘一次
 
     public override void _Ready()
     {
@@ -20,6 +23,38 @@ public partial class SaveManager : Node
     public override void _ExitTree()
     {
         Instance = null;
+    }
+
+    public override void _Process(double delta)
+    {
+        // 脏标志节流：累积变更达到间隔后统一写盘，避免每次击杀都 IO
+        if (_dirty)
+        {
+            _flushTimer -= (float)delta;
+            if (_flushTimer <= 0)
+            {
+                _dirty = false;
+                _flushTimer = 0;
+                _SaveGame();
+            }
+        }
+    }
+
+    /// <summary>标记数据已变更，延迟写盘。</summary>
+    private void _MarkDirty()
+    {
+        _dirty = true;
+        if (_flushTimer <= 0)
+            _flushTimer = FlushInterval;
+    }
+
+    /// <summary>立即写盘（用于游戏结束/退出等必须即时保存的场景）。</summary>
+    public static void Flush()
+    {
+        if (Instance == null || !Instance._dirty) return;
+        Instance._dirty = false;
+        Instance._flushTimer = 0;
+        Instance._SaveGame();
     }
 
     public static void SaveHighScore(int newScore)
@@ -50,7 +85,7 @@ public partial class SaveManager : Node
             ? (int)Instance._saveData["total_kills"]
             : 0;
         Instance._saveData["total_kills"] = kills + 1;
-        Instance._SaveGame();
+        Instance._MarkDirty();
     }
 
     public static void AddGamePlayed()
@@ -86,7 +121,7 @@ public partial class SaveManager : Node
         if (Instance == null || amount <= 0) return;
         int coins = Instance._saveData.ContainsKey("coins") ? (int)Instance._saveData["coins"] : 0;
         Instance._saveData["coins"] = coins + amount;
-        Instance._SaveGame();
+        Instance._MarkDirty();
     }
 
     public static int GetCoins()

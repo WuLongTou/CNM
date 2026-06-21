@@ -38,8 +38,8 @@ public partial class MapManager : Node
     {
         int round = (int)roundVar;
         _roundsSinceChange++;
-        // 第 1 回合或达到切换间隔时换图
-        if (round <= 1 || _roundsSinceChange >= GameConfig.MapRerollRounds)
+        // 第 1 回合不换图（初始地图已在 Main._Ready 中选定），仅达到切换间隔时换
+        if (round > 1 && _roundsSinceChange >= GameConfig.MapRerollRounds)
         {
             SelectRandom();
             _roundsSinceChange = 0;

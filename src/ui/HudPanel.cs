@@ -414,27 +414,34 @@ public partial class HudPanel : Panel
         _scoreLabel.TooltipText = "击杀僵尸、精英和 BOSS 可获得分数。";
     }
 
+    private string _lastDashText = "";
     public void UpdateDashCooldown(float remaining)
     {
+        string text;
         if (remaining <= 0.0f)
         {
-            _dashCooldownLabel.Text = "闪避: 就绪";
+            text = "闪避: 就绪";
             _dashCooldownLabel.TooltipText = "按 Shift 冲刺闪避，拉开距离或穿过危险区域。";
         }
         else
         {
             string secs = remaining < 2.0f ? remaining.ToString("F1") + "s" : Mathf.FloorToInt(remaining) + "s";
-            _dashCooldownLabel.Text = $"闪避: {secs}";
+            text = $"闪避: {secs}";
             _dashCooldownLabel.TooltipText = $"闪避冷却中，还需 {secs}。";
         }
+        if (text == _lastDashText) return;
+        _lastDashText = text;
+        _dashCooldownLabel.Text = text;
     }
 
+    private string _lastIntervalTooltip = "";
     public void UpdateAttackInterval(float interval, float cooldown)
     {
-        _attackIntervalLabel.Text = $"隔{interval:F2}s";
-        string intervalText = $"{interval:F2}s";
-        string cooldownText = cooldown > 0 ? $"{cooldown:F2}s" : "就绪";
-        _attackIntervalLabel.TooltipText = $"攻击间隔: 每 {intervalText} 可攻击一次\n下次可攻击: {cooldownText}";
+        string tooltipText = cooldown > 0 ? $"攻击间隔: 每 {interval:F2}s 可攻击一次\n下次可攻击: {cooldown:F2}s" : $"攻击间隔: 每 {interval:F2}s 可攻击一次\n下次可攻击: 就绪";
+        if (tooltipText == _lastIntervalTooltip) return;
+        _lastIntervalTooltip = tooltipText;
+        _attackIntervalLabel.Text = $"隔 {interval:F2}s";
+        _attackIntervalLabel.TooltipText = tooltipText;
     }
 
     public void UpdatePlayerStatus(Player player)

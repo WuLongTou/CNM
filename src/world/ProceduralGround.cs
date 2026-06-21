@@ -18,6 +18,30 @@ public static class ProceduralGround
     private const float InnerRadiusX = 0.42f;
     private const float InnerRadiusY = 0.40f;
 
+    // 纹理缓存：同一 seed 只烘焙一次，后续直接复用（避免每次换图都做 23 万像素 × 7 遍处理）
+    private static readonly System.Collections.Generic.Dictionary<int, ImageTexture> _cache = new();
+
+    /// <summary>获取烘焙好的地面纹理（带缓存）。首次调用烘焙，后续直接返回缓存。</summary>
+    public static ImageTexture GetTexture(int seed = 20240615)
+    {
+        if (_cache.TryGetValue(seed, out var cached))
+            return cached;
+        var img = Bake(seed);
+        var tex = ImageTexture.CreateFromImage(img);
+        _cache[seed] = tex;
+        return tex;
+    }
+
+    /// <summary>预生成所有地图的地面纹理（在欢迎画面期间调用，分散首次烘焙开销）。</summary>
+    public static void PreGenerateAll(int[] seeds)
+    {
+        foreach (var seed in seeds)
+        {
+            if (!_cache.ContainsKey(seed))
+                _cache[seed] = ImageTexture.CreateFromImage(Bake(seed));
+        }
+    }
+
     public static Image Bake(int seed = 20240615)
     {
         var img = Image.CreateEmpty(BakeW, BakeH, false, Image.Format.Rgba8);

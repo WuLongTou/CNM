@@ -61,9 +61,10 @@ public partial class ZombieArrow : Area2D, IDamager
         if (GetChildCount() > 0 && GetChild(0) is Sprite2D sprite)
             sprite.Rotation = _velocity.Angle();
 
-        // Auto-cleanup if off-screen
-        var screen = GetViewport().GetVisibleRect();
-        if (!screen.HasPoint(GlobalPosition))
+        // Auto-cleanup if off-screen（用 CanvasTransform 将世界坐标转为屏幕坐标）
+        var vp = GetViewport();
+        Vector2 screenPos = vp.CanvasTransform * GlobalPosition;
+        if (!vp.GetVisibleRect().Grow(200).HasPoint(screenPos))
             QueueFree();
     }
 

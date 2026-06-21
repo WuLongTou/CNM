@@ -216,15 +216,11 @@ public partial class PlayerBuffSystem : Node
         switch (buff.Type)
         {
             case BuffType.Poison:
-                _player.TakeDamage((int)buff.Value);
-                VFXManager.SpawnFloatingLabel(_player.GetParent(), _player.GlobalPosition,
-                    $"-{buff.Value:F0}", new Color(0.3f, 0.9f, 0.2f), 12);
+                _ApplyDotDamage((int)buff.Value, new Color(0.3f, 0.9f, 0.2f));
                 break;
 
             case BuffType.Burn:
-                _player.TakeDamage((int)buff.Value);
-                VFXManager.SpawnFloatingLabel(_player.GetParent(), _player.GlobalPosition,
-                    $"-{buff.Value:F0}", new Color(1.0f, 0.4f, 0.1f), 12);
+                _ApplyDotDamage((int)buff.Value, new Color(1.0f, 0.4f, 0.1f));
                 break;
 
             case BuffType.Invincible:
@@ -237,6 +233,18 @@ public partial class PlayerBuffSystem : Node
         }
 
         BuffTick?.Invoke(buff, buff.Value);
+    }
+
+    /// <summary>DOT 伤害直接扣血，不触发无敌帧/震屏/受击动画——否则中毒每 tick 白送 0.5s 无敌。</summary>
+    private void _ApplyDotDamage(int amount, Color labelColor)
+    {
+        if (_player == null || _player.IsDead || amount <= 0) return;
+        _player.CurrentHealth = Math.Max(0, _player.CurrentHealth - amount);
+        _player.FireHealthChanged(_player.CurrentHealth);
+        VFXManager.SpawnFloatingLabel(_player.GetParent(), _player.GlobalPosition,
+            $"-{amount}", labelColor, 12);
+        if (_player.CurrentHealth <= 0)
+            _player.Die();
     }
 
     /// <summary>

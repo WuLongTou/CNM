@@ -184,6 +184,20 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
             return;
         }
 
+        // 眩晕：完全不能移动/攻击
+        if (StunDuration > 0)
+        {
+            StunDuration -= (float)delta;
+            Velocity = Vector2.Zero;
+            MoveAndSlide();
+            return;
+        }
+
+        // 魅惑：反转移动方向
+        bool charmed = CharmDuration > 0;
+        if (charmed)
+            CharmDuration -= (float)delta;
+
         if (IsDashing)
         {
             Vfx?.SpawnDashTrail((float)delta);
@@ -306,6 +320,9 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     private void _HandleMovement()
     {
         Vector2 inputVec = InputHandler?.MoveDirection ?? Vector2.Zero;
+        // 魅惑状态下反转移动方向
+        if (CharmDuration > 0 && inputVec != Vector2.Zero)
+            inputVec = -inputVec;
         Velocity = inputVec != Vector2.Zero ? inputVec * CurrentSpeed * ExternalSlowMult : Vector2.Zero;
     }
 

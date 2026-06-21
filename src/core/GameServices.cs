@@ -23,6 +23,9 @@ public static class GameServices
     public static GameManager Game => _gameManager
         ?? throw new InvalidOperationException("GameManager not initialized");
 
+    /// <summary>安全可空访问（场景卸载/重载期间 Game 可能为 null）。</summary>
+    public static GameManager? GameOrNull => _gameManager;
+
     public static SaveManager Save => _saveManager
         ?? throw new InvalidOperationException("SaveManager not initialized");
 

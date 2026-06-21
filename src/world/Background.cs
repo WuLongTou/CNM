@@ -52,8 +52,8 @@ public partial class Background : Node2D
 
     private void _BakeGroundTexture()
     {
-        var img = ProceduralGround.Bake();
-        var tex = ImageTexture.CreateFromImage(img);
+        int seed = _currentMap?.Seed ?? 20240615;
+        var tex = ProceduralGround.GetTexture(seed); // 命中缓存时零开销
         var groundSprite = new TextureRect
         {
             Texture = tex,

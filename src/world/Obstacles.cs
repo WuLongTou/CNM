@@ -502,7 +502,13 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
         biteCol.Shape = new RectangleShape2D { Size = def.Size * 1.1f };
         _biteArea.AddChild(biteCol);
         AddChild(_biteArea);
+        _biteArea.BodyEntered += _OnBiteBodyEntered;
+        _biteArea.BodyExited += _OnBiteBodyExited;
     }
+
+    private int _biteCount;
+    private void _OnBiteBodyEntered(Node body) => _biteCount++;
+    private void _OnBiteBodyExited(Node body) => _biteCount = Math.Max(0, _biteCount - 1);
 
     public override void _Ready()
     {
@@ -526,12 +532,12 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
             QueueRedraw();
         }
 
-        // 僵尸啃咬：用 biteArea 重叠检测（替代全局距离，避免跨障碍误伤），每 0.5s 掉血
+        // 僵尸啃咬：用信号维护的计数判断，避免每帧 GetOverlappingBodies 物理查询
         _biteTick += d;
         if (_biteTick >= 0.5f)
         {
             _biteTick = 0;
-            if (_biteArea != null && _biteArea.GetOverlappingBodies().Count > 0)
+            if (_biteCount > 0)
                 TakeDamage(4);
         }
     }

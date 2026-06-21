@@ -485,6 +485,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         // 避免堆叠成一点、形成自然包围圈（N 有界，O(N²) 距离计算无 GC 压力）
         float sepRange = GameConfig.ZombieSeparationRange;
         float sepRangeSq = sepRange * sepRange;
+        float sepDt = (float)GetPhysicsProcessDeltaTime(); // 缓存到循环外，避免 N² 次引擎调用
         foreach (var other in ZombieRegistry.All)
         {
             if (other == this) continue;
@@ -494,7 +495,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             {
                 float dist = Mathf.Sqrt(distSq);
                 float factor = (sepRange - dist) / sepRange;
-                Velocity += (diff / dist) * factor * GameConfig.ZombieSeparationForce * (float)GetPhysicsProcessDeltaTime();
+                Velocity += (diff / dist) * factor * GameConfig.ZombieSeparationForce * sepDt;
             }
         }
 
