@@ -61,13 +61,9 @@ public partial class UIManager : Control
     private WeaponDeck? _weaponDeck;
 
     // ═══════════════════════════════════════════════
-    // Tooltip
+    // Tooltip（委托给 TooltipSystem）
     // ═══════════════════════════════════════════════
-    private Panel _tooltipPanel = null!;
-    private RichTextLabel _tooltipLabel = null!;
-    private Timer? _tooltipHideTimer;
-    private float _tooltipMaxWidth = GameConfig.TooltipMaxWidth;
-    private Vector2 _tooltipOffset = GameConfig.TooltipOffset;
+    private TooltipSystem _tooltipSystem = null!;
 
     // ═══════════════════════════════════════════════
     // Pause
@@ -80,11 +76,9 @@ public partial class UIManager : Control
     private Panel? _roundSummaryPanel;
 
     // ═══════════════════════════════════════════════
-    // Level Up / Milestone
+    // Notifications（委托给 NotificationPanel）
     // ═══════════════════════════════════════════════
-    private Panel? _levelUpPanel;
-    private Label? _levelUpLabel;
-    private Tween? _levelUpTween;
+    private NotificationPanel _notificationPanel = null!;
 
     // ═══════════════════════════════════════════════
     // Lifecycle
@@ -139,7 +133,10 @@ public partial class UIManager : Control
         _CreateResonanceIndicator();
 
         _SetupConnections();
-        _CreateTooltipPanel();
+        _tooltipSystem = new TooltipSystem { Name = "TooltipSystem" };
+        AddChild(_tooltipSystem);
+        _notificationPanel = new NotificationPanel { Name = "NotificationPanel" };
+        AddChild(_notificationPanel);
         _pausePanel = new PausePanel();
         _pausePanel.ResumeRequested += () => SetUserPaused(false);
         AddChild(_pausePanel);
@@ -317,56 +314,6 @@ public partial class UIManager : Control
         return _GetUpgradeTooltipText(upgrade);
     }
 
-    private void _CreateTooltipPanel()
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-        _tooltipPanel = new Panel
-        {
-            Visible = false,
-            ZIndex = 200,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            ProcessMode = ProcessModeEnum.Always
-        };
-
-        var tooltipStyle = MakeNotePanel(shadowSize: 6f);
-        tooltipStyle.BgColor = new Color(NoteBg, 0.98f);
-        tooltipStyle.ShadowSize = 8;
-        tooltipStyle.ShadowOffset = new Vector2(3, 3);
-        _tooltipPanel.AddThemeStyleboxOverride("panel", tooltipStyle);
-
-        _tooltipLabel = new RichTextLabel
-        {
-            BbcodeEnabled = true,
-            FitContent = true,
-            ScrollActive = false,
-            MouseFilter = Control.MouseFilterEnum.Ignore,
-            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(320, viewport, 0.48f), 0)
-        };
-        _tooltipLabel.AddThemeFontSizeOverride("normal_font_size", ResponsiveUi.Font(14, viewport, 10));
-        _tooltipLabel.AddThemeFontSizeOverride("bold_font_size", ResponsiveUi.Font(15, viewport, 11));
-        _tooltipLabel.AddThemeColorOverride("default_color", NoteText);
-
-        var margin = new MarginContainer
-        {
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginXLarge, viewport, 8));
-        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginXLarge, viewport, 8));
-        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(12, viewport, 6));
-        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(12, viewport, 6));
-        _tooltipPanel.AddChild(margin);
-        margin.AddChild(_tooltipLabel);
-
-        AddChild(_tooltipPanel);
-
-        _tooltipHideTimer = new Timer
-        {
-            OneShot = true,
-            WaitTime = 0.2f
-        };
-        _tooltipHideTimer.Timeout += _HideTooltipPanel;
-        AddChild(_tooltipHideTimer);
-    }
 
     // ═══════════════════════════════════════════════
     // Connections
@@ -452,8 +399,7 @@ public partial class UIManager : Control
 
     public override void _Process(double delta)
     {
-        if (_tooltipPanel != null && _tooltipPanel.Visible)
-            _PositionTooltip();
+        // tooltip 跟随由 TooltipSystem._Process 自行处理
 
         // 陷阱 HUD 提示倒计时清除（玩家离开陷阱区后 0.6s 自动消失）
         if (_hazardTimer > 0)
@@ -663,103 +609,16 @@ public partial class UIManager : Control
     }
 
     // ═══════════════════════════════════════════════
-    // Tooltip Display
+    // Tooltip Display（委托给 TooltipSystem）
     // ═══════════════════════════════════════════════
 
-    private void _HideTooltip()
-    {
-        if (_tooltipPanel != null)
-            _tooltipPanel.Visible = false;
-        if (_tooltipHideTimer != null && !_tooltipHideTimer.IsStopped())
-            _tooltipHideTimer.Stop();
-    }
+    private void _HideTooltip() => _tooltipSystem?.HideTooltip();
 
-    public void ShowTooltip(string text)
-    {
-        _ShowTooltip(text);
-    }
+    public void ShowTooltip(string text) => _tooltipSystem?.Show(text);
 
-    public void HideTooltip()
-    {
-        _HideTooltip();
-    }
+    public void HideTooltip() => _tooltipSystem?.HideTooltip();
 
-    private void _ShowTooltip(string text)
-    {
-        if (_tooltipPanel == null || _tooltipLabel == null) return;
-
-        if (_tooltipHideTimer != null && !_tooltipHideTimer.IsStopped())
-            _tooltipHideTimer.Stop();
-
-        _tooltipLabel.Text = text;
-        _tooltipLabel.ResetSize();
-
-        var screenSize = GetViewport().GetVisibleRect().Size;
-        float contentWidth = Mathf.Min(_tooltipMaxWidth, Mathf.Max(ResponsiveUi.Px(260, screenSize, 180), screenSize.X * 0.32f));
-        float contentHeight = _tooltipLabel.GetContentHeight();
-
-        contentHeight = Mathf.Max(contentHeight, ResponsiveUi.Px(100, screenSize, 72));
-
-        float panelWidth = contentWidth + ResponsiveUi.Px(32, screenSize, 16);
-        float panelHeight = contentHeight + ResponsiveUi.Px(24, screenSize, 12);
-
-        _tooltipLabel.CustomMinimumSize = new Vector2(contentWidth, contentHeight);
-        _tooltipPanel.CustomMinimumSize = new Vector2(panelWidth, panelHeight);
-        _tooltipPanel.Size = new Vector2(panelWidth, panelHeight);
-
-        _PositionTooltip();
-        _tooltipPanel.Visible = true;
-    }
-
-    private void _PositionTooltip()
-    {
-        var mousePos = GetViewport().GetMousePosition();
-        var panelSize = _tooltipPanel.GetCombinedMinimumSize();
-        var screenSize = GetViewport().GetVisibleRect().Size;
-
-        var candidates = new List<Vector2>
-        {
-            mousePos + _tooltipOffset,
-            mousePos + new Vector2(_tooltipOffset.X, -panelSize.Y - _tooltipOffset.Y),
-            mousePos + new Vector2(-panelSize.X - _tooltipOffset.X, _tooltipOffset.Y),
-            mousePos + new Vector2(-panelSize.X - _tooltipOffset.X, -panelSize.Y - _tooltipOffset.Y)
-        };
-
-        var bestPos = mousePos + _tooltipOffset;
-        float bestDist = Mathf.Inf;
-        foreach (var pos in candidates)
-        {
-            bool inside = pos.X >= 0 && pos.Y >= 0 &&
-                          pos.X + panelSize.X <= screenSize.X &&
-                          pos.Y + panelSize.Y <= screenSize.Y;
-            if (inside)
-            {
-                var dist = pos.DistanceTo(mousePos);
-                if (dist < bestDist)
-                {
-                    bestDist = dist;
-                    bestPos = pos;
-                }
-            }
-        }
-
-        if (bestDist < Mathf.Inf)
-        {
-            _tooltipPanel.Position = bestPos;
-            return;
-        }
-
-        _tooltipPanel.Position = new Vector2(
-            Mathf.Clamp(mousePos.X + _tooltipOffset.X, ResponsiveUi.Px(10, screenSize, 5), screenSize.X - panelSize.X - ResponsiveUi.Px(10, screenSize, 5)),
-            Mathf.Clamp(mousePos.Y + _tooltipOffset.Y, ResponsiveUi.Px(10, screenSize, 5), screenSize.Y - panelSize.Y - ResponsiveUi.Px(10, screenSize, 5))
-        );
-    }
-
-    private void _HideTooltipPanel()
-    {
-        if (_tooltipPanel != null)
-            _tooltipPanel.Visible = false;
-    }
+    private void _ShowTooltip(string text) => _tooltipSystem?.Show(text);
 
     // ═══════════════════════════════════════════════
     // Card Rendering
@@ -1085,19 +944,11 @@ public partial class UIManager : Control
     private void _ApplyResponsiveLayout(Vector2 viewportSize)
     {
         float scale = ResponsiveUi.Scale(viewportSize);
-        _tooltipMaxWidth = Mathf.Min(GameConfig.TooltipMaxWidth * scale, viewportSize.X * 0.54f);
-        _tooltipOffset = ResponsiveUi.Size(GameConfig.TooltipOffset.X, GameConfig.TooltipOffset.Y, viewportSize, 8);
-
-        if (_tooltipLabel != null)
-        {
-            _tooltipLabel.AddThemeFontSizeOverride("normal_font_size", ResponsiveUi.Font(14, viewportSize, 10));
-            _tooltipLabel.AddThemeFontSizeOverride("bold_font_size", ResponsiveUi.Font(15, viewportSize, 11));
-        }
+        // tooltip/levelup 响应式布局由各自组件内部处理
 
         _ApplyWeaponSelectionResponsive(viewportSize);
         _ApplyBossHealthResponsive(viewportSize);
         _ApplyMathUiResponsive(viewportSize);
-        _ApplyLevelUpResponsive(viewportSize);
     }
 
     private void _ApplyWeaponSelectionResponsive(Vector2 viewportSize)
@@ -1154,18 +1005,6 @@ public partial class UIManager : Control
             _fieldHintLabel.OffsetTop = -ResponsiveUi.Px(160, viewportSize, 116);
             _fieldHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewportSize, 11));
         }
-    }
-
-    private void _ApplyLevelUpResponsive(Vector2 viewportSize)
-    {
-        if (_levelUpPanel == null)
-            return;
-
-        float top = ResponsiveUi.Px(90, viewportSize, 64);
-        _levelUpPanel.OffsetTop = top;
-        _levelUpPanel.OffsetBottom = top + ResponsiveUi.Px(40, viewportSize, 30);
-        _levelUpLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewportSize, 15));
-        _levelUpLabel?.AddThemeConstantOverride("outline_size", ResponsiveUi.Px(UiOutlineHero, viewportSize, 2));
     }
 
     // ═══════════════════════════════════════════════
@@ -1503,64 +1342,9 @@ public partial class UIManager : Control
         _screenFx?.ShowOffscreenIndicator(direction, dangerLevel);
     }
 
-    /// <summary>显示升级/强化通知</summary>
+    /// <summary>显示升级/强化通知（委托给 NotificationPanel）</summary>
     public void ShowLevelUpNotification(string text, Color color)
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-        if (_levelUpPanel == null)
-        {
-            _levelUpPanel = new Panel
-            {
-                Visible = true,
-                ZIndex = 60,
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            _levelUpPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-            _levelUpPanel.OffsetTop = ResponsiveUi.Px(90, viewport, 64);
-            _levelUpPanel.OffsetBottom = _levelUpPanel.OffsetTop + ResponsiveUi.Px(40, viewport, 30);
-            var style = new StyleBoxFlat { BgColor = new Color(0, 0, 0, 0) };
-            _levelUpPanel.AddThemeStyleboxOverride("panel", style);
-            AddChild(_levelUpPanel);
-
-            var center = new CenterContainer();
-            center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            _levelUpPanel.AddChild(center);
-
-            _levelUpLabel = new Label
-            {
-                HorizontalAlignment = HorizontalAlignment.Center,
-                VerticalAlignment = VerticalAlignment.Center
-            };
-            _levelUpLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 15));
-            _levelUpLabel.AddThemeConstantOverride("outline_size", ResponsiveUi.Px(UiOutlineHero, viewport, 2));
-            _levelUpLabel.AddThemeColorOverride("font_outline_color", InkBlack);
-            center.AddChild(_levelUpLabel);
-        }
-
-        if (_levelUpTween != null && _levelUpTween.IsRunning())
-            _levelUpTween.Kill();
-
-        _levelUpLabel!.Text = text;
-        _levelUpLabel.AddThemeColorOverride("font_color", color);
-        _levelUpPanel!.Visible = true;
-        _levelUpPanel.Modulate = _levelUpPanel.Modulate with { A = 0.0f };
-        _levelUpPanel.Scale = new Vector2(0.5f, 0.5f);
-
-        _levelUpTween = CreateTween();
-        _levelUpTween.SetParallel(true);
-        _levelUpTween.TweenProperty(_levelUpPanel, Control.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.2f);
-        _levelUpTween.TweenProperty(_levelUpPanel, "scale", new Vector2(1.1f, 1.1f), 0.2f)
-            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-        _levelUpTween.TweenProperty(_levelUpPanel, "scale", new Vector2(1.0f, 1.0f), 0.1f);
-        _levelUpTween.TweenInterval(1.2f);
-        _levelUpTween.SetParallel(true);
-        _levelUpTween.TweenProperty(_levelUpPanel, Control.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.4f);
-        _levelUpTween.SetParallel(false);
-        _levelUpTween.TweenCallback(Callable.From(() =>
-        {
-            if (_levelUpPanel != null) _levelUpPanel.Visible = false;
-        }));
-    }
+        => _notificationPanel?.Show(text, color);
 
     /// <summary>显示连击计数</summary>
     public void ShowComboNotification(int comboCount)
