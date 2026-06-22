@@ -422,7 +422,9 @@ public partial class GameManager : Node
         if (HealBetweenRounds && _player != null && CurrentRound > 1)
         {
             var playerMaxHp = _player.MaxHealth;
-            var healAmount = (int)(playerMaxHp * HealPercent);
+            // 回血比例随回合递减：后期 20% 固定回血太强，每回合衰减 1%
+            var effectiveHeal = HealPercent * Mathf.Max(0.05f, 1.0f - CurrentRound * 0.01f);
+            var healAmount = (int)(playerMaxHp * effectiveHeal);
             _player.Heal(healAmount);
             _uiManager?.ShowDamageNumber(_player.GlobalPosition, -healAmount, false);
         }
@@ -610,7 +612,7 @@ public partial class GameManager : Node
         zombieInstance.Died += _OnZombieDied;
         GetTree().CurrentScene.AddChild(zombieInstance);
 
-        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
+        var roundMult = _GetRoundMult();
         zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
 
         // 数学系统：分形——R7+ 普通僵尸 25% 概率标记为分形体
@@ -637,6 +639,10 @@ public partial class GameManager : Node
         }
     }
 
+    /// <summary>难度系数：线性增长（取代对数），保证后期压力。</summary>
+    private float _GetRoundMult(float factor = 1.0f) =>
+        1.0f + CurrentRound * RoundMultiplierBase * 2.0f * factor;
+
     /// <summary>
     /// 生成分形僵尸的子体（由父体死亡触发）。
     /// </summary>
@@ -655,7 +661,7 @@ public partial class GameManager : Node
 
         GetTree().CurrentScene.AddChild(child);
 
-        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
+        var roundMult = _GetRoundMult();
         child.ApplyRoundScaling(CurrentRound, roundMult);
         child.OverrideStats(hp, damage, speed);
 
@@ -695,7 +701,9 @@ public partial class GameManager : Node
         var zombieInstance = _zombieScene.Instantiate() as Zombie;
         if (zombieInstance == null) return;
 
-        zombieInstance.Set("zombie_type", (int)ZombieType.Tank);
+        // Boss 多样化：从高威胁类型中随机选择，不再固定 Tank
+        var bossTypes = new[] { ZombieType.Tank, ZombieType.Mech, ZombieType.Knight, ZombieType.Dragon };
+        zombieInstance.Set("zombie_type", (int)bossTypes[(int)(GD.Randi() % bossTypes.Length)]);
 
         var screenSize = GetViewport().GetVisibleRect().Size;
         zombieInstance.GlobalPosition = new Vector2(screenSize.X / 2.0f, screenSize.Y * 0.2f);
@@ -704,7 +712,7 @@ public partial class GameManager : Node
         zombieInstance.Died += _OnZombieDied;
         GetTree().CurrentScene.AddChild(zombieInstance);
 
-        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
+        var roundMult = _GetRoundMult();
         zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
         zombieInstance.SetBoss();
         BossZombie = zombieInstance;
@@ -787,7 +795,7 @@ public partial class GameManager : Node
             swarm.Died += _OnMinionDied;
             GetTree().CurrentScene.AddChild(swarm);
 
-            var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.8f;
+            var roundMult = _GetRoundMult(0.8f);
             swarm.ApplyRoundScaling(CurrentRound, roundMult);
             _zombiesAlive++;
             _currentRoundTotalZombies++;
@@ -836,10 +844,9 @@ public partial class GameManager : Node
 
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
         _uiManager?.UpdateScoreDisplay(Score);
-        _uiManager?.AddCombo();
+        // 连击 UI 由 PlayerCombat.OnKill() 驱动（单一数据源），不再在此处 AddCombo
         _uiManager?.ShowKillEffect(zombie.GlobalPosition, pts);
 
-        // Track combo in UI
         if (_player?.Combat != null)
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
 
@@ -1068,8 +1075,6 @@ public partial class GameManager : Node
 
     public int GetCurrentRound() => CurrentRound;
     public int GetZombiesRemaining() => _zombiesAlive;
-    private int _GetRemainingZombies() => Mathf.Max(0, _zombiesToSpawn - _zombiesSpawned) + _zombiesAlive;
-
     public void SpawnMinionZombie(Vector2 pos)
     {
         if (_zombieScene == null || _zombiesAlive >= ZombiesMaxPerRound + 10) return;
@@ -1084,8 +1089,8 @@ public partial class GameManager : Node
         GetTree().CurrentScene.AddChild(minion);
         ZombieRegistry.Register(minion);
 
-        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 2.0f;
-        minion.ApplyRoundScaling(CurrentRound, roundMult * 0.6f);
+        var roundMult = _GetRoundMult(1.2f);
+        minion.ApplyRoundScaling(CurrentRound, roundMult);
 
         _zombiesAlive++;
         _currentRoundTotalZombies++;
@@ -1112,7 +1117,7 @@ public partial class GameManager : Node
             MapContext.CurrentWorldSize.Y / 2.0f + (float)GD.RandRange(-100, 100)
         );
 
-        var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 1.5f;
+        var roundMult = _GetRoundMult(1.5f);
         zombieInstance.ApplyRoundScaling(CurrentRound, roundMult);
 
         GetTree().CurrentScene.AddChild(zombieInstance);
@@ -1143,7 +1148,6 @@ public partial class GameManager : Node
 
         _uiManager?.UpdateScoreDisplay(Score);
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
-        _uiManager?.AddCombo();
         if (_player?.Combat != null)
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
         _HandleDirectiveKill(zombie, 5);
@@ -1174,7 +1178,7 @@ public partial class GameManager : Node
             GetTree().CurrentScene.AddChild(ship);
             ZombieRegistry.Register(ship);
 
-            var roundMult = 1.0f + Mathf.Log(1.0f + CurrentRound) * RoundMultiplierBase * 0.7f;
+            var roundMult = _GetRoundMult(0.7f);
             ship.ApplyRoundScaling(CurrentRound, roundMult);
             _zombiesAlive++;
             _currentRoundTotalZombies++;

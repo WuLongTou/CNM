@@ -150,6 +150,10 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     private float _eliteMultiplier = GameConfig.ZombieEliteStatMult;
     private EliteAffix _eliteAffix = EliteAffix.None;
     private float _eliteRegenTimer;
+    private int _eliteShieldHp;
+    private static readonly int EliteShieldMax = 25;
+    private bool _frenzySpeedBoosted;
+    private bool _frenzyDmgBoosted;
 
     // 数学系统：分形
     public bool IsFractal { get; set; }
@@ -243,6 +247,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             ZombieType.Invisible => AbilityType.GhostPhase,
             ZombieType.Fast => AbilityType.Teleport,
             ZombieType.Summoner => AbilityType.Cloner,
+            ZombieType.Healer => AbilityType.MindController,
             ZombieType.Exploder => AbilityType.Bomber,
             _ => null
         };
@@ -843,6 +848,30 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             case EliteAffix.Explosive:
                 // Handled in Die()
                 break;
+            case EliteAffix.Shielded:
+                _eliteRegenTimer += delta;
+                if (_eliteRegenTimer >= 3.0f && _eliteShieldHp < EliteShieldMax)
+                {
+                    _eliteRegenTimer = 0.0f;
+                    _eliteShieldHp = Mathf.Min(EliteShieldMax, _eliteShieldHp + 10);
+                }
+                break;
+            case EliteAffix.Frenzy:
+            {
+                // 血量越低越强，狂怒触发后永久生效
+                float hpRatio = (float)CurrentHealth / Mathf.Max(1, MaxHealth);
+                if (hpRatio <= 0.5f && !_frenzySpeedBoosted)
+                {
+                    _frenzySpeedBoosted = true;
+                    Speed *= GameConfig.EliteSwiftMult;
+                }
+                if (hpRatio <= 0.25f && !_frenzyDmgBoosted)
+                {
+                    _frenzyDmgBoosted = true;
+                    Damage = Mathf.Max(Damage, (int)(MaxHealth * 0.15f)); // 低血量威胁翻倍
+                }
+                break;
+            }
         }
     }
 
@@ -854,7 +883,9 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         {
             EliteAffix.Regenerating,
             EliteAffix.Swift,
-            EliteAffix.Explosive
+            EliteAffix.Explosive,
+            EliteAffix.Shielded,
+            EliteAffix.Frenzy
         };
         _eliteAffix = affixes[(int)(GD.Randi() % affixes.Length)];
 
@@ -862,6 +893,9 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         {
             case EliteAffix.Swift:
                 Speed *= GameConfig.EliteSwiftMult;
+                break;
+            case EliteAffix.Shielded:
+                _eliteShieldHp = EliteShieldMax;
                 break;
         }
     }
@@ -957,6 +991,20 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
     public void TakeDamage(int amount)
     {
+        // Shielded 精英：护盾优先吸收伤害
+        if (_eliteAffix == EliteAffix.Shielded && _eliteShieldHp > 0)
+        {
+            int absorbed = Mathf.Min(_eliteShieldHp, amount);
+            _eliteShieldHp -= absorbed;
+            amount -= absorbed;
+            _vfx?.FlashHit(); // 护盾受击闪白（纯视觉，不减血）
+            if (amount <= 0)
+            {
+                _vfx?.ShowDamagePopup(absorbed);
+                return;
+            }
+        }
+
         CurrentHealth -= amount;
         CurrentHealth = Mathf.Max(0, CurrentHealth);
 

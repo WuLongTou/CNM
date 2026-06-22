@@ -60,10 +60,13 @@ public partial class MetaUpgradePanel : Control
         vbox.AddChild(closeBtn);
     }
 
-    public override void _Process(double delta)
+    public override void _Input(InputEvent @event)
     {
-        if (Visible && Input.IsActionJustPressed("ui_cancel"))
+        if (Visible && @event.IsActionPressed("ui_cancel"))
+        {
             Visible = false;
+            GetViewport().SetInputAsHandled();
+        }
     }
 
     public void Open()

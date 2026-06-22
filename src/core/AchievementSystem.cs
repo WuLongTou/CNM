@@ -222,8 +222,10 @@ public partial class AchievementSystem : Node
 
     public void OnGameEnded(int totalKills, int totalDamage, float survivalTime)
     {
-        TryUnlock(AchievementType.Round5Survived);
-        TryUnlock(AchievementType.Round10Survived);
-        TryUnlock(AchievementType.Round20Survived);
+        // Round survival achievements already handled by OnRoundSurvived per round
+        // — 不再无条件解锁，避免第 1 回合死也拿到"存活 20 回合"
+        // 使用实例字段记录结算日志
+        LogUtils.Print($"游戏结算: 回合={_roundsSurvived}, 击杀={_totalKills}," +
+            $"伤害={_totalDamage}, 时间={_survivalTime:F1}秒");
     }
 }

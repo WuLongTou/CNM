@@ -85,6 +85,11 @@ public static class GameConfig
     // Critical hit
     public const float CritMultiplier = 2.5f;
 
+    // Stat caps — 防止单属性堆叠破坏平衡
+    public const float CritCapPercent = 75.0f;       // 暴击率上限 75%
+    public const float LifeStealCapPercent = 40.0f;   // 吸血上限 40%
+    public const float DodgeCapPercent = 60.0f;       // 闪避上限 60%
+
     // Attack
     public const float BaseAttackCooldown = 0.45f;
     public const float BaseAttackRange = 70.0f;
@@ -198,7 +203,7 @@ public static class GameConfig
 
     // Boss system
     public const float BossStatMult = 3.0f;
-    public const float BossSpeedMult = 0.7f;
+    public const float BossSpeedMult = 0.9f; // 原 0.7 → 0.9，避免 Boss 永远追不上玩家
     public const float BossScoreMult = 5.0f;
     public static readonly Godot.Vector2 BossScale = new(1.8f, 1.8f);
     public const int BossInterval = 5;

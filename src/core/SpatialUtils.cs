@@ -13,13 +13,17 @@ public static class SpatialUtils
     // Spatial hash grid for efficient range queries
     private const float GridCellSize = 100.0f;
     private static readonly Dictionary<Vector2I, List<Zombie>> _spatialGrid = new();
+    private static bool _gridDirty = true;
 
     /// <summary>
     /// Rebuilds the spatial hash grid.
-    /// Called on every query to ensure zombie movement is reflected.
+    /// Only rebuilds when InvalidateGrid() has been called (spawn/death).
     /// </summary>
     private static void RebuildGrid()
     {
+        if (!_gridDirty) return;
+        _gridDirty = false;
+
         _spatialGrid.Clear();
         foreach (var zombie in ZombieRegistry.All)
         {
@@ -38,9 +42,9 @@ public static class SpatialUtils
 
     /// <summary>
     /// Marks the spatial grid as needing rebuild.
-    /// No-op since grid is now rebuilt on every query.
+    /// Called by ZombieRegistry on spawn/death.
     /// </summary>
-    public static void InvalidateGrid() { }
+    public static void InvalidateGrid() { _gridDirty = true; }
 
     private static Vector2I GetCell(Vector2 pos)
     {
@@ -165,36 +169,37 @@ public static class SpatialUtils
     /// </summary>
     public static Zombie? FindDensestZombie(Vector2 position, float clusterRange = 200f)
     {
+        RebuildGrid();
+
         Zombie? densest = null;
         int maxCount = 0;
+        int cellRange = (int)(clusterRange / GridCellSize) + 1;
+        Vector2I center = GetCell(position);
 
-        // Use spatial grid to reduce candidate set
-        var candidates = GetZombiesInCells(position, clusterRange);
-        float rangeSq = clusterRange * clusterRange;
-
-        foreach (var zombie in candidates)
+        // 用网格细胞密度替代 O(n²) 两两距离计算：每个僵尸只计数一次
+        for (int dx = -cellRange; dx <= cellRange; dx++)
         {
-            if (!IsValidZombie(zombie))
-                continue;
-
-            // Count only valid zombies within range
-            int count = 0;
-            var zombiePos = zombie.GlobalPosition;
-
-            foreach (var other in candidates)
+            for (int dy = -cellRange; dy <= cellRange; dy++)
             {
-                if (!IsValidZombie(other))
-                    continue;
-
-                float distSq = zombiePos.DistanceSquaredTo(other.GlobalPosition);
-                if (distSq <= rangeSq)
-                    count++;
-            }
-
-            if (count > maxCount)
-            {
-                maxCount = count;
-                densest = zombie;
+                Vector2I cell = center + new Vector2I(dx, dy);
+                if (_spatialGrid.TryGetValue(cell, out var list))
+                {
+                    int validCount = 0;
+                    Zombie? firstValid = null;
+                    foreach (var z in list)
+                    {
+                        if (IsValidZombie(z))
+                        {
+                            validCount++;
+                            firstValid ??= z;
+                        }
+                    }
+                    if (validCount > maxCount)
+                    {
+                        maxCount = validCount;
+                        densest = firstValid;
+                    }
+                }
             }
         }
 
@@ -231,6 +236,7 @@ public static class SpatialUtils
     public static void Clear()
     {
         _spatialGrid.Clear();
+        _gridDirty = true;
     }
 
     /// <summary>

@@ -48,9 +48,6 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     private Timer _dashTimer = null!;
     private Timer _dashCooldownTimer = null!;
     private GameManager? _gameManager;
-    private Vector2 _cachedScreenMin;
-    private Vector2 _cachedScreenMax;
-    private Vector2 _cachedScreenSize;
 
     public int TargetPriority { get; set; } = 0;
     public AttackType CurrentAttackType { get; set; } = AttackType.Melee;
@@ -431,7 +428,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
     public void TakeDamage(int amount, Zombie? attacker = null)
     {
-        if (IsDead || InvincibleTimer > 0)
+        if (IsDead || InvincibleTimer > 0 || IsDashing)
             return;
 
         if (DodgeChance > 0 && attacker != null && GD.Randf() < DodgeChance / 100.0f)

@@ -85,6 +85,11 @@ public partial class PlayerBuffSystem : Node
         {
             existing.RemainingTime = Mathf.Max(existing.RemainingTime, duration);
             existing.NextTick = tickInterval; // reset tick timer
+            // 同步更新 Player 的状态字段，确保 _PhysicsProcess 读到的是刷新后的时长
+            if (type == BuffType.Stunned)
+                _player.StunDuration = Mathf.Max(_player.StunDuration, duration);
+            else if (type == BuffType.Charmed)
+                _player.CharmDuration = Mathf.Max(_player.CharmDuration, duration);
             return false;
         }
 
@@ -314,7 +319,8 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.Frozen:
-                _player.FreezeDuration = Mathf.Max(_player.FreezeDuration, buff.Duration);
+                // FreezeDuration 是玩家冻结敌人的属性，不是玩家被冻结状态
+                // 玩家被冻结的减速由 GetSpeedModifier() 统一处理
                 break;
 
             case BuffType.Stunned:
@@ -357,7 +363,6 @@ public partial class PlayerBuffSystem : Node
                 break;
 
             case BuffType.Frozen:
-                _player.FreezeDuration = 0;
                 break;
 
             case BuffType.Stunned:

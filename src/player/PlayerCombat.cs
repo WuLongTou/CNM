@@ -49,6 +49,10 @@ public partial class PlayerCombat : Node
     private Timer _attackTimer = null!;
     public Timer AttackTimer => _attackTimer;
 
+    // 攻击输入缓冲：冷却期内按下的攻击会缓存，冷却结束时自动触发
+    private const float AttackBufferDuration = 0.12f;
+    private float _attackBufferTimer = 0.0f;
+
     // 鼠标在 HUD 区域时的提示冷却（物理帧计数）：避免每帧 spam 提示
     private ulong _lastMouseHintFrame;
     private const ulong MouseHintCooldownFrames = 60;
@@ -67,6 +71,14 @@ public partial class PlayerCombat : Node
 
     public override void _Process(double delta)
     {
+        // 攻击输入缓冲：冷却结束时消费缓冲中的按键
+        if (_attackBufferTimer > 0 && CanAttack)
+        {
+            _attackBufferTimer = 0;
+            PerformAttack();
+        }
+        _attackBufferTimer = Mathf.Max(0, _attackBufferTimer - (float)delta);
+
         // Combo decay
         if (_comboTimer > 0)
         {
@@ -96,8 +108,9 @@ public partial class PlayerCombat : Node
         if (_currentCombo > MaxComboEver)
             MaxComboEver = _currentCombo;
 
-        // Notify achievement system
+        // Notify achievement system and UI（单一 combo 数据源）
         AchievementSystem.Instance?.OnComboAchieved(_currentCombo);
+        GameServices.UI.AddCombo();
     }
 
     public void ResetComboStats()
@@ -144,9 +157,12 @@ public partial class PlayerCombat : Node
             return;
         }
 
-        if ((attackActionPressed || mouseAttackPressed) && CanAttack)
+        if (attackActionPressed || mouseAttackPressed)
         {
-            PerformAttack();
+            if (CanAttack)
+                PerformAttack();
+            else
+                _attackBufferTimer = AttackBufferDuration; // 冷却期内缓冲按键
         }
     }
 
@@ -319,6 +335,8 @@ public partial class PlayerCombat : Node
     {
         Player!.Vfx?.FaceToward(zombie.GlobalPosition); // 攻击朝向被攻击的敌人
         float damage = Player!.CurrentDamage;
+        // 连击加成：每层 +5%（上限 50%），此前只计算未应用到伤害
+        damage *= 1.0f + _damageBonusFromCombo;
         bool isCritical = GD.Randf() < (Player.CriticalChance / 100.0f);
         if (isCritical)
             damage *= Player.CritMultiplier;
@@ -902,6 +920,11 @@ public partial class PlayerCombat : Node
             Player.CurrentSpeed *= Mathf.Max(0.1f, 1.0f + Player.BuffSystem.GetSpeedModifier());
             Player.CurrentDamage *= Mathf.Max(0.1f, 1.0f + Player.BuffSystem.GetDamageModifier());
         }
+        // 属性硬上限：防止暴击/吸血/闪避堆叠破坏平衡
+        Player.CriticalChance = Mathf.Min(Player.CriticalChance, Core.GameConfig.CritCapPercent);
+        Player.LifeStealPercent = Mathf.Min(Player.LifeStealPercent, Core.GameConfig.LifeStealCapPercent);
+        Player.DodgeChance = Mathf.Min(Player.DodgeChance, Core.GameConfig.DodgeCapPercent);
+
         Player.CurrentHealth = Math.Clamp(Player.CurrentHealth, 0, Player.MaxHealth);
     }
 
@@ -925,27 +948,27 @@ public partial class PlayerCombat : Node
         if (weapon.LifeStealBonus > 0)
             Player.LifeStealPercent += weapon.LifeStealBonus;
         if (weapon.FreezeBonus > 0)
-            Player.FreezeDuration = Math.Max(Player.FreezeDuration, weapon.FreezeBonus);
+            Player.FreezeDuration += weapon.FreezeBonus;
         if (weapon.PoisonBonus > 0)
-            Player.PoisonDamage = Math.Max(Player.PoisonDamage, weapon.PoisonBonus);
+            Player.PoisonDamage += weapon.PoisonBonus;
 
         if (weapon.ThornsChance > 0)
-            Player.ThornsChance = Math.Max(Player.ThornsChance, weapon.ThornsChance);
+            Player.ThornsChance += weapon.ThornsChance;
         if (weapon.ThornsRatio > 0)
-            Player.ThornsRatio = Math.Max(Player.ThornsRatio, weapon.ThornsRatio);
+            Player.ThornsRatio += weapon.ThornsRatio;
         if (weapon.DodgeChance > 0)
-            Player.DodgeChance = Math.Max(Player.DodgeChance, weapon.DodgeChance);
+            Player.DodgeChance += weapon.DodgeChance;
         if (weapon.PiercingBonus > 0)
             Player.PiercingCount += weapon.PiercingBonus;
         if (weapon.BounceBonus > 0)
         {
             Player.ReturningProjectiles = true;
-            Player.BounceCount = Math.Max(Player.BounceCount, weapon.BounceBonus);
+            Player.BounceCount += weapon.BounceBonus;
         }
         if (weapon.SplashBonus > 0)
-            Player.SplashRadius = Math.Max(Player.SplashRadius, weapon.SplashBonus);
+            Player.SplashRadius += weapon.SplashBonus;
         if (weapon.Tenacity > 0)
-            Player.Tenacity = Math.Max(Player.Tenacity, weapon.Tenacity);
+            Player.Tenacity += weapon.Tenacity;
         if (weapon.GrantsAura)
         {
             if (Player.Aura!.Active)

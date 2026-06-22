@@ -47,6 +47,7 @@ public static partial class WeaponFactory
         { "力场法杖", "法杖" },
         { "冰霜法杖", "火球法杖" }, { "雷电法杖", "火球法杖" },
         { "死神法杖", "雷电法杖" },
+        { "集束地雷", "铁蒺藜" }, { "地狱火雷", "集束地雷" },
     };
 
     // ═══════════════════════════════════════════════
@@ -103,6 +104,9 @@ public static partial class WeaponFactory
         { "弹跳之刃", "res://assets/sprites/equipment/bouncing_blade.png" },
         { "毁灭之息", "res://assets/sprites/equipment/destruction_breath.png" },
         { "钢铁意志", "res://assets/sprites/equipment/iron_will.png" },
+        { "铁蒺藜", "res://assets/sprites/weapons/mine_basic.png" },
+        { "集束地雷", "res://assets/sprites/weapons/mine_cluster.png" },
+        { "地狱火雷", "res://assets/sprites/weapons/mine_hellfire.png" },
     };
 
     private static readonly GodotArray _WEAPON_DATA = new GodotArray
@@ -286,7 +290,34 @@ public static partial class WeaponFactory
             { "magic_fx", new GodotDictionary { { "PUSH", 2 } } }
         },
 
-        // ═══ 装备 ═══
+            // ═══ 地雷武器（陷阱/区域封锁） ═══
+        // 铁蒺藜
+        new GodotDictionary
+        {
+            { "name", "铁蒺藜" }, { "desc", "放置地雷，敌人触碰爆炸" },
+            { "type", (int)MI }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "⚡" }, { "rarity", 1 },
+            { "dmg", 1.5f }, { "asp", 0.6f }, { "cd", 2.0f }
+        },
+
+        // 集束地雷
+        new GodotDictionary
+        {
+            { "name", "集束地雷" }, { "desc", "放置后分裂为多枚小雷" },
+            { "type", (int)MI }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "💥" }, { "rarity", 2 },
+            { "tags", new GodotArray {"铁蒺藜"} }, { "dmg", 1.2f }, { "asp", 0.4f }, { "cd", 3.0f },
+            { "hp", -10f }
+        },
+
+        // 地狱火雷
+        new GodotDictionary
+        {
+            { "name", "地狱火雷" }, { "desc", "大范围爆炸附带眩晕" },
+            { "type", (int)MI }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "🔥" }, { "rarity", 3 },
+            { "tags", new GodotArray {"集束地雷"} }, { "dmg", 2.0f }, { "asp", 0.3f }, { "cd", 4.0f },
+            { "hcost", 8 }
+        },
+
+    // ═══ 装备 ═══
         // 生命药水
         new GodotDictionary
         {
