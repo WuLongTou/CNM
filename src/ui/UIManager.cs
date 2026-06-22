@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using ZombieWars.Core;
 using ZombieWars.Weapons;
+using ZombieWars.World;
 
 using Player = ZombieWars.Player.Player;
 using static ZombieWars.Core.GameConfig;
@@ -46,6 +47,7 @@ public partial class UIManager : Control
     private HelpPanel _helpPanel = null!;
     private EquipmentPanel _equipmentPanel = null!;
     private MetaUpgradePanel? _metaPanel;  // 跨局永久升级面板
+    private FusionOfferPanel? _fusionPanel;  // 武器融合确认面板
     private WelcomePanel? _welcomePanel;
     private ProgressBar _bossHealthBar = null!;
     private Label _bossHealthLabel = null!;
@@ -122,6 +124,8 @@ public partial class UIManager : Control
         // _weaponSelectionPanel.Setup 延迟到 SetWeaponDeck 时调用（此时 _gameManager/_weaponDeck 已就位）
         _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
         AddChild(_metaPanel);
+        _fusionPanel = new FusionOfferPanel { Name = "FusionOfferPanel" };
+        AddChild(_fusionPanel);
         _welcomePanel = new WelcomePanel();
         _welcomePanel.ZIndex = 160;
         _welcomePanel.Setup(onStart: _StartGame, onToggleHelp: _ToggleControlsPanel);
@@ -1244,6 +1248,49 @@ public partial class UIManager : Control
             GetWeaponTooltipText, GetUpgradeTooltipText,
             (ctrl, text) => _ShowTooltip(text),
             _HideTooltip);
+    }
+
+    public bool TryShowFusionOffer(World.Altar altar, WeaponCard currentWeapon)
+    {
+        if (_fusionPanel == null || _weaponDeck == null || _gameManager?.PlayerRef == null) return false;
+        string? resultName = _weaponDeck.GetFusionResultName(currentWeapon,
+            new WeaponCard { CardName = altar.MateWeaponName ?? "" });
+        if (resultName == null) return false;
+
+        var player = _gameManager.PlayerRef;
+        _fusionPanel.ShowOffer(currentWeapon.CardName, altar.MateWeaponName ?? "",
+            resultName, altar.FusionResultDesc ?? "", _gameManager);
+
+        _fusionPanel.FusionAccepted += () =>
+        {
+            ApplyFusion(currentWeapon, altar);
+            altar.QueueFree();
+        };
+        _fusionPanel.FusionRejected += () =>
+        {
+            altar.Boon = Altar.BoonKind.Damage;
+            altar.ActivateAndDestroy();
+        };
+        return true;
+    }
+
+    private void ApplyFusion(WeaponCard currentWeapon, World.Altar altar)
+    {
+        if (_weaponDeck == null || _gameManager?.PlayerRef == null) return;
+        var mate = new WeaponCard { CardName = altar.MateWeaponName ?? "" };
+        var fused = _weaponDeck.TryFuse(currentWeapon, mate);
+        if (fused == null) return;
+
+        var player = _gameManager.PlayerRef;
+        int idx = player.ActiveEffects.IndexOf(currentWeapon);
+        if (idx >= 0)
+        {
+            player.ActiveEffects[idx] = fused;
+            player.Combat?.RecalculateStats();
+        }
+        GameServices.Audio.PlayUpgrade();
+        _weaponSelectionPanel.UpdateCurrentWeaponLabel(player);
+        ShowLevelUpNotification($"融合成功! 获得 {fused.CardName}", new Color(0.7f, 0.3f, 1.0f));
     }
 
     public void ShowGameOver()

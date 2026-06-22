@@ -3,6 +3,7 @@ namespace ZombieWars.World;
 using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.Weapons;
 
 /// <summary>
 /// 地图构建器 —— 根据当前 MapData 构建可交互场景层：
@@ -142,16 +143,39 @@ public partial class MapBuilder : Node2D
             _obstacleLayer.AddChild(chest);
         }
 
-        // 祭坛：每张图 1~2 个，随机增益类型
+        // 祭坛：每张图 1~2 个，随机增益类型；15% 概率为武器融合祭坛
         int altarCount = GameConfig.WorldScale >= 2f ? 2 : 1;
         var boons = System.Enum.GetValues(typeof(Altar.BoonKind));
+        var weaponDeck = GetTree().Root.GetNodeOrNull<WeaponDeck>("Main/WeaponDeck");
         for (int i = 0; i < altarCount; i++)
         {
             var altar = new Altar
             {
                 GlobalPosition = _RandomPosAwayFromCenter(ws),
-                Boon = (Altar.BoonKind)boons.GetValue((int)GD.RandRange(0, boons.Length - 1))!
             };
+
+            // 15% 概率生成为武器融合祭坛
+            if (weaponDeck != null && GD.Randf() < 0.15f)
+            {
+                var recipes = weaponDeck.GetAllFusionRecipes();
+                if (recipes.Length > 0)
+                {
+                    string recipe = recipes[(int)(GD.Randi() % recipes.Length)];
+                    var parts = recipe.Split(" + ");
+                    if (parts.Length == 2)
+                    {
+                        altar.Boon = Altar.BoonKind.WeaponFusion;
+                        altar.MateWeaponName = parts[1];
+                        altar.FusionResultName = recipe;
+                        altar.FusionResultDesc = "献祭当前武器与对偶武器融合为更强大的存在";
+                    }
+                }
+            }
+            else
+            {
+                altar.Boon = (Altar.BoonKind)boons.GetValue((int)GD.RandRange(0, boons.Length - 1))!;
+            }
+
             _obstacleLayer.AddChild(altar);
         }
     }

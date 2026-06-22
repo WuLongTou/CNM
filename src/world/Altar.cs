@@ -4,19 +4,33 @@ using Godot;
 using ZombieWars.Core;
 using ZombieWars.Player;
 using ZombieWars.Vfx;
+using ZombieWars.Weapons;
 using static ZombieWars.Core.GameEnums;
 
 /// <summary>
-/// 祭坛：玩家触碰激活，获得一次性强力增益（伤害/回血/护盾/疾速）。
-/// 激活后消失，给玩家"主动探索找祭坛"的动机。
+/// 祭坛：玩家触碰激活，获得一次性强力增益（伤害/回血/护盾/疾速/武器融合）。
+/// 融合祭坛触发时弹出模态面板供玩家确认，其余 boon 即时生效。
 /// </summary>
 public partial class Altar : Area2D
 {
-    public enum BoonKind { Damage, Heal, Shield, Haste }
+    public enum BoonKind { Damage, Heal, Shield, Haste, WeaponFusion }
     public BoonKind Boon { get; set; } = BoonKind.Damage;
+    /// <summary>融合祭坛的"对偶武器"名：玩家武器与此名匹配方可触发融合。</summary>
+    public string? MateWeaponName { get; set; }
+    public string? FusionResultName { get; set; }
+    public string? FusionResultDesc { get; set; }
 
     private bool _activated;
     private float _glowPhase;
+
+    /// <summary>供融合面板关闭后调用：拒绝时退化为回血，接受时已 QueueFree。</summary>
+    public void ActivateAndDestroy()
+    {
+        if (Boon != BoonKind.WeaponFusion)
+            _ApplyAndDestroy(GameServices.Game?.PlayerRef as Player);
+        else
+            QueueFree();
+    }
 
     public override void _Ready()
     {
@@ -75,6 +89,7 @@ public partial class Altar : Area2D
         BoonKind.Heal => new Color(0.30f, 1.0f, 0.40f),
         BoonKind.Shield => new Color(0.40f, 0.70f, 1.0f),
         BoonKind.Haste => new Color(1.0f, 0.85f, 0.30f),
+        BoonKind.WeaponFusion => new Color(0.70f, 0.30f, 1.0f),
         _ => Colors.White,
     };
 
@@ -84,6 +99,7 @@ public partial class Altar : Area2D
         BoonKind.Heal => "生命回复!",
         BoonKind.Shield => "护盾加持!",
         BoonKind.Haste => "疾速祝福!",
+        BoonKind.WeaponFusion => "武器融合!",
         _ => "",
     };
 
@@ -93,8 +109,31 @@ public partial class Altar : Area2D
         if (body is not Player player) return;
         _activated = true;
         CollisionMask = 0;
-        _ApplyBoon(player);
 
+        if (Boon == BoonKind.WeaponFusion)
+        {
+            // 融合祭坛：检查玩家武器是否匹配配方
+            WeaponCard? currentWeapon = null;
+            foreach (var e in player.ActiveEffects)
+            {
+                if (e.Category == WeaponCategory.Weapon) { currentWeapon = e; break; }
+            }
+            if (currentWeapon != null && GameServices.UI is UI.UIManager ui)
+            {
+                bool canFuse = ui.TryShowFusionOffer(this, currentWeapon);
+                if (canFuse) return; // Panel 处理完毕后自行销毁
+            }
+            // 不匹配或无法弹面板，退化为伤害 boon
+            Boon = BoonKind.Damage;
+        }
+
+        _ApplyAndDestroy(player);
+    }
+
+    /// <summary>应用即时生效的 boon 并销毁祭坛。</summary>
+    private void _ApplyAndDestroy(Player player)
+    {
+        _ApplyBoon(player);
         Node? parent = GetParent();
         if (parent != null)
         {
@@ -103,7 +142,7 @@ public partial class Altar : Area2D
             VFXManager.SpawnFloatingLabel(parent, GlobalPosition, _BoonName(), _BoonColor(), 18);
         }
         GameServices.Audio.PlayUpgrade();
-
+        LogUtils.Print($"激活祭坛：{_BoonName()}");
         var t = new Timer { WaitTime = 0.4f, OneShot = true };
         t.Timeout += QueueFree;
         AddChild(t);
@@ -126,8 +165,10 @@ public partial class Altar : Area2D
             case BoonKind.Haste:
                 player.ApplyBuffFromZombie(BuffType.SpeedBoost, 10f, 1.35f);
                 break;
+            case BoonKind.WeaponFusion:
+                // 融合已由面板处理，此处不执行额外逻辑
+                break;
         }
-        LogUtils.Print($"激活祭坛：{_BoonName()}");
     }
 
     /// <summary>生成垂直渐变光柱纹理（底部亮、顶部透明），用于远距离指引。</summary>
