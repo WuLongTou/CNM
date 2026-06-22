@@ -94,33 +94,8 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     private float _charmTimer;
     private Node2D? _originalPlayer;
 
-    // Type-specific state
-    private float _invisibleTimer;
-    private bool _isRevealed;
-    private float _spitterCooldown;
-    private float _spitterCooldownBase = GameConfig.SpitterCooldown;
-
-    // Archer (ranged)
-    private float _archerCooldown;
-    private float _archerCooldownBase = 2.0f; // Shoots every 2 seconds
-    private const float ArcherRange = 300.0f; // Can shoot from this range
-
-    // Healer
-    private float _healerCooldown;
-    private float _healerCooldownBase = GameConfig.HealerCooldown;
-    private float _healerRange = GameConfig.HealerRange;
-    private int _healerAmount = GameConfig.HealerAmount;
-
-    // Summoner
-    private float _summonerCooldown;
-    private float _summonerCooldownBase = GameConfig.SummonerCooldown;
-
-    // 复杂 AI 行为组件（Knight/Dragon/Mech/Ship）
+    // 复杂 AI 行为组件（每种僵尸类型对应一个行为实例）
     private IZombieBehavior? _behavior;
-
-    // Swarm
-    private float _swarmWanderTimer;
-    private Vector2 _swarmWanderDir;
 
     // Boss / Elite
     public bool IsBoss { get; private set; }
@@ -227,6 +202,12 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             ZombieType.Dragon => new DragonBehavior(),
             ZombieType.Mech => new MechBehavior(),
             ZombieType.Ship => new ShipBehavior(),
+            ZombieType.Invisible => new InvisibleBehavior(),
+            ZombieType.Spitter => new SpitterBehavior(),
+            ZombieType.Archer => new ArcherBehavior(),
+            ZombieType.Healer => new HealerBehavior(),
+            ZombieType.Summoner => new SummonerBehavior(),
+            ZombieType.Swarm => new SwarmBehavior(),
             _ => null
         };
         _behavior?.OnReady(this);
@@ -275,12 +256,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         Damage = (int)((float)Damage * multiplier);
         float speedMult = 1.0f + (multiplier - 1.0f) * GameConfig.RoundSpeedScaleFactor;
         Speed = Speed * speedMult;
-
-        if (ZombieType == ZombieType.Spitter)
-        {
-            _spitterCooldownBase = Mathf.Max(GameConfig.SpitterMinCooldown,
-                GameConfig.SpitterCooldown - roundNumber * GameConfig.SpitterCooldownDecay);
-        }
 
         _vfx?.UpdateStatusLabels();
     }
@@ -365,29 +340,15 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         // Type-specific logic
         switch (ZombieType)
         {
-            case ZombieType.Invisible:
-                _HandleInvisible(d);
-                break;
-            case ZombieType.Spitter:
-                _HandleSpitter(d);
-                break;
-            case ZombieType.Archer:
-                _HandleArcher(d);
-                break;
-            case ZombieType.Healer:
-                _HandleHealer(d);
-                break;
-            case ZombieType.Summoner:
-                _HandleSummoner(d);
-                break;
-            case ZombieType.Ship:
-            case ZombieType.Mech:
             case ZombieType.Knight:
             case ZombieType.Dragon:
-                _behavior?.OnProcess(this, (float)d);
-                break;
+            case ZombieType.Invisible:
+            case ZombieType.Spitter:
+            case ZombieType.Archer:
+            case ZombieType.Healer:
+            case ZombieType.Summoner:
             case ZombieType.Swarm:
-                _HandleSwarm(d);
+                _behavior?.OnProcess(this, (float)d);
                 break;
         }
 
@@ -501,168 +462,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     // Type-Specific Behaviors
     // ═══════════════════════════════════════════════
 
-    private void _HandleInvisible(float delta)
-    {
-        _invisibleTimer -= delta;
-        if (_invisibleTimer <= 0)
-        {
-            _invisibleTimer = (float)GD.RandRange(GameConfig.ZombieInvisibleRevealMin, GameConfig.ZombieInvisibleRevealMax);
-            _isRevealed = !_isRevealed;
-            _vfx?.ShowInvisible(_isRevealed);
-        }
-    }
-
-    private void _HandleSpitter(float delta)
-    {
-        _spitterCooldown -= delta;
-        if (_spitterCooldown <= 0)
-        {
-            _spitterCooldown = _spitterCooldownBase;
-            if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= GameConfig.SpitterRange)
-            {
-                _SpitPoison(Player);
-            }
-        }
-    }
-
-    private void _SpitPoison(Node target)
-    {
-        var proj = new Sprite2D();
-        // Use cached poison texture for performance
-        proj.Texture = _GetCachedPoisonTexture();
-        proj.GlobalPosition = GlobalPosition;
-        GetParent().AddChild(proj);
-
-        var tw = CreateTween();
-        tw.TweenProperty(proj, "global_position", ((Node2D)target).GlobalPosition, 0.5);
-        tw.TweenCallback(Callable.From(() => _CompletePoisonSpit(target, proj)));
-    }
-
-    // Static cache for poison texture
-    private static ImageTexture? _cachedPoisonTexture;
-    private static ImageTexture _GetCachedPoisonTexture()
-    {
-        if (_cachedPoisonTexture != null)
-            return _cachedPoisonTexture;
-
-        var tex = Core.TextureUtils.LoadNormalizedSprite("res://assets/sprites/effects/effect_poison.jpg");
-        if (tex != null)
-        {
-            _cachedPoisonTexture = (ImageTexture)tex;
-            return _cachedPoisonTexture;
-        }
-
-        // Fallback: programmatic green square
-        var img = Image.CreateEmpty(10, 10, false, Image.Format.Rgba8);
-        img.Fill(Colors.Green);
-        _cachedPoisonTexture = ImageTexture.CreateFromImage(img);
-        return _cachedPoisonTexture;
-    }
-
-    private void _HandleArcher(float delta)
-    {
-        _archerCooldown -= delta;
-        if (_archerCooldown <= 0)
-        {
-            _archerCooldown = _archerCooldownBase;
-            if (Player != null && GlobalPosition.DistanceTo(Player.GlobalPosition) <= ArcherRange)
-            {
-                _ShootArrow(Player);
-            }
-        }
-    }
-
-    private void _ShootArrow(Node target)
-    {
-        if (target == null) return;
-        Vector2 direction = ((Node2D)target).GlobalPosition - GlobalPosition;
-        var arrow = new ZombieArrow(direction, Damage, this)
-        {
-            Target = (Node2D)target,
-            GlobalPosition = GlobalPosition
-        };
-        GetParent().AddChild(arrow);
-    }
-
-    private void _HandleSummoner(float delta)
-    {
-        _summonerCooldown -= delta;
-        if (_summonerCooldown <= 0)
-        {
-            _summonerCooldown = _summonerCooldownBase;
-            _SummonMinions();
-        }
-    }
-
-    private void _HandleHealer(float delta)
-    {
-        _healerCooldown -= delta;
-        if (_healerCooldown <= 0)
-        {
-            _healerCooldown = _healerCooldownBase;
-            _HealNearbyZombies();
-        }
-    }
-
-    private void _HealNearbyZombies()
-    {
-        bool healedAny = false;
-
-        foreach (var z in ZombieRegistry.All)
-        {
-            if (!IsInstanceValid(z) || z == this)
-                continue;
-            if (GlobalPosition.DistanceTo(z.GlobalPosition) <= _healerRange && z.CurrentHealth < z.MaxHealth)
-            {
-                z.CurrentHealth = Mathf.Min(z.MaxHealth, z.CurrentHealth + _healerAmount);
-                z._vfx?.UpdateStatusLabels();
-                healedAny = true;
-                _vfx?.ShowHealEffect(z.GlobalPosition, _healerAmount);
-            }
-        }
-
-        if (healedAny && _vfx != null)
-        {
-            _vfx.ShowHealPulse(_healerRange);
-        }
-    }
-
-    private void _HandleSwarm(float delta)
-    {
-        // Small fast creature: wanders erratically, rarely stops
-        _swarmWanderTimer -= delta;
-        if (_swarmWanderTimer <= 0)
-        {
-            _swarmWanderTimer = (float)GD.RandRange(0.5f, 1.5f);
-            float angle = (float)GD.RandRange(0, Mathf.Pi * 2);
-            _swarmWanderDir = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
-        }
-
-        if (Player != null)
-        {
-            Vector2 toPlayer = (Player.GlobalPosition - GlobalPosition).Normalized();
-            Velocity = (toPlayer * 0.7f + _swarmWanderDir * 0.3f).Normalized() * Speed * _slowMultiplier;
-            MoveAndSlide();
-        }
-    }
-
-    private void _SummonMinions()
-    {
-        var pos = GlobalPosition + new Vector2(
-            (float)GD.RandRange(-50, 50),
-            (float)GD.RandRange(-50, 50)
-        );
-        GetTree().CallGroup("game_manager", "spawn_minion_zombie", pos);
-
-        if (GD.Randf() < 0.5f)
-        {
-            var pos2 = GlobalPosition + new Vector2(
-                (float)GD.RandRange(-50, 50),
-                (float)GD.RandRange(-50, 50)
-            );
-            GetTree().CallGroup("game_manager", "spawn_minion_zombie", pos2);
-        }
-    }
 
     private void _HandleEliteAffix(float delta)
     {
@@ -1032,36 +831,6 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             }
         }
         return nearest;
-    }
-
-    private void _CompletePoisonSpit(Node target, Node projectile)
-    {
-        // 修复：发射者（this）可能在 0.5s 延迟期间已死亡释放，回调访问 Damage 等字段前必须校验自身
-        if (!IsInstanceValid(this))
-        {
-            if (IsInstanceValid(projectile)) projectile.QueueFree();
-            return;
-        }
-        if (IsInstanceValid(target))
-        {
-            if (target is Player player)
-            {
-                player.TakeDamage(Damage);
-                player.ApplyBuffFromZombie(BuffType.Poison, GameConfig.SpitterPoisonDuration, GameConfig.SpitterPoisonDps);
-            }
-            else if (target is IDamageable d)
-            {
-                d.TakeDamage(Damage);
-            }
-            else if (target.HasMethod("TakeDamage"))
-            {
-                target.Call("TakeDamage", Damage);
-            }
-        }
-        if (IsInstanceValid(projectile))
-        {
-            projectile.QueueFree();
-        }
     }
 
     // ═══════════════════════════════════════════════

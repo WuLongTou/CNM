@@ -125,11 +125,7 @@ public partial class UIManager : Control
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
         _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
         AddChild(_equipmentPanel);
-        _weaponSelectionPanel.Setup(
-            _gameManager!, _weaponDeck!,
-            GetWeaponTooltipText, GetUpgradeTooltipText,
-            (ctrl, text) => _ShowTooltip(text),
-            _HideTooltip);
+        // _weaponSelectionPanel.Setup 延迟到 SetWeaponDeck 时调用（此时 _gameManager/_weaponDeck 已就位）
         _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
         AddChild(_metaPanel);
         _welcomePanel = new WelcomePanel();
@@ -1400,7 +1396,16 @@ public partial class UIManager : Control
         _SetupConnections();
     }
 
-    public void SetWeaponDeck(WeaponDeck deck) => _weaponDeck = deck;
+    public void SetWeaponDeck(WeaponDeck deck)
+    {
+        _weaponDeck = deck;
+        // 现在两个依赖都已就位，初始化武器选择面板
+        _weaponSelectionPanel.Setup(
+            _gameManager!, _weaponDeck!,
+            GetWeaponTooltipText, GetUpgradeTooltipText,
+            (ctrl, text) => _ShowTooltip(text),
+            _HideTooltip);
+    }
 
     public void ShowGameOver()
     {
