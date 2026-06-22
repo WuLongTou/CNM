@@ -196,6 +196,7 @@ public partial class WeaponSelectionPanel : Control
 
     public override void _Ready()
     {
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         var viewport = ResponsiveUi.ViewportSize(this);
         _panel = new Panel
         {

@@ -288,21 +288,27 @@ public partial class HudPanel : Panel
         _speedLabel = _MakeStatLabel("速 220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
 
         // 组 1：武器信息
-        statRow.AddChild(_MakeStatGroup(new Control[] {
+        var grp1 = _MakeStatGroup(new Control[] {
             _weaponNameLabel, _attackTypeLabel, _targetPriorityLabel
-        }));
+        });
+        grp1.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        statRow.AddChild(grp1);
         statRow.AddChild(_MakeStatDivider());
 
         // 组 2：攻击属性
-        statRow.AddChild(_MakeStatGroup(new Control[] {
+        var grp2 = _MakeStatGroup(new Control[] {
             _damageLabel, _attackIntervalLabel, _critLabel
-        }));
+        });
+        grp2.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        statRow.AddChild(grp2);
         statRow.AddChild(_MakeStatDivider());
 
         // 组 3：防御/机动
-        statRow.AddChild(_MakeStatGroup(new Control[] {
+        var grp3 = _MakeStatGroup(new Control[] {
             _lifestealLabel, _speedLabel
-        }));
+        });
+        grp3.SizeFlagsHorizontal = SizeFlags.ExpandFill;
+        statRow.AddChild(grp3);
 
         var hudHint = _MakeStatLabel("? H(帮助) · C(装备) · Tab(切目标)", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
         hudHint.TooltipText = "H 帮助 · C 装备 · Tab 切换目标";

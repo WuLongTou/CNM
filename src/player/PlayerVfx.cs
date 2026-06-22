@@ -21,6 +21,7 @@ public partial class PlayerVfx : Node
     private bool _isMoving = false;
     private bool _facingLeft = false;
     private float _breatheTimer = 0.0f;
+    private ColorRect? _hpBarFill;
     private AttackType _visualAttackType = AttackType.Melee;
 
     /// <summary>
@@ -1323,11 +1324,37 @@ public partial class PlayerVfx : Node
 
     private void _CreateStatusDisplays()
     {
-        Player!.HealthDisplay = new Label();
-        Player.HealthDisplay.AddThemeFontSizeOverride("font_size", 12);
-        Player.HealthDisplay.AddThemeColorOverride("font_color", Colors.Red);
-        Player.HealthDisplay.Position = new Vector2(-20, -55);
-        Player.HealthDisplay.ZIndex = 10;
+        // Health bar container
+        var hpContainer = new Control { Position = new Vector2(-24, -58), ZIndex = 10 };
+        hpContainer.CustomMinimumSize = new Vector2(48, 10);
+
+        var barBg = new ColorRect
+        {
+            Color = new Color(0.15f, 0.05f, 0.05f, 0.85f),
+            Size = new Vector2(48, 10)
+        };
+        hpContainer.AddChild(barBg);
+
+        _hpBarFill = new ColorRect
+        {
+            Color = new Color(0.85f, 0.2f, 0.15f, 0.95f),
+            Size = new Vector2(48, 10)
+        };
+        hpContainer.AddChild(_hpBarFill);
+
+        var hpLabel = new Label
+        {
+            Text = "",
+            Position = new Vector2(0, -2),
+            ZIndex = 1
+        };
+        hpLabel.AddThemeFontSizeOverride("font_size", 11);
+        hpLabel.AddThemeColorOverride("font_color", Colors.White);
+        hpLabel.AddThemeConstantOverride("outline_size", 1);
+        hpLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.8f));
+        hpContainer.AddChild(hpLabel);
+
+        Player!.HealthDisplay = hpContainer;
         Player.AddChild(Player.HealthDisplay);
 
         Player.AttackTypeDisplay = new Label();
@@ -1342,8 +1369,26 @@ public partial class PlayerVfx : Node
 
     public void UpdateStatusDisplays()
     {
-        if (Player!.HealthDisplay != null)
-            Player.HealthDisplay.Text = $"心️{Player.CurrentHealth}/{Player.MaxHealth}";
+        var hp = Player!.HealthDisplay;
+        if (hp != null)
+        {
+            // Update label text
+            var label = hp.GetChild(2) as Label;
+            if (label != null)
+                label.Text = $"❤️{Player.CurrentHealth}/{Player.MaxHealth}";
+
+            // Update fill bar width
+            if (_hpBarFill != null && Player.MaxHealth > 0)
+            {
+                float pct = Mathf.Clamp((float)Player.CurrentHealth / Player.MaxHealth, 0f, 1f);
+                _hpBarFill.Size = new Vector2(48 * pct, 10);
+                _hpBarFill.Color = pct > 0.5f
+                    ? new Color(0.25f, 0.7f, 0.2f, 0.95f)
+                    : pct > 0.25f
+                        ? new Color(0.85f, 0.7f, 0.15f, 0.95f)
+                        : new Color(0.85f, 0.2f, 0.15f, 0.95f);
+            }
+        }
 
         if (Player.AttackTypeDisplay != null)
         {

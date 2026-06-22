@@ -391,6 +391,7 @@ public partial class GameManager : Node
 
     public void StartNewRound()
     {
+        if (CurrentState == GameState.GameOver) return;
         CurrentRound++;
         _bossPhase = 0; // 防御：每回合重置 Boss 阶段状态机，避免幽灵阶段
         CurrentState = GameState.WeaponSelection;
@@ -476,7 +477,7 @@ public partial class GameManager : Node
 
     public async void EndRound()
     {
-        if (_endingRound) return;
+        if (_endingRound || CurrentState == GameState.GameOver) return;
         _endingRound = true;
 
         try

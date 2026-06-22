@@ -116,6 +116,9 @@ public partial class UIManager : Control
 
         _weaponSelectionPanel = new WeaponSelectionPanel { Name = "WeaponSelectionPanel", ZIndex = 160 };
         AddChild(_weaponSelectionPanel);
+        // 转发 WeaponSelectionPanel 事件到 UIManager 同名事件（GameManager 订阅的是后者）
+        _weaponSelectionPanel.WeaponCardSelected += (card) => WeaponCardSelected?.Invoke(card);
+        _weaponSelectionPanel.UpgradeSkipped += () => UpgradeSkipped?.Invoke();
         _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 170 };
         AddChild(_helpPanel);
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };

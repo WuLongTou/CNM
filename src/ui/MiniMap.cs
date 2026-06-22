@@ -52,11 +52,11 @@ public partial class MiniMap : CanvasLayer
 
         // 背景 + 边框（按世界实际比例绘制，不再画正方形留空白）
         drawer.DrawRect(new Rect2(origin - Vector2.One, mapW + 2, mapH + 2),
-            new Color(0.55f, 0.42f, 0.18f, 0.15f), filled: false, width: 3f);
+            new Color(0.15f, 0.1f, 0.08f, 0.35f), filled: false, width: 1.5f);
         drawer.DrawRect(new Rect2(origin, mapW, mapH),
             new Color(0.05f, 0.04f, 0.03f, 0.60f), filled: true);
         drawer.DrawRect(new Rect2(origin, mapW, mapH),
-            new Color(0.65f, 0.50f, 0.25f, 0.85f), filled: false, width: 2f);
+            new Color(0.25f, 0.18f, 0.12f, 0.50f), filled: false, width: 1f);
 
         // 敌人（红点）
         foreach (var z in ZombieRegistry.All)

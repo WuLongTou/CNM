@@ -26,8 +26,9 @@ public partial class Altar : Area2D
     /// <summary>供融合面板关闭后调用：拒绝时退化为回血，接受时已 QueueFree。</summary>
     public void ActivateAndDestroy()
     {
-        if (Boon != BoonKind.WeaponFusion)
-            _ApplyAndDestroy(GameServices.Game?.PlayerRef as Player);
+        var player = GameServices.Game?.PlayerRef as Player;
+        if (Boon != BoonKind.WeaponFusion && player != null)
+            _ApplyAndDestroy(player);
         else
             QueueFree();
     }

@@ -23,6 +23,7 @@ public partial class FusionOfferPanel : Control
     {
         Visible = false;
         MouseFilter = MouseFilterEnum.Stop;
+        SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         ProcessMode = ProcessModeEnum.Always;
         ZIndex = 250;
 

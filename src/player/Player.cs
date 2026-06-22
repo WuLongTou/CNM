@@ -104,7 +104,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public Sprite2D? Sprite { get; set; }
     public Sprite2D? Shadow { get; set; }
     public CollisionShape2D? Collision { get; set; }
-    public Label? HealthDisplay { get; set; }
+    public Control? HealthDisplay { get; set; }
     public Label? AttackTypeDisplay { get; set; }
     public Node2D? MeleeRangeIndicator { get; set; }
     public bool ShowMeleeRange { get; set; } = true;
