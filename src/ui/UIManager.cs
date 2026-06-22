@@ -41,14 +41,7 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     // HUD
     // ═══════════════════════════════════════════════
-    private Panel _weaponSelectionPanel = null!;
-    private readonly List<Button> _weaponButtons = new();
-    private Button? _skipButton;
-    private VBoxContainer? _weaponSelectionMainVbox;
-    private HBoxContainer? _weaponButtonContainer;
-    private Label? _weaponSelectionTitleLabel;
-    private Label? _weaponSelectionDescLabel;
-    private Label? _weaponKeyboardHintLabel;
+    private WeaponSelectionPanel _weaponSelectionPanel = null!;
     private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
     private EquipmentPanel _equipmentPanel = null!;
@@ -64,7 +57,6 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     // Weapon Selection
     // ═══════════════════════════════════════════════
-    private readonly List<object> _currentWeaponOptions = new();
     private GameManager? _gameManager;
     private WeaponDeck? _weaponDeck;
 
@@ -84,8 +76,6 @@ public partial class UIManager : Control
     private bool _pauseLockedByUpgrade;
     private bool _userPaused;
     private float _hazardTimer;  // 陷阱 HUD 提示残留时间（玩家离开陷阱区后倒计时清除）
-    private Label _currentWeaponLabel = null!;
-
     private RoundBanner? _roundBanner;
     private Panel? _roundSummaryPanel;
 
@@ -128,15 +118,18 @@ public partial class UIManager : Control
         AddChild(_hudPanel);
         _CreateBossHealthBar();
 
-        _CreateWeaponSelectionPanel();
-        // 预暖：让面板在欢迎屏背后渲染一帧，避免首次选卡时 JIT/纹理/布局卡顿
-        _weaponSelectionPanel.Visible = true;
-        CallDeferred(nameof(_PostWarmWeaponPanel));
+        _weaponSelectionPanel = new WeaponSelectionPanel { Name = "WeaponSelectionPanel", ZIndex = 160 };
+        AddChild(_weaponSelectionPanel);
         _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 170 };
         AddChild(_helpPanel);
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
         _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
         AddChild(_equipmentPanel);
+        _weaponSelectionPanel.Setup(
+            _gameManager!, _weaponDeck!,
+            GetWeaponTooltipText, GetUpgradeTooltipText,
+            (ctrl, text) => _ShowTooltip(text),
+            _HideTooltip);
         _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
         AddChild(_metaPanel);
         _welcomePanel = new WelcomePanel();
@@ -318,269 +311,14 @@ public partial class UIManager : Control
         AddChild(_bossHealthLabel);
     }
 
-    /// <summary>预暖结束后隐藏武器面板，玩家不可见。</summary>
-    private void _PostWarmWeaponPanel()
+    public string GetWeaponTooltipText(WeaponCard weapon)
     {
-        if (IsInstanceValid(_weaponSelectionPanel))
-            _weaponSelectionPanel.Visible = false;
+        return _GetWeaponTooltipText(weapon);
     }
 
-    private void _CreateWeaponSelectionPanel()
+    public string GetUpgradeTooltipText(UpgradeCard upgrade)
     {
-        var viewport = ResponsiveUi.ViewportSize(this);
-        _weaponSelectionPanel = new Panel
-        {
-            Visible = false,
-            ProcessMode = ProcessModeEnum.Always,
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        _weaponSelectionPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        var weaponStyle = MakeDarkPanel(0.92f);
-        weaponStyle.BgColor = new Color(BattlefieldBg, 0.95f);
-        _weaponSelectionPanel.AddThemeStyleboxOverride("panel", weaponStyle);
-        AddChild(_weaponSelectionPanel);
-
-        var centerContainer = new CenterContainer();
-        centerContainer.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _weaponSelectionPanel.AddChild(centerContainer);
-
-        var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingSection, viewport, 12));
-        centerContainer.AddChild(mainVbox);
-        _weaponSelectionMainVbox = mainVbox;
-
-        // Title
-        var titleLabel = new Label
-        {
-            Text = "【 选择本回合强化 】"
-        };
-        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(32, viewport, 22));
-        titleLabel.AddThemeColorOverride("font_color", BloodBright);
-        titleLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        mainVbox.AddChild(titleLabel);
-        _weaponSelectionTitleLabel = titleLabel;
-
-        var weaponSlotPanel = new Panel();
-        weaponSlotPanel.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewport, 0.9f), 0);
-        weaponSlotPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
-        var slotStyle = MakeNotePanel(borderRadius: 3f, shadowSize: 2f);
-        slotStyle.BgColor = new Color(0.12f, 0.08f, 0.06f, 0.6f);
-        slotStyle.BorderColor = new Color(0.35f, 0.25f, 0.15f, 0.4f);
-        slotStyle.BorderWidthBottom = 1;
-        slotStyle.BorderWidthTop = 1;
-        slotStyle.BorderWidthLeft = 1;
-        slotStyle.BorderWidthRight = 1;
-        weaponSlotPanel.AddThemeStyleboxOverride("panel", slotStyle);
-        var slotMargin = new MarginContainer();
-        slotMargin.AddThemeConstantOverride("margin_left", 8);
-        slotMargin.AddThemeConstantOverride("margin_right", 8);
-        slotMargin.AddThemeConstantOverride("margin_top", 4);
-        slotMargin.AddThemeConstantOverride("margin_bottom", 4);
-        weaponSlotPanel.AddChild(slotMargin);
-
-        _currentWeaponLabel = new Label
-        {
-            Text = "剑 当前武器: 无",
-            AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 13));
-        _currentWeaponLabel.AddThemeColorOverride("font_color", new Color(0.86f, 0.78f, 0.55f));
-        slotMargin.AddChild(_currentWeaponLabel);
-        mainVbox.AddChild(weaponSlotPanel);
-
-        // Description
-        var descLabel = new Label
-        {
-            Text = "你可能抽到新武器、装备，或对已有装备的强化卡",
-            AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewport, 0.9f), 0)
-        };
-        descLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(18, viewport, 13));
-        descLabel.AddThemeColorOverride("font_color", Godot.Colors.White); descLabel.HorizontalAlignment = HorizontalAlignment.Center;
-        mainVbox.AddChild(descLabel);
-        _weaponSelectionDescLabel = descLabel;
-
-        // Card button container
-        var buttonContainer = new HBoxContainer();
-        buttonContainer.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingWide, viewport, 8));
-        buttonContainer.Alignment = BoxContainer.AlignmentMode.Center;
-        mainVbox.AddChild(buttonContainer);
-        _weaponButtonContainer = buttonContainer;
-
-        // Create 3 weapon buttons
-        for (int i = 0; i < 3; i++)
-        {
-            int cardIndex = i; // capture for closure
-            var button = new Button
-            {
-                CustomMinimumSize = ResponsiveUi.Size(200, 280, viewport, 120),
-                FocusMode = Control.FocusModeEnum.None
-            };
-            button.MouseEntered += () => _OnCardMouseEntered(cardIndex);
-            button.MouseExited += _OnCardMouseExited;
-            button.Pressed += () => _OnWeaponButtonPressed(cardIndex);
-            buttonContainer.AddChild(button);
-            _weaponButtons.Add(button);
-
-            var cardVbox = new VBoxContainer
-            {
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            cardVbox.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            cardVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingNormal, viewport, 4));
-
-            var margin = new MarginContainer
-            {
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-            margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
-            margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
-            margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
-            margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginMedium, viewport, 6));
-            button.AddChild(margin);
-            margin.AddChild(cardVbox);
-
-            // 1. Category
-            var categoryLabel = new Label
-            {
-                Name = "Category",
-                Text = "【类型】",
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            categoryLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 9));
-            categoryLabel.AddThemeColorOverride("font_color", NoteText);
-            cardVbox.AddChild(categoryLabel);
-
-            // 2. Title
-            var title = new Label
-            {
-                Name = "Title",
-                Text = "武器名称",
-                HorizontalAlignment = HorizontalAlignment.Center,
-                AutowrapMode = TextServer.AutowrapMode.WordSmart
-            };
-            title.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 15));
-            cardVbox.AddChild(title);
-
-            // Separator
-            var sep1 = new HSeparator { MouseFilter = Control.MouseFilterEnum.Ignore };
-            cardVbox.AddChild(sep1);
-
-            // 3. Icon
-            var iconPlaceholder = new CenterContainer
-            {
-                Name = "IconContainer",
-                CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(70, viewport, 42)),
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            cardVbox.AddChild(iconPlaceholder);
-
-            var iconLabel = new Label
-            {
-                Name = "Icon",
-                Text = "剑",
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            iconLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
-            iconPlaceholder.AddChild(iconLabel);
-
-            // 4. Type
-            var typeLabel = new Label
-            {
-                Name = "Type",
-                Text = "类型",
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            typeLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 10));
-            typeLabel.AddThemeColorOverride("font_color", NoteText);
-            cardVbox.AddChild(typeLabel);
-
-            // 5. Description (keywords with BBCode coloring)
-            var desc = new RichTextLabel
-            {
-                Name = "Desc",
-                Text = "",
-                BbcodeEnabled = true,
-                FitContent = true,
-                AutowrapMode = TextServer.AutowrapMode.WordSmart,
-                ScrollActive = false,
-                MouseFilter = Control.MouseFilterEnum.Ignore,
-            };
-            desc.AddThemeFontSizeOverride("normal_font_size", ResponsiveUi.Font(15, viewport, 11));
-            desc.AddThemeColorOverride("default_color", NoteText);
-            cardVbox.AddChild(desc);
-
-            // Spacer
-            var spacer = new Control
-            {
-                SizeFlagsVertical = Control.SizeFlags.ExpandFill,
-                MouseFilter = Control.MouseFilterEnum.Ignore
-            };
-            cardVbox.AddChild(spacer);
-
-            // 6. Rarity
-            var rarity = new Label
-            {
-                Name = "Rarity",
-                Text = "稀有度",
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            rarity.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 10));
-            cardVbox.AddChild(rarity);
-
-            // 7. Hint
-            var hintLabel = new Label
-            {
-                Name = "Hint",
-                Text = "(i) 悬停查看详情",
-                HorizontalAlignment = HorizontalAlignment.Center
-            };
-            hintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewport, 9));
-            hintLabel.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.45f));
-            cardVbox.AddChild(hintLabel);
-        }
-
-        // Keyboard hint label
-        var keyboardHintLabel = new Label
-        {
-            Text = "※ [1] [2] [3] 选择  |  [Enter] 或 [Delete] 跳过",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        keyboardHintLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 11));
-        keyboardHintLabel.AddThemeColorOverride("font_color", new Color(0.65f, 0.6f, 0.55f));
-        mainVbox.AddChild(keyboardHintLabel);
-        _weaponKeyboardHintLabel = keyboardHintLabel;
-
-        // Skip button
-        var skipContainer = new CenterContainer();
-        mainVbox.AddChild(skipContainer);
-
-        _skipButton = new Button
-        {
-            Text = ">> 跳过 [Delete]",
-            CustomMinimumSize = ResponsiveUi.Size(240, 44, viewport, 36)
-        };
-        _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 13));
-        var skipNormal = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
-        skipNormal.BgColor = new Color(0.35f, 0.25f, 0.22f, 0.92f);
-        skipNormal.BorderColor = new Color(0.55f, 0.35f, 0.25f, 0.7f);
-        skipNormal.BorderWidthBottom = 2;
-        skipNormal.BorderWidthTop = 2;
-        skipNormal.BorderWidthLeft = 2;
-        skipNormal.BorderWidthRight = 2;
-        _skipButton.AddThemeStyleboxOverride("normal", skipNormal);
-        var skipHover = MakeNotePanel(borderRadius: 4f, shadowSize: 3f);
-        skipHover.BgColor = new Color(0.50f, 0.35f, 0.28f, 0.95f);
-        skipHover.BorderColor = new Color(0.75f, 0.50f, 0.35f, 0.9f);
-        skipHover.BorderWidthBottom = 2;
-        skipHover.BorderWidthTop = 2;
-        skipHover.BorderWidthLeft = 2;
-        skipHover.BorderWidthRight = 2;
-        _skipButton.AddThemeStyleboxOverride("hover", skipHover);
-        _skipButton.AddThemeColorOverride("font_color", new Color(0.9f, 0.75f, 0.6f));
-        skipContainer.AddChild(_skipButton);
+        return _GetUpgradeTooltipText(upgrade);
     }
 
     private void _CreateTooltipPanel()
@@ -651,37 +389,7 @@ public partial class UIManager : Control
     {
         if (@event is InputEventKey key && key.Pressed && !key.Echo)
         {
-            if (IsUpgradeActive())
-            {
-                switch (key.Keycode)
-                {
-                    case Key.Key1:
-                    case Key.Kp1:
-                        _OnWeaponButtonPressed(0);
-                        GetViewport().SetInputAsHandled();
-                        return;
-                    case Key.Key2:
-                    case Key.Kp2:
-                        _OnWeaponButtonPressed(1);
-                        GetViewport().SetInputAsHandled();
-                        return;
-                    case Key.Key3:
-                    case Key.Kp3:
-                        _OnWeaponButtonPressed(2);
-                        GetViewport().SetInputAsHandled();
-                        return;
-                    // 跳过强化：原用 S/Enter，但 S 与 move_down 冲突——
-                    // 玩家在战斗中按 S 是"向下走"，卡片页用 S 是"跳过"，
-                    // 这就是用户报告的"卡片快捷键用常用操作键"的根因。
-                    // 改用 Enter（通用确认键，不与 move/attack 冲突） + Delete（不冲突的备用键）。
-                    case Key.Enter:
-                    case Key.KpEnter:
-                    case Key.Delete:
-                        _OnSkipPressed();
-                        GetViewport().SetInputAsHandled();
-                        return;
-                }
-            }
+            // 武器选择快捷键 (1/2/3/Enter/Delete) 由 WeaponSelectionPanel._Input 处理
 
             if (@event.IsActionPressed("toggle_help") || key.Keycode == Key.H)
             {
@@ -697,15 +405,7 @@ public partial class UIManager : Control
             }
         }
 
-        if (@event is InputEventMouseButton mb && mb.Pressed && mb.ButtonIndex == MouseButton.Left && IsUpgradeActive())
-        {
-            if (_skipButton != null && _skipButton.GetGlobalRect().HasPoint(mb.GlobalPosition))
-            {
-                _OnSkipPressed();
-                GetViewport().SetInputAsHandled();
-                return;
-            }
-        }
+        // 武器选择面板的 skip 按钮点击由 WeaponSelectionPanel 内部处理
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -739,10 +439,10 @@ public partial class UIManager : Control
             _CloseEquipmentPanel();
             return true;
         }
-        // 3. 跳过武器选择
-        if (IsUpgradeActive())
+        // 3. 关闭武器选择
+        if (_weaponSelectionPanel.IsOpen())
         {
-            _OnSkipPressed();
+            CloseWeaponSelection();
             return true;
         }
         // 4. 切换暂停
@@ -853,11 +553,11 @@ public partial class UIManager : Control
             GetTree().Paused = false;
     }
 
-    public bool IsUpgradeActive() => _weaponSelectionPanel.Visible;
+    public bool IsUpgradeActive() => _weaponSelectionPanel.IsOpen();
 
     private void _ToggleControlsPanel()
     {
-        if (_weaponSelectionPanel.Visible && !_helpPanel.Visible) return;
+        if (_weaponSelectionPanel.IsOpen() && !_helpPanel.Visible) return;
         if (!_helpPanel.Visible && _equipmentPanel.Visible)
             _equipmentPanel.Close();
         _helpPanel.Toggle();
@@ -868,7 +568,7 @@ public partial class UIManager : Control
     private void _ToggleEquipmentPanel()
     {
         // 武器选择阶段不弹装备面板，避免遮挡选卡
-        if (_weaponSelectionPanel.Visible && !_equipmentPanel.Visible) return;
+        if (_weaponSelectionPanel.IsOpen() && !_equipmentPanel.Visible) return;
         if (!_equipmentPanel.Visible && _helpPanel.Visible)
             _helpPanel.Close();
         _equipmentPanel.Toggle();
@@ -942,294 +642,28 @@ public partial class UIManager : Control
     // Weapon Selection
     // ═══════════════════════════════════════════════
 
-    public void ShowWeaponSelection()
+    public void OpenWeaponSelection()
     {
-        if (_weaponDeck == null)
-        {
-            LogUtils.PrintErr("错误：武器牌堆未设置");
-            return;
-        }
         _pauseLockedByUpgrade = true;
         GetTree().Paused = true;
         if (_pausePanel != null) _pausePanel.Visible = false;
-
-        if (_helpPanel.Visible)
-            _CloseHelpPanel();
-
-        if (_equipmentPanel.Visible)
-            _CloseEquipmentPanel();
+        if (_helpPanel.Visible) _CloseHelpPanel();
+        if (_equipmentPanel.Visible) _CloseEquipmentPanel();
 
         if (_gameManager?.PlayerRef != null)
-        {
-            _UpdateCurrentWeaponLabel(_gameManager.PlayerRef);
-            _currentWeaponOptions.Clear();
-            var drawn = _weaponDeck.DrawThreeCards(_gameManager.PlayerRef);
-            foreach (var w in drawn) _currentWeaponOptions.Add(w);
-        }
-        else
-        {
-            _currentWeaponOptions.Clear();
-            var drawn = _weaponDeck.DrawThreeCards();
-            foreach (var w in drawn) _currentWeaponOptions.Add(w);
-        }
-
-        for (int i = 0; i < 3; i++)
-        {
-            if (i < _currentWeaponOptions.Count)
-            {
-                var weapon = _currentWeaponOptions[i];
-                var button = _weaponButtons[i];
-                button.Visible = true;
-
-                if (weapon is UpgradeCard upgrade)
-                {
-                    _RenderUpgradeCard(button, upgrade);
-                    continue;
-                }
-
-                if (weapon is not WeaponCard wc) continue;
-
-                // Get internal card nodes
-                var margin = (MarginContainer)button.GetChild(0);
-                var vbox = (VBoxContainer)margin.GetChild(0);
-                var categoryNode = (Label)vbox.GetNode("Category");
-                var titleNode = (Label)vbox.GetNode("Title");
-                var typeNode = (Label)vbox.GetNode("Type");
-                var iconContainer = vbox.GetNodeOrNull<Control>("IconContainer");
-                var iconNode = iconContainer?.GetNodeOrNull<Label>("Icon");
-                var descNode = (RichTextLabel)vbox.GetNode("Desc");
-                var rarityNode = (Label)vbox.GetNode("Rarity");
-
-                titleNode.Text = wc.CardName;
-
-                var upgradeCategory = wc.UpgradeCategory;
-                if (string.IsNullOrEmpty(upgradeCategory))
-                    upgradeCategory = wc.Category == WeaponCategory.Weapon ? "武器" : "装备";
-                categoryNode.Text = $"【{upgradeCategory} Lv.{wc.Tier}】";
-
-                if (wc.Category == WeaponCategory.Weapon)
-                    typeNode.Text = wc.GetWeaponTypeText();
-                else
-                    typeNode.Text = "装备";
-
-                // Keywords with BBCode coloring
-                var keywords = new List<string>();
-                if (wc.DamageModifier > 1.0f) keywords.Add("[color=#e6b800]伤害↑[/color]");
-                else if (wc.DamageModifier < 1.0f) keywords.Add("[color=#e74c3c]伤害↓[/color]");
-                if (wc.AttackSpeedModifier > 1.0f) keywords.Add("[color=#e6b800]攻速↑[/color]");
-                else if (wc.AttackSpeedModifier < 1.0f) keywords.Add("[color=#e74c3c]攻速↓[/color]");
-                if (wc.HealthModifier > 0) keywords.Add("[color=#4caf50]生命↑[/color]");
-                else if (wc.HealthModifier < 0) keywords.Add("[color=#e74c3c]生命↓[/color]");
-                if (wc.SpeedModifier > 0) keywords.Add("[color=#e6b800]速度↑[/color]");
-                if (wc.CriticalBonus > 0) keywords.Add("[color=#e6b800]暴击[/color]");
-                if (wc.LifeStealBonus > 0) keywords.Add("[color=#ce5c5c]吸血[/color]");
-                if (wc.FreezeBonus > 0) keywords.Add("[color=#5b9bd5]冰冻[/color]");
-                if (wc.PoisonBonus > 0) keywords.Add("[color=#7baf5b]中毒[/color]");
-                if (wc.GrantsAura) keywords.Add("[color=#5b9bd5]护盾[/color]");
-                if (wc.HealthCost > 0) keywords.Add("[color=#e74c3c]消耗生命[/color]");
-                if (wc.MeleeEffects.Count > 0 || wc.RangedEffects.Count > 0 || wc.MagicEffects.Count > 0)
-                    keywords.Add("[color=#8a8acc]特效[/color]");
-
-                descNode.Text = keywords.Count > 0 ? string.Join(" ", keywords) : "[color=#666666]基础[/color]";
-                rarityNode.Text = WeaponFormatter.GetRarityText(wc.Rarity);
-
-                if (iconContainer != null && wc.IconTexture != null)
-                {
-                    var viewport = ResponsiveUi.ViewportSize(this);
-                    var existingTex = iconContainer.GetNodeOrNull<TextureRect>("IconTex");
-                    if (existingTex != null)
-                    {
-                        existingTex.Texture = wc.IconTexture;
-                        existingTex.CustomMinimumSize = ResponsiveUi.Size(60, 60, viewport, 38);
-                        existingTex.Visible = true;
-                    }
-                    else
-                    {
-                        var texRect = new TextureRect
-                        {
-                            Name = "IconTex",
-                            Texture = wc.IconTexture,
-                            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-                            StretchMode = TextureRect.StretchModeEnum.KeepAspectCentered,
-                            CustomMinimumSize = ResponsiveUi.Size(60, 60, viewport, 38)
-                        };
-                        iconContainer.AddChild(texRect);
-                    }
-                    if (iconNode != null)
-                        iconNode.Visible = false;
-                }
-                else if (iconContainer != null)
-                {
-                    var viewport = ResponsiveUi.ViewportSize(this);
-                    var existingTex = iconContainer.GetNodeOrNull<TextureRect>("IconTex");
-                    if (existingTex != null)
-                        existingTex.Visible = false;
-                    if (iconNode == null)
-                    {
-                        iconNode = new Label
-                        {
-                            Name = "Icon",
-                            HorizontalAlignment = HorizontalAlignment.Center,
-                            VerticalAlignment = VerticalAlignment.Center
-                        };
-                        iconNode.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
-                        iconContainer.AddChild(iconNode);
-                    }
-                    iconNode.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewport, 32));
-                    iconNode.Text = wc.Icon;
-                    iconNode.Visible = true;
-                }
-
-                var cardBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
-                Color borderColor;
-
-                switch (wc.Rarity)
-                {
-                    case 1:
-                        borderColor = RarityCommon;
-                        titleNode.AddThemeColorOverride("font_color", RarityCommon);
-                        rarityNode.AddThemeColorOverride("font_color", RarityCommon);
-                        break;
-                    case 2:
-                        borderColor = RarityRare;
-                        titleNode.AddThemeColorOverride("font_color", RarityRare);
-                        rarityNode.AddThemeColorOverride("font_color", RarityRare);
-                        break;
-                    case 3:
-                        borderColor = RarityEpic;
-                        titleNode.AddThemeColorOverride("font_color", RarityEpic);
-                        rarityNode.AddThemeColorOverride("font_color", RarityEpic);
-                        break;
-                    case 4:
-                        borderColor = RarityLegendary;
-                        titleNode.AddThemeColorOverride("font_color", RarityLegendary);
-                        rarityNode.AddThemeColorOverride("font_color", RarityLegendary);
-                        break;
-                    default:
-                        borderColor = RarityCommon;
-                        titleNode.AddThemeColorOverride("font_color", RarityCommon);
-                        rarityNode.AddThemeColorOverride("font_color", RarityCommon);
-                        break;
-                }
-
-                var dimText = new Color(0.6f, 0.5f, 0.5f);
-                categoryNode.AddThemeColorOverride("font_color", dimText);
-                typeNode.AddThemeColorOverride("font_color", dimText);
-                descNode.AddThemeColorOverride("default_color", dimText);
-                var hintNode = (Label)vbox.GetNode("Hint");
-                hintNode.AddThemeColorOverride("font_color", new Color(0.45f, 0.38f, 0.38f));
-
-                var cardStyle = MakeCardPanel(cardBg, borderColor);
-                button.AddThemeStyleboxOverride("normal", cardStyle);
-
-                var hoverBg = new Color(0.25f, 0.18f, 0.18f, 0.95f);
-                var hoverBorder = ColorUtils.Lighten(borderColor, 0.2f);
-                var cardHoverStyle = MakeCardPanel(hoverBg, hoverBorder);
-                button.AddThemeStyleboxOverride("hover", cardHoverStyle);
-            }
-            else
-            {
-                _weaponButtons[i].Visible = false;
-            }
-        }
-
-        _weaponSelectionPanel.Visible = true;
+            _weaponSelectionPanel.UpdateCurrentWeaponLabel(_gameManager.PlayerRef);
+        _weaponSelectionPanel.Open();
     }
 
-    public void HideWeaponSelection()
+    public void CloseWeaponSelection()
     {
-        _weaponSelectionPanel.Visible = false;
+        _weaponSelectionPanel.Close();
         _HideTooltip();
         _pauseLockedByUpgrade = false;
         if (!_userPaused && !_IsUiModalVisible())
             GetTree().Paused = false;
         else if (_userPaused && _pausePanel != null)
             _pausePanel.Visible = true;
-    }
-
-    private void _UpdateCurrentWeaponLabel(Player player)
-    {
-        if (_currentWeaponLabel == null) return;
-        string weaponName = "无";
-        string weaponTypeText = "";
-        var effects = new List<string>();
-
-        foreach (var effect in player.ActiveEffects)
-        {
-            if (effect.Category == WeaponCategory.Weapon)
-            {
-                weaponName = effect.CardName;
-                weaponTypeText = effect.GetWeaponTypeText();
-                foreach (var m in effect.MeleeEffects)
-                {
-                    var level = effect.MeleeEffectLevels.TryGetValue((int)m, out var l) ? l.AsInt32() : 1;
-                    effects.Add(WeaponCard.GetMeleeEffectDesc((MeleeEffect)(int)m, level));
-                }
-                foreach (var r in effect.RangedEffects)
-                {
-                    var level = effect.RangedEffectLevels.TryGetValue((int)r, out var l) ? l.AsInt32() : 1;
-                    effects.Add(WeaponCard.GetRangedEffectDesc((RangedEffect)(int)r, level));
-                }
-                foreach (var g in effect.MagicEffects)
-                {
-                    var level = effect.MagicEffectLevels.TryGetValue((int)g, out var l) ? l.AsInt32() : 1;
-                    effects.Add(WeaponCard.GetMagicEffectDesc((MagicEffect)(int)g, level));
-                }
-                break;
-            }
-        }
-
-        var effectText = effects.Count > 0 ? string.Join(" | ", effects) : "无特效";
-        effectText = _TruncateText(effectText, 36);
-        if (weaponName == "无")
-            _currentWeaponLabel.Text = "剑 当前武器: 无";
-        else
-            _currentWeaponLabel.Text = $"剑 {weaponName} ({weaponTypeText}) | {effectText}";
-    }
-
-    private string _TruncateText(string text, int maxLen)
-    {
-        if (text.Length <= maxLen) return text;
-        return text.Substring(0, maxLen - 1) + "…";
-    }
-
-    private string _GetRarityText(int rarity) => WeaponFormatter.GetRarityText(rarity);
-
-    private void _OnWeaponButtonPressed(int index)
-    {
-        if (index < _currentWeaponOptions.Count)
-        {
-            var selectedWeapon = _currentWeaponOptions[index];
-            WeaponCardSelected?.Invoke(selectedWeapon);
-            HideWeaponSelection();
-            _HideTooltip();
-
-            GameServices.Audio.PlayWeaponSelect();
-        }
-    }
-
-    private void _OnSkipPressed()
-    {
-        UpgradeSkipped?.Invoke();
-        HideWeaponSelection();
-        _HideTooltip();
-    }
-
-    private void _OnCardMouseEntered(int index)
-    {
-        if (index < _currentWeaponOptions.Count)
-        {
-            var weapon = _currentWeaponOptions[index];
-            if (weapon is UpgradeCard upgrade)
-                _ShowTooltip(_GetUpgradeTooltipText(upgrade));
-            else if (weapon is WeaponCard wc)
-                _ShowTooltip(_GetWeaponTooltipText(wc));
-        }
-    }
-
-    private void _OnCardMouseExited()
-    {
-        _HideTooltip();
     }
 
     // ═══════════════════════════════════════════════
@@ -1335,61 +769,7 @@ public partial class UIManager : Control
     // Card Rendering
     // ═══════════════════════════════════════════════
 
-    private void _RenderUpgradeCard(Button button, UpgradeCard upgrade)
-    {
-        var margin = (MarginContainer)button.GetChild(0);
-        var vbox = (VBoxContainer)margin.GetChild(0);
-        var categoryNode = (Label)vbox.GetNode("Category");
-        var titleNode = (Label)vbox.GetNode("Title");
-        var typeNode = (Label)vbox.GetNode("Type");
-        var iconNode = vbox.FindChild("Icon", true, false) as Label;
-        var descNode = (RichTextLabel)vbox.GetNode("Desc");
-        var rarityNode = (Label)vbox.GetNode("Rarity");
 
-        categoryNode.Text = "【强化卡】";
-        titleNode.Text = upgrade.DisplayName;
-        typeNode.Text = "强化已有装备";
-        if (iconNode != null) iconNode.Text = upgrade.Icon;
-        upgrade.SyncDescription();
-        descNode.Text = _UpgradeDescToBBCode(upgrade.Description);
-        rarityNode.Text = "升级";
-
-        var upBg = new Color(0.18f, 0.13f, 0.13f, 0.95f);
-        var upBorder = RarityRare;
-        titleNode.AddThemeColorOverride("font_color", RarityRare);
-        rarityNode.AddThemeColorOverride("font_color", RarityRare);
-
-        var style = MakeCardPanel(upBg, upBorder);
-        button.AddThemeStyleboxOverride("normal", style);
-
-        var hoverBg = new Color(0.25f, 0.18f, 0.18f, 0.95f);
-        var hoverBorder = ColorUtils.Lighten(upBorder, 0.2f);
-        var hoverStyle = MakeCardPanel(hoverBg, hoverBorder);
-        button.AddThemeStyleboxOverride("hover", hoverStyle);
-    }
-
-    /// <summary>转换升级卡描述为 BBCode 着色版本：正面增益金色，副作用红色。</summary>
-    private static string _UpgradeDescToBBCode(string plain)
-    {
-        var result = plain;
-        // 正面数值标记（伤害/攻速/暴击/吸血/冰冻/中毒后的 +N 或 +N%）
-        result = System.Text.RegularExpressions.Regex.Replace(result,
-            @"(\+[\d.]+%?)", m => $"[color=#d4a04a]{m.Value}[/color]");
-        // 生命值正面标记（生命+数字）
-        result = System.Text.RegularExpressions.Regex.Replace(result,
-            @"(生命\+[\d]+)", m => $"[color=#4caf50]{m.Value}[/color]");
-        // 负面/副作用标记（消耗生命/生命负值/速度负值）
-        result = System.Text.RegularExpressions.Regex.Replace(result,
-            @"(消耗生命\+[\d]+)", m => $"[color=#e74c3c]{m.Value}[/color]");
-        result = System.Text.RegularExpressions.Regex.Replace(result,
-            @"(生命[\-\d]+)", m => $"[color=#e74c3c]{m.Value}[/color]");
-        result = System.Text.RegularExpressions.Regex.Replace(result,
-            @"(速度[\-\d]+)", m => $"[color=#e74c3c]{m.Value}[/color]");
-        // 特效强化标记
-        result = System.Text.RegularExpressions.Regex.Replace(result,
-            @"(特效强化)", m => $"[color=#8a8acc]{m.Value}[/color]");
-        return result;
-    }
 
     // ═══════════════════════════════════════════════
     // Tooltip Text Generators
@@ -1449,7 +829,7 @@ public partial class UIManager : Control
         string typeText = weapon.Category == WeaponCategory.Weapon
             ? weapon.GetWeaponTypeText() + "武器"
             : "装备";
-        typeText += $" · Lv.{weapon.Tier} · {_GetRarityText(weapon.Rarity)}";
+        typeText += $" · Lv.{weapon.Tier} · {WeaponFormatter.GetRarityText(weapon.Rarity)}";
         bb += $"[center][color=#8a6060]{typeText}[/color][/center]\n";
         bb += "[center]━━━━━━━━━━━━━━━━━━━━[/center]\n\n";
 
@@ -1726,48 +1106,7 @@ public partial class UIManager : Control
 
     private void _ApplyWeaponSelectionResponsive(Vector2 viewportSize)
     {
-        _weaponSelectionMainVbox?.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingSection, viewportSize, 12));
-        _weaponButtonContainer?.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingWide, viewportSize, 8));
-        _weaponSelectionTitleLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(32, viewportSize, 22));
-        _currentWeaponLabel.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewportSize, 0.9f), 0);
-        _currentWeaponLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewportSize, 12));
-        _weaponSelectionDescLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(18, viewportSize, 13));
-        if (_weaponSelectionDescLabel != null)
-            _weaponSelectionDescLabel.CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(720, viewportSize, 0.9f), 0);
-        _weaponKeyboardHintLabel?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewportSize, 10));
-
-        foreach (var button in _weaponButtons)
-        {
-            button.CustomMinimumSize = ResponsiveUi.Size(200, 280, viewportSize, 120);
-            if (button.GetChildCount() == 0 || button.GetChild(0) is not MarginContainer margin)
-                continue;
-
-            int cardMargin = ResponsiveUi.Px(UiMarginMedium, viewportSize, 6);
-            margin.AddThemeConstantOverride("margin_top", cardMargin);
-            margin.AddThemeConstantOverride("margin_bottom", cardMargin);
-            margin.AddThemeConstantOverride("margin_left", cardMargin);
-            margin.AddThemeConstantOverride("margin_right", cardMargin);
-
-            if (margin.GetChildCount() == 0 || margin.GetChild(0) is not VBoxContainer vbox)
-                continue;
-
-            vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingNormal, viewportSize, 4));
-            (vbox.FindChild("Category", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewportSize, 9));
-            (vbox.FindChild("Title", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewportSize, 15));
-            (vbox.FindChild("Type", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewportSize, 10));
-            (vbox.FindChild("Desc", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(13, viewportSize, 10));
-            (vbox.FindChild("Rarity", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewportSize, 10));
-            (vbox.FindChild("Hint", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewportSize, 9));
-            (vbox.FindChild("Icon", true, false) as Label)?.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(55, viewportSize, 32));
-            if (vbox.FindChild("IconContainer", true, false) is CenterContainer iconContainer)
-                iconContainer.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(70, viewportSize, 42));
-        }
-
-        if (_skipButton != null)
-        {
-            _skipButton.CustomMinimumSize = ResponsiveUi.Size(150, 40, viewportSize, 30);
-            _skipButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewportSize, 12));
-        }
+        _weaponSelectionPanel.ApplyResponsiveLayout();
     }
 
     private void _ApplyBossHealthResponsive(Vector2 viewportSize)
@@ -1837,7 +1176,7 @@ public partial class UIManager : Control
     // Game Manager Events
     // ═══════════════════════════════════════════════
 
-    private void _OnWeaponSelectionStarted() => ShowWeaponSelection();
+    private void _OnWeaponSelectionStarted() => OpenWeaponSelection();
 
     private void _OnRoundStarted(int roundNumber)
     {
@@ -2067,8 +1406,8 @@ public partial class UIManager : Control
     {
         HideRoundBanner();
         HideRoundSummary();
-        if (_weaponSelectionPanel != null && _weaponSelectionPanel.Visible)
-            HideWeaponSelection();
+        if (_weaponSelectionPanel != null && _weaponSelectionPanel.IsOpen())
+            CloseWeaponSelection();
         // 关闭可能打开的模态面板，避免遮挡 GameOver（Help/Equipment ZIndex 170 高于 GameOver 50）
         _helpPanel?.Close();
         _equipmentPanel?.Close();

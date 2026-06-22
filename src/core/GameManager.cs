@@ -516,7 +516,7 @@ public partial class GameManager : Node
             _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
         }
 
-        _uiManager?.HideWeaponSelection();
+        _uiManager?.CloseWeaponSelection();
         _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
@@ -535,7 +535,7 @@ public partial class GameManager : Node
         if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
         _transitioningToCombat = true;
 
-        _uiManager?.HideWeaponSelection();
+        _uiManager?.CloseWeaponSelection();
         _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
         await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
 
