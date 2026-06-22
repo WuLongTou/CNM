@@ -64,6 +64,11 @@ public partial class GameManager : Node
     private int _directiveProgress;
     private const float RiftRadius = 190.0f;
 
+    // 提取的独立组件
+    private PickupSpawner _pickupSpawner = null!;
+    private SpawnPointGrid _spawnPointGrid = null!;
+    private DirectiveSystem _directiveSystem = null!;
+
     public Player? PlayerRef { get; private set; }
     public Zombie? BossZombie { get; private set; }
     private int _bossPhase; // Boss 阶段：0=无/已死，1/2/3=三阶段（66%/33% 血量切换）
@@ -77,7 +82,6 @@ public partial class GameManager : Node
     private WeaponDeck? _weaponDeck;
     private Player _player = null!;
     private PackedScene _zombieScene = null!;
-    private List<Vector2> _spawnPoints = new();
 
     private UIManager _uiManager = null!;
 
@@ -135,6 +139,14 @@ public partial class GameManager : Node
         var hitStop = new HitStopController { Name = "HitStop" };
         AddChild(hitStop);
 
+        // 初始化提取的独立组件
+        _pickupSpawner = new PickupSpawner { Name = "PickupSpawner" };
+        AddChild(_pickupSpawner);
+        _spawnPointGrid = new SpawnPointGrid { Name = "SpawnPointGrid" };
+        AddChild(_spawnPointGrid);
+        _directiveSystem = new DirectiveSystem { Name = "DirectiveSystem" };
+        AddChild(_directiveSystem);
+
         // 初始化 4 大数学玩法系统
         if (GameConfig.MathSystemsEnabled)
         {
@@ -153,8 +165,7 @@ public partial class GameManager : Node
             _zombieScene = GD.Load<PackedScene>("res://scenes/Zombie.tscn");
         }
 
-        _UpdateSpawnPoints();
-        GetViewport().SizeChanged += _OnViewportSizeChanged;
+        _spawnPointGrid.Rebuild();
 
         await ToSignal(GetTree(), "process_frame");
 
@@ -401,7 +412,7 @@ public partial class GameManager : Node
         _roundDamageDealt = 0;
         _roundDamageTaken = 0;
         _directiveProgress = 0;
-        _ChooseRoundDirective();
+        _directiveSystem.OnRoundStart(CurrentRound);
 
         var roundFactor = Mathf.Sqrt((float)CurrentRound) * 1.5f;
         _zombiesToSpawn = ZombiesPerRoundBase + (int)roundFactor + (CurrentRound - 1) * ZombiesIncreasePerRound;
@@ -449,7 +460,7 @@ public partial class GameManager : Node
             if (bg is Background background)
             {
                 background.SetTension(Mathf.Clamp((float)(CurrentRound - 1) / 15.0f, 0.0f, 1.0f));
-                _ApplyDirectiveAtmosphere(background);
+                _directiveSystem.ApplyAtmosphere(background);
             }
         }
 
@@ -523,7 +534,7 @@ public partial class GameManager : Node
         _transitioningToCombat = false;
         if (CurrentState == GameState.GameOver) return;
         CurrentState = GameState.Combat;
-        _ActivateRoundDirective();
+        _directiveSystem.OnCombatActivated();
         WeaponSelectionEnded?.Invoke();
 
         var cardName = card != null ? card.GetType().Name : "null";
@@ -542,7 +553,7 @@ public partial class GameManager : Node
         _transitioningToCombat = false;
         if (CurrentState == GameState.GameOver) return;
         CurrentState = GameState.Combat;
-        _ActivateRoundDirective();
+        _directiveSystem.OnCombatActivated();
         WeaponSelectionEnded?.Invoke();
 
         LogUtils.Print("跳过升级！直接战斗！");
@@ -582,11 +593,7 @@ public partial class GameManager : Node
             zombieInstance.SetElite(true);
         }
 
-        if (_spawnPoints.Count == 0)
-        {
-            _UpdateSpawnPoints();
-        }
-        var spawnPos = _spawnPoints[(int)(GD.Randi() % _spawnPoints.Count)];
+        var spawnPos = _spawnPointGrid.PickRandom();
         var offset = new Vector2(
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange,
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange
@@ -851,8 +858,13 @@ public partial class GameManager : Node
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
 
         // Try to drop a pickup
-        _TryDropPickup(zombie);
-        _HandleDirectiveKill(zombie, pts);
+        _pickupSpawner.TryDrop(zombie, CurrentRound, _totalKills);
+        int directiveBonus = _directiveSystem.OnZombieKilled(zombie, pts);
+        if (directiveBonus > 0)
+        {
+            Score += directiveBonus;
+            _uiManager?.UpdateScoreDisplay(Score);
+        }
     }
 
     private void _OnPlayerDied()
@@ -871,7 +883,7 @@ public partial class GameManager : Node
         _spawnTimer = 999999.0f;
         _zombiesToSpawn = 0;
         _zombiesAlive = 0;
-        _ClearDirectiveVisual();
+        _directiveSystem.OnPlayerDied();
         ZombieRegistry.Clear();
 
         LogUtils.Print($"游戏结束！坚持了 {CurrentRound} 回合，得分: {Score}");
@@ -883,189 +895,14 @@ public partial class GameManager : Node
         SaveManager.Flush(); // 游戏结束立即写盘，避免数据丢失
     }
 
-    private void _ChooseRoundDirective()
-    {
-        _ClearDirectiveVisual();
-        if (CurrentRound <= 1)
-        {
-            _roundDirective = RoundDirective.Standard;
-            return;
-        }
 
-        int directiveSlot = CurrentRound % 4;
-        _roundDirective = directiveSlot switch
-        {
-            1 => RoundDirective.RiftHarvest,
-            2 => RoundDirective.EliteHunt,
-            3 => RoundDirective.SwarmSurge,
-            _ => RoundDirective.Standard
-        };
-    }
-
-    private void _ActivateRoundDirective()
-    {
-        switch (_roundDirective)
-        {
-            case RoundDirective.RiftHarvest:
-                _riftPosition = _PickArenaPoint(0.22f);
-                _CreateRiftVisual();
-                _uiManager?.ShowLevelUpNotification("战术目标: 在炼金裂隙附近击杀 5 只僵尸", new Color(1.0f, 0.62f, 0.24f));
-                break;
-            case RoundDirective.EliteHunt:
-                _uiManager?.ShowLevelUpNotification("战术目标: 击杀精英悬赏目标", new Color(0.95f, 0.35f, 0.25f));
-                break;
-            case RoundDirective.SwarmSurge:
-                _uiManager?.ShowLevelUpNotification("事件: 虫群潮汐，尸群会成组涌入", new Color(0.55f, 0.85f, 0.35f));
-                break;
-            default:
-                _uiManager?.ShowLevelUpNotification("战术目标: 保持连击，快速清场", new Color(0.6f, 0.7f, 0.9f));
-                break;
-        }
-    }
-
-    private void _HandleDirectiveKill(Zombie zombie, int basePoints)
-    {
-        if (_player == null)
-            return;
-
-        switch (_roundDirective)
-        {
-            case RoundDirective.RiftHarvest:
-                if (_riftVisual != null && zombie.GlobalPosition.DistanceTo(_riftPosition) <= RiftRadius)
-                {
-                    _directiveProgress++;
-                    int bonus = Mathf.Max(8, basePoints / 2);
-                    Score += bonus;
-                    _uiManager?.UpdateScoreDisplay(Score);
-                    _uiManager?.ShowKillEffect(zombie.GlobalPosition, bonus);
-                    if (_directiveProgress >= 5)
-                    {
-                        _player.Heal(Mathf.Max(8, _player.MaxHealth / 12));
-                        _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
-                        _uiManager?.ShowLevelUpNotification("裂隙净化完成: 回复生命并获得额外分数", new Color(1.0f, 0.78f, 0.34f));
-                        _ClearDirectiveVisual();
-                        _roundDirective = RoundDirective.Standard;
-                    }
-                }
-                break;
-            case RoundDirective.EliteHunt:
-                if (zombie.IsElite || zombie.IsBoss)
-                {
-                    _directiveProgress++;
-                    Score += basePoints;
-                    _uiManager?.UpdateScoreDisplay(Score);
-                    _uiManager?.ShowLevelUpNotification("精英悬赏完成: 分数翻倍", new Color(1.0f, 0.35f, 0.25f));
-                    _roundDirective = RoundDirective.Standard;
-                }
-                break;
-        }
-    }
-
-    private Vector2 _PickArenaPoint(float marginRatio)
-    {
-        var ws = MapContext.CurrentWorldSize;
-        float mx = ws.X * marginRatio;
-        float my = ws.Y * marginRatio;
-        return new Vector2((float)GD.RandRange(mx, ws.X - mx), (float)GD.RandRange(my, ws.Y - my));
-    }
-
-    private void _CreateRiftVisual()
-    {
-        _ClearDirectiveVisual();
-        var root = new Node2D { Name = "RoundRift", GlobalPosition = _riftPosition, ZIndex = -1 };
-        GetTree().CurrentScene.AddChild(root);
-        _riftVisual = root;
-
-        var outer = new Line2D
-        {
-            Width = 2.0f,
-            DefaultColor = new Color(1.0f, 0.62f, 0.24f, 0.55f),
-            Closed = true
-        };
-        var inner = new Line2D
-        {
-            Width = 1.2f,
-            DefaultColor = new Color(0.55f, 0.20f, 0.95f, 0.48f),
-            Closed = true
-        };
-        for (int i = 0; i < 48; i++)
-        {
-            float angle = i * Mathf.Tau / 48.0f;
-            outer.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * RiftRadius);
-            inner.AddPoint(new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (RiftRadius * 0.55f));
-        }
-        root.AddChild(outer);
-        root.AddChild(inner);
-
-        var pulse = root.CreateTween().SetLoops(999999);
-        pulse.TweenProperty(root, "scale", new Vector2(1.06f, 1.06f), 0.7f).SetTrans(Tween.TransitionType.Sine);
-        pulse.TweenProperty(root, "scale", Vector2.One, 0.7f).SetTrans(Tween.TransitionType.Sine);
-    }
-
-    private void _ClearDirectiveVisual()
-    {
-        if (_riftVisual != null && IsInstanceValid(_riftVisual))
-            _riftVisual.QueueFree();
-        _riftVisual = null;
-    }
-
-    private void _ApplyDirectiveAtmosphere(Background background)
-    {
-        switch (_roundDirective)
-        {
-            case RoundDirective.RiftHarvest:
-                background.SetAtmosphereTint(1.05f, 0.82f, 1.12f, 0.28f, 1.0f);
-                break;
-            case RoundDirective.EliteHunt:
-                background.SetAtmosphereTint(1.18f, 0.72f, 0.58f, 0.35f, 1.2f);
-                break;
-            case RoundDirective.SwarmSurge:
-                background.SetAtmosphereTint(0.82f, 1.05f, 0.72f, 0.30f, 0.9f);
-                break;
-        }
-    }
-
-    private void _UpdateSpawnPoints()
-    {
-        _spawnPoints.Clear();
-        var worldSize = MapContext.CurrentWorldSize;
-        var margin = GameConfig.SpawnMargin;
-        var topMargin = GameConfig.SpawnTopMarginFallback;
-
-        // Spawn around the edges of the larger world
-        var topEdge = topMargin + margin;
-        var bottomEdge = worldSize.Y - margin;
-        var leftEdge = margin;
-        var rightEdge = worldSize.X - margin;
-
-        // 大场景：边缘刷怪点密度随世界放大，让敌人从更多方向涌入而非只从远处几个点
-        int hSteps = 5 + (int)(4 * Core.GameConfig.WorldScale);  // 顶/底横向等分
-        int vSteps = 4 + (int)(4 * Core.GameConfig.WorldScale);  // 左/右纵向等分
-        for (int i = 0; i <= hSteps; i++)
-        {
-            float t = i / (float)hSteps;
-            _spawnPoints.Add(new Vector2(t * worldSize.X, topEdge));
-            _spawnPoints.Add(new Vector2(t * worldSize.X, bottomEdge));
-        }
-        float vSpan = worldSize.Y - topEdge - bottomEdge;
-        for (int i = 0; i <= vSteps; i++)
-        {
-            float t = i / (float)vSteps;
-            _spawnPoints.Add(new Vector2(leftEdge, topEdge + t * vSpan));
-            _spawnPoints.Add(new Vector2(rightEdge, topEdge + t * vSpan));
-        }
-    }
-
-    private void _OnViewportSizeChanged()
-    {
-        _UpdateSpawnPoints();
-    }
 
     public void SetPlayer(Node playerNode)
     {
         _player = (Player)playerNode;
         PlayerRef = playerNode as Player;
         _player.Died += _OnPlayerDied;
+        _directiveSystem.Setup(_uiManager!, _player);
     }
 
     public void SetWeaponDeck(Node deck)
@@ -1150,7 +987,12 @@ public partial class GameManager : Node
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
         if (_player?.Combat != null)
             _uiManager?.ShowComboNotification(_player.Combat.CurrentCombo);
-        _HandleDirectiveKill(zombie, 5);
+        int minionBonus = _directiveSystem.OnZombieKilled(zombie, 5);
+        if (minionBonus > 0)
+        {
+            Score += minionBonus;
+            _uiManager?.UpdateScoreDisplay(Score);
+        }
     }
 
     public void SpawnSwarmGroup(Vector2 pos)
@@ -1186,95 +1028,12 @@ public partial class GameManager : Node
     }
 
     /// <summary>Spawn a pickup at the given position. Called when a zombie dies.</summary>
-    public void SpawnPickup(Vector2 pos, string type)
-    {
-        if (CurrentState != GameState.Combat) return;
-
-        PackedScene? scene = null;
-        if (type == "health_potion")
-        {
-            if (ResourceLoader.Exists("res://scenes/Pickups/HealthPotion.tscn"))
-                scene = GD.Load<PackedScene>("res://scenes/Pickups/HealthPotion.tscn");
-        }
-        else if (type == "skill_book")
-        {
-            if (ResourceLoader.Exists("res://scenes/Pickups/SkillBook.tscn"))
-                scene = GD.Load<PackedScene>("res://scenes/Pickups/SkillBook.tscn");
-        }
-
-        if (scene == null)
-        {
-            // Create programmatically as fallback
-            var pickup = _CreatePickupNode(type, pos);
-            if (pickup != null)
-                GetTree().CurrentScene.AddChild(pickup);
-        }
-        else
-        {
-            var inst = scene.Instantiate();
-            if (inst is Node2D n)
-            {
-                n.GlobalPosition = pos;
-                GetTree().CurrentScene.AddChild(n);
-            }
-        }
-    }
-
-    private Node? _CreatePickupNode(string type, Vector2 pos)
-    {
-        try
-        {
-            Node? pickup = null;
-            if (type == "health_potion")
-            {
-                pickup = new ZombieWars.Pickups.HealthPotion { GlobalPosition = pos };
-            }
-            else if (type == "skill_book")
-            {
-                pickup = new ZombieWars.Pickups.SkillBook { GlobalPosition = pos };
-            }
-            return pickup;
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    private void _TryDropPickup(Zombie zombie)
-    {
-        if (CurrentRound < 3) return; // No drops in early rounds
-
-        var roll = GD.Randf();
-        float dropChance = 0.12f;
-
-        // Higher tier enemies drop better items
-        if (zombie.IsElite || zombie.IsBoss)
-            dropChance = 0.35f;
-        else if (zombie.ZombieType == ZombieType.Tank || zombie.ZombieType == ZombieType.Mech)
-            dropChance = 0.20f;
-        else if (zombie.ZombieType == ZombieType.Swarm || zombie.ZombieType == ZombieType.Fast)
-            dropChance = 0.08f;
-
-        // 数学系统：黄金比例——斐波那契击杀点保证掉落（1,2,3,5,8,13,21...）
-        bool goldenDrop = GameConfig.MathSystemsEnabled
-            && ZombieWars.Math.GoldenProgression.IsFibonacciDropPoint(_totalKills + 1);
-
-        if (roll > dropChance && !goldenDrop) return;
-
-        // 黄金掉落可见反馈：柔和金光，让玩家感知"斐波那契时刻"
-        if (goldenDrop)
-        {
-            _uiManager?.FlashGoldenDrop();
-            GameServices.Audio.PlayUpgrade();
-        }
-
-        string pickupType = GD.Randf() < 0.5f ? "health_potion" : "skill_book";
-        SpawnPickup(zombie.GlobalPosition, pickupType);
-    }
 
     public void SetUIManager(UIManager ui)
     {
         _uiManager = ui;
+        _pickupSpawner?.Setup(ui);
+        if (_player != null)
+            _directiveSystem?.Setup(ui, _player);
     }
 }
