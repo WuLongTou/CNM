@@ -1,5 +1,6 @@
 namespace ZombieWars.Core;
 
+using System;
 using System.Collections.Generic;
 using Godot;
 using ZombieWars.Enemy;
@@ -45,6 +46,29 @@ public static class SpatialUtils
     /// Called by ZombieRegistry on spawn/death.
     /// </summary>
     public static void InvalidateGrid() { _gridDirty = true; }
+
+    /// <summary>
+    /// 零分配遍历附近网格细胞中的僵尸（用于分离力计算，避免 O(N²) 全量遍历）。
+    /// 调用者传入 callback 处理每个候选；callback 内自行做精确距离判定。
+    /// </summary>
+    public static void ForEachNearbyZombie(Vector2 position, float range, Action<Zombie> callback)
+    {
+        RebuildGrid();
+        int cellRange = Mathf.Max(1, (int)(range / GridCellSize) + 1);
+        Vector2I center = GetCell(position);
+        for (int dx = -cellRange; dx <= cellRange; dx++)
+        {
+            for (int dy = -cellRange; dy <= cellRange; dy++)
+            {
+                Vector2I cell = center + new Vector2I(dx, dy);
+                if (_spatialGrid.TryGetValue(cell, out var list))
+                {
+                    foreach (var z in list)
+                        callback(z);
+                }
+            }
+        }
+    }
 
     private static Vector2I GetCell(Vector2 pos)
     {

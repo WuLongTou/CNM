@@ -437,15 +437,15 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
             }
         }
 
-        // 僵尸间分离力：遍历注册表快照（已缓存、无 List 分配）推开重叠同伴，
-        // 避免堆叠成一点、形成自然包围圈（N 有界，O(N²) 距离计算无 GC 压力）
+        // 僵尸间分离力：通过空间网格只查询附近细胞，避免 O(N²) 全量遍历
         float sepRange = GameConfig.ZombieSeparationRange;
         float sepRangeSq = sepRange * sepRange;
-        float sepDt = (float)GetPhysicsProcessDeltaTime(); // 缓存到循环外，避免 N² 次引擎调用
-        foreach (var other in ZombieRegistry.All)
+        float sepDt = (float)GetPhysicsProcessDeltaTime();
+        Vector2 myPos = GlobalPosition;
+        SpatialUtils.ForEachNearbyZombie(myPos, sepRange, other =>
         {
-            if (other == this) continue;
-            Vector2 diff = GlobalPosition - other.GlobalPosition;
+            if (other == this) return;
+            Vector2 diff = myPos - other.GlobalPosition;
             float distSq = diff.LengthSquared();
             if (distSq < sepRangeSq && distSq > 0.25f)
             {
@@ -453,7 +453,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
                 float factor = (sepRange - dist) / sepRange;
                 Velocity += (diff / dist) * factor * GameConfig.ZombieSeparationForce * sepDt;
             }
-        }
+        });
 
         MoveAndSlide();
     }
