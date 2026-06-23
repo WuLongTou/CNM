@@ -17,8 +17,8 @@ public partial class InventoryPanel : Panel
     {
         ((Color)(new Color(0.55f, 0.36f, 0.18f)), "木"),  // Wood - 棕色
         ((Color)(new Color(0.62f, 0.60f, 0.57f)), "石"),  // Stone - 灰色
-        ((Color)(new Color(0.40f, 0.55f, 0.25f)), "纤"),  // Fiber - 绿色
-        ((Color)(new Color(0.80f, 0.15f, 0.20f)), "浆"),  // Berry - 红色
+        ((Color)(new Color(0.40f, 0.55f, 0.25f)), "草"),  // Fiber - 绿色
+        ((Color)(new Color(0.80f, 0.15f, 0.20f)), "果"),  // Berry - 红色
     };
 
     public override void _Ready()

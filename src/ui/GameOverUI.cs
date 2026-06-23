@@ -238,13 +238,13 @@ public partial class GameOverUI : Control
         quitBtn.Pressed += () => GetTree().Quit();
         btnBox.AddChild(quitBtn);
 
-        // Animations
-        var panelTw = CreateTween();
+        // Animations - set pause mode to Process so they play even when GetTree().Paused = true
+        var panelTw = CreateTween().SetPauseMode(Tween.TweenPauseMode.Process);
         panelTw.TweenInterval(0.6f);
         panelTw.TweenProperty(content, Node2D.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.5f)
             .SetTrans(Tween.TransitionType.Cubic);
 
-        var titleTw = CreateTween().SetLoops(999999);
+        var titleTw = CreateTween().SetPauseMode(Tween.TweenPauseMode.Process).SetLoops(999999);
         titleTw.TweenProperty(title, Node2D.PropertyName.Modulate.ToString(), new Color(1.0f, 0.85f, 0.85f), 1.2f)
             .SetTrans(Tween.TransitionType.Sine);
         titleTw.TweenProperty(title, Node2D.PropertyName.Modulate.ToString(), new Color(1, 1, 1), 1.2f)

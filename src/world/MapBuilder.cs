@@ -188,6 +188,9 @@ public partial class MapBuilder : Node2D
             var wb = new Workbench { GlobalPosition = _RandomPosAwayFromCenter(ws) };
             _obstacleLayer.AddChild(wb);
         }
+        // 锻造台（锻造）—— 1 处
+        var fs = new ForgeStation { GlobalPosition = _RandomPosAwayFromCenter(ws) };
+        _obstacleLayer.AddChild(fs);
     }
 
     /// <summary>散布可采集资源节点：树丛（木材）、矿点（石头）、灌木（纤维/浆果）。</summary>

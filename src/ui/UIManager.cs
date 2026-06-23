@@ -48,6 +48,7 @@ public partial class UIManager : Control
     private EquipmentPanel _equipmentPanel = null!;
     private InventoryPanel? _inventoryPanel;
     private CraftingPanel? _craftingPanel;
+    private ForgePanel? _forgePanel;
     private MetaUpgradePanel? _metaPanel;  // 跨局永久升级面板
     private FusionOfferPanel? _fusionPanel;  // 武器融合确认面板
     private WelcomePanel? _welcomePanel;
@@ -143,6 +144,8 @@ public partial class UIManager : Control
         AddChild(_inventoryPanel);
         _craftingPanel = new CraftingPanel { Name = "CraftingPanel", ZIndex = 170 };
         AddChild(_craftingPanel);
+        _forgePanel = new ForgePanel { Name = "ForgePanel", ZIndex = 170 };
+        AddChild(_forgePanel);
         // _weaponSelectionPanel.Setup 延迟到 SetWeaponDeck 时调用（此时 _gameManager/_weaponDeck 已就位）
         _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
         AddChild(_metaPanel);
@@ -464,18 +467,16 @@ public partial class UIManager : Control
 
     /// <summary>
     /// 统一 ESC 键处理：按优先级短路求值状态机。
-    /// 优先级：GameOver / WelcomePanel > HelpPanel > 武器选择 > 普通暂停。
+    /// 优先级：HelpPanel > 武器选择 > 普通暂停。
+    /// GameOver/Welcome 不处理 ESC（让玩家通过按钮操作，防止误退出）。
     /// 返回 true 表示事件已消费（调用方应 SetInputAsHandled）。
     /// </summary>
     private bool TryHandleEscape()
     {
-        // 1. 退出游戏状态（最高）
+        // GameOver/Welcome 界面下不响应 ESC
         if (_gameOverUi.Visible || (_welcomePanel != null && _welcomePanel.Visible))
-        {
-            GetTree().Quit();
             return true;
-        }
-        // 2. 关闭帮助面板
+        // 关闭帮助面板
         if (_helpPanel.Visible)
         {
             _CloseHelpPanel();
@@ -491,6 +492,12 @@ public partial class UIManager : Control
         if (_craftingPanel != null && _craftingPanel.Visible)
         {
             _CloseCrafting();
+            return true;
+        }
+        // 2e. 关闭锻造面板
+        if (_forgePanel != null && _forgePanel.Visible)
+        {
+            _CloseForge();
             return true;
         }
         // 2b. 关闭装备面板
@@ -686,8 +693,28 @@ public partial class UIManager : Control
         _RefreshUiModalPauseLock();
     }
 
+    /// <summary>锻造台交互：打开锻造面板（模态）。</summary>
+    public void OpenForge()
+    {
+        if (_forgePanel == null) return;
+        var player = _gameManager?.PlayerRef;
+        if (player == null) return;
+        if (_weaponSelectionPanel.IsOpen()) return;
+        _forgePanel.Open(player);
+        GetTree().Paused = true;
+    }
+
+    public bool IsForgeOpen() => _forgePanel?.Visible ?? false;
+
+    private void _CloseForge()
+    {
+        if (_forgePanel != null) _forgePanel.Close();
+        _RefreshUiModalPauseLock();
+    }
+
     private bool _IsUiModalVisible() => _helpPanel.Visible || _equipmentPanel.Visible
-        || (_inventoryPanel?.Visible ?? false) || (_craftingPanel?.Visible ?? false);
+        || (_inventoryPanel?.Visible ?? false) || (_craftingPanel?.Visible ?? false)
+        || (_forgePanel?.Visible ?? false);
 
     private void _RefreshUiModalPauseLock()
     {
@@ -1091,7 +1118,7 @@ public partial class UIManager : Control
                 }
             }
             if (!string.IsNullOrEmpty(currentWeaponName) && currentWeaponName != weapon.CardName)
-                bb += $"[color=#e0a040]剑 将替换当前武器: {currentWeaponName}[/color]\n";
+                bb += $"[color=#e0a040]将替换当前武器: {currentWeaponName}[/color]\n";
         }
 
         return bb;

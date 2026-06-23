@@ -343,14 +343,14 @@ public partial class HudPanel : Panel
         statRow.Alignment = BoxContainer.AlignmentMode.Center;
         bottomStack.AddChild(statRow);
 
-        _weaponNameLabel = _MakeStatLabel("刀 基础近战", HudPalette.WeaponName, UiFontSmall);
-        _attackTypeLabel = _MakeStatLabel("剑 近战", HudPalette.AttackType, UiFontSmall);
-        _targetPriorityLabel = _MakeStatLabel("弩 最近", HudPalette.TargetPriority, UiFontSmall);
-        _damageLabel = _MakeStatLabel("伤 12/次", HudPalette.Damage, UiFontSmall);
-        _attackIntervalLabel = _MakeStatLabel("隔 0.45s", HudPalette.AttackInterval, UiFontSmall);
-        _critLabel = _MakeStatLabel("爆 0%", HudPalette.Crit, UiFontSmall);
-        _lifestealLabel = _MakeStatLabel("血 0%", HudPalette.Lifesteal, UiFontSmall);
-        _speedLabel = _MakeStatLabel("速 220", HudPalette.Speed, UiFontSmall);
+        _weaponNameLabel = _MakeStatLabel("武器 基础近战", HudPalette.WeaponName, UiFontSmall);
+        _attackTypeLabel = _MakeStatLabel("类型 近战", HudPalette.AttackType, UiFontSmall);
+        _targetPriorityLabel = _MakeStatLabel("目标 最近", HudPalette.TargetPriority, UiFontSmall);
+        _damageLabel = _MakeStatLabel("伤害 12/次", HudPalette.Damage, UiFontSmall);
+        _attackIntervalLabel = _MakeStatLabel("间隔 0.45s", HudPalette.AttackInterval, UiFontSmall);
+        _critLabel = _MakeStatLabel("暴击 0%", HudPalette.Crit, UiFontSmall);
+        _lifestealLabel = _MakeStatLabel("吸血 0%", HudPalette.Lifesteal, UiFontSmall);
+        _speedLabel = _MakeStatLabel("速度 220", HudPalette.Speed, UiFontSmall);
 
         // 组 1：武器信息
         var grp1 = _MakeStatGroup(new Control[] {
@@ -519,7 +519,7 @@ public partial class HudPanel : Panel
         string tooltipText = cooldown > 0 ? $"攻击间隔: 每 {interval:F2}s 可攻击一次\n下次可攻击: {cooldown:F2}s" : $"攻击间隔: 每 {interval:F2}s 可攻击一次\n下次可攻击: 就绪";
         if (tooltipText == _lastIntervalTooltip) return;
         _lastIntervalTooltip = tooltipText;
-        _attackIntervalLabel.Text = $"隔 {interval:F2}s";
+        _attackIntervalLabel.Text = $"间隔 {interval:F2}s";
         _attackIntervalLabel.TooltipText = tooltipText;
     }
 
@@ -527,18 +527,18 @@ public partial class HudPanel : Panel
     {
         string attackTypeText = _GetAttackTypeText(player.CurrentAttackType);
         string weaponName = _GetCurrentWeaponName(player);
-        _weaponNameLabel.Text = $"刀 {_Shorten(weaponName, 10)}";
-        _attackTypeLabel.Text = $"剑 {attackTypeText}";
-        _damageLabel.Text = $"伤 {Mathf.RoundToInt(player.CurrentDamage)}/次";
-        _critLabel.Text = $"爆 {Mathf.RoundToInt(player.CriticalChance)}%";
-        _lifestealLabel.Text = $"血 {Mathf.RoundToInt(player.LifeStealPercent)}%";
-        _speedLabel.Text = $"速 {Mathf.RoundToInt(player.CurrentSpeed)}";
+        _weaponNameLabel.Text = $"武器 {_Shorten(weaponName, 10)}";
+        _attackTypeLabel.Text = $"类型 {attackTypeText}";
+        _damageLabel.Text = $"伤害 {Mathf.RoundToInt(player.CurrentDamage)}/次";
+        _critLabel.Text = $"暴击 {Mathf.RoundToInt(player.CriticalChance)}%";
+        _lifestealLabel.Text = $"吸血 {Mathf.RoundToInt(player.LifeStealPercent)}%";
+        _speedLabel.Text = $"速度 {Mathf.RoundToInt(player.CurrentSpeed)}";
         _targetPriorityLabel.Text = player.TargetPriority switch
         {
-            0 => "弩 最近",
-            1 => "弩 最远",
-            2 => "弩 密集",
-            _ => "弩 最近"
+            0 => "目标 最近",
+            1 => "目标 最远",
+            2 => "目标 密集",
+            _ => "目标 最近"
         };
         _UpdateStatusTooltips(player);
         UpdateEffects(player);
@@ -591,7 +591,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "冰",
+                ["icon"] = "冰霜",
                 ["name"] = "冰霜护盾",
                 ["type"] = "buff",
                 ["color"] = HudPalette.EffectFrost,
@@ -602,7 +602,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "伤",
+                ["icon"] = "暴击",
                 ["name"] = "暴击",
                 ["type"] = "stat",
                 ["color"] = HudPalette.EffectCrit,
@@ -613,7 +613,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "血",
+                ["icon"] = "吸血",
                 ["name"] = "吸血",
                 ["type"] = "stat",
                 ["color"] = HudPalette.EffectLifesteal,
@@ -624,7 +624,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "冻",
+                ["icon"] = "冰冻",
                 ["name"] = "冰冻",
                 ["type"] = "stat",
                 ["color"] = HudPalette.EffectFreeze,
@@ -635,7 +635,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "毒",
+                ["icon"] = "中毒",
                 ["name"] = "中毒",
                 ["type"] = "stat",
                 ["color"] = HudPalette.EffectPoison,
@@ -646,7 +646,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "盾",
+                ["icon"] = "护盾",
                 ["name"] = "护盾",
                 ["type"] = "buff",
                 ["color"] = HudPalette.EffectShield,
@@ -657,7 +657,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "涡",
+                ["icon"] = "闪避",
                 ["name"] = "闪避",
                 ["type"] = "buff",
                 ["color"] = HudPalette.EffectDodge,
@@ -668,7 +668,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "刺",
+                ["icon"] = "反伤",
                 ["name"] = "反伤",
                 ["type"] = "buff",
                 ["color"] = HudPalette.EffectThorns,
@@ -679,7 +679,7 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "御",
+                ["icon"] = "坚韧",
                 ["name"] = "减控",
                 ["type"] = "buff",
                 ["color"] = HudPalette.EffectTenacity,
@@ -692,7 +692,7 @@ public partial class HudPanel : Panel
             var btn = new Button
             {
                 Text = (string)item["icon"],
-                CustomMinimumSize = new Vector2(28, 24),
+                CustomMinimumSize = new Vector2(40, 24),
                 FocusMode = Control.FocusModeEnum.None,
                 Flat = true
             };

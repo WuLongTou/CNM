@@ -245,7 +245,7 @@ public partial class WeaponSelectionPanel : Control
 
         _currentWeaponLabel = new Label
         {
-            Text = "剑 当前武器: 无",
+            Text = "当前武器: 无",
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             HorizontalAlignment = HorizontalAlignment.Center
         };
@@ -432,8 +432,8 @@ public partial class WeaponSelectionPanel : Control
         var effectText = effects.Count > 0 ? string.Join(" | ", effects) : "无特效";
         effectText = _TruncateText(effectText, 36);
         _currentWeaponLabel.Text = weaponName == "无"
-            ? "剑 当前武器: 无"
-            : $"剑 {weaponName} ({weaponTypeText}) | {effectText}";
+            ? "当前武器: 无"
+            : $"武器 {weaponName} ({weaponTypeText}) | {effectText}";
     }
 
     public override void _Input(InputEvent @event)
