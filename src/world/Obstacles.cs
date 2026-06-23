@@ -49,30 +49,84 @@ internal static class ObstacleDraw
         c.DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
     }
 
-    // 绘制带轻微纹理变化的矩形石块
+    /// 绘制风化暗棕灰色石块/城墙。
+    /// 原版用 1 个纯色矩形 + 2 条高光阴影 + 粗竖线 = 玩家口中的"灰色矩形框"。
+    /// 新版:随机多块面着色 + 灰泥 + 风化裂缝 + 苔藓斑 + 磨损边,融入棕褐暗黑童话调。
     public static void DrawStoneBlock(CanvasItem c, Rect2 rect, Color baseCol, Color lit, Color dark,
         int variant, RandomNumberGenerator rng)
     {
-        c.DrawRect(rect, baseCol, true);
-        // 顶面高光、底面阴影
-        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, 3f), lit, true);
-        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 3f, rect.Size.X, 3f), dark, true);
-        // 砖块分隔线
-        int blocks = Math.Max(2, (int)(rect.Size.X / 26f));
-        for (int i = 1; i < blocks; i++)
+        // 整体底涂层(灰泥色)
+        var mortar = new Color(baseCol.R * 0.55f, baseCol.G * 0.50f, baseCol.B * 0.45f, 1f);
+        c.DrawRect(rect, mortar, true);
+
+        // 随机分割成长方形石砖(3-5 列,每列高度微偏移,营造错缝感)
+        int cols = Mathf.Clamp((int)(rect.Size.X / 18f), 2, 5);
+        int rows = Mathf.Clamp((int)(rect.Size.Y / 12f), 1, 3);
+        float colW = rect.Size.X / cols;
+        float rowH = rect.Size.Y / rows;
+        float mortarW = 1.5f; // 灰泥缝隙宽
+
+        for (int r = 0; r < rows; r++)
         {
-            float x = rect.Position.X + i * (rect.Size.X / blocks);
-            c.DrawLine(new Vector2(x, rect.Position.Y), new Vector2(x, rect.End.Y), dark, 1.5f);
+            // 每行偏移半缝(错缝砌法)
+            float rowOff = (r % 2 == 0) ? 0f : colW * 0.5f;
+            // 同行砖石颜色在 baseCol 附近随机 ±15%,让墙面有自然色差
+            var stoneCol = new Color(
+                Mathf.Clamp(baseCol.R + rng.RandfRange(-0.06f, 0.08f), 0.08f, 0.55f),
+                Mathf.Clamp(baseCol.G + rng.RandfRange(-0.05f, 0.06f), 0.06f, 0.48f),
+                Mathf.Clamp(baseCol.B + rng.RandfRange(-0.04f, 0.05f), 0.04f, 0.40f),
+                1f);
+            for (int col = -1; col < cols; col++)
+            {
+                float cx = rect.Position.X + col * colW + rowOff;
+                float cy = rect.Position.Y + r * rowH;
+                // 控制砖宽:错缝行首尾回缩
+                float bw = colW - mortarW;
+                float bh = rowH - mortarW;
+                if (r % 2 == 0 || (col >= 0 && col < cols - 1))
+                {
+                    // 每块砖再做 5% 尺寸随机(风化缩边)
+                    float shrinkX = rng.RandfRange(0f, bw * 0.05f);
+                    float shrinkY = rng.RandfRange(0f, bh * 0.05f);
+                    var brickRect = new Rect2(
+                        cx + mortarW * 0.5f + shrinkX * 0.5f,
+                        cy + mortarW * 0.5f + shrinkY * 0.5f,
+                        bw - shrinkX,
+                        bh - shrinkY);
+                    // 砖面(不同深浅)
+                    var brickCol = new Color(
+                        Mathf.Clamp(stoneCol.R + rng.RandfRange(-0.03f, 0.04f), 0.08f, 0.55f),
+                        Mathf.Clamp(stoneCol.G + rng.RandfRange(-0.03f, 0.03f), 0.06f, 0.48f),
+                        Mathf.Clamp(stoneCol.B + rng.RandfRange(-0.02f, 0.03f), 0.04f, 0.40f),
+                        1f);
+                    c.DrawRect(brickRect, brickCol, true);
+                    // 砖顶高光(2px 亮边,模拟光照)
+                    c.DrawRect(new Rect2(brickRect.Position.X, brickRect.Position.Y, brickRect.Size.X, 1.5f), lit, true);
+                    // 随机风化裂缝
+                    if (rng.Randf() < 0.25f)
+                    {
+                        float crackX = brickRect.Position.X + rng.RandfRange(brickRect.Size.X * 0.15f, brickRect.Size.X * 0.75f);
+                        float crackLen = rng.RandfRange(3f, Mathf.Min(brickRect.Size.Y * 0.6f, 8f));
+                        var crackCol = new Color(dark.R, dark.G, dark.B, 0.75f);
+                        c.DrawLine(new Vector2(crackX, brickRect.Position.Y + 1f), new Vector2(crackX + rng.RandfRange(-2f, 2f), brickRect.Position.Y + crackLen), crackCol, 0.8f);
+                    }
+                    // 随机苔藓斑(暗绿,融入棕褐调)
+                    if (rng.Randf() < 0.30f)
+                    {
+                        float mossX = brickRect.Position.X + rng.RandfRange(2f, brickRect.Size.X - 4f);
+                        float mossY = brickRect.Position.Y + rng.RandfRange(1f, brickRect.Size.Y - 4f);
+                        var mossCol = new Color(0.09f + rng.RandfRange(0f, 0.06f), 0.14f + rng.RandfRange(0f, 0.06f), 0.08f + rng.RandfRange(0f, 0.04f), 0.55f + rng.RandfRange(0f, 0.20f));
+                        c.DrawCircle(new Vector2(mossX, mossY), rng.RandfRange(1.5f, 4f), mossCol);
+                    }
+                }
+            }
         }
-        // 偶尔破损缺口
-        if (variant % 2 == 0)
-        {
-            var notch = new Rect2(
-                rect.Position.X + rect.Size.X * 0.3f,
-                rect.Position.Y + rect.Size.Y * 0.2f,
-                rect.Size.X * 0.18f, rect.Size.Y * 0.5f);
-            c.DrawRect(notch, dark.Darkened(0.3f), true);
-        }
+
+        // 总体风化描边:左侧/上侧少量高光,右侧/下侧暗阴影,模拟斜光源
+        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, 1.5f), new Color(lit.R, lit.G, lit.B, 0.5f), true);
+        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 1.5f, rect.Size.X, 1.5f), new Color(dark.R, dark.G, dark.B, 0.6f), true);
+        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, 1.5f, rect.Size.Y), new Color(lit.R, lit.G, lit.B, 0.3f), true);
+        c.DrawRect(new Rect2(rect.End.X - 1.5f, rect.Position.Y, 1.5f, rect.Size.Y), new Color(dark.R, dark.G, dark.B, 0.5f), true);
     }
 
     // ══ 各 variant 专用绘制：让每种障碍一眼可辨 ══
@@ -166,58 +220,96 @@ internal static class ObstacleDraw
         float capH = Mathf.Min(rect.Size.Y * 0.16f, 7f);
         float yTop = rect.Position.Y;
         float yBot = rect.End.Y;
-        // 柱头
-        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, capH), stone, true);
-        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, 2f), lit, true);
-        // 柱础
-        c.DrawRect(new Rect2(-capW * 0.5f, yBot - capH, capW, capH), stone, true);
-        c.DrawRect(new Rect2(-capW * 0.5f, yBot - 2f, capW, 2f), dark, true);
-        // 柱身
         float shaftTop = yTop + capH;
         float shaftBot = yBot - capH;
-        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW, shaftBot - shaftTop), stone, true);
-        // 左侧高光
-        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW * 0.22f, shaftBot - shaftTop), lit, true);
-        // 右侧暗面（圆柱体积感）
-        c.DrawRect(new Rect2(shaftW * 0.5f - shaftW * 0.2f, shaftTop, shaftW * 0.2f, shaftBot - shaftTop), dark, true);
-        // 竖向凹槽
+
+        // 柱身(纹理层次比纯色丰富)
+        c.DrawRect(new Rect2(-shaftW * 0.48f, shaftTop, shaftW, shaftBot - shaftTop), stone, true);
+        // 左侧柱身高光加宽
+        c.DrawRect(new Rect2(-shaftW * 0.48f, shaftTop, shaftW * 0.30f, shaftBot - shaftTop), lit, true);
+        // 右侧暗面加深(体积感更明显)
+        c.DrawRect(new Rect2(shaftW * 0.48f - shaftW * 0.25f, shaftTop, shaftW * 0.25f, shaftBot - shaftTop), dark, true);
+        // 柱身随机风化斑
+        for (int i = 0; i < 4; i++)
+        {
+            float px = rng.RandfRange(-shaftW * 0.40f, shaftW * 0.40f);
+            float py = rng.RandfRange(shaftTop + 2f, shaftBot - 2f);
+            c.DrawCircle(new Vector2(px, py), rng.RandfRange(1.5f, 3f),
+                new Color(dark.R * 0.8f, dark.G * 0.8f, dark.B * 0.8f, 0.5f));
+        }
+        // 柱身底部苔藓
+        for (int i = 0; i < 3; i++)
+        {
+            float mx = rng.RandfRange(-shaftW * 0.35f, shaftW * 0.35f);
+            float my = rng.RandfRange(shaftBot - shaftBot * 0.35f, shaftBot - 2f);
+            c.DrawCircle(new Vector2(mx, my), rng.RandfRange(2f, 4.5f),
+                new Color(0.10f, 0.16f, 0.09f, 0.55f));
+        }
+        // 竖向凹槽(加深阴影)
         int flutes = 3;
         for (int i = 1; i < flutes; i++)
         {
             float x = -shaftW * 0.5f + i * (shaftW / flutes);
-            c.DrawLine(new Vector2(x, shaftTop + 1f), new Vector2(x, shaftBot - 1f), dark, 1.2f);
+            c.DrawLine(new Vector2(x, shaftTop + 2f), new Vector2(x, shaftBot - 2f), dark, 1.5f);
+        }
+        // 柱头 + 柱础
+        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, capH), stone, true);
+        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, 2f), lit, true);
+        c.DrawRect(new Rect2(-capW * 0.5f, yBot - capH, capW, capH), stone, true);
+        c.DrawRect(new Rect2(-capW * 0.5f, yBot - 2f, capW, 2f), dark, true);
+        // 柱头随机裂纹
+        if (rng.Randf() < 0.5f)
+        {
+            float cx = rng.RandfRange(-capW * 0.35f, capW * 0.35f);
+            c.DrawLine(new Vector2(cx, yTop + 2f), new Vector2(cx + rng.RandfRange(-2f, 2f), yTop + capH - 1f),
+                new Color(dark.R, dark.G, dark.B, 0.7f), 0.8f);
         }
         // 描边
-        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, capH), dark, false, 1f);
-        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW, shaftBot - shaftTop), dark, false, 1f);
-        c.DrawRect(new Rect2(-capW * 0.5f, yBot - capH, capW, capH), dark, false, 1f);
+        c.DrawRect(new Rect2(-capW * 0.5f, yTop, capW, capH), dark, false, 0.8f);
+        c.DrawRect(new Rect2(-shaftW * 0.5f, shaftTop, shaftW, shaftBot - shaftTop), dark, false, 0.8f);
+        c.DrawRect(new Rect2(-capW * 0.5f, yBot - capH, capW, capH), dark, false, 0.8f);
     }
 
-    // 金属掩体（Solid variant 5）：金属板 + 警告条 + 铆钉 + 反光带
+    // 金属掩体（Solid variant 5）：氧化金属板 + 锈蚀 + 警告条 + 铆钉 + 反光带
     public static void DrawMetalBunker(CanvasItem c, Rect2 rect, Color metal, Color lit, Color dark,
         RandomNumberGenerator rng)
     {
+        // 底色(金属氧化偏暖棕)
         c.DrawRect(rect, metal, true);
-        // 顶高光 / 底阴影
-        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, 2.5f), lit, true);
-        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 2.5f, rect.Size.X, 2.5f), dark, true);
-        // 斜向金属反光带
+        // 顶高光(较宽,模拟边缘照)
+        c.DrawRect(new Rect2(rect.Position.X, rect.Position.Y, rect.Size.X, 3.5f), lit, true);
+        // 底阴影(较深)
+        c.DrawRect(new Rect2(rect.Position.X, rect.End.Y - 3.5f, rect.Size.X, 3.5f), dark, true);
+        // 斜向金属反光带(两条)
         c.DrawLine(new Vector2(rect.Position.X, rect.End.Y), new Vector2(rect.End.X, rect.Position.Y),
-            lit.Lightened(0.1f), 2f);
-        // 警告色横条
-        var warn = new Color(0.82f, 0.60f, 0.10f);
+            new Color(lit.R, lit.G, lit.B, 0.3f), 1.5f);
+        c.DrawLine(new Vector2(rect.Position.X + 4f, rect.End.Y - 2f), new Vector2(rect.End.X - 4f, rect.Position.Y + 2f),
+            new Color(lit.R, lit.G, lit.B, 0.15f), 0.8f);
+        // 锈蚀斑(散布)
+        for (int i = 0; i < 3; i++)
+        {
+            float erx = rng.RandfRange(rect.Position.X + 3f, rect.End.X - 3f);
+            float ery = rng.RandfRange(rect.Position.Y + 3f, rect.End.Y - 3f);
+            c.DrawCircle(new Vector2(erx, ery), rng.RandfRange(2f, 4f),
+                new Color(0.35f, 0.12f, 0.06f, 0.45f));
+        }
+        // 警告色横条(暗金,而非亮黄,融入棕褐调)
+        var warn = new Color(0.75f, 0.55f, 0.15f, 0.85f);
         float midY = rect.Position.Y + rect.Size.Y * 0.5f - 1.5f;
         c.DrawRect(new Rect2(rect.Position.X, midY, rect.Size.X, 3f), warn, true);
-        // 四角铆钉
-        var rivet = new Color(0.5f, 0.5f, 0.54f);
+        c.DrawRect(new Rect2(rect.Position.X, midY + 1f, rect.Size.X, 1f), new Color(1f, 0.8f, 0.4f, 0.4f), true);
+        // 四角铆钉(氧化铜色)
+        var rivet = new Color(0.35f, 0.30f, 0.28f);
+        var rivetHl = new Color(0.55f, 0.48f, 0.40f);
         float rx = rect.Size.X * 0.5f - 5f;
         float ry = rect.Size.Y * 0.5f - 4f;
-        c.DrawCircle(new Vector2(-rx, -ry), 2f, rivet);
-        c.DrawCircle(new Vector2(rx, -ry), 2f, rivet);
-        c.DrawCircle(new Vector2(-rx, ry), 2f, rivet);
-        c.DrawCircle(new Vector2(rx, ry), 2f, rivet);
+        foreach (var (px, py) in new[] { (-rx, -ry), (rx, -ry), (-rx, ry), (rx, ry) })
+        {
+            c.DrawCircle(new Vector2(px, py), 2.5f, rivetHl);
+            c.DrawCircle(new Vector2(px - 0.5f, py - 0.3f), 1.2f, rivet);
+        }
         // 描边
-        c.DrawRect(rect, dark, false, 1.5f);
+        c.DrawRect(rect, dark, false, 1.2f);
     }
 
     // ══ 大型视觉地标（Solid variant 6-9）：每张图 1-2 个，导航参考 + 记忆点 ══
