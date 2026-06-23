@@ -261,6 +261,7 @@ public partial class PlayerCombat : Node
         // This prevents the bug where attacking with no targets in range leaves
         // CanAttack=false permanently (since _BeginAttack was never called).
         _BeginAttack();
+        _HarvestNearbyResources(range);
         Player!.Vfx?.ShowAttackEffect(_GetAttackEffectTargetPosition(targets), Player.CurrentAttackType);
 
         if (targets.Count == 0)
@@ -268,6 +269,18 @@ public partial class PlayerCombat : Node
 
         foreach (var zombie in targets)
             AttackZombie(zombie);
+    }
+
+    /// <summary>采集范围内的资源节点（砍树/挖矿，饥荒式）。近战挥击顺带采集。</summary>
+    private void _HarvestNearbyResources(float range)
+    {
+        float rangeSq = range * range;
+        foreach (var n in GetTree().GetNodesInGroup("resource_nodes"))
+        {
+            if (n is not ZombieWars.World.ResourceNode r || !GodotObject.IsInstanceValid(r)) continue;
+            if (Player!.GlobalPosition.DistanceSquaredTo(r.GlobalPosition) <= rangeSq)
+                r.TakeDamage(1);
+        }
     }
 
     private void _PerformRangedAttack()

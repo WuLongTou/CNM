@@ -125,6 +125,10 @@ public partial class Chest : Area2D
             if (pickup != null)
                 parent?.AddChild(pickup);
         }
+        // 选卡弱化：25% 概率额外给随机卡牌奖励（roguelike 选卡改为宝箱奖励）
+        if (GD.Randf() < 0.25f)
+            GameServices.Game.GrantChestReward();
+
         LogUtils.Print($"宝箱开启，掉落 {LootCount} 件物品");
     }
 

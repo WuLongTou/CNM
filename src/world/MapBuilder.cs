@@ -178,6 +178,56 @@ public partial class MapBuilder : Node2D
 
             _obstacleLayer.AddChild(altar);
         }
+
+        // 资源节点（饥荒式采集）：树/石/灌木散布
+        _SpawnResourceNodes(ws);
+
+        // 工作台（合成）—— 2 处，便于玩家就近合成
+        for (int i = 0; i < 2; i++)
+        {
+            var wb = new Workbench { GlobalPosition = _RandomPosAwayFromCenter(ws) };
+            _obstacleLayer.AddChild(wb);
+        }
+    }
+
+    /// <summary>散布可采集资源节点：树丛（木材）、矿点（石头）、灌木（纤维/浆果）。</summary>
+    private void _SpawnResourceNodes(Vector2 ws)
+    {
+        // 树丛（木材）—— 4 片小树林
+        for (int g = 0; g < 4; g++)
+        {
+            var center = _RandomPosAwayFromCenter(ws);
+            int count = (int)GD.RandRange(3, 5);
+            for (int i = 0; i < count; i++)
+            {
+                var pos = center + new Vector2((float)GD.RandRange(-90, 90), (float)GD.RandRange(-90, 90));
+                _AddResource(ResourceType.Wood, pos);
+            }
+        }
+        // 矿点（石头）—— 3 处
+        for (int g = 0; g < 3; g++)
+        {
+            var center = _RandomPosAwayFromCenter(ws);
+            int count = (int)GD.RandRange(2, 3);
+            for (int i = 0; i < count; i++)
+            {
+                var pos = center + new Vector2((float)GD.RandRange(-70, 70), (float)GD.RandRange(-70, 70));
+                _AddResource(ResourceType.Stone, pos);
+            }
+        }
+        // 灌木/浆果丛 —— 散布
+        for (int i = 0; i < 10; i++)
+        {
+            var pos = _RandomPosAwayFromCenter(ws);
+            _AddResource(GD.Randf() < 0.5f ? ResourceType.Fiber : ResourceType.Berry, pos);
+        }
+    }
+
+    private void _AddResource(ResourceType type, Vector2 pos)
+    {
+        var node = new ResourceNode();
+        node.Setup(type, pos);
+        _obstacleLayer.AddChild(node);
     }
 
     /// <summary>在地图内随机取一个远离出生安全区的位置。</summary>

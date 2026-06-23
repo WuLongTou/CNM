@@ -46,6 +46,8 @@ public partial class UIManager : Control
     private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
     private EquipmentPanel _equipmentPanel = null!;
+    private InventoryPanel? _inventoryPanel;
+    private CraftingPanel? _craftingPanel;
     private MetaUpgradePanel? _metaPanel;  // 跨局永久升级面板
     private FusionOfferPanel? _fusionPanel;  // 武器融合确认面板
     private WelcomePanel? _welcomePanel;
@@ -124,6 +126,10 @@ public partial class UIManager : Control
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
         _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
         AddChild(_equipmentPanel);
+        _inventoryPanel = new InventoryPanel { Name = "InventoryPanel", ZIndex = 170 };
+        AddChild(_inventoryPanel);
+        _craftingPanel = new CraftingPanel { Name = "CraftingPanel", ZIndex = 170 };
+        AddChild(_craftingPanel);
         // _weaponSelectionPanel.Setup 延迟到 SetWeaponDeck 时调用（此时 _gameManager/_weaponDeck 已就位）
         _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
         AddChild(_metaPanel);
@@ -353,6 +359,12 @@ public partial class UIManager : Control
                 GetViewport().SetInputAsHandled();
                 return;
             }
+            else if (key.Keycode == Key.I)
+            {
+                _ToggleInventoryPanel();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
         }
 
         // 武器选择面板的 skip 按钮点击由 WeaponSelectionPanel 内部处理
@@ -381,6 +393,18 @@ public partial class UIManager : Control
         if (_helpPanel.Visible)
         {
             _CloseHelpPanel();
+            return true;
+        }
+        // 2c. 关闭背包面板
+        if (_inventoryPanel != null && _inventoryPanel.Visible)
+        {
+            _CloseInventoryPanel();
+            return true;
+        }
+        // 2d. 关闭合成面板
+        if (_craftingPanel != null && _craftingPanel.Visible)
+        {
+            _CloseCrafting();
             return true;
         }
         // 2b. 关闭装备面板
@@ -542,7 +566,42 @@ public partial class UIManager : Control
         _RefreshUiModalPauseLock();
     }
 
-    private bool _IsUiModalVisible() => _helpPanel.Visible || _equipmentPanel.Visible;
+    /// <summary>I 键：开关背包面板。</summary>
+    private void _ToggleInventoryPanel()
+    {
+        if (_inventoryPanel == null) return;
+        if (_weaponSelectionPanel.IsOpen() && !_inventoryPanel.Visible) return;
+        _inventoryPanel.Toggle();
+        _RefreshUiModalPauseLock();
+    }
+
+    private void _CloseInventoryPanel()
+    {
+        if (_inventoryPanel != null) _inventoryPanel.Visible = false;
+        _RefreshUiModalPauseLock();
+    }
+
+    /// <summary>工作台交互：打开合成面板（模态）。</summary>
+    public void OpenCrafting()
+    {
+        if (_craftingPanel == null) return;
+        var player = _gameManager?.PlayerRef;
+        if (player == null) return;
+        if (_weaponSelectionPanel.IsOpen()) return;
+        _craftingPanel.Open(player);
+        GetTree().Paused = true;
+    }
+
+    public bool IsCraftingOpen() => _craftingPanel?.Visible ?? false;
+
+    private void _CloseCrafting()
+    {
+        if (_craftingPanel != null) _craftingPanel.Close();
+        _RefreshUiModalPauseLock();
+    }
+
+    private bool _IsUiModalVisible() => _helpPanel.Visible || _equipmentPanel.Visible
+        || (_inventoryPanel?.Visible ?? false) || (_craftingPanel?.Visible ?? false);
 
     private void _RefreshUiModalPauseLock()
     {

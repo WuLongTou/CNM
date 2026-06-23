@@ -48,6 +48,9 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     private Timer _dashTimer = null!;
     private Timer _dashCooldownTimer = null!;
     private GameManager? _gameManager;
+    // 建造模式（饥荒式）
+    private bool _isBuildingMode;
+    private ZombieWars.World.BuildingType _selectedBuildingType = ZombieWars.World.BuildingType.Wall;
 
     public int TargetPriority { get; set; } = 0;
     public AttackType CurrentAttackType { get; set; } = AttackType.Melee;
@@ -210,8 +213,8 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         _HandleTargetCycleInput();
         _HandleInvincibility((float)delta);
         Aura?.Handle((float)delta);
-        // 放置力场时抑制攻击
-        if (!IsFieldPlacementMode)
+        // 放置力场/建造模式时抑制攻击
+        if (!IsFieldPlacementMode && !_isBuildingMode)
             Combat?.HandleManualAttack();
         _HandleCollisionRepulsion();
         MoveAndSlide();
@@ -229,6 +232,29 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         // 数学系统：向量场放置交互
         if (Core.GameConfig.MathSystemsEnabled)
             _HandleFieldPlacementInput(@event);
+
+        // 建造模式（饥荒式：B 键切换，消耗材料放置建筑）
+        if (@event is InputEventKey kb && kb.Pressed && !kb.Echo)
+        {
+            if (kb.Keycode == Key.B)
+            {
+                _ToggleBuildMode();
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+            if (_isBuildingMode && kb.Keycode is >= Key.Key1 and <= Key.Key4)
+            {
+                _selectedBuildingType = (World.BuildingType)(kb.Keycode - Key.Key1);
+                GetViewport().SetInputAsHandled();
+                return;
+            }
+        }
+        if (_isBuildingMode)
+        {
+            _HandleBuildingInput(@event);
+            if (@event is InputEventMouseButton)
+                GetViewport().SetInputAsHandled();
+        }
     }
 
     /// <summary>是否处于力场放置模式（放置时攻击被抑制）</summary>
@@ -304,6 +330,47 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
             }
             GetViewport().SetInputAsHandled();
         }
+    }
+
+    // ══ 建造模式（饥荒式：B 键进入，消耗材料放置建筑）══════════
+
+    private void _ToggleBuildMode()
+    {
+        _isBuildingMode = !_isBuildingMode;
+        if (!_isBuildingMode) return;
+        _selectedBuildingType = World.BuildingType.Wall;
+        GameServices.UI?.ShowLevelUpNotification("建造模式 [1墙 2陷阱 3营火 4箱] [左键放置] [右键取消]", new Color(0.9f, 0.7f, 0.2f));
+    }
+
+    private void _HandleBuildingInput(InputEvent @event)
+    {
+        if (@event is InputEventMouseButton mb && mb.Pressed)
+        {
+            if (mb.ButtonIndex == MouseButton.Right)
+            {
+                _isBuildingMode = false;
+                GameServices.UI?.ShowLevelUpNotification("退出建造", new Color(0.7f, 0.7f, 0.7f));
+                return;
+            }
+            if (mb.ButtonIndex == MouseButton.Left)
+                _PlaceBuilding(GetGlobalMousePosition());
+        }
+    }
+
+    private void _PlaceBuilding(Vector2 pos)
+    {
+        var cost = World.BuildingNode.GetCost(_selectedBuildingType);
+        if (!Inventory.TryConsume(cost))
+        {
+            GameServices.UI?.ShowLevelUpNotification("材料不足！", new Color(0.9f, 0.3f, 0.3f));
+            return;
+        }
+        var scene = GetTree().CurrentScene;
+        if (scene == null) return;
+        var building = new World.BuildingNode { Type = _selectedBuildingType, GlobalPosition = pos };
+        scene.AddChild(building);
+        GameServices.UI?.ShowLevelUpNotification($"建造 {_selectedBuildingType}", new Color(0.9f, 0.7f, 0.2f));
+        GameServices.Audio?.PlayUpgrade();
     }
 
     private bool _IsCombatInputEnabled()

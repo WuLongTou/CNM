@@ -24,8 +24,9 @@ public static class GameConfig
     public const uint CollisionLayerZombie = 0b0010;
     public const uint CollisionLayerObstacleSolid = 0b0100;
     public const uint CollisionLayerObstacleDestructible = 0b1000;
-    public const uint CollisionMaskPlayer = CollisionLayerZombie | CollisionLayerObstacleSolid | CollisionLayerObstacleDestructible;
-    public const uint CollisionMaskZombie = CollisionLayerObstacleSolid | CollisionLayerObstacleDestructible;
+    public const uint CollisionLayerBuilding = 0b10000;  // 玩家建造物
+    public const uint CollisionMaskPlayer = CollisionLayerZombie | CollisionLayerObstacleSolid | CollisionLayerObstacleDestructible | CollisionLayerBuilding;
+    public const uint CollisionMaskZombie = CollisionLayerObstacleSolid | CollisionLayerObstacleDestructible | CollisionLayerBuilding;
 
     // ═══════════════════════════════════════════════
     // Map System（多地图 + 障碍物 + 导航）
@@ -65,6 +66,19 @@ public static class GameConfig
     public const float ZombieSpawnCooldown = 1.5f;          // 持续刷新冷却（秒）
     public const float ZombieSpawnMinDistFromPlayer = 420f; // 刷新点距玩家最小距离（屏幕外）
     public const float DifficultyRampInterval = 45f;        // 每 N 秒推进一"回合"难度（替代波次结束推进）
+    // 采集系统（饥荒式：近战攻击资源节点产出材料）
+    public const int ResourceNodeHealthTree = 3;     // 树需砍 3 下
+    public const int ResourceNodeHealthRock = 5;     // 石头需挖 5 下
+    public const int ResourceNodeHealthBush = 1;     // 灌木 1 下
+    public const int ResourceWoodPerTree = 2;
+    public const int ResourceStonePerRock = 2;
+    public const int ResourceFiberPerBush = 1;
+    public const int ResourceBerryPerBush = 2;
+    public const float HarvestShakeIntensity = 2.0f;  // 砍伐震屏强度
+    // 建造系统（饥荒式：消耗材料放置防御/设施）
+    public const int BuildingWallHealth = 120;
+    public const int BuildingSpikeTrapDamage = 20;
+    public const float BuildingSpikeTrapSlowMult = 0.5f;
 
     // ═══════════════════════════════════════════════
     // Camera System（镜头动感：平滑跟随 + 前瞻 + 震动 + zoom punch + 冲刺）

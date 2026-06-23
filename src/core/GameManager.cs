@@ -482,6 +482,7 @@ public partial class GameManager : Node
             if (_player != null)
                 _uiManager.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
         }
+        Inventory.Clear(); // 新局重置库存
         LogUtils.Print("进入持续探索模式（饥荒式）— 自由探索，僵尸持续刷新");
     }
 
@@ -1005,6 +1006,18 @@ public partial class GameManager : Node
     public void SetWeaponDeck(Node deck)
     {
         _weaponDeck = (WeaponDeck)deck;
+    }
+
+    /// <summary>宝箱卡牌奖励（选卡弱化）：给玩家一件随机武器，替代原每回合强制选卡。</summary>
+    public void GrantChestReward()
+    {
+        if (_player == null || _weaponDeck == null) return;
+        var card = _weaponDeck.GetRandomWeapon();
+        if (card == null) return;
+        _player.ApplyWeaponEffect(card);
+        _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
+        _uiManager?.ShowLevelUpNotification($"宝箱奖励: {card.CardName}", new Color(0.8f, 0.6f, 0.3f));
+        GameServices.Audio?.PlayUpgrade();
     }
 
     public int GetCurrentRound() => CurrentRound;
