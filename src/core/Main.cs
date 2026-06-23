@@ -117,6 +117,7 @@ public partial class Main : Node2D
         if (Array.Exists(args, arg => arg == "--autotest"))
         {
             LogUtils.Print("[AUTOTEST] enabled");
+            GameConfig.IsAutotestMode = true;
             _autoTestRunner = new AutoTestRunner { Name = "AutoTestRunner" };
             AddChild(_autoTestRunner);
         }

@@ -51,6 +51,9 @@ public partial class GameManager : Node
     private int _currentRoundTotalZombies; // 本回合总僵尸数（含天气额外生成）
     private float _spawnTimer;
     private float _currentSpawnInterval;
+    // 持续探索模式（饥荒式）：维持世界僵尸数 + 时间推进难度，替代波次
+    private float _exploreMaintainTimer;
+    private float _difficultyRampTimer;
 
     // Per-round battle stats
     private int _roundKills;
@@ -193,7 +196,7 @@ public partial class GameManager : Node
             // JIT 预热
             _JitWarmup();
 
-            while (_uiManager != null && _IsWelcomeVisible())
+            while (_uiManager != null && _IsWelcomeVisible() && !GameConfig.IsAutotestMode)
             {
                 await ToSignal(GetTree(), "process_frame");
             }
@@ -205,7 +208,7 @@ public partial class GameManager : Node
 
         AchievementSystem.Instance?.ResetRoundStats();
 
-        StartNewRound();
+        _StartExploring();
     }
 
     /// <summary>
@@ -305,15 +308,10 @@ public partial class GameManager : Node
 
     private void _HandleCombat(double delta)
     {
-        if (_zombiesSpawned < _zombiesToSpawn)
-        {
-            _spawnTimer -= (float)delta;
-            if (_spawnTimer <= 0)
-            {
-                SpawnZombie();
-                _spawnTimer = _currentSpawnInterval;
-            }
-        }
+        // 持续探索模式：维持世界僵尸数（去波次/去 EndRound）
+        _MaintainZombies(delta);
+        // 时间推进难度（替代波次结束推进 CurrentRound）
+        _RampDifficultyOverTime(delta);
 
         _edgeIndicatorTimer += (float)delta;
         if (_edgeIndicatorTimer >= GameConfig.EdgeIndicatorInterval && _player != null && _uiManager != null)
@@ -322,12 +320,76 @@ public partial class GameManager : Node
             _UpdateEdgeIndicators();
         }
 
-        if (_zombiesSpawned >= _zombiesToSpawn && _zombiesAlive <= 0)
-        {
-            EndRound();
-        }
-
         _HandleBossPhases();
+    }
+
+    /// <summary>持续维持世界僵尸数：低于 Min 时补充，不超过 Max。</summary>
+    private void _MaintainZombies(double delta)
+    {
+        // autotest 期间不持续刷怪，避免僵尸干扰攻击回归检查（攻击检查假设玩家血量可控）
+        if (GameConfig.IsAutotestMode) return;
+        if (_zombiesAlive >= GameConfig.WorldMaxZombies) return;
+        _exploreMaintainTimer -= (float)delta;
+        if (_exploreMaintainTimer > 0) return;
+        _exploreMaintainTimer = GameConfig.ZombieSpawnCooldown;
+
+        // 低于 Min 一次补到 Min；否则缓慢 +1，维持持续压力
+        int target = _zombiesAlive < GameConfig.WorldMinZombies
+            ? GameConfig.WorldMinZombies
+            : _zombiesAlive + 1;
+        int guard = 0;
+        while (_zombiesAlive < target && _zombiesAlive < GameConfig.WorldMaxZombies && guard < 12)
+        {
+            SpawnZombieExplore();
+            guard++;
+        }
+        _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
+    }
+
+    /// <summary>时间推进难度：每 DifficultyRampInterval 秒推进一"回合"，配置数学系统，Boss 周期触发。</summary>
+    private void _RampDifficultyOverTime(double delta)
+    {
+        _difficultyRampTimer += (float)delta;
+        if (_difficultyRampTimer < GameConfig.DifficultyRampInterval) return;
+        _difficultyRampTimer = 0f;
+        CurrentRound++;
+
+        if (GameConfig.MathSystemsEnabled)
+        {
+            WaveSystem?.ConfigureForRound(CurrentRound);
+            FieldSystem?.ConfigureForRound(CurrentRound);
+            FractalSys?.ConfigureForRound(CurrentRound);
+            StrategySys?.ConfigureForRound(CurrentRound);
+        }
+        _uiManager?.UpdateRoundDisplay(CurrentRound);
+        _uiManager?.ShowRoundBanner($"威胁加剧 · 第 {CurrentRound} 阶");
+
+        // Boss 周期触发（替代原每 5 回合），当前无 Boss 时才出
+        if (CurrentRound % GameConfig.BossInterval == 0 && (BossZombie == null || !IsInstanceValid(BossZombie)))
+            _SpawnBossZombie();
+    }
+
+    /// <summary>持续模式刷新单只僵尸到远离玩家的位置。</summary>
+    private void SpawnZombieExplore()
+    {
+        SpawnZombie(_PickSpawnPointFarFromPlayer());
+    }
+
+    /// <summary>从刷怪网格中选一个远离玩家的点（屏幕外刷新，避免贴脸生成）。</summary>
+    private Vector2 _PickSpawnPointFarFromPlayer()
+    {
+        if (_player == null) return _spawnPointGrid.PickRandom();
+        Vector2 best = _spawnPointGrid.PickRandom();
+        float bestDistSq = _player.GlobalPosition.DistanceSquaredTo(best);
+        float minDistSq = GameConfig.ZombieSpawnMinDistFromPlayer * GameConfig.ZombieSpawnMinDistFromPlayer;
+        for (int i = 0; i < 6; i++)
+        {
+            var p = _spawnPointGrid.PickRandom();
+            float d = _player.GlobalPosition.DistanceSquaredTo(p);
+            if (d > bestDistSq) { best = p; bestDistSq = d; }
+            if (bestDistSq >= minDistSq) break;
+        }
+        return best;
     }
 
     // ── Boss 多阶段：血量跨越 66%/33% 时切换阶段，怒吼 + 加速 + 召唤援军 ──
@@ -387,6 +449,40 @@ public partial class GameManager : Node
             var danger = Mathf.Clamp((float)offscreenCount / 10.0f, 0.0f, 1.0f);
             _uiManager.ShowOffscreenIndicator(offscreenDir.Normalized(), danger);
         }
+    }
+
+    /// <summary>持续探索模式启动（饥荒式）：直接进入战斗探索，不弹选卡，僵尸在世界持续刷新。</summary>
+    private void _StartExploring()
+    {
+        CurrentRound = 1;
+        _bossPhase = 0;
+        CurrentState = GameState.Combat;
+
+        if (GameConfig.MathSystemsEnabled)
+        {
+            WaveSystem?.ConfigureForRound(CurrentRound);
+            FieldSystem?.ConfigureForRound(CurrentRound);
+            FractalSys?.ConfigureForRound(CurrentRound);
+            StrategySys?.ConfigureForRound(CurrentRound);
+        }
+
+        _roundKills = 0;
+        _directiveSystem.OnRoundStart(CurrentRound);
+        _directiveSystem.OnCombatActivated();
+
+        _exploreMaintainTimer = 0.5f;  // 短延迟后开始补充僵尸
+        _difficultyRampTimer = 0f;
+
+        RoundStarted?.Invoke(CurrentRound);
+
+        if (_uiManager != null)
+        {
+            _uiManager.UpdateRoundDisplay(CurrentRound);
+            _uiManager.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
+            if (_player != null)
+                _uiManager.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
+        }
+        LogUtils.Print("进入持续探索模式（饥荒式）— 自由探索，僵尸持续刷新");
     }
 
     public void StartNewRound()
@@ -560,7 +656,7 @@ public partial class GameManager : Node
         LogUtils.Print("跳过升级！直接战斗！");
     }
 
-    public void SpawnZombie()
+    public void SpawnZombie(Vector2? forcedPos = null)
     {
         if (_zombieScene == null)
         {
@@ -594,7 +690,7 @@ public partial class GameManager : Node
             zombieInstance.SetElite(true);
         }
 
-        var spawnPos = _spawnPointGrid.PickRandom();
+        var spawnPos = forcedPos ?? _spawnPointGrid.PickRandom();
         var offset = new Vector2(
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange,
             GD.Randf() * 2.0f * GameConfig.SpawnOffsetRange - GameConfig.SpawnOffsetRange

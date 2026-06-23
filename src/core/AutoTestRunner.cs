@@ -57,12 +57,11 @@ public partial class AutoTestRunner : Node
             await ToSignal(GetTree().CreateTimer(0.1f), Timer.SignalName.Timeout);
             if (_gameManager == null || _player == null) return;
 
-            if (!_started && _gameManager.CurrentState == GameState.WeaponSelection)
+            // 持续探索模式：游戏经 _StartExploring 直接进入 Combat（不再有选卡环节）
+            if (!_started && _gameManager.CurrentState == GameState.Combat)
             {
                 _started = true;
-                LogUtils.Print($"[AUTOTEST] weapon selection detected at round={_gameManager.CurrentRound}");
-                _gameManager.OnUpgradeSkipped();
-                LogUtils.Print("[AUTOTEST] skipped selection to enter combat");
+                LogUtils.Print($"[AUTOTEST] exploring mode entered combat (round={_gameManager.CurrentRound})");
             }
 
             if (!_combatSeen && _gameManager.CurrentState == GameState.Combat)
@@ -73,8 +72,17 @@ public partial class AutoTestRunner : Node
 
             if (_combatSeen && !_attackRegressionChecksPassed && _gameManager.CurrentState == GameState.Combat)
             {
-                await _RunAttackRegressionChecks();
-                _attackRegressionChecksPassed = true;
+                try
+                {
+                    await _RunAttackRegressionChecks();
+                    _attackRegressionChecksPassed = true;
+                }
+                catch (Exception e)
+                {
+                    LogUtils.PrintErr($"[AUTOTEST] attack regression threw: {e.Message}\n{e.StackTrace}");
+                    GetTree().Quit(3);
+                    return;
+                }
             }
 
             if (_combatSeen && _gameManager.CurrentState == GameState.Combat)
@@ -86,10 +94,12 @@ public partial class AutoTestRunner : Node
                 }
             }
 
-            if (!_roundCompleted && _gameManager.CurrentRound > _initialRound)
+            // 持续探索模式下"回合"由时间推进（45s/阶），20s 内未必推进；
+            // 核心回归（sprite + 攻击）全通过即视为成功退出。
+            if (!_roundCompleted && _combatSeen && _attackRegressionChecksPassed && _spriteRegressionChecksPassed)
             {
                 _roundCompleted = true;
-                LogUtils.Print($"[AUTOTEST] next round reached: {_gameManager.CurrentRound}");
+                LogUtils.Print($"[AUTOTEST] all regression checks passed (round={_gameManager.CurrentRound})");
                 GetTree().Quit(0);
                 return;
             }
@@ -157,7 +167,7 @@ public partial class AutoTestRunner : Node
             throw new Exception("[AUTOTEST] RecalculateStats should resync attack state and stop stale cooldown timer");
 
         int originalHealth = _player.CurrentHealth;
-        _player.HealthCostPerAttack = Math.Max(1, originalHealth);
+        _player.HealthCostPerAttack = originalHealth + 1;  // 超过血量触发"生命不足"失败路径（不扣血/不致死），验证失败攻击不卡冷却
         combat.CanAttack = true;
         combat.PerformAttack();
         if (!combat.CanAttack)

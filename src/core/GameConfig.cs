@@ -12,6 +12,9 @@ public static class GameConfig
 
     // 大场景世界尺寸（2 屏宽 × 2 屏高，相机跟随玩家滚动探索）
     public static readonly Godot.Vector2 WorldSize = new(3840, 2160);
+
+    // 测试模式标志：--autotest 时为 true，跳过欢迎画面等待等测试专用路径
+    public static bool IsAutotestMode = false;
     // 障碍物/装饰物相对原始 1920×1080 设计的缩放因子（世界放大后同比例放大，避免空旷）
     public const float WorldScale = 2.0f;
 
@@ -56,6 +59,12 @@ public static class GameConfig
     // 僵尸间分离力（避免堆叠成一点，形成自然包围圈）
     public const float ZombieSeparationRange = 26.0f;
     public const float ZombieSeparationForce = 150.0f;
+    // 持续探索模式刷怪（饥荒式：世界内维持僵尸数，远离玩家刷新，去波次）
+    public const int WorldMinZombies = 6;       // 低于此值触发补充刷新
+    public const int WorldMaxZombies = 18;      // 上限，避免无限堆积
+    public const float ZombieSpawnCooldown = 1.5f;          // 持续刷新冷却（秒）
+    public const float ZombieSpawnMinDistFromPlayer = 420f; // 刷新点距玩家最小距离（屏幕外）
+    public const float DifficultyRampInterval = 45f;        // 每 N 秒推进一"回合"难度（替代波次结束推进）
 
     // ═══════════════════════════════════════════════
     // Camera System（镜头动感：平滑跟随 + 前瞻 + 震动 + zoom punch + 冲刺）
