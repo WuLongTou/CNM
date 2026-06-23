@@ -148,9 +148,9 @@ public static partial class WeaponFormatter
         }
 
         if (effects.Count == 0)
-            return "🎒 " + currentWeapon;
+            return "装 " + currentWeapon;
 
-        return "🎒 " + currentWeapon + " | " + string.Join(" | ", effects);
+        return "装 " + currentWeapon + " | " + string.Join(" | ", effects);
     }
 
     public static string BuildActiveEffectsTooltip(Player player)

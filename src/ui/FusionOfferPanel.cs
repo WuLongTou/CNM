@@ -21,6 +21,8 @@ public partial class FusionOfferPanel : Control
 
     public override void _Ready()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
         Visible = false;
         MouseFilter = MouseFilterEnum.Stop;
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
@@ -41,7 +43,10 @@ public partial class FusionOfferPanel : Control
 
         var vbox = new VBoxContainer
         {
-            OffsetLeft = 20, OffsetRight = -20, OffsetTop = 16, OffsetBottom = -16
+            OffsetLeft = ResponsiveUi.Px(20, viewport, 12),
+            OffsetRight = -ResponsiveUi.Px(20, viewport, 12),
+            OffsetTop = ResponsiveUi.Px(16, viewport, 10),
+            OffsetBottom = -ResponsiveUi.Px(16, viewport, 10)
         };
         vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         vbox.AddThemeConstantOverride("separation", 10);

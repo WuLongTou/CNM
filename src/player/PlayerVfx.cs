@@ -1375,7 +1375,7 @@ public partial class PlayerVfx : Node
             // Update label text
             var label = hp.GetChild(2) as Label;
             if (label != null)
-                label.Text = $"❤️{Player.CurrentHealth}/{Player.MaxHealth}";
+                label.Text = $"生 {Player.CurrentHealth}/{Player.MaxHealth}";
 
             // Update fill bar width
             if (_hpBarFill != null && Player.MaxHealth > 0)

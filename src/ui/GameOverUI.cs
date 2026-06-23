@@ -137,7 +137,7 @@ public partial class GameOverUI : Control
 
         int high = SaveManager.Instance != null ? SaveManager.GetHighScore() : 0;
         if (totalScore >= high && totalScore > 0)
-            _AddStatRow(statsBox, "🏆 新纪录!", totalScore.ToString(), RarityEpic);
+            _AddStatRow(statsBox, "★ 新纪录!", totalScore.ToString(), RarityEpic);
         else if (high > 0)
             _AddStatRow(statsBox, "最高分", high.ToString(), NoteTextDim);
 
@@ -172,13 +172,13 @@ public partial class GameOverUI : Control
             vbox.AddChild(achievementsBox);
 
             if (roundCount >= 10)
-                _AddAchievementBadge(achievementsBox, "🌟", "坚持10波", new Color(1.0f, 0.85f, 0.3f));
+                _AddAchievementBadge(achievementsBox, "★", "坚持10波", new Color(1.0f, 0.85f, 0.3f));
             if (kills >= 100)
                 _AddAchievementBadge(achievementsBox, "魂", "击杀100", new Color(0.7f, 0.7f, 0.7f));
             if (totalScore >= 1000)
-                _AddAchievementBadge(achievementsBox, "🏅", "得分1000", new Color(0.9f, 0.75f, 0.3f));
+                _AddAchievementBadge(achievementsBox, "牌", "得分1000", new Color(0.9f, 0.75f, 0.3f));
             if (roundCount >= 20)
-                _AddAchievementBadge(achievementsBox, "👑", "坚持20波", new Color(1.0f, 0.9f, 0.4f));
+                _AddAchievementBadge(achievementsBox, "冠", "坚持20波", new Color(1.0f, 0.9f, 0.4f));
         }
 
         // Tips for next run

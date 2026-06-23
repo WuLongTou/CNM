@@ -54,7 +54,7 @@ public partial class PausePanel : Panel
 
         var titleLabel = new Label
         {
-            Text = "⏸ 暂停中",
+            Text = "暂停中",
             HorizontalAlignment = HorizontalAlignment.Center
         };
         titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(28, viewport, 22));
@@ -65,7 +65,7 @@ public partial class PausePanel : Panel
 
         var resumeBtn = new Button
         {
-            Text = "▶ 继续 [ESC]",
+            Text = "继续 [ESC]",
             CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(40, viewport, 32)),
             FocusMode = FocusModeEnum.None
         };

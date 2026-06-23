@@ -43,6 +43,14 @@ public static class HandDrawnTheme
         public static readonly Color HpMed = new(0.72f, 0.50f, 0.20f);           // 琥珀
         public static readonly Color HpLow = new(0.48f, 0.18f, 0.12f);           // 猪肝
 
+        // ═══ HUD 通用底色与描边（暗棕暗黑童话风格）══
+        public static readonly Color HudBottomBg = new(0.06f, 0.04f, 0.03f, 0.92f);
+        public static readonly Color HudBottomBorder = new(0.45f, 0.15f, 0.10f, 0.6f);
+        public static readonly Color HudTopBorder = new(0.239f, 0.102f, 0.102f, 0.4f);
+        public static readonly Color HudChipBg = new(0.10f, 0.08f, 0.06f, 0.70f);
+        public static readonly Color HudGroupBg = new(0.05f, 0.03f, 0.02f, 0.50f);
+        public static readonly Color HudGroupBorder = new(0.20f, 0.12f, 0.08f, 0.35f);
+
         public static readonly Color NotePaperShadow = new(0f, 0f, 0f, 0.50f);
     }
 

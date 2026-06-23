@@ -3,6 +3,7 @@ namespace ZombieWars.UI;
 using Godot;
 using System.Collections.Generic;
 using ZombieWars.Core;
+using static ZombieWars.Core.GameConfig;
 using static ZombieWars.UI.HandDrawnTheme;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
 
@@ -20,6 +21,8 @@ public partial class HelpPanel : Panel
 
     public override void _Ready()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
         Visible = false;
         ProcessMode = ProcessModeEnum.Always;
         SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -37,7 +40,7 @@ public partial class HelpPanel : Panel
         AddChild(center);
 
         var card = new Panel();
-        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(700, 560), ResponsiveUi.ViewportSize(this));
+        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(700, 560), viewport);
         card.MouseFilter = MouseFilterEnum.Stop;
         var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 10f);
         cardStyle.ShadowOffset = new Vector2(4, 4);
@@ -46,30 +49,30 @@ public partial class HelpPanel : Panel
 
         var outerMargin = new MarginContainer();
         outerMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        outerMargin.AddThemeConstantOverride("margin_left", 16);
-        outerMargin.AddThemeConstantOverride("margin_right", 16);
-        outerMargin.AddThemeConstantOverride("margin_top", 12);
-        outerMargin.AddThemeConstantOverride("margin_bottom", 12);
+        outerMargin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(16, viewport, 8));
+        outerMargin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(16, viewport, 8));
+        outerMargin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(12, viewport, 6));
+        outerMargin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(12, viewport, 6));
         outerMargin.MouseFilter = MouseFilterEnum.Ignore;
         card.AddChild(outerMargin);
 
         var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", 8);
+        mainVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
         outerMargin.AddChild(mainVbox);
 
         // Title row
         var titleRow = new HBoxContainer();
-        titleRow.AddThemeConstantOverride("separation", 8);
+        titleRow.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
         mainVbox.AddChild(titleRow);
 
         var titleLabel = new Label
         {
-            Text = "📖 帮助与说明",
+            Text = "帮助与说明",
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        titleLabel.AddThemeFontSizeOverride("font_size", 24);
+        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 18));
         titleLabel.AddThemeColorOverride("font_color", BattlefieldBright);
-        titleLabel.AddThemeConstantOverride("outline_size", 3);
+        titleLabel.AddThemeConstantOverride("outline_size", UiOutlineBold);
         titleLabel.AddThemeColorOverride("font_outline_color", InkBlack);
         titleRow.AddChild(titleLabel);
 
@@ -77,14 +80,14 @@ public partial class HelpPanel : Panel
         {
             Text = "[ H / ESC 关闭 ]"
         };
-        closeHint.AddThemeFontSizeOverride("font_size", 12);
+        closeHint.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 10));
         closeHint.AddThemeColorOverride("font_color", new Color(NoteText, 0.7f));
         closeHint.VerticalAlignment = VerticalAlignment.Center;
         titleRow.AddChild(closeHint);
 
         // Tab bar
         var tabBar = new HBoxContainer();
-        tabBar.AddThemeConstantOverride("separation", 4);
+        tabBar.AddThemeConstantOverride("separation", ResponsiveUi.Px(4, viewport, 2));
         mainVbox.AddChild(tabBar);
 
         for (int i = 0; i < _tabNames.Length; i++)
@@ -93,7 +96,7 @@ public partial class HelpPanel : Panel
             var btn = new Button
             {
                 Text = _tabNames[i],
-                CustomMinimumSize = new Vector2(0, 32),
+                CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(32, viewport, 24)),
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 FocusMode = FocusModeEnum.None
             };
@@ -126,7 +129,7 @@ public partial class HelpPanel : Panel
 
         _contentContainer = new VBoxContainer();
         _contentContainer.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        _contentContainer.AddThemeConstantOverride("separation", 4);
+        _contentContainer.AddThemeConstantOverride("separation", ResponsiveUi.Px(4, viewport, 2));
         scroll.AddChild(_contentContainer);
 
         _currentTab = 0;
@@ -154,20 +157,24 @@ public partial class HelpPanel : Panel
 
     private void _StyleTabButton(Button btn, bool active)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+        int marginL = ResponsiveUi.Px(6, viewport, 3);
+        int marginT = ResponsiveUi.Px(4, viewport, 2);
+
         var normal = new StyleBoxFlat
         {
             BgColor = active ? new Color(BloodBright, 0.85f) : new Color(InkBlack, 0.5f),
             BorderColor = active ? BattlefieldBright : new Color(NoteBorder, 0.3f),
-            BorderWidthBottom = active ? 2 : 0,
+            BorderWidthBottom = active ? UiOutlineNorm : 0,
             BorderWidthLeft = 0,
             BorderWidthRight = 0,
             BorderWidthTop = 0,
             CornerRadiusTopLeft = 6,
             CornerRadiusTopRight = 6,
-            ContentMarginLeft = 6,
-            ContentMarginRight = 6,
-            ContentMarginTop = 4,
-            ContentMarginBottom = 4
+            ContentMarginLeft = marginL,
+            ContentMarginRight = marginL,
+            ContentMarginTop = marginT,
+            ContentMarginBottom = marginT
         };
         btn.AddThemeStyleboxOverride("normal", normal);
 
@@ -175,18 +182,18 @@ public partial class HelpPanel : Panel
         {
             BgColor = active ? new Color(BloodBright, 0.9f) : new Color(InkBlack, 0.7f),
             BorderColor = active ? BattlefieldBright : new Color(NoteBorder, 0.5f),
-            BorderWidthBottom = active ? 2 : 0,
+            BorderWidthBottom = active ? UiOutlineNorm : 0,
             CornerRadiusTopLeft = 6,
             CornerRadiusTopRight = 6,
-            ContentMarginLeft = 6,
-            ContentMarginRight = 6,
-            ContentMarginTop = 4,
-            ContentMarginBottom = 4
+            ContentMarginLeft = marginL,
+            ContentMarginRight = marginL,
+            ContentMarginTop = marginT,
+            ContentMarginBottom = marginT
         };
         btn.AddThemeStyleboxOverride("hover", hover);
         btn.AddThemeStyleboxOverride("pressed", hover);
         btn.AddThemeColorOverride("font_color", active ? NoteBg : NoteText);
-        btn.AddThemeFontSizeOverride("font_size", 14);
+        btn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
     }
 
     private void _BuildContent()
@@ -354,21 +361,23 @@ public partial class HelpPanel : Panel
 
     private void _AddSectionLabel(string text)
     {
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 8) };
+        var viewport = ResponsiveUi.ViewportSize(this);
+
+        var spacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(8, viewport, 4)) };
         _contentContainer.AddChild(spacer);
 
         var banner = new Panel();
-        banner.CustomMinimumSize = new Vector2(0, 26);
+        banner.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(26, viewport, 20));
         banner.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         var bannerStyle = new StyleBoxFlat
         {
             BgColor = new Color(BloodBright, 0.15f),
-            BorderWidthBottom = 2,
+            BorderWidthBottom = UiOutlineNorm,
             BorderColor = new Color(BloodBright, 0.5f),
-            ContentMarginLeft = 12,
-            ContentMarginRight = 8,
-            ContentMarginTop = 3,
-            ContentMarginBottom = 3
+            ContentMarginLeft = ResponsiveUi.Px(12, viewport, 6),
+            ContentMarginRight = ResponsiveUi.Px(8, viewport, 4),
+            ContentMarginTop = ResponsiveUi.Px(3, viewport, 2),
+            ContentMarginBottom = ResponsiveUi.Px(3, viewport, 2)
         };
         banner.AddThemeStyleboxOverride("panel", bannerStyle);
         _contentContainer.AddChild(banner);
@@ -378,18 +387,20 @@ public partial class HelpPanel : Panel
             Text = "▎ " + text,
             VerticalAlignment = VerticalAlignment.Center
         };
-        label.AddThemeFontSizeOverride("font_size", 15);
+        label.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
         label.AddThemeColorOverride("font_color", BattlefieldBright);
-        label.AddThemeConstantOverride("outline_size", 2);
+        label.AddThemeConstantOverride("outline_size", UiOutlineNorm);
         label.AddThemeColorOverride("font_outline_color", InkBlack);
         banner.AddChild(label);
 
-        var spacer2 = new Control { CustomMinimumSize = new Vector2(0, 4) };
+        var spacer2 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(4, viewport, 2)) };
         _contentContainer.AddChild(spacer2);
     }
 
     private void _AddInfoCard(string title, string content, Color accentColor)
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
         var cardStyle = new StyleBoxFlat
         {
             BgColor = new Color(NoteBg, 0.55f),
@@ -399,10 +410,10 @@ public partial class HelpPanel : Panel
             CornerRadiusTopRight = 4,
             CornerRadiusBottomLeft = 4,
             CornerRadiusBottomRight = 4,
-            ContentMarginLeft = 14,
-            ContentMarginRight = 12,
-            ContentMarginTop = 8,
-            ContentMarginBottom = 8
+            ContentMarginLeft = ResponsiveUi.Px(14, viewport, 8),
+            ContentMarginRight = ResponsiveUi.Px(12, viewport, 6),
+            ContentMarginTop = ResponsiveUi.Px(8, viewport, 4),
+            ContentMarginBottom = ResponsiveUi.Px(8, viewport, 4)
         };
 
         var card = new PanelContainer();
@@ -411,13 +422,13 @@ public partial class HelpPanel : Panel
         _contentContainer.AddChild(card);
 
         var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", 3);
+        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(3, viewport, 2));
         card.AddChild(vbox);
 
         var titleLabel = new Label { Text = title };
-        titleLabel.AddThemeFontSizeOverride("font_size", 14);
+        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
         titleLabel.AddThemeColorOverride("font_color", accentColor);
-        titleLabel.AddThemeConstantOverride("outline_size", 1);
+        titleLabel.AddThemeConstantOverride("outline_size", UiOutlineThin);
         titleLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.4f));
         vbox.AddChild(titleLabel);
 
@@ -427,11 +438,11 @@ public partial class HelpPanel : Panel
             AutowrapMode = TextServer.AutowrapMode.WordSmart,
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
-        contentLabel.AddThemeFontSizeOverride("font_size", 12);
+        contentLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 10));
         contentLabel.AddThemeColorOverride("font_color", NoteText);
         vbox.AddChild(contentLabel);
 
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, 3) };
+        var spacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(3, viewport, 2)) };
         _contentContainer.AddChild(spacer);
     }
 }

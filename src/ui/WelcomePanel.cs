@@ -51,7 +51,7 @@ public partial class WelcomePanel : Panel
         vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(16, viewport, 6));
         centerContainer.AddChild(vbox);
 
-        var title = new Label { Text = "🧟 僵尸大战 🧟" };
+        var title = new Label { Text = "僵尸大战" };
         title.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(36, viewport, 24));
         title.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
         title.HorizontalAlignment = HorizontalAlignment.Center;

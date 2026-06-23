@@ -18,6 +18,8 @@ public partial class MetaUpgradePanel : Control
 
     public override void _Ready()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
         SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Stop;
         Visible = false;
@@ -35,7 +37,13 @@ public partial class MetaUpgradePanel : Control
         var panel = new Panel { CustomMinimumSize = new Vector2(440, 380) };
         center.AddChild(panel);
 
-        var vbox = new VBoxContainer { OffsetLeft = 20, OffsetRight = -20, OffsetTop = 16, OffsetBottom = -16 };
+        var vbox = new VBoxContainer
+        {
+            OffsetLeft = ResponsiveUi.Px(20, viewport, 12),
+            OffsetRight = -ResponsiveUi.Px(20, viewport, 12),
+            OffsetTop = ResponsiveUi.Px(16, viewport, 10),
+            OffsetBottom = -ResponsiveUi.Px(16, viewport, 10)
+        };
         vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         vbox.AddThemeConstantOverride("separation", 10);
         panel.AddChild(vbox);
@@ -77,7 +85,7 @@ public partial class MetaUpgradePanel : Control
 
     private void _Refresh()
     {
-        _coinsLabel.Text = $"💰 金币: {SaveManager.GetCoins()}";
+        _coinsLabel.Text = $"金币: {SaveManager.GetCoins()}";
         foreach (var c in _rowsBox.GetChildren())
             if (c is Node n) n.QueueFree();
 

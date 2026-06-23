@@ -600,7 +600,7 @@ public partial class WeaponEvolutionSystem : Node
         {
             WeaponType.Melee => "剑",
             WeaponType.Ranged => "弓",
-            WeaponType.Magic => "🔮",
+            WeaponType.Magic => "魔",
             _ => "?"
         };
 }

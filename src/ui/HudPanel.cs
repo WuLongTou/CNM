@@ -19,6 +19,54 @@ using static ZombieWars.Core.GameEnums;
 /// </summary>
 public partial class HudPanel : Panel
 {
+    /// <summary>HUD 内部调色板：所有属性标签和效果图标的硬编码颜色集中维护。
+    /// 改色调只需改这里，不影响 HandDrawnTheme 全局主题。
+    /// 通用背景/边框/大块色已上提到 HandDrawnTheme.Colors（Hud*）。</summary>
+    private static class HudPalette
+    {
+        // 顶栏标签
+        public static readonly Color ZombieLabel = new(0.75f, 0.6f, 0.6f);
+        public static readonly Color WeatherLabel = new(0.8f, 0.8f, 0.5f);
+        public static readonly Color DebuffLabel = new(0.9f, 0.3f, 0.9f);
+        public static readonly Color HazardLabel = new(0.95f, 0.5f, 0.2f);
+        public static readonly Color ScoreLabel = new(0.95f, 0.55f, 0.45f);
+
+        // 底栏标签
+        public static readonly Color EffectLabel = new(0.75f, 0.66f, 0.45f);
+        public static readonly Color HpLabel = new(0.94f, 0.91f, 0.91f);
+        public static readonly Color DashLabel = new(0.55f, 0.6f, 0.55f);
+        public static readonly Color HintLabel = new(0.52f, 0.50f, 0.46f);
+        public static readonly Color EmptyEffect = new(0.5f, 0.5f, 0.6f);
+
+        // 属性行
+        public static readonly Color WeaponName = new(0.86f, 0.78f, 0.55f);
+        public static readonly Color AttackType = new(0.72f, 0.78f, 0.92f);
+        public static readonly Color TargetPriority = new(0.65f, 0.82f, 0.88f);
+        public static readonly Color Damage = new(0.92f, 0.70f, 0.52f);
+        public static readonly Color AttackInterval = new(0.78f, 0.72f, 0.92f);
+        public static readonly Color Crit = new(0.95f, 0.70f, 0.35f);
+        public static readonly Color Lifesteal = new(0.85f, 0.45f, 0.45f);
+        public static readonly Color Speed = new(0.62f, 0.82f, 0.58f);
+
+        // 效果图标（玩家动态状态）
+        public static readonly Color EffectFrost = new(0.3f, 0.8f, 1.0f);
+        public static readonly Color EffectCrit = new(1.0f, 0.6f, 0.2f);
+        public static readonly Color EffectLifesteal = new(0.9f, 0.3f, 0.3f);
+        public static readonly Color EffectFreeze = new(0.4f, 0.8f, 1.0f);
+        public static readonly Color EffectPoison = new(0.4f, 0.9f, 0.3f);
+        public static readonly Color EffectShield = new(0.6f, 0.8f, 1.0f);
+        public static readonly Color EffectDodge = new(0.5f, 0.9f, 0.5f);
+        public static readonly Color EffectThorns = new(0.8f, 0.6f, 0.4f);
+        public static readonly Color EffectTenacity = new(0.7f, 0.75f, 0.7f);
+
+        // 描边统一 alpha 档（替代散落 new Color(0,0,0,0.5~0.9)）
+        public static readonly Color Outline500 = new(0, 0, 0, 0.5f);
+        public static readonly Color Outline600 = new(0, 0, 0, 0.6f);
+        public static readonly Color Outline700 = new(0, 0, 0, 0.7f);
+        public static readonly Color Outline800 = new(0, 0, 0, 0.8f);
+        public static readonly Color Outline900 = new(0, 0, 0, 0.9f);
+    }
+
     // ── Setup-time 注入的回调 ────────────────────────────────
     private Action _onToggleSound = null!;
     private Action _onToggleHelp = null!;
@@ -69,6 +117,8 @@ public partial class HudPanel : Panel
 
     public override void _Ready()
     {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
         // ── 全屏透明容器，承载顶栏 + 底栏 ──────────────────
         // ZIndex 100 让 HUD 永远在所有 UI 之上（包括武器选择面板 FullRect）。
         // 本容器必须透明（无 panel 背景），否则会用深色蒙住整个游戏画面。
@@ -81,11 +131,11 @@ public partial class HudPanel : Panel
         // ═══ 顶栏：波次 / 剩余 / 天气 / Debuff / 分数 ═══
         var topPanel = new Panel();
         topPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.TopWide);
-        topPanel.OffsetBottom = 34;
-        topPanel.CustomMinimumSize = new Vector2(0, 34);
+        topPanel.OffsetBottom = ResponsiveUi.Px(34, viewport, 24);
+        topPanel.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(34, viewport, 24));
         topPanel.MouseFilter = MouseFilterEnum.Ignore;
         var topStyle = HandDrawnTheme.MakeDarkPanel(0.90f);
-        topStyle.BorderColor = new Color(0.239f, 0.102f, 0.102f, 0.4f);
+        topStyle.BorderColor = HandDrawnTheme.Colors.HudTopBorder;
         topStyle.BorderWidthBottom = 1;
         topPanel.AddThemeStyleboxOverride("panel", topStyle);
         AddChild(topPanel);
@@ -107,12 +157,12 @@ public partial class HudPanel : Panel
         _roundLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
         _roundLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
         _roundLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _roundLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        _roundLabel.AddThemeColorOverride("font_outline_color", HudPalette.Outline600);
         topRow.AddChild(_roundLabel);
 
         _zombiesLabel = new Label { Text = "僵尸 0/0" };
         _zombiesLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _zombiesLabel.AddThemeColorOverride("font_color", new Color(0.75f, 0.6f, 0.6f));
+        _zombiesLabel.AddThemeColorOverride("font_color", HudPalette.ZombieLabel);
         topRow.AddChild(_zombiesLabel);
 
         // 常驻天气显示
@@ -126,25 +176,25 @@ public partial class HudPanel : Panel
             FitContent = true,
         };
         _weatherLabel.AddThemeFontSizeOverride("normal_font_size", UiFontSmall);
-        _weatherLabel.AddThemeColorOverride("default_color", new Color(0.8f, 0.8f, 0.5f));
+        _weatherLabel.AddThemeColorOverride("default_color", HudPalette.WeatherLabel);
         _weatherLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _weatherLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        _weatherLabel.AddThemeColorOverride("font_outline_color", HudPalette.Outline600);
         topRow.AddChild(_weatherLabel);
 
         // 常驻 debuff 提示：中毒/燃烧等持续掉血状态，避免"莫名其妙掉血"
         _debuffLabel = new Label { Text = "" };
         _debuffLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _debuffLabel.AddThemeColorOverride("font_color", new Color(0.9f, 0.3f, 0.9f));  // 紫红色提示
+        _debuffLabel.AddThemeColorOverride("font_color", HudPalette.DebuffLabel);  // 紫红色提示
         _debuffLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _debuffLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        _debuffLabel.AddThemeColorOverride("font_outline_color", HudPalette.Outline600);
         topRow.AddChild(_debuffLabel);
 
         // 陷阱（玩家踩入毒沼/燃烧地带）持续伤害提示
         _hazardLabel = new Label { Text = "" };
         _hazardLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _hazardLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.5f, 0.2f));  // 橙红警示
+        _hazardLabel.AddThemeColorOverride("font_color", HudPalette.HazardLabel);  // 橙红警示
         _hazardLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _hazardLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        _hazardLabel.AddThemeColorOverride("font_outline_color", HudPalette.Outline600);
         topRow.AddChild(_hazardLabel);
 
         // 分数靠右
@@ -156,22 +206,22 @@ public partial class HudPanel : Panel
             SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
         };
         _scoreLabel.AddThemeFontSizeOverride("font_size", UiFontBody);
-        _scoreLabel.AddThemeColorOverride("font_color", new Color(0.95f, 0.55f, 0.45f));
+        _scoreLabel.AddThemeColorOverride("font_color", HudPalette.ScoreLabel);
         _scoreLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _scoreLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
+        _scoreLabel.AddThemeColorOverride("font_outline_color", HudPalette.Outline600);
         topRow.AddChild(_scoreLabel);
 
         // ═══ 底栏：装备图标 / HP条 / 状态 / 按钮 ═══
         var bottomPanel = new Panel();
         bottomPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.BottomWide);
-        bottomPanel.OffsetTop = -88;
-        bottomPanel.CustomMinimumSize = new Vector2(0, 88);
+        bottomPanel.OffsetTop = -ResponsiveUi.Px(88, viewport, 60);
+        bottomPanel.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(88, viewport, 60));
         bottomPanel.MouseFilter = MouseFilterEnum.Ignore;
         // 游戏风格底栏：暗色羊皮纸 + 血色顶边 + 渐变阴影
         var bottomStyle = new StyleBoxFlat
         {
-            BgColor = new Color(0.06f, 0.04f, 0.03f, 0.92f),
-            BorderColor = new Color(0.45f, 0.15f, 0.10f, 0.6f),
+            BgColor = HandDrawnTheme.Colors.HudBottomBg,
+            BorderColor = HandDrawnTheme.Colors.HudBottomBorder,
             BorderWidthTop = 2,
         };
         bottomPanel.AddThemeStyleboxOverride("panel", bottomStyle);
@@ -194,7 +244,7 @@ public partial class HudPanel : Panel
         bottomStack.AddChild(bottomRow);
 
         // 左侧：装备效果图标
-        var effectsLabel = _MakeStatLabel("效果", new Color(0.75f, 0.66f, 0.45f), UiFontSmall);
+        var effectsLabel = _MakeStatLabel("效果", HudPalette.EffectLabel, UiFontSmall);
         effectsLabel.TooltipText = "当前武器、装备和临时强化。把鼠标放到图标上可查看具体效果。";
         bottomRow.AddChild(effectsLabel);
 
@@ -226,9 +276,9 @@ public partial class HudPanel : Panel
 
         _healthLabel = new Label { Text = "生命 120/120" };
         _healthLabel.AddThemeFontSizeOverride("font_size", UiFontSmall);
-        _healthLabel.AddThemeColorOverride("font_color", new Color(0.94f, 0.91f, 0.91f));
+        _healthLabel.AddThemeColorOverride("font_color", HudPalette.HpLabel);
         _healthLabel.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        _healthLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.9f));
+        _healthLabel.AddThemeColorOverride("font_outline_color", HudPalette.Outline900);
         _healthLabel.VerticalAlignment = VerticalAlignment.Center;
         hpWrapper.AddChild(_healthLabel);
 
@@ -237,13 +287,13 @@ public partial class HudPanel : Panel
         bottomRow.AddChild(rightSpacer);
 
         // 闪避冷却（战术信息，保留可见）
-        _dashCooldownLabel = _MakeStatLabel("闪避: 就绪", new Color(0.55f, 0.6f, 0.55f), UiFontSmall);
+        _dashCooldownLabel = _MakeStatLabel("闪避: 就绪", HudPalette.DashLabel, UiFontSmall);
         bottomRow.AddChild(_dashCooldownLabel);
 
         // 右侧：按钮组（固定大小，不拉伸）
         _soundToggleButton = new Button
         {
-            Text = "🔊",
+            Text = "音",
             CustomMinimumSize = new Vector2(28, 24),
             FocusMode = Control.FocusModeEnum.None,
             TooltipText = "点击切换音效"
@@ -278,14 +328,14 @@ public partial class HudPanel : Panel
         statRow.Alignment = BoxContainer.AlignmentMode.Center;
         bottomStack.AddChild(statRow);
 
-        _weaponNameLabel = _MakeStatLabel("刀 基础近战", new Color(0.86f, 0.78f, 0.55f), UiFontSmall);
-        _attackTypeLabel = _MakeStatLabel("剑 近战", new Color(0.72f, 0.78f, 0.92f), UiFontSmall);
-        _targetPriorityLabel = _MakeStatLabel("弩 最近", new Color(0.65f, 0.82f, 0.88f), UiFontSmall);
-        _damageLabel = _MakeStatLabel("伤 12/次", new Color(0.92f, 0.70f, 0.52f), UiFontSmall);
-        _attackIntervalLabel = _MakeStatLabel("隔 0.45s", new Color(0.78f, 0.72f, 0.92f), UiFontSmall);
-        _critLabel = _MakeStatLabel("爆 0%", new Color(0.95f, 0.70f, 0.35f), UiFontSmall);
-        _lifestealLabel = _MakeStatLabel("血 0%", new Color(0.85f, 0.45f, 0.45f), UiFontSmall);
-        _speedLabel = _MakeStatLabel("速 220", new Color(0.62f, 0.82f, 0.58f), UiFontSmall);
+        _weaponNameLabel = _MakeStatLabel("刀 基础近战", HudPalette.WeaponName, UiFontSmall);
+        _attackTypeLabel = _MakeStatLabel("剑 近战", HudPalette.AttackType, UiFontSmall);
+        _targetPriorityLabel = _MakeStatLabel("弩 最近", HudPalette.TargetPriority, UiFontSmall);
+        _damageLabel = _MakeStatLabel("伤 12/次", HudPalette.Damage, UiFontSmall);
+        _attackIntervalLabel = _MakeStatLabel("隔 0.45s", HudPalette.AttackInterval, UiFontSmall);
+        _critLabel = _MakeStatLabel("爆 0%", HudPalette.Crit, UiFontSmall);
+        _lifestealLabel = _MakeStatLabel("血 0%", HudPalette.Lifesteal, UiFontSmall);
+        _speedLabel = _MakeStatLabel("速 220", HudPalette.Speed, UiFontSmall);
 
         // 组 1：武器信息
         var grp1 = _MakeStatGroup(new Control[] {
@@ -310,7 +360,7 @@ public partial class HudPanel : Panel
         grp3.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         statRow.AddChild(grp3);
 
-        var hudHint = _MakeStatLabel("? H(帮助) · C(装备) · Tab(切目标)", new Color(0.52f, 0.50f, 0.46f), UiFontMicro);
+        var hudHint = _MakeStatLabel("? H(帮助) · C(装备) · Tab(切目标)", HudPalette.HintLabel, UiFontMicro);
         hudHint.TooltipText = "H 帮助 · C 装备 · Tab 切换目标";
         hudHint.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         hudHint.HorizontalAlignment = HorizontalAlignment.Right;
@@ -529,7 +579,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "冰",
                 ["name"] = "冰霜护盾",
                 ["type"] = "buff",
-                ["color"] = new Color(0.3f, 0.8f, 1.0f),
+                ["color"] = HudPalette.EffectFrost,
                 ["tooltip"] = $"【冰霜护盾】\n伤害: {Mathf.RoundToInt(player.Aura.Damage)}\n范围: {Mathf.RoundToInt(player.Aura.Radius)}\n效果: 环绕的冰晶会伤害并减速接触的敌人"
             });
         }
@@ -540,7 +590,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "伤",
                 ["name"] = "暴击",
                 ["type"] = "stat",
-                ["color"] = new Color(1.0f, 0.6f, 0.2f),
+                ["color"] = HudPalette.EffectCrit,
                 ["tooltip"] = $"【暴击】\n几率: {Mathf.RoundToInt(player.CriticalChance)}%\n伤害: x{Mathf.Snapped(CritMultiplier, 0.1f)}"
             });
         }
@@ -551,7 +601,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "血",
                 ["name"] = "吸血",
                 ["type"] = "stat",
-                ["color"] = new Color(0.9f, 0.3f, 0.3f),
+                ["color"] = HudPalette.EffectLifesteal,
                 ["tooltip"] = $"【吸血】\n比例: {Mathf.RoundToInt(player.LifeStealPercent)}%\n效果: 造成伤害时回复生命"
             });
         }
@@ -562,7 +612,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "冻",
                 ["name"] = "冰冻",
                 ["type"] = "stat",
-                ["color"] = new Color(0.4f, 0.8f, 1.0f),
+                ["color"] = HudPalette.EffectFreeze,
                 ["tooltip"] = $"【冰冻】\n几率: {Mathf.RoundToInt(player.FreezeDuration)}%\n效果: 攻击有几率冻结敌人"
             });
         }
@@ -573,7 +623,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "毒",
                 ["name"] = "中毒",
                 ["type"] = "stat",
-                ["color"] = new Color(0.4f, 0.9f, 0.3f),
+                ["color"] = HudPalette.EffectPoison,
                 ["tooltip"] = $"【中毒】\n几率: {Mathf.RoundToInt(player.PoisonDamage)}%\n效果: 攻击有几率使敌人中毒"
             });
         }
@@ -584,7 +634,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "盾",
                 ["name"] = "护盾",
                 ["type"] = "buff",
-                ["color"] = new Color(0.6f, 0.8f, 1.0f),
+                ["color"] = HudPalette.EffectShield,
                 ["tooltip"] = $"【护盾】\n剩余: {player.ShieldAmount}\n效果: 吸收伤害"
             });
         }
@@ -595,7 +645,7 @@ public partial class HudPanel : Panel
                 ["icon"] = "涡",
                 ["name"] = "闪避",
                 ["type"] = "buff",
-                ["color"] = new Color(0.5f, 0.9f, 0.5f),
+                ["color"] = HudPalette.EffectDodge,
                 ["tooltip"] = $"【闪避】\n几率: {Mathf.RoundToInt(player.DodgeChance)}%\n效果: 有概率完全躲避伤害"
             });
         }
@@ -603,10 +653,10 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "🌵",
+                ["icon"] = "刺",
                 ["name"] = "反伤",
                 ["type"] = "buff",
-                ["color"] = new Color(0.8f, 0.6f, 0.4f),
+                ["color"] = HudPalette.EffectThorns,
                 ["tooltip"] = $"【反伤】\n几率: {Mathf.RoundToInt(player.ThornsChance)}%\n反弹: 受伤的{Mathf.RoundToInt(player.ThornsRatio)}%"
             });
         }
@@ -614,10 +664,10 @@ public partial class HudPanel : Panel
         {
             activeItems.Add(new Godot.Collections.Dictionary
             {
-                ["icon"] = "⚜️",
+                ["icon"] = "御",
                 ["name"] = "减控",
                 ["type"] = "buff",
-                ["color"] = new Color(0.7f, 0.75f, 0.7f),
+                ["color"] = HudPalette.EffectTenacity,
                 ["tooltip"] = $"【减控】\n减免: {Mathf.RoundToInt(player.Tenacity)}%\n效果: 缩短受到的负面效果持续时间"
             });
         }
@@ -656,7 +706,7 @@ public partial class HudPanel : Panel
         {
             var hint = new Label { Text = "暂无强化" };
             hint.AddThemeFontSizeOverride("font_size", UiFontMicro);
-            hint.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.6f));
+            hint.AddThemeColorOverride("font_color", HudPalette.EmptyEffect);
             hint.TooltipText = "选择武器或装备强化后，这里会显示对应图标。";
             _effectsContainer.AddChild(hint);
         }
@@ -687,7 +737,7 @@ public partial class HudPanel : Panel
         lbl.AddThemeFontSizeOverride("font_size", fontSize);
         lbl.AddThemeColorOverride("font_color", color);
         lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
-        lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
+        lbl.AddThemeColorOverride("font_outline_color", HudPalette.Outline500);
         return lbl;
     }
 
@@ -699,8 +749,8 @@ public partial class HudPanel : Panel
         chip.CustomMinimumSize = new Vector2(0, 20);
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.10f, 0.08f, 0.06f, 0.70f),
-            BorderColor = new Color(accentColor.R, accentColor.G, accentColor.B, 0.30f),
+            BgColor = HandDrawnTheme.Colors.HudChipBg,
+            BorderColor = new Color(accentColor, 0.30f),
             BorderWidthLeft = 1,
             BorderWidthRight = 1,
             CornerRadiusTopLeft = 3,
@@ -724,7 +774,7 @@ public partial class HudPanel : Panel
         lbl.AddThemeFontSizeOverride("font_size", fontSize);
         lbl.AddThemeColorOverride("font_color", accentColor);
         lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
-        lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.7f));
+        lbl.AddThemeColorOverride("font_outline_color", HudPalette.Outline700);
         chip.AddChild(lbl);
         return chip;
     }
@@ -736,8 +786,8 @@ public partial class HudPanel : Panel
         panel.MouseFilter = Control.MouseFilterEnum.Ignore;
         var style = new StyleBoxFlat
         {
-            BgColor = new Color(0.05f, 0.03f, 0.02f, 0.50f),
-            BorderColor = new Color(0.20f, 0.12f, 0.08f, 0.35f),
+            BgColor = HandDrawnTheme.Colors.HudGroupBg,
+            BorderColor = HandDrawnTheme.Colors.HudGroupBorder,
             BorderWidthLeft = 1,
             BorderWidthRight = 1,
             CornerRadiusTopLeft = 3,
@@ -756,7 +806,7 @@ public partial class HudPanel : Panel
         foreach (var c in children)
         {
             c.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-            c.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.8f));
+            c.AddThemeColorOverride("font_outline_color", HudPalette.Outline800);
             hbox.AddChild(c);
         }
         panel.AddChild(hbox);
@@ -798,6 +848,6 @@ public partial class HudPanel : Panel
     public void SetSoundIcon(bool sfxEnabled)
     {
         if (_soundToggleButton != null)
-            _soundToggleButton.Text = sfxEnabled ? "🔊" : "🔇";
+            _soundToggleButton.Text = sfxEnabled ? "音" : "静";
     }
 }

@@ -295,7 +295,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "铁蒺藜" }, { "desc", "放置地雷，敌人触碰爆炸" },
-            { "type", (int)MI }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "⚡" }, { "rarity", 1 },
+            { "type", (int)MI }, { "cat", (int)W }, { "tier", 1 }, { "upcat", "武器" }, { "icon", "雷" }, { "rarity", 1 },
             { "dmg", 1.5f }, { "asp", 0.6f }, { "cd", 2.0f }
         },
 
@@ -303,7 +303,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "集束地雷" }, { "desc", "放置后分裂为多枚小雷" },
-            { "type", (int)MI }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "💥" }, { "rarity", 2 },
+            { "type", (int)MI }, { "cat", (int)W }, { "tier", 2 }, { "upcat", "武器" }, { "icon", "爆" }, { "rarity", 2 },
             { "tags", new GodotArray {"铁蒺藜"} }, { "dmg", 1.2f }, { "asp", 0.4f }, { "cd", 3.0f },
             { "hp", -10f }
         },
@@ -312,7 +312,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "地狱火雷" }, { "desc", "大范围爆炸附带眩晕" },
-            { "type", (int)MI }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "🔥" }, { "rarity", 3 },
+            { "type", (int)MI }, { "cat", (int)W }, { "tier", 3 }, { "upcat", "武器" }, { "icon", "炎" }, { "rarity", 3 },
             { "tags", new GodotArray {"集束地雷"} }, { "dmg", 2.0f }, { "asp", 0.3f }, { "cd", 4.0f },
             { "hcost", 8 }
         },
@@ -369,7 +369,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "剧毒之戒" }, { "desc", "增加中毒几率" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "戒指" }, { "icon", "☠️" }, { "rarity", 2 },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "戒指" }, { "icon", "毒" }, { "rarity", 2 },
             { "psn", 12f }
         },
 
@@ -408,7 +408,7 @@ public static partial class WeaponFactory
         new GodotDictionary
         {
             { "name", "再生戒指" }, { "desc", "提高生命上限并附带少量吸血" },
-            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "戒指" }, { "icon", "💚" },
+            { "type", (int)ME }, { "cat", (int)E }, { "tier", 2 }, { "upcat", "戒指" }, { "icon", "愈" },
             { "hp", 10f }, { "ls", 3f }
         },
 

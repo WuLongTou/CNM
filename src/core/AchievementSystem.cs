@@ -181,7 +181,7 @@ public partial class AchievementSystem : Node
 
         _unlockedAchievements.Add(achievement);
         var (name, desc, color) = _GetAchievementInfo(achievement);
-        OnAchievementUnlocked?.Invoke($"🏆 {name}", color);
+        OnAchievementUnlocked?.Invoke($"★ {name}", color);
 
         LogUtils.Print($"成就解锁: {name} - {desc}");
     }
