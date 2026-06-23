@@ -135,7 +135,8 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
         Sprite = new Sprite2D
         {
-            TextureFilter = TextureFilterEnum.Linear
+            TextureFilter = TextureFilterEnum.Linear,
+            Modulate = new Color(0.82f, 0.72f, 0.62f)  // 棕褐覆盖：饥荒式暗暖色调
         };
         AddChild(Sprite);
 

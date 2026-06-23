@@ -180,6 +180,8 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         AddChild(_vfx);
         _vfx.Setup(this);
         _vfx.CreateVisuals();
+        if (Sprite != null)
+            Sprite.Modulate = new Color(0.78f, 0.68f, 0.58f);  // 棕褐覆盖：饥荒式暗暖色调
 
         // Attack timer：场景未绑定 [Export] 时从子节点兜底（否则 70 范围定时攻击完全失效）
         if (_attackTimer == null)
