@@ -59,7 +59,7 @@ public partial class MapBuilder : Node2D
 
             var node = ObstacleFactory.Create(def);
             _obstacleLayer.AddChild(node);
-            if (def.Kind is ObstacleKind.Solid or ObstacleKind.Destructible)
+            if (def.Kind is ObstacleKind.Solid or ObstacleKind.Destructible or ObstacleKind.Explosive)
                 _solidRefs.Add((def, node));
         }
 

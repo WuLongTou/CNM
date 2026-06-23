@@ -41,6 +41,14 @@ public static class GameConfig
     public const float HazardSlowMult = 0.55f;
     // 低矮装饰障碍减速
     public const float LowObstacleSlowMult = 0.6f;
+    // 爆炸桶（可破坏战术物，破碎时范围爆炸 + 击退）
+    public const int ExplosiveBarrelHealth = 25;
+    public const int ExplosiveBarrelDamage = 60;
+    public const float ExplosiveBarrelRadius = 130f;
+    public const float ExplosiveBarrelKnockback = 300f;
+    // 脉冲陷阱（周期激活/休眠的危险区，增加走位时机博弈）
+    public const float HazardPulsePeriod = 3.0f;      // 一个完整周期（秒）
+    public const float HazardPulseActiveRatio = 0.5f; // 周期内激活时长占比
     // 导航
     public const float NavAgentPathDesiredDist = 8.0f;
     public const float NavAgentTargetDesiredDist = 12.0f;

@@ -24,6 +24,7 @@ public static class ObstacleFactory
             ObstacleKind.Destructible => new DestructibleObstacle(),
             ObstacleKind.Low => new LowObstacle(),
             ObstacleKind.Hazard => new HazardZone(),
+            ObstacleKind.Explosive => new ExplosiveBarrel(),
             _ => new SolidObstacle()
         };
         ((IObstacleSetup)node).Setup(def);
@@ -217,6 +218,234 @@ internal static class ObstacleDraw
         c.DrawCircle(new Vector2(rx, ry), 2f, rivet);
         // 描边
         c.DrawRect(rect, dark, false, 1.5f);
+    }
+
+    // ══ 大型视觉地标（Solid variant 6-9）：每张图 1-2 个，导航参考 + 记忆点 ══
+
+    // 残破方尖碑（Solid variant 6）：窄高梯形碑身 + 斜断裂尖端 + 宽底座
+    public static void DrawObelisk(CanvasItem c, Rect2 rect, Color stone, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        float yBot = rect.End.Y;
+        float baseH = Mathf.Min(rect.Size.Y * 0.14f, 12f);
+        float baseW = rect.Size.X * 0.92f;
+        // 底座（两层阶梯）
+        c.DrawRect(new Rect2(-baseW * 0.5f, yBot - baseH, baseW, baseH), stone, true);
+        c.DrawRect(new Rect2(-baseW * 0.5f, yBot - 2f, baseW, 2f), dark, true);
+        c.DrawRect(new Rect2(-baseW * 0.5f, yBot - baseH, baseW * 0.6f, 2.5f), lit, true);
+        float baseW2 = baseW * 0.78f;
+        c.DrawRect(new Rect2(-baseW2 * 0.5f, yBot - baseH - 4f, baseW2, 4f), stone.Darkened(0.05f), true);
+
+        // 碑身：从底座顶收分向上，尖端斜切断裂（左高右低）
+        float shaftBot = yBot - baseH - 4f;
+        float shaftTop = rect.Position.Y + rect.Size.Y * 0.08f;
+        float bW = rect.Size.X * 0.5f;   // 底部宽
+        float tWL = rect.Size.X * 0.16f; // 顶部左（断裂高点）
+        float tWR = rect.Size.X * 0.30f; // 顶部右（断裂低点，斜切）
+        var shaft = new Vector2[]
+        {
+            new(-bW * 0.5f, shaftBot),
+            new(bW * 0.5f, shaftBot),
+            new(tWR * 0.5f, shaftTop + rect.Size.Y * 0.12f),
+            new(tWL * 0.5f, shaftTop),
+            new(-tWL * 0.5f, shaftTop),
+        };
+        c.DrawPolygon(shaft, new[] { stone });
+        // 左侧高光面（窄条）
+        var litFace = new Vector2[]
+        {
+            new(-bW * 0.5f, shaftBot),
+            new(-bW * 0.5f + bW * 0.16f, shaftBot),
+            new(-tWL * 0.5f + bW * 0.12f, shaftTop),
+            new(-tWL * 0.5f, shaftTop),
+        };
+        c.DrawPolygon(litFace, new[] { lit });
+        // 右侧暗面
+        var darkFace = new Vector2[]
+        {
+            new(bW * 0.5f - bW * 0.18f, shaftBot),
+            new(bW * 0.5f, shaftBot),
+            new(tWR * 0.5f, shaftTop + rect.Size.Y * 0.12f),
+        };
+        c.DrawPolygon(darkFace, new[] { dark });
+        // 断裂尖端碎石（顶端缺口处几块小石）
+        c.DrawCircle(new Vector2(tWL * 0.25f, shaftTop + 3f), 2.5f, dark.Darkened(0.2f));
+        c.DrawCircle(new Vector2(-tWL * 0.3f, shaftTop + 6f), 2f, dark);
+        // 碑面刻痕
+        c.DrawLine(new Vector2(0, shaftBot - 6f), new Vector2(0, shaftTop + rect.Size.Y * 0.2f), dark, 1.2f);
+        // 描边
+        for (int i = 0; i < shaft.Length; i++)
+            c.DrawLine(shaft[i], shaft[(i + 1) % shaft.Length], dark, 1.3f);
+    }
+
+    // 断裂拱门（Solid variant 7）：左右方柱 + 顶部横梁，一侧塌落残缺
+    public static void DrawArchway(CanvasItem c, Rect2 rect, Color stone, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        float yTop = rect.Position.Y;
+        float yBot = rect.End.Y;
+        float colW = Mathf.Min(rect.Size.X * 0.22f, 16f);
+        float gap = rect.Size.X * 0.5f;     // 拱门净宽
+        float beamH = Mathf.Min(rect.Size.Y * 0.16f, 12f);
+        float beamY = yTop + rect.Size.Y * 0.1f;
+        // 左柱（完整）
+        _DrawArchColumn(c, -gap * 0.5f - colW * 0.5f, colW, yTop + beamH, yBot, stone, lit, dark);
+        // 右柱（完整）
+        _DrawArchColumn(c, gap * 0.5f + colW * 0.5f, colW, yTop + beamH, yBot, stone, lit, dark);
+        // 横梁：左半完整，右半断裂塌落（只画左 60%）
+        float beamFullW = gap + colW;
+        float beamLeftW = beamFullW * 0.62f;
+        c.DrawRect(new Rect2(-beamFullW * 0.5f, beamY, beamLeftW, beamH), stone, true);
+        c.DrawRect(new Rect2(-beamFullW * 0.5f, beamY, beamLeftW, 2.5f), lit, true);
+        c.DrawRect(new Rect2(-beamFullW * 0.5f, beamY + beamH - 2.5f, beamLeftW, 2.5f), dark, true);
+        c.DrawRect(new Rect2(-beamFullW * 0.5f, beamY, beamLeftW, beamH), dark, false, 1.3f);
+        // 断裂面锯齿（横梁断口）
+        float breakX = -beamFullW * 0.5f + beamLeftW;
+        c.DrawLine(new Vector2(breakX, beamY), new Vector2(breakX - 4f, beamY + beamH * 0.5f), dark, 2f);
+        c.DrawLine(new Vector2(breakX - 4f, beamY + beamH * 0.5f), new Vector2(breakX, beamY + beamH), dark, 2f);
+        // 塌落的横梁残块（地面右侧）
+        var rubbleRect = new Rect2(gap * 0.5f + colW, yBot - beamH * 0.8f, colW * 1.4f, beamH * 0.8f);
+        c.DrawRect(rubbleRect, stone.Darkened(0.08f), true);
+        c.DrawRect(rubbleRect, dark, false, 1f);
+    }
+
+    private static void _DrawArchColumn(CanvasItem c, float cx, float w, float yTop, float yBot,
+        Color stone, Color lit, Color dark)
+    {
+        c.DrawRect(new Rect2(cx - w * 0.5f, yTop, w, yBot - yTop), stone, true);
+        c.DrawRect(new Rect2(cx - w * 0.5f, yTop, w * 0.28f, yBot - yTop), lit, true);
+        c.DrawRect(new Rect2(cx + w * 0.5f - w * 0.24f, yTop, w * 0.24f, yBot - yTop), dark, true);
+        // 柱头/柱础加宽
+        c.DrawRect(new Rect2(cx - w * 0.7f, yTop - 3f, w * 1.4f, 4f), stone, true);
+        c.DrawRect(new Rect2(cx - w * 0.7f, yBot - 4f, w * 1.4f, 4f), stone, true);
+        c.DrawRect(new Rect2(cx - w * 0.7f, yBot - 2f, w * 1.4f, 2f), dark, true);
+        c.DrawRect(new Rect2(cx - w * 0.5f, yTop, w, yBot - yTop), dark, false, 1.2f);
+    }
+
+    // 枯巨树（Solid variant 8）：粗树干 + 大团枯枝冠（地标版，比 variant 2 更大更密）
+    public static void DrawGiantTree(CanvasItem c, Rect2 rect, Color wood, Color woodLit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        float groundY = rect.End.Y;
+        float trunkH = rect.Size.Y * 0.5f;
+        float topY = groundY - trunkH;
+        float trunkW = Mathf.Min(rect.Size.X * 0.34f, 20f);
+        // 主干 + 高光 + 暗面
+        c.DrawRect(new Rect2(-trunkW * 0.5f, topY, trunkW, trunkH), wood, true);
+        c.DrawRect(new Rect2(-trunkW * 0.5f, topY, trunkW * 0.3f, trunkH), woodLit, true);
+        c.DrawRect(new Rect2(trunkW * 0.5f - trunkW * 0.28f, topY, trunkW * 0.28f, trunkH), dark, true);
+        // 根部张开底座
+        c.DrawRect(new Rect2(-trunkW * 0.9f, groundY - 7f, trunkW * 1.8f, 7f), dark, true);
+        // 大树冠：多团枯枝从主干顶部向四周辐射
+        int branches = 11;
+        for (int i = 0; i < branches; i++)
+        {
+            float t = rng.RandfRange(0.45f, 1.0f);
+            float by = groundY - trunkH * t;
+            float side = i % 2 == 0 ? -1f : 1f;
+            float len = rng.RandfRange(rect.Size.X * 0.3f, rect.Size.X * 0.55f);
+            float ang = rng.RandfRange(0.35f, 1.15f);
+            float ex = side * Mathf.Cos(ang) * len;
+            float ey = by - Mathf.Sin(ang) * len;
+            c.DrawLine(new Vector2(0f, by), new Vector2(ex, ey), wood, 4f);
+            c.DrawLine(new Vector2(0f, by), new Vector2(ex, ey), woodLit, 1.4f);
+            // 末梢分叉（更密，营造大树冠）
+            float mx = ex * 0.65f, my = by - Mathf.Sin(ang) * len * 0.65f;
+            float s2 = Mathf.Sign(ex);
+            c.DrawLine(new Vector2(mx, my), new Vector2(mx + s2 * len * 0.4f, my - len * 0.32f), dark, 2f);
+            if (rng.Randf() < 0.5f)
+                c.DrawLine(new Vector2(mx, my), new Vector2(mx + s2 * len * 0.3f, my - len * 0.05f), dark, 1.5f);
+        }
+    }
+
+    // 钟楼/塔楼（Solid variant 9）：多层收分方塔 + 顶层钟窗 + 尖顶
+    public static void DrawTower(CanvasItem c, Rect2 rect, Color stone, Color lit, Color dark,
+        RandomNumberGenerator rng)
+    {
+        float yBot = rect.End.Y;
+        float[] tierFrac = { 0.40f, 0.30f, 0.22f }; // 三层高度占比（剩余给尖顶）
+        float[] tierW = { rect.Size.X, rect.Size.X * 0.82f, rect.Size.X * 0.64f };
+        float y = yBot;
+        for (int i = 0; i < 3; i++)
+        {
+            float th = rect.Size.Y * tierFrac[i];
+            float w = tierW[i];
+            c.DrawRect(new Rect2(-w * 0.5f, y - th, w, th), stone, true);
+            c.DrawRect(new Rect2(-w * 0.5f, y - th, w * 0.2f, th), lit, true);
+            c.DrawRect(new Rect2(w * 0.5f - w * 0.18f, y - th, w * 0.18f, th), dark, true);
+            // 层间挑檐
+            c.DrawRect(new Rect2(-w * 0.58f, y - th, w * 1.16f, 4f), stone.Darkened(0.08f), true);
+            c.DrawRect(new Rect2(-w * 0.58f, y - th + 2f, w * 1.16f, 2f), dark, true);
+            c.DrawRect(new Rect2(-w * 0.5f, y - th, w, th), dark, false, 1.2f);
+            // 顶层开拱形钟窗
+            if (i == 2)
+            {
+                float winW = w * 0.34f, winH = th * 0.5f;
+                c.DrawRect(new Rect2(-winW * 0.5f, y - th * 0.72f, winW, winH), dark.Darkened(0.5f), true);
+                c.DrawArc(new Vector2(0, y - th * 0.72f + winH * 0.5f), winW * 0.5f, 0, Mathf.Pi, 8, dark);
+            }
+            y -= th;
+        }
+        // 尖顶（三角）
+        float spireH = rect.Size.Y * 0.12f;
+        float spireW = tierW[2] * 0.5f;
+        c.DrawPolygon(new Vector2[]
+        {
+            new(-spireW * 0.5f, y),
+            new(spireW * 0.5f, y),
+            new(0, y - spireH),
+        }, new[] { stone });
+        c.DrawPolygon(new Vector2[]
+        {
+            new(-spireW * 0.5f, y),
+            new(-spireW * 0.25f, y),
+            new(0, y - spireH),
+        }, new[] { lit });
+        c.DrawLine(new Vector2(-spireW * 0.5f, y), new Vector2(0, y - spireH), dark, 1.2f);
+        c.DrawLine(new Vector2(spireW * 0.5f, y), new Vector2(0, y - spireH), dark, 1.2f);
+    }
+
+    // 爆炸桶（Explosive）：红色桶身 + 黄黑警示条纹 + 引信火花
+    public static void DrawExplosiveBarrel(CanvasItem c, Rect2 rect, Color baseCol, Color lit, Color dark,
+        float dmgRatio, RandomNumberGenerator rng)
+    {
+        float w = rect.Size.X;
+        float h = rect.Size.Y;
+        float bodyH = h * 0.82f;
+        float bodyW = Mathf.Min(w, bodyH * 0.72f);
+        float bodyX = rect.Position.X + (w - bodyW) * 0.5f;
+        float bodyTop = rect.Position.Y + (h - bodyH) * 0.5f;
+        var body = new Rect2(bodyX, bodyTop, bodyW, bodyH);
+        // 桶身（深红）
+        c.DrawRect(body, baseCol, true);
+        // 左高光 / 右暗面
+        c.DrawRect(new Rect2(bodyX, bodyTop, bodyW * 0.22f, bodyH), lit, true);
+        c.DrawRect(new Rect2(bodyX + bodyW - bodyW * 0.2f, bodyTop, bodyW * 0.2f, bodyH), dark, true);
+        // 黄黑警示条纹（中部两条）
+        var warn = new Color(0.85f, 0.68f, 0.10f);
+        float stripeH = bodyH * 0.12f;
+        c.DrawRect(new Rect2(bodyX, bodyTop + bodyH * 0.4f, bodyW, stripeH), warn, true);
+        c.DrawRect(new Rect2(bodyX, bodyTop + bodyH * 0.6f, bodyW, stripeH), dark.Darkened(0.2f), true);
+        // 顶部桶盖
+        c.DrawRect(new Rect2(bodyX - 2f, bodyTop - 3f, bodyW + 4f, 5f), dark, true);
+        c.DrawRect(new Rect2(bodyX - 2f, bodyTop - 3f, bodyW + 4f, 2f), lit, true);
+        // 引信 + 火花
+        float fuseX = bodyX + bodyW * 0.5f;
+        c.DrawLine(new Vector2(fuseX, bodyTop - 3f), new Vector2(fuseX + 4f, bodyTop - 12f), dark, 1.5f);
+        c.DrawCircle(new Vector2(fuseX + 4f, bodyTop - 13f), 2f, new Color(1f, 0.7f, 0.2f));
+        // 描边
+        c.DrawRect(body, dark, false, 1.3f);
+        // 受损裂纹
+        if (dmgRatio > 0.1f)
+        {
+            int cracks = (int)(dmgRatio * 4) + 1;
+            for (int i = 0; i < cracks; i++)
+            {
+                float cx = rng.RandfRange(bodyX + 3f, body.Position.X + bodyW - 3f);
+                float cy = rng.RandfRange(bodyTop + 3f, bodyTop + bodyH - 3f);
+                c.DrawLine(new Vector2(cx, cy), new Vector2(cx + 4f, cy + 5f), dark.Darkened(0.4f), 1.2f);
+            }
+        }
     }
 
     // 木栅栏/木板（Destructible 木）：竖板缝 + 木纹 + 铁钉
@@ -427,6 +656,10 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
             3 => (new Color(0.32f, 0.30f, 0.27f), new Color(0.42f, 0.40f, 0.36f), new Color(0.20f, 0.18f, 0.16f)), // 石柱
             4 => (new Color(0.28f, 0.26f, 0.24f), new Color(0.38f, 0.36f, 0.32f), new Color(0.16f, 0.14f, 0.12f)), // 城墙石
             5 => (new Color(0.22f, 0.22f, 0.24f), new Color(0.34f, 0.34f, 0.38f), new Color(0.12f, 0.12f, 0.14f)), // 金属掩体
+            6 => (new Color(0.30f, 0.28f, 0.25f), new Color(0.42f, 0.39f, 0.34f), new Color(0.17f, 0.15f, 0.12f)), // 方尖碑（地标）
+            7 => (new Color(0.31f, 0.28f, 0.24f), new Color(0.42f, 0.38f, 0.32f), new Color(0.18f, 0.15f, 0.11f)), // 拱门（地标）
+            8 => (new Color(0.19f, 0.13f, 0.07f), new Color(0.27f, 0.18f, 0.10f), new Color(0.11f, 0.07f, 0.03f)), // 枯巨树（地标）
+            9 => (new Color(0.33f, 0.31f, 0.28f), new Color(0.44f, 0.41f, 0.37f), new Color(0.20f, 0.18f, 0.15f)), // 钟楼（地标）
             _ => (new Color(0.28f, 0.26f, 0.24f), new Color(0.38f, 0.36f, 0.32f), new Color(0.16f, 0.14f, 0.12f))
         };
     }
@@ -451,6 +684,18 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
                 break;
             case 5: // 金属掩体
                 ObstacleDraw.DrawMetalBunker(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 6: // 方尖碑（地标）
+                ObstacleDraw.DrawObelisk(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 7: // 拱门（地标）
+                ObstacleDraw.DrawArchway(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 8: // 枯巨树（地标）
+                ObstacleDraw.DrawGiantTree(this, rect, _baseCol, _litCol, _darkCol, rng);
+                break;
+            case 9: // 钟楼（地标）
+                ObstacleDraw.DrawTower(this, rect, _baseCol, _litCol, _darkCol, rng);
                 break;
             default: // variant 4 / 其他：砖石墙
                 ObstacleDraw.DrawStoneBlock(this, rect, _baseCol, _litCol, _darkCol, _variant, rng);
@@ -640,6 +885,161 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     }
 }
 
+// ── 爆炸桶：可破坏战术物，破碎时范围爆炸 + 击退（实现 IDamageable）──
+public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstacleSetup
+{
+    private Vector2 _size;
+    private readonly int _maxHealth = GameConfig.ExplosiveBarrelHealth;
+    private int _health;
+    private float _shakeTime;
+    private float _biteTick;
+    private int _biteCount;
+    private Area2D? _biteArea;
+    private Vector2 _drawShake;
+
+    int IDamageable.CurrentHealth => _health;
+    int IDamageable.MaxHealth => _maxHealth;
+    bool IDamageable.IsDead => _health <= 0;
+
+    public void Setup(in ObstacleDef def)
+    {
+        _size = def.Size;
+        _health = _maxHealth;
+        Position = def.Position;
+        Rotation = def.Rotation;
+        CollisionLayer = GameConfig.CollisionLayerObstacleDestructible;
+        CollisionMask = 0;
+
+        var col = new CollisionShape2D();
+        col.Shape = new RectangleShape2D { Size = def.Size };
+        AddChild(col);
+
+        // 僵尸啃咬监测区（僵尸靠近会啃咬引爆）
+        _biteArea = new Area2D
+        {
+            Monitoring = true,
+            Monitorable = false,
+            CollisionLayer = 0,
+            CollisionMask = GameConfig.CollisionLayerZombie
+        };
+        var biteCol = new CollisionShape2D();
+        biteCol.Shape = new RectangleShape2D { Size = def.Size * 1.1f };
+        _biteArea.AddChild(biteCol);
+        AddChild(_biteArea);
+        _biteArea.BodyEntered += _OnBiteBodyEntered;
+        _biteArea.BodyExited += _OnBiteBodyExited;
+    }
+
+    private void _OnBiteBodyEntered(Node body) => _biteCount++;
+    private void _OnBiteBodyExited(Node body) => _biteCount = Math.Max(0, _biteCount - 1);
+
+    public override void _Ready()
+    {
+        AddToGroup("destructibles");
+        QueueRedraw();
+    }
+
+    public override void _PhysicsProcess(double delta)
+    {
+        if (_health <= 0) return;
+        float d = (float)delta;
+        // 受击抖动衰减
+        if (_shakeTime > 0)
+        {
+            _shakeTime -= d;
+            _drawShake = new Vector2(
+                (float)GD.RandRange(-1, 1) * GameConfig.DestructibleObstacleShakeOnHit,
+                (float)GD.RandRange(-1, 1) * GameConfig.DestructibleObstacleShakeOnHit);
+            if (_shakeTime <= 0) _drawShake = Vector2.Zero;
+            QueueRedraw();
+        }
+        // 僵尸啃咬累计引爆
+        _biteTick += d;
+        if (_biteTick >= 0.5f)
+        {
+            _biteTick = 0;
+            if (_biteCount > 0) TakeDamage(4);
+        }
+    }
+
+    public void TakeDamage(int amount)
+    {
+        if (_health <= 0 || amount <= 0) return;
+        _health -= amount;
+        _shakeTime = 0.15f;
+        QueueRedraw();
+        if (_health <= 0) _Explode();
+    }
+
+    public void Heal(int amount) { /* 爆炸桶不治疗 */ }
+
+    // 破碎引爆：范围伤害（僵尸+玩家+可破坏物，距离衰减）+ 击退 + VFX + 震屏
+    private void _Explode()
+    {
+        var scene = GetTree().CurrentScene;
+        float radius = GameConfig.ExplosiveBarrelRadius;
+
+        // 爆炸 VFX + 音效 + 震屏
+        ZombieWars.Vfx.VFXManager.SpawnParticleBurst(scene, GlobalPosition,
+            new Color(1f, 0.6f, 0.1f), 30, 0.6f, 60f, 150f);
+        ZombieWars.Vfx.VFXManager.SpawnImpactRing(scene, GlobalPosition, radius,
+            new Color(1f, 0.5f, 0.1f), 3f);
+        GameServices.UI?.ShakeScreen(0.8f);
+        GameServices.Audio.PlayExplosion();
+
+        // 范围伤害僵尸（距离衰减）+ 击退
+        foreach (var z in Core.ZombieRegistry.All)
+        {
+            if (!GodotObject.IsInstanceValid(z)) continue;
+            float dist = GlobalPosition.DistanceTo(z.GlobalPosition);
+            if (dist > radius) continue;
+            float falloff = 1f - (dist / radius) * 0.5f;
+            int dmg = (int)(GameConfig.ExplosiveBarrelDamage * falloff);
+            z.TakeDamage(dmg);
+            Vector2 push = (z.GlobalPosition - GlobalPosition).Normalized();
+            z.Velocity += push * GameConfig.ExplosiveBarrelKnockback;
+        }
+
+        // 范围伤害玩家（靠近时）
+        var player = GameServices.Game?.PlayerRef;
+        if (player != null && GodotObject.IsInstanceValid(player))
+        {
+            float dist = GlobalPosition.DistanceTo(player.GlobalPosition);
+            if (dist <= radius)
+            {
+                float falloff = 1f - (dist / radius) * 0.5f;
+                player.TakeDamage((int)(GameConfig.ExplosiveBarrelDamage * falloff));
+            }
+        }
+
+        // 链式引爆/破坏范围内其他可破坏物（含其他爆炸桶）
+        foreach (var n in GetTree().GetNodesInGroup("destructibles"))
+        {
+            if (n is not IDamageable d || ReferenceEquals(n, this)) continue;
+            float dist = GlobalPosition.DistanceTo(((Node2D)n).GlobalPosition);
+            if (dist <= radius)
+                d.TakeDamage((int)(GameConfig.ExplosiveBarrelDamage * 0.6f));
+        }
+
+        // 通知地图重建导航（爆炸桶消失后区域可通行）
+        GetTree().CallGroup("map_builder", "RequestNavRebuild");
+        QueueFree();
+    }
+
+    public override void _Draw()
+    {
+        DrawSetTransform(_drawShake, 0f, Vector2.One);
+        var rect = new Rect2(-_size * 0.5f, _size);
+        ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
+        var rng = new RandomNumberGenerator { Seed = (ulong)((long)GlobalPosition.X * 13 + (long)GlobalPosition.Y * 7 + 1) };
+        float dmgRatio = 1f - (float)_health / _maxHealth;
+        ObstacleDraw.DrawExplosiveBarrel(this, rect,
+            new Color(0.55f, 0.16f, 0.10f), new Color(0.72f, 0.24f, 0.14f), new Color(0.30f, 0.08f, 0.05f),
+            dmgRatio, rng);
+        DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+    }
+}
+
 // ── 低矮障碍：Area2D，可穿过但减速 ──────────────────────
 public sealed partial class LowObstacle : Area2D, IObstacleSetup
 {
@@ -724,6 +1124,18 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
     private float _tickTimer;
     private float _redrawTimer;
 
+    // 脉冲陷阱（variant 3=脉冲毒 / 4=脉冲火）：周期激活/休眠，休眠期无害，逼玩家踩时机
+    private bool _IsPulse => _variant is 3 or 4;
+    private bool _PulseActive
+    {
+        get
+        {
+            if (!_IsPulse) return true;
+            double t = Time.GetTicksMsec() / 1000.0;
+            return (t % GameConfig.HazardPulsePeriod) < GameConfig.HazardPulsePeriod * GameConfig.HazardPulseActiveRatio;
+        }
+    }
+
     public void Setup(in ObstacleDef def)
     {
         _size = def.Size;
@@ -755,6 +1167,13 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
             _redrawTimer = 0.1f;
             QueueRedraw();
         }
+
+        // 脉冲陷阱：休眠期不减速不掉血，仅激活期生效
+        bool active = _PulseActive;
+        // 视觉：休眠期整体压暗，激活期恢复（提示玩家当前是否危险）
+        var targetMod = active ? Colors.White : new Color(0.45f, 0.45f, 0.45f, 0.55f);
+        if (Modulate != targetMod) Modulate = targetMod;
+        if (!active) return;
 
         float slow = GameConfig.HazardSlowMult;
         foreach (var body in GetOverlappingBodies())
@@ -794,7 +1213,7 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
         float pulse = 0.5f + 0.5f * Mathf.Sin((float)t * 4f);
         var rng = new RandomNumberGenerator { Seed = (ulong)(_size.X * 127.0 + _size.Y * 31.0 + _variant * 7L) };
 
-        if (_variant == 1)
+        if (_variant is 1 or 3)
             ObstacleDraw.DrawToxicSwamp(this, rect, pulse, rng);
         else
             ObstacleDraw.DrawFireGround(this, rect, pulse, rng);

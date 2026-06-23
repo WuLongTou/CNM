@@ -63,7 +63,7 @@ public partial class GameOverUI : Control
         bgTw.TweenProperty(bg, "color", new Color(BattlefieldBg, 0.85f), 0.8f).SetTrans(Tween.TransitionType.Cubic);
         bgTw.Parallel().TweenProperty(redTint, "color:a", 0.3f, 1.0f).SetTrans(Tween.TransitionType.Cubic);
 
-        // Content panel - centered via CenterContainer
+        // Content panel — 用 PanelContainer 让高度随内容自适应，避免按钮溢出框外
         var centerWrapper = new CenterContainer
         {
             ZIndex = 52,
@@ -72,11 +72,6 @@ public partial class GameOverUI : Control
         centerWrapper.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(centerWrapper);
 
-        var content = new Panel
-        {
-            Modulate = new Color(1, 1, 1, 0),
-            CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(420, 440), viewport, 0.9f, 0.86f)
-        };
         var style = MakeNotePanel(borderRadius: 6f, shadowSize: 10f);
         style.BgColor = new Color(NoteBg, 0.96f);
         style.BorderColor = NoteBorder;
@@ -85,11 +80,17 @@ public partial class GameOverUI : Control
         style.BorderWidthLeft = 2;
         style.BorderWidthRight = 2;
         style.ShadowOffset = new Vector2(4, 4);
+
+        var content = new PanelContainer
+        {
+            Modulate = new Color(1, 1, 1, 0),
+            // 只约束宽度下限，高度由内容自适应
+            CustomMinimumSize = new Vector2(ResponsiveUi.FitWidth(420, viewport, 0.9f), 0)
+        };
         content.AddThemeStyleboxOverride("panel", style);
         centerWrapper.AddChild(content);
 
         var margin = new MarginContainer();
-        margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginPanel, viewport, 14));
         margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginPanel, viewport, 14));
         margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(UiMarginPanelInner, viewport, 12));
