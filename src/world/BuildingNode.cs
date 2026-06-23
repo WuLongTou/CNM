@@ -16,6 +16,14 @@ public sealed partial class BuildingNode : StaticBody2D
     private Area2D? _detector;
     private float _tickTimer;
 
+    // 预加载陷阱贴图(64x64 PNG,适配 48x48 碰撞体)。
+    // 用真实 sprite 替代代码绘制:细节更丰富(血渍/金属高光/警示三角都在贴图里),
+    // 运行时 0 重绘开销,style 跟项目其他精灵统一。
+    private static readonly Texture2D? _spikeTex =
+        ResourceLoader.Exists("res://assets/sprites/buildings/spike_trap.png")
+            ? GD.Load<Texture2D>("res://assets/sprites/buildings/spike_trap.png")
+            : null;
+
     public override void _Ready()
     {
         switch (Type)
@@ -86,67 +94,22 @@ public sealed partial class BuildingNode : StaticBody2D
 
     private void _DrawSpike()
     {
-        float t = (float)Time.GetTicksMsec() / 1000f;
-        float pulse = 0.5f + 0.5f * Mathf.Sin(t * 3f);
-        float danger = 0.5f + 0.5f * Mathf.Sin(t * 1.5f);  // 慢节奏危险呼吸(用于发光)
-
-        // ① 底座:深色铁板(明示"这是陷阱平台")+ 顶高光 + 底阴影 + 板钉
-        var plateRect = new Rect2(-22, 12, 44, 8);
-        DrawRect(plateRect, new Color(0.18f, 0.13f, 0.10f), true);
-        DrawRect(new Rect2(-22, 12, 44, 2), new Color(0.35f, 0.26f, 0.20f), true);
-        DrawRect(new Rect2(-22, 18, 44, 2), new Color(0.05f, 0.03f, 0.02f), true);
-        for (int i = 0; i < 4; i++)
+        // 用真实贴图渲染(spike_trap.png 64x64,适配 48x48 碰撞体)。
+        // 仅做 Modulate 脉冲呼吸(1.5s 节奏,让贴图"活"起来,提示危险)。
+        // 备份方案:贴图缺失时退回占位红框(确保 Bug 可见)。
+        if (_spikeTex != null)
         {
-            float px = -18 + i * 12;
-            DrawCircle(new Vector2(px, 16), 1.2f, new Color(0.55f, 0.50f, 0.40f));
+            float t = (float)Time.GetTicksMsec() / 1000f;
+            float breath = 0.5f + 0.5f * Mathf.Sin(t * 1.5f);
+            // R 通道偏暖 + alpha 微脉冲,让贴图有"危险发光"感
+            var col = new Color(1f, 0.95f + breath * 0.05f, 0.95f, 0.92f + breath * 0.08f);
+            // 64x64 贴图居中绘制(中心 0,0 → 贴图左上角在 -32,-32)
+            DrawTexture(_spikeTex, new Vector2(-32, -32), col);
+            return;
         }
 
-        // ② 危险光晕:底座周围红色脉冲光(让玩家远距离也看到)
-        var glowAlpha = 0.20f + danger * 0.18f;
-        DrawCircle(new Vector2(0, 6), 26f, new Color(0.95f, 0.25f, 0.10f, glowAlpha));
-        DrawCircle(new Vector2(0, 6), 18f, new Color(1.0f, 0.55f, 0.20f, glowAlpha * 0.7f));
-
-        // ③ 5 个尖刺:鲜红渐变(基部暗红→尖部亮橙) + 顶部高光 + 边缘深描边
-        for (int i = 0; i < 5; i++)
-        {
-            float x = -16 + i * 8;
-            float spikeH = 16f + pulse * 6f;
-            var tip = new Vector2(x, 16 - spikeH);
-
-            // 主体:左侧暗面 + 右侧亮面(营造立体感)
-            DrawLine(new Vector2(x - 4, 16), tip, new Color(0.55f, 0.10f, 0.05f), 3f);
-            DrawLine(new Vector2(x + 4, 16), tip, new Color(0.95f, 0.30f, 0.12f), 2.5f);
-            // 顶部高光(白色窄线,金属反光)
-            DrawLine(tip, tip + new Vector2(-0.6f, 2f), new Color(1f, 0.9f, 0.75f, 0.7f), 1f);
-            // 边缘深色描边
-            DrawLine(new Vector2(x - 4, 16), tip, new Color(0.10f, 0.04f, 0.02f), 0.8f);
-            DrawLine(new Vector2(x + 4, 16), tip, new Color(0.10f, 0.04f, 0.02f), 0.8f);
-        }
-
-        // ④ 血渍:尖刺基部的不规则深红点(暗示已刺穿敌人)
-        var rng = new RandomNumberGenerator { Seed = 42UL };
-        for (int i = 0; i < 6; i++)
-        {
-            float bx = rng.RandfRange(-20f, 20f);
-            float by = 12f + rng.RandfRange(0f, 6f);
-            float br = rng.RandfRange(1.0f, 2.2f);
-            DrawCircle(new Vector2(bx, by), br, new Color(0.42f, 0.05f, 0.04f, 0.75f));
-        }
-
-        // ⑤ 警示三角(顶部中心):黄黑斜纹致命标志 + "!" 符号
-        var warnCenter = new Vector2(0, -12);
-        var warnCol = new Color(1.0f, 0.85f, 0.10f, 0.92f);
-        var warnEdge = new Color(0.05f, 0.04f, 0.02f, 1.0f);
-        var pTop = warnCenter + new Vector2(0, -5);
-        var pLeft = warnCenter + new Vector2(-5, 4);
-        var pRight = warnCenter + new Vector2(5, 4);
-        DrawColoredPolygon(new[] { pTop, pLeft, pRight }, new Color(0.0f, 0.0f, 0.0f, 0.85f));
-        DrawColoredPolygon(new[] { pTop + new Vector2(0, 1), pLeft + new Vector2(0.8f, -0.6f), pRight + new Vector2(-0.8f, -0.6f) }, warnCol);
-        DrawLine(pTop, pLeft, warnEdge, 1.2f);
-        DrawLine(pLeft, pRight, warnEdge, 1.2f);
-        DrawLine(pRight, pTop, warnEdge, 1.2f);
-        DrawLine(warnCenter + new Vector2(0, 0), warnCenter + new Vector2(0, 2.5f), warnEdge, 1.5f);
-        DrawCircle(warnCenter + new Vector2(0, -0.5f), 0.6f, warnEdge);
+        // Fallback:贴图缺失时,显示一个占位红框(确保 Bug 可见)
+        DrawRect(new Rect2(-24, -24, 48, 48), new Color(0.8f, 0.1f, 0.1f, 0.7f), false, 2f);
     }
 
     private void _DrawFire()
