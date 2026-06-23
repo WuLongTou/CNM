@@ -96,6 +96,7 @@ public partial class HudPanel : Panel
     private HBoxContainer _effectsContainer = null!;
     private readonly Dictionary<string, Button> _effectIcons = new();
     private Button _soundToggleButton = null!;
+    private HSlider _sfxVolumeSlider = null!;
     private Label _debuffLabel = null!;  // 常驻 debuff 提示：中毒/燃烧等
     private Label _hazardLabel = null!;  // 陷阱（毒沼/燃烧地带）持续伤害提示
     private Label _weaponNameLabel = null!;
@@ -296,10 +297,24 @@ public partial class HudPanel : Panel
             Text = "音",
             CustomMinimumSize = new Vector2(28, 24),
             FocusMode = Control.FocusModeEnum.None,
-            TooltipText = "点击切换音效"
+            TooltipText = "点击切换 SFX 静音\n音乐音量请在暂停菜单/设置中调整"
         };
         _soundToggleButton.Pressed += _onToggleSound;
         bottomRow.AddChild(_soundToggleButton);
+
+        // SFX 音量条（实时控制 SFX 音量 0~2，Music 留到 Settings 面板）
+        _sfxVolumeSlider = new HSlider
+        {
+            MinValue = 0.0f,
+            MaxValue = 2.0f,
+            Step = 0.1f,
+            Value = 1.0f,
+            CustomMinimumSize = new Vector2(80, 16),
+            FocusMode = Control.FocusModeEnum.None,
+            TooltipText = "SFX 音量 (0~200%)"
+        };
+        _sfxVolumeSlider.ValueChanged += _OnSfxVolumeChanged;
+        bottomRow.AddChild(_sfxVolumeSlider);
 
         // 装备面板按钮（C 键也可打开）
         var equipBtn = new Button
@@ -849,5 +864,20 @@ public partial class HudPanel : Panel
     {
         if (_soundToggleButton != null)
             _soundToggleButton.Text = sfxEnabled ? "音" : "静";
+    }
+
+    /// <summary>同步外部 SFX 音量变化到 slider（避免 slider 与 SoundManager 状态脱钩）。
+    /// 由 UIManager.SetUserPaused / Settings 面板打开时调用。</summary>
+    public void SetSfxVolume(float volume)
+    {
+        if (_sfxVolumeSlider != null)
+            _sfxVolumeSlider.Value = volume;
+    }
+
+    /// <summary>用户拖动 slider 时调 SoundManager.Instance.SfxVolume,实时生效。</summary>
+    private void _OnSfxVolumeChanged(double value)
+    {
+        var sm = ZombieWars.Audio.SoundManager.Instance;
+        if (sm != null) sm.SfxVolume = (float)value;
     }
 }

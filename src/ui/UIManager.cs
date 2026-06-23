@@ -73,6 +73,7 @@ public partial class UIManager : Control
     // Pause
     // ═══════════════════════════════════════════════
     private PausePanel? _pausePanel;
+    private SettingsPanel? _settingsPanel;
     private bool _pauseLockedByUpgrade;
     private bool _userPaused;
     private float _hazardTimer;  // 陷阱 HUD 提示残留时间（玩家离开陷阱区后倒计时清除）
@@ -88,6 +89,7 @@ public partial class UIManager : Control
     [Export] public PackedScene? WeaponSelectionPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/WeaponSelectionPanel.tscn");
     [Export] public PackedScene? HelpPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/HelpPanel.tscn");
     [Export] public PackedScene? PausePanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/PausePanel.tscn");
+    [Export] public PackedScene? SettingsPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/SettingsPanel.tscn");
 
     private NotificationPanel _notificationPanel = null!;
 
@@ -163,7 +165,11 @@ public partial class UIManager : Control
         AddChild(_notificationPanel);
         _pausePanel = PausePanelScene!.Instantiate<PausePanel>();
         _pausePanel.ResumeRequested += () => SetUserPaused(false);
+        _pausePanel.SettingsRequested += ShowSettings;
         AddChild(_pausePanel);
+        _settingsPanel = SettingsPanelScene!.Instantiate<SettingsPanel>();
+        _settingsPanel.CloseRequested += _OnSettingsClosed;
+        AddChild(_settingsPanel);
         _SetGameplayHudVisible(false);
         GetViewport().SizeChanged += _OnUiViewportSizeChanged;
         _OnUiViewportSizeChanged();
@@ -326,6 +332,75 @@ public partial class UIManager : Control
         _bossHealthLabel.Visible = false;
         _bossHealthLabel.ZIndex = 6;
         AddChild(_bossHealthLabel);
+    }
+
+    /// <summary>Boss 出场警告演出：全屏红光闪 + 顶部警告横幅（含 boss 名）。
+    /// 由 GameManager._SpawnBossZombie 调用，每次 boss 出现播放一次。</summary>
+    public void PlayBossWarning(string bossName)
+    {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
+        // 全屏红光闪（alpha 0 → 0.35 → 0，自动销毁）
+        var redFlash = new ColorRect
+        {
+            Color = new Color(0.6f, 0.05f, 0.02f, 0f),
+            MouseFilter = MouseFilterEnum.Ignore,
+            ZIndex = 200,
+        };
+        redFlash.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        AddChild(redFlash);
+        var flashTween = CreateTween();
+        flashTween.TweenProperty(redFlash, "color:a", 0.35f, 0.15f);
+        flashTween.TweenProperty(redFlash, "color:a", 0.0f, 0.55f);
+        flashTween.TweenCallback(Callable.From(redFlash.QueueFree));
+
+        // 警告横幅（从顶部滑入 → 保持 1.5s → 淡出，自动销毁）
+        var banner = new Panel();
+        banner.SetAnchorsAndOffsetsPreset(LayoutPreset.TopWide);
+        banner.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(70, viewport, 52));
+        banner.MouseFilter = MouseFilterEnum.Ignore;
+        banner.ZIndex = 201;
+        var bannerStyle = new StyleBoxFlat
+        {
+            BgColor = new Color(0.4f, 0.05f, 0.05f, 0.88f),
+            BorderColor = HandDrawnTheme.Colors.BloodBright,
+            BorderWidthBottom = 3,
+            BorderWidthTop = 3,
+            ContentMarginTop = ResponsiveUi.Px(6, viewport, 4),
+            ContentMarginBottom = ResponsiveUi.Px(6, viewport, 4),
+        };
+        banner.AddThemeStyleboxOverride("panel", bannerStyle);
+        banner.Modulate = new Color(1, 1, 1, 0);
+        AddChild(banner);
+
+        var vbox = new VBoxContainer();
+        vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        vbox.Alignment = BoxContainer.AlignmentMode.Center;
+        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(2, viewport, 1));
+        banner.AddChild(vbox);
+
+        var title = new Label { Text = "! BOSS 来袭 !" };
+        title.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 18));
+        title.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BloodBright);
+        title.HorizontalAlignment = HorizontalAlignment.Center;
+        title.AddThemeConstantOverride("outline_size", UiOutlineBold);
+        title.AddThemeColorOverride("font_outline_color", HandDrawnTheme.Colors.InkBlack);
+        vbox.AddChild(title);
+
+        var nameLabel = new Label { Text = bossName };
+        nameLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
+        nameLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteBg);
+        nameLabel.HorizontalAlignment = HorizontalAlignment.Center;
+        nameLabel.AddThemeConstantOverride("outline_size", UiOutlineThin);
+        nameLabel.AddThemeColorOverride("font_outline_color", HandDrawnTheme.Colors.InkBlack);
+        vbox.AddChild(nameLabel);
+
+        // 动画：先淡入（modulate.a 0→1），保持 1.5s，再淡出 + QueueFree
+        var bannerTween = CreateTween();
+        bannerTween.TweenProperty(banner, "modulate:a", 1.0f, 0.3f);
+        bannerTween.TweenInterval(1.5f);
+        bannerTween.TweenProperty(banner, "modulate:a", 0.0f, 0.5f);
+        bannerTween.TweenCallback(Callable.From(banner.QueueFree));
     }
 
     public string GetWeaponTooltipText(WeaponCard weapon)
@@ -629,6 +704,23 @@ public partial class UIManager : Control
     public void ToggleHelp()
     {
         _ToggleControlsPanel();
+    }
+
+    /// <summary>从 PausePanel 打开设置面板：隐藏暂停 + 显示设置。
+    /// 必须保证只有从暂停态才能调用（由 PausePanel "设置" 按钮触发）。</summary>
+    public void ShowSettings()
+    {
+        if (_pausePanel == null || _settingsPanel == null) return;
+        _pausePanel.Visible = false;
+        _settingsPanel.Visible = true;
+    }
+
+    /// <summary>设置面板关闭时（关闭按钮 / ESC）自动恢复 PausePanel。
+    /// 这样"打开设置 → 关闭"会回到暂停态,而不是回到游戏。</summary>
+    private void _OnSettingsClosed()
+    {
+        if (_pausePanel != null && _userPaused)
+            _pausePanel.Visible = true;
     }
 
     private void _ToggleSound()

@@ -12,6 +12,7 @@ using UIManager = ZombieWars.UI.UIManager;
 using Background = ZombieWars.World.Background;
 using WaveResonanceSystem = ZombieWars.Math.WaveResonanceSystem;
 using VectorFieldSystem = ZombieWars.Math.VectorFieldSystem;
+using ZombieType = ZombieWars.Core.GameEnums.ZombieType;
 using FractalSystem = ZombieWars.Math.FractalSystem;
 using StrategySystem = ZombieWars.Math.StrategySystem;
 
@@ -828,6 +829,7 @@ public partial class GameManager : Node
 
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
         _uiManager?.ShowRoundBanner("BOSS 来袭");
+        _uiManager?.PlayBossWarning(_BossTypeName(zombieInstance.ZombieType));
 
         // 出场演出：命中停顿 + 强震屏 + 全屏暗化，把"Boss 登场"砸出压迫感
         _bossPhase = 1;
@@ -1146,4 +1148,14 @@ public partial class GameManager : Node
         if (_player != null)
             _directiveSystem?.Setup(ui, _player);
     }
+
+    /// <summary>把 ZombieType 翻译成中文显示名（Boss 出场警告横幅用）。</summary>
+    private static string _BossTypeName(ZombieType type) => type switch
+    {
+        ZombieType.Tank   => "巨型坦克僵尸",
+        ZombieType.Mech   => "重型机甲僵尸",
+        ZombieType.Knight => "骑士僵尸领主",
+        ZombieType.Dragon => "飞龙僵尸",
+        _                 => "未知 BOSS",
+    };
 }

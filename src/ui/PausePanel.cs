@@ -12,6 +12,7 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 public partial class PausePanel : Panel
 {
     public event Action? ResumeRequested;
+    public event Action? SettingsRequested;
 
     public PausePanel()
     {
@@ -79,6 +80,24 @@ public partial class PausePanel : Panel
         resumeBtn.AddThemeColorOverride("font_color", BattlefieldBright);
         resumeBtn.Pressed += () => ResumeRequested?.Invoke();
         vbox.AddChild(resumeBtn);
+
+        // 设置入口
+        var settingsBtn = new Button
+        {
+            Text = "设置",
+            CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(34, viewport, 28)),
+            FocusMode = FocusModeEnum.None
+        };
+        settingsBtn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(14, viewport, 11));
+        var (sn, sh, _) = MakeButtonStyles(
+            new Color(BattlefieldBg, 0.85f), new Color(BattlefieldMid, 0.90f),
+            BattlefieldAccent, radius: 4, shadowSize: 2);
+        settingsBtn.AddThemeStyleboxOverride("normal", sn);
+        settingsBtn.AddThemeStyleboxOverride("hover", sh);
+        settingsBtn.AddThemeStyleboxOverride("pressed", sh);
+        settingsBtn.AddThemeColorOverride("font_color", NoteBg);
+        settingsBtn.Pressed += () => SettingsRequested?.Invoke();
+        vbox.AddChild(settingsBtn);
 
         var hintLabel = new Label
         {

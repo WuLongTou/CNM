@@ -211,6 +211,16 @@ public partial class GameOverUI : Control
         restartBtn.Pressed += () => GetTree().ReloadCurrentScene();
         btnBox.AddChild(restartBtn);
 
+        // 返回主菜单：与"重新开始"行为相同(ReloadCurrentScene → WelcomePanel 自动出现),
+        // 但按钮文案让玩家明确知道会回到欢迎界面
+        var menuBtn = _MakeButton("返回主菜单",
+            new Color(0.15f, 0.10f, 0.10f, 0.9f),
+            new Color(0.25f, 0.18f, 0.18f, 0.9f),
+            NoteBorder,
+            viewport);
+        menuBtn.Pressed += () => GetTree().ReloadCurrentScene();
+        btnBox.AddChild(menuBtn);
+
         // 跨局永久升级（用金币买 buff，新局生效）
         var upgradeBtn = _MakeButton("永久升级",
             new Color(0.20f, 0.15f, 0.05f, 0.9f),
