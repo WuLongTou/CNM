@@ -1,26 +1,26 @@
-[gd_scene load_steps=7 format=3 uid="uid://bqxcvw5hn6p2c"]
+[gd_scene load_steps=8 format=3 uid="uid://bqxcvw5hn6p2c"]
 
 [ext_resource type="Script" uid="uid://c3lvuljtvarl7" path="res://src/core/Main.cs" id="1_0k8vg"]
-[ext_resource type="Script" uid="uid://n62pubm52k4q" path="res://src/world/Background.cs" id="2_1a2bc"]
-[ext_resource type="Script" uid="uid://02atcfdlkgxy" path="res://src/player/Player.cs" id="3_3h4xr"]
-[ext_resource type="Script" uid="uid://b3w15vm1apohw" path="res://src/core/GameManager.cs" id="4_8j2kl"]
-[ext_resource type="Script" uid="uid://cromhpstk3t2k" path="res://src/weapons/WeaponDeck.cs" id="5_9m3nl"]
+[ext_resource type="PackedScene" uid="uid://dj4k2n5p7q8rt" path="res://scenes/Background.tscn" id="2_bg"]
+[ext_resource type="PackedScene" uid="uid://by1pxr2n3mq7c" path="res://scenes/Player.tscn" id="3_pl"]
+[ext_resource type="PackedScene" uid="uid://bm7q1x2n4k9vd" path="res://scenes/GameManager.tscn" id="4_gm"]
+[ext_resource type="PackedScene" uid="uid://cr5t8n2k1x4wq" path="res://scenes/WeaponDeck.tscn" id="5_wd"]
 [ext_resource type="Script" uid="uid://dhvtexsvepn28" path="res://src/ui/UIManager.cs" id="6_p6q0o"]
+[ext_resource type="Environment" uid="uid://b7e5d9f3c1a2k" path="res://data/default_env.tres" id="7_env01"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1_0k8vg")
 
-[node name="Background" type="Node2D" parent="."]
-script = ExtResource("2_1a2bc")
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = ExtResource("7_env01")
 
-[node name="Player" type="CharacterBody2D" parent="."]
-script = ExtResource("3_3h4xr")
+[node name="Background" parent="." instance=ExtResource("2_bg")]
 
-[node name="GameManager" type="Node" parent="."]
-script = ExtResource("4_8j2kl")
+[node name="Player" parent="." instance=ExtResource("3_pl")]
 
-[node name="WeaponDeck" type="Node" parent="."]
-script = ExtResource("5_9m3nl")
+[node name="GameManager" parent="." instance=ExtResource("4_gm")]
+
+[node name="WeaponDeck" parent="." instance=ExtResource("5_wd")]
 
 [node name="UILayer" type="CanvasLayer" parent="."]
 

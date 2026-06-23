@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://cr5t8n2k1x4wq"]
+
+[ext_resource type="Script" uid="uid://cromhpstk3t2k" path="res://src/weapons/WeaponDeck.cs" id="1_wd"]
+
+[node name="WeaponDeck" type="Node"]
+script = ExtResource("1_wd")
