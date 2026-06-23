@@ -82,6 +82,13 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     // Notifications（委托给 NotificationPanel）
     // ═══════════════════════════════════════════════
+    // ═══ PackedScene 导出（编辑器中可替换 .tscn；运行时 Instantiate）══
+    [Export] public PackedScene? HudPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/HudPanel.tscn");
+    [Export] public PackedScene? GameOverUIScene { get; set; } = GD.Load<PackedScene>("res://scenes/GameOverUI.tscn");
+    [Export] public PackedScene? WeaponSelectionPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/WeaponSelectionPanel.tscn");
+    [Export] public PackedScene? HelpPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/HelpPanel.tscn");
+    [Export] public PackedScene? PausePanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/PausePanel.tscn");
+
     private NotificationPanel _notificationPanel = null!;
 
     // ═══════════════════════════════════════════════
@@ -97,7 +104,7 @@ public partial class UIManager : Control
         _screenFx.Name = "ScreenEffects";
         AddChild(_screenFx);
 
-        _gameOverUi = new GameOverUI();
+        _gameOverUi = GameOverUIScene!.Instantiate<GameOverUI>();
         _gameOverUi.Name = "GameOverUI";
         AddChild(_gameOverUi);
 
@@ -105,8 +112,8 @@ public partial class UIManager : Control
         Core.AchievementSystem.OnAchievementUnlocked += _ShowAchievementNotification;
         Core.AchievementSystem.OnMilestoneReached += _ShowMilestoneNotification;
 
-        // 构造各 UI 子面板
-        _hudPanel = new HudPanel();
+        // 构造各 UI 子面板（HudPanel/GameOverUI/WeaponSelection/Help/Pause 走 .tscn 加载，其余仍代码创建）
+        _hudPanel = HudPanelScene!.Instantiate<HudPanel>();
         _hudPanel.Setup(
             onToggleSound: _ToggleSound,
             onToggleHelp: _ToggleControlsPanel,
@@ -116,12 +123,16 @@ public partial class UIManager : Control
         AddChild(_hudPanel);
         _CreateBossHealthBar();
 
-        _weaponSelectionPanel = new WeaponSelectionPanel { Name = "WeaponSelectionPanel", ZIndex = 160 };
+        _weaponSelectionPanel = WeaponSelectionPanelScene!.Instantiate<WeaponSelectionPanel>();
+        _weaponSelectionPanel.Name = "WeaponSelectionPanel";
+        _weaponSelectionPanel.ZIndex = 160;
         AddChild(_weaponSelectionPanel);
         // 转发 WeaponSelectionPanel 事件到 UIManager 同名事件（GameManager 订阅的是后者）
         _weaponSelectionPanel.WeaponCardSelected += (card) => WeaponCardSelected?.Invoke(card);
         _weaponSelectionPanel.UpgradeSkipped += () => UpgradeSkipped?.Invoke();
-        _helpPanel = new HelpPanel { Name = "HelpPanel", ZIndex = 170 };
+        _helpPanel = HelpPanelScene!.Instantiate<HelpPanel>();
+        _helpPanel.Name = "HelpPanel";
+        _helpPanel.ZIndex = 170;
         AddChild(_helpPanel);
         _equipmentPanel = new EquipmentPanel { Name = "EquipmentPanel", ZIndex = 170 };
         _equipmentPanel.Setup(showTooltip: _ShowTooltip, hideTooltip: _HideTooltip);
@@ -150,7 +161,7 @@ public partial class UIManager : Control
         AddChild(_tooltipSystem);
         _notificationPanel = new NotificationPanel { Name = "NotificationPanel" };
         AddChild(_notificationPanel);
-        _pausePanel = new PausePanel();
+        _pausePanel = PausePanelScene!.Instantiate<PausePanel>();
         _pausePanel.ResumeRequested += () => SetUserPaused(false);
         AddChild(_pausePanel);
         _SetGameplayHudVisible(false);

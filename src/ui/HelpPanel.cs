@@ -217,14 +217,21 @@ public partial class HelpPanel : Panel
 
     private void _BuildHudTab()
     {
-        _AddSectionLabel("-- 顶部信息栏 --");
+        _AddTabTOC(new List<(string, string)>
+        {
+            ("hud_top",     "▸ 顶部信息栏（回合/僵尸/天气/负面/分数）"),
+            ("hud_bottom",  "▸ 底部战斗栏（效果/生命/闪避/武器/目标/数值）"),
+            ("hud_special", "▸ 特殊系统提示（力场/共振/装备面板）"),
+        });
+
+        _AddSectionLabel("-- 顶部信息栏 --", "hud_top");
         _AddInfoCard("回合", "当前第几回合。每回合开始前会抽强化卡，回合越高敌人越强。", new Color(0.85f, 0.72f, 0.35f));
         _AddInfoCard("僵尸", "格式为 剩余/本回合总量。\n清完本回合僵尸后进入结算和下一次强化。", new Color(0.75f, 0.55f, 0.55f));
         _AddInfoCard("天气", "显示当前天气。危险天气会造成危险效果，例如持续掉血或额外刷怪。", new Color(0.55f, 0.75f, 0.95f));
         _AddInfoCard("负面状态", "中毒、燃烧等持续掉血状态会在顶部显示，例如: 中毒 -5/s。", new Color(0.9f, 0.35f, 0.85f));
         _AddInfoCard("分数", "击杀僵尸、精英和 BOSS 获得分数。BOSS 和精英给分更高。", new Color(0.95f, 0.55f, 0.45f));
 
-        _AddSectionLabel("-- 底部战斗栏 --");
+        _AddSectionLabel("-- 底部战斗栏 --", "hud_bottom");
         _AddInfoCard("效果图标", "当前武器、装备、护盾、暴击、吸血等都会显示成图标。\n鼠标悬停图标可查看详细数值和说明。", new Color(0.85f, 0.75f, 0.45f));
         _AddInfoCard("生命", "生命值归零会死亡；低血量时血条会闪烁。\n回合结算时会恢复一部分最大生命。", new Color(0.35f, 0.75f, 0.45f));
         _AddInfoCard("闪避", "显示冲刺闪避是否就绪。就绪时按 Shift 冲刺，冷却时会显示剩余秒数。", new Color(0.45f, 0.7f, 1.0f));
@@ -233,7 +240,7 @@ public partial class HelpPanel : Panel
         _AddInfoCard("伤害 / 间隔", "伤害是单次攻击基础伤害；间隔是两次攻击之间的时间。\n间隔越短，攻击越快。", new Color(0.92f, 0.70f, 0.52f));
         _AddInfoCard("暴击 / 吸血 / 移速", "暴击提高爆发伤害；吸血会按伤害比例回血；移速影响走位和拉怪。", new Color(0.80f, 0.65f, 0.45f));
 
-        _AddSectionLabel("-- 特殊系统提示 --");
+        _AddSectionLabel("-- 特殊系统提示 --", "hud_special");
         _AddInfoCard("力场", "左下角显示可用力场次数。\n按 ` 进入放置模式，左键放置，右键取消。[+]吸引、[x]排斥、[o]旋涡。", new Color(0.75f, 0.65f, 0.95f));
         _AddInfoCard("共振", "右上角共振指示器展示武器频率与尸潮波形的接近程度。\n越接近共振，部分伤害加成越明显。", new Color(0.45f, 0.85f, 0.95f));
         _AddInfoCard("装备面板", "按 C 或点击底部【装备】打开，查看身体部位槽位和每件装备的完整效果。", new Color(0.6f, 0.7f, 0.9f));
@@ -245,13 +252,25 @@ public partial class HelpPanel : Panel
 
     private void _BuildControlsTab()
     {
+        _AddTabTOC(new List<(string, string)>
+        {
+            ("ctrl_move", "▸ 移动与攻击"),
+            ("ctrl_meta", "▸ 游戏控制（暂停/帮助/装备）"),
+            ("ctrl_card", "▸ 强化阶段快捷键"),
+        });
+
+        _AddSectionLabel("-- 移动与攻击 --", "ctrl_move");
         _AddInfoCard("WASD / 方向键", "移动角色", new Color(0.3f, 0.8f, 0.3f));
         _AddInfoCard("空格 (按住)", "攻击\n魔法类自动锁定目标", new Color(0.8f, 0.3f, 0.3f));
         _AddInfoCard("Shift", "冲刺闪避，有冷却时间", new Color(0.4f, 0.7f, 1.0f));
         _AddInfoCard("Tab", "切换目标优先级 (最近/最远/密集)", new Color(0.5f, 0.8f, 0.9f));
+
+        _AddSectionLabel("-- 游戏控制 --", "ctrl_meta");
         _AddInfoCard("ESC", "暂停/继续游戏\n强化阶段无法手动暂停", new Color(0.8f, 0.8f, 0.5f));
         _AddInfoCard("H", "打开/关闭帮助面板", new Color(0.7f, 0.6f, 0.8f));
         _AddInfoCard("C", "打开/关闭角色装备面板\n按身体部位查看已装备的武器/防具/饰品", new Color(0.6f, 0.7f, 0.9f));
+
+        _AddSectionLabel("-- 强化阶段快捷键 --", "ctrl_card");
         _AddInfoCard("1 / 2 / 3", "武器选择阶段快速选牌", new Color(0.6f, 0.7f, 0.4f));
         _AddInfoCard("Enter / Delete", "武器选择阶段跳过强化", new Color(0.7f, 0.6f, 0.5f));
     }
@@ -280,17 +299,24 @@ public partial class HelpPanel : Panel
 
     private void _BuildZombieTab()
     {
-        _AddSectionLabel("-- 僵尸图鉴 --");
+        _AddTabTOC(new List<(string, string)>
+        {
+            ("zom_codex",  "▸ 僵尸图鉴（14 种基础僵尸）"),
+            ("zom_elite",  "▸ 精英前缀（再生/迅捷/爆炸）"),
+            ("zom_boss",   "▸ BOSS 僵尸"),
+        });
+
+        _AddSectionLabel("-- 僵尸图鉴 --", "zom_codex");
 
         foreach (var entry in ZombieEntries)
             _AddInfoCard(entry.Name, entry.Desc, entry.Color);
 
-        _AddSectionLabel("-- 精英前缀 --");
+        _AddSectionLabel("-- 精英前缀 --", "zom_elite");
         _AddInfoCard("再生", "精英僵尸缓慢回复生命值", new Color(0.3f, 0.9f, 0.4f));
         _AddInfoCard("迅捷", "精英僵尸移动速度大幅提升", new Color(0.3f, 0.7f, 1.0f));
         _AddInfoCard("爆炸", "精英僵尸死亡时产生爆炸", new Color(0.9f, 0.4f, 0.2f));
 
-        _AddSectionLabel("-- BOSS --");
+        _AddSectionLabel("-- BOSS --", "zom_boss");
         _AddInfoCard("BOSS 僵尸", "每 5 回合出现一次\n体型巨大、属性强化为普通僵尸的数倍\n击杀后获得大量分数", new Color(0.9f, 0.2f, 0.2f));
     }
 
@@ -300,25 +326,33 @@ public partial class HelpPanel : Panel
 
     private void _BuildWeaponTab()
     {
-        _AddSectionLabel("-- 武器类型 --");
+        _AddTabTOC(new List<(string, string)>
+        {
+            ("wpn_type",   "▸ 武器类型（近战/远程/魔法/范围）"),
+            ("wpn_gear",   "▸ 装备 & 装备效果"),
+            ("wpn_effect", "▸ 武器特效（近战/远程/魔法）"),
+            ("wpn_quality","▸ 品质与强化"),
+        });
+
+        _AddSectionLabel("-- 武器类型 --", "wpn_type");
         _AddInfoCard("近战", "扇形斩击攻击近距离敌人\n可搭配溅射、多目标、击退等效果", new Color(0.9f, 0.4f, 0.4f));
         _AddInfoCard("远程", "发射子弹打击远处敌人\n可搭配多射、穿透、轨迹伤害等", new Color(0.5f, 0.7f, 0.9f));
         _AddInfoCard("魔法", "发射追踪导弹，自动锁定敌人\n可搭配魅惑、推力、链式闪电等", new Color(0.7f, 0.5f, 0.9f));
         _AddInfoCard("范围", "爆炸范围伤害\n适合清理密集敌群", new Color(0.9f, 0.7f, 0.3f));
 
-        _AddSectionLabel("-- 装备 --");
+        _AddSectionLabel("-- 装备 --", "wpn_gear");
         _AddInfoCard("装备", "被动增强角色属性\n不会替换当前武器\n可与武器叠加装备", new Color(0.6f, 0.8f, 0.6f));
 
-        _AddSectionLabel("-- 装备特殊效果 --");
+        _AddSectionLabel("-- 装备特殊效果 --", "wpn_gear");
         _AddInfoCard("防御类", "反伤: 受伤时有几率反弹伤害给攻击者\n闪避: 有概率完全躲避一次攻击\n减控: 缩短受到的负面效果持续时间", new Color(0.5f, 0.8f, 0.7f));
         _AddInfoCard("攻击类", "穿透: 子弹可贯穿更多敌人\n弹跳: 子弹反弹攻击多个目标\n溅射: 攻击波及周围敌人", new Color(0.85f, 0.6f, 0.4f));
 
-        _AddSectionLabel("-- 武器特效 --");
+        _AddSectionLabel("-- 武器特效 --", "wpn_effect");
         _AddInfoCard("近战特效", "溅射: 攻击波及周围敌人\n多目标: 同时攻击多个目标\n击杀爆炸: 击杀时产生爆炸\n击杀护盾: 击杀时获得护盾\n击退: 击退敌人", new Color(0.85f, 0.5f, 0.5f));
         _AddInfoCard("远程特效", "多射: 发射多枚子弹\n轨迹伤害: 子弹路径造成伤害\n回旋: 子弹可返回\n穿透: 子弹穿透敌人", new Color(0.5f, 0.65f, 0.85f));
         _AddInfoCard("魔法特效", "魅惑: 让敌人互相攻击\n推力: 击飞敌人\n眩晕: 短暂眩晕敌人\n链式: 伤害跳跃到附近敌人\n中毒: 持续伤害", new Color(0.65f, 0.5f, 0.85f));
 
-        _AddSectionLabel("-- 品质与强化 --");
+        _AddSectionLabel("-- 品质与强化 --", "wpn_quality");
         _AddInfoCard("品质等级", "普通 (灰) < 稀有 (红) < 史诗 (金) < 传说\n高品质武器属性更强", new Color(0.85f, 0.75f, 0.5f));
         _AddInfoCard("强化卡", "选中已有装备的强化卡\n直接提升装备属性和特效等级\n可能附带副作用", new Color(0.8f, 0.6f, 0.3f));
     }
@@ -329,29 +363,39 @@ public partial class HelpPanel : Panel
 
     private void _BuildMechanicsTab()
     {
-        _AddSectionLabel("-- 回合流程 --");
+        _AddTabTOC(new List<(string, string)>
+        {
+            ("mch_round",   "▸ 回合流程"),
+            ("mch_combat",  "▸ 战斗机制（连击/暴击/吸血/护盾）"),
+            ("mch_status",  "▸ 状态效果（冰冻/中毒/魅惑/眩晕）"),
+            ("mch_drop",    "▸ 掉落物"),
+            ("mch_weather", "▸ 天气系统"),
+            ("mch_achieve", "▸ 成就系统"),
+        });
+
+        _AddSectionLabel("-- 回合流程 --", "mch_round");
         _AddInfoCard("回合循环", "每回合开始 → 选择武器卡牌 → 战斗 → 回合结算\n回合间恢复 20% 最大生命值", new Color(0.7f, 0.6f, 0.8f));
 
-        _AddSectionLabel("-- 战斗机制 --");
+        _AddSectionLabel("-- 战斗机制 --", "mch_combat");
         _AddInfoCard("连击系统", "连续击杀僵尸积累连击\n连击越高，伤害加成越大 (最高 +50%)\n停止击杀后连击会衰减", new Color(1.0f, 0.6f, 0.2f));
         _AddInfoCard("暴击", "暴击造成 2.5x 伤害\n暴击率可通过装备提升", new Color(0.9f, 0.5f, 0.7f));
         _AddInfoCard("吸血", "命中后回复伤害值一定比例的生命", new Color(0.7f, 0.3f, 0.3f));
         _AddInfoCard("护盾", "装备护盾领域后\n环绕的冰晶会伤害并减速接近的敌人", new Color(0.3f, 0.7f, 0.9f));
 
-        _AddSectionLabel("-- 状态效果 --");
+        _AddSectionLabel("-- 状态效果 --", "mch_status");
         _AddInfoCard("冰冻", "大幅降低敌人移动速度\n持续约 0.8 秒", new Color(0.4f, 0.8f, 1.0f));
         _AddInfoCard("中毒", "对敌人造成持续伤害\n持续约 3 秒", new Color(0.4f, 0.9f, 0.3f));
         _AddInfoCard("魅惑", "使敌人互相攻击\n持续一段时间", new Color(0.9f, 0.4f, 0.8f));
         _AddInfoCard("眩晕", "短暂使敌人无法行动", new Color(0.8f, 0.8f, 0.4f));
 
-        _AddSectionLabel("-- 掉落物 --");
+        _AddSectionLabel("-- 掉落物 --", "mch_drop");
         _AddInfoCard("生命药水", "僵尸死亡后有概率掉落\n回复一定生命值", new Color(0.8f, 0.3f, 0.3f));
         _AddInfoCard("技能书", "僵尸死亡后有概率掉落\n精英和 BOSS 掉落概率更高", new Color(0.4f, 0.5f, 0.9f));
 
-        _AddSectionLabel("-- 天气系统 --");
+        _AddSectionLabel("-- 天气系统 --", "mch_weather");
         _AddInfoCard("天气变化", "游戏中天气会随机变化\n暴风天气时可能额外生成僵尸", new Color(0.5f, 0.7f, 0.9f));
 
-        _AddSectionLabel("-- 成就系统 --");
+        _AddSectionLabel("-- 成就系统 --", "mch_achieve");
         _AddInfoCard("成就与里程碑", "完成特定目标解锁成就\n首次击杀、存活回合数、连击记录等\n成就会保存到存档中", new Color(0.9f, 0.8f, 0.3f));
     }
 
@@ -359,7 +403,7 @@ public partial class HelpPanel : Panel
     // UI Helpers
     // ═══════════════════════════════════════════════
 
-    private void _AddSectionLabel(string text)
+    private void _AddSectionLabel(string text, string? sectionId = null)
     {
         var viewport = ResponsiveUi.ViewportSize(this);
 
@@ -367,6 +411,7 @@ public partial class HelpPanel : Panel
         _contentContainer.AddChild(spacer);
 
         var banner = new Panel();
+        if (sectionId != null) banner.Name = sectionId;  // 供锚点跳转用
         banner.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(26, viewport, 20));
         banner.SizeFlagsHorizontal = SizeFlags.ExpandFill;
         var bannerStyle = new StyleBoxFlat
@@ -395,6 +440,67 @@ public partial class HelpPanel : Panel
 
         var spacer2 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(4, viewport, 2)) };
         _contentContainer.AddChild(spacer2);
+    }
+
+    /// <summary>在 Tab 顶部加一个"章节目录"区，每个条目可点击滚动到对应 section。
+    /// entries 列表 (sectionId, 显示文本) — sectionId 须与 _AddSectionLabel 的 sectionId 一致。</summary>
+    private void _AddTabTOC(List<(string sectionId, string label)> entries)
+    {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
+        var tocBox = new VBoxContainer();
+        tocBox.Name = "TabTOC";
+        tocBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(2, viewport, 1));
+        _contentContainer.AddChild(tocBox);
+
+        foreach (var (sectionId, label) in entries)
+        {
+            var btn = new Button
+            {
+                Text = $"  {label}",
+                FocusMode = FocusModeEnum.None,
+                Alignment = HorizontalAlignment.Left
+            };
+            btn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 10));
+            btn.AddThemeColorOverride("font_color", new Color(NoteText, 0.85f));
+            var style = new StyleBoxFlat
+            {
+                BgColor = new Color(NoteBg, 0.4f),
+                BorderColor = new Color(NoteBorder, 0.3f),
+                BorderWidthBottom = 1,
+                ContentMarginLeft = ResponsiveUi.Px(8, viewport, 4),
+                ContentMarginRight = ResponsiveUi.Px(8, viewport, 4),
+                ContentMarginTop = ResponsiveUi.Px(2, viewport, 1),
+                ContentMarginBottom = ResponsiveUi.Px(2, viewport, 1),
+            };
+            btn.AddThemeStyleboxOverride("normal", style);
+            var hoverStyle = (StyleBoxFlat)style.Duplicate();
+            hoverStyle.BgColor = new Color(NoteBg, 0.65f);
+            btn.AddThemeStyleboxOverride("hover", hoverStyle);
+            btn.Pressed += () => _ScrollToSection(sectionId);
+            tocBox.AddChild(btn);
+        }
+
+        var tocSpacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(8, viewport, 4)) };
+        _contentContainer.AddChild(tocSpacer);
+    }
+
+    /// <summary>滚动到指定 sectionId 的 banner 位置（带 tween 平滑动画）。</summary>
+    private void _ScrollToSection(string sectionId)
+    {
+        var section = _contentContainer.GetNodeOrNull<Panel>(sectionId);
+        if (section == null) return;
+        if (_contentContainer.GetParent() is not ScrollContainer scroll) return;
+
+        // target Y = banner.GlobalPosition.Y - scroll.GlobalPosition.Y + scroll.ScrollVertical
+        int targetY = (int)(section.GlobalPosition.Y - scroll.GlobalPosition.Y) + scroll.ScrollVertical
+                      - ResponsiveUi.Px(8, ResponsiveUi.ViewportSize(this), 4);
+        targetY = Mathf.Max(0, targetY);
+
+        var tween = CreateTween();
+        tween.TweenProperty(scroll, "scroll_vertical", targetY, 0.25f)
+             .SetTrans(Tween.TransitionType.Cubic)
+             .SetEase(Tween.EaseType.Out);
     }
 
     private void _AddInfoCard(string title, string content, Color accentColor)

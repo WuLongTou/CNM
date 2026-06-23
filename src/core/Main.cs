@@ -16,6 +16,13 @@ using WeaponDeck = ZombieWars.Weapons.WeaponDeck;
 /// </summary>
 public partial class Main : Node2D
 {
+    // ═══ NodePath 导出（编辑器中可拖拽修改；运行时按节点名查找子节点）══
+    [Export] public NodePath BackgroundPath { get; set; } = "Background";
+    [Export] public NodePath PlayerPath { get; set; } = "Player";
+    [Export] public NodePath GameManagerPath { get; set; } = "GameManager";
+    [Export] public NodePath WeaponDeckPath { get; set; } = "WeaponDeck";
+    [Export] public NodePath UIManagerPath { get; set; } = "UILayer/UIManager";
+
     private Background _background = null!;
     private PlayerClass _player = null!;
     private GameManager _gameManager = null!;
@@ -63,11 +70,11 @@ public partial class Main : Node2D
         _mapManager.SelectInitialRandom();
 
         // Cache typed references to autoloaded/child nodes.
-        _background = GetNode<Background>("Background");
-        _player = GetNode<PlayerClass>("Player");
-        _gameManager = GetNode<GameManager>("GameManager");
-        _weaponDeck = GetNode<WeaponDeck>("WeaponDeck");
-        _uiManager = GetNode<UIManager>("UILayer/UIManager");
+        _background = GetNode<Background>(BackgroundPath);
+        _player = GetNode<PlayerClass>(PlayerPath);
+        _gameManager = GetNode<GameManager>(GameManagerPath);
+        _weaponDeck = GetNode<WeaponDeck>(WeaponDeckPath);
+        _uiManager = GetNode<UIManager>(UIManagerPath);
 
         // 用选定地图构建可交互场景（Background._Ready 已用默认构建氛围，这里按选定地图重建）
         _background.LoadMap(_mapManager.Current);

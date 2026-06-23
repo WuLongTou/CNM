@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dr8n2k5p7q3wz"]
+
+[ext_resource type="Script" uid="uid://cxkt6ssipd380" path="res://src/ui/PausePanel.cs" id="1_pp"]
+
+[node name="PausePanel" type="Panel"]
+script = ExtResource("1_pp")

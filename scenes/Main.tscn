@@ -14,6 +14,14 @@ script = ExtResource("1_0k8vg")
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = ExtResource("7_env01")
 
+[node name="SunLight" type="DirectionalLight2D" parent="."]
+position = Vector2(640, 360)
+rotation = -0.7854
+scale = Vector2(0.7, 0.7)
+energy = 0.4
+color = Color(0.95, 0.82, 0.55, 1)
+mode = 0
+
 [node name="Background" parent="." instance=ExtResource("2_bg")]
 
 [node name="Player" parent="." instance=ExtResource("3_pl")]

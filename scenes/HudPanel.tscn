@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dh2k5p7n3mq8x"]
+
+[ext_resource type="Script" uid="uid://ber6ku82pulx2" path="res://src/ui/HudPanel.cs" id="1_hud"]
+
+[node name="HudPanel" type="Panel"]
+script = ExtResource("1_hud")

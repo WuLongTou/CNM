@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://dg4k7n2p5x8qv"]
+
+[ext_resource type="Script" uid="uid://cqlehpnkvm2k4" path="res://src/ui/GameOverUI.cs" id="1_go"]
+
+[node name="GameOverUI" type="Control"]
+script = ExtResource("1_go")

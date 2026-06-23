@@ -1,8 +1,14 @@
-[gd_scene load_steps=2 format=3 uid="uid://cjm8vw2hn7p3d"]
+[gd_scene load_steps=3 format=3 uid="uid://cjm8vw2hn7p3d"]
 
 [ext_resource type="Script" uid="uid://dvdww3xfyocew" path="res://src/enemy/Zombie.cs" id="1_1l9mk"]
 
+[sub_resource type="OccluderPolygon2D" id="OccluderPolygon2D_zombie"]
+polygon = PackedVector2Array(-12, -12, 12, -12, 12, 12, -12, 12)
+
 [node name="Zombie" type="CharacterBody2D"]
 script = ExtResource("1_1l9mk")
+
+[node name="Shadow" type="LightOccluder2D" parent="."]
+occluder = SubResource("OccluderPolygon2D_zombie")
 
 [node name="AttackTimer" type="Timer" parent="."]
