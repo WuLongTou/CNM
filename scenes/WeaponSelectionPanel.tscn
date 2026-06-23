@@ -1,4 +1,4 @@
-[gd_scene load_steps=2 format=3 uid="uid://ct2k8n5p7x9qr"]
+[gd_scene format=3 uid="uid://ct2k8n5p7yaqr"]
 
 [ext_resource type="Script" uid="uid://dfwsbeuyubm6t" path="res://src/ui/WeaponSelectionPanel.cs" id="1_ws"]
 
