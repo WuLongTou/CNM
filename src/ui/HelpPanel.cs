@@ -10,14 +10,18 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 /// <summary>
 /// Tabbed help panel — HUD legend, controls, zombie codex, weapon guide, and game mechanics.
 /// Toggled via H key or the "?" HUD button.
+///
+/// 设计原则:极简可读,只用 2 个颜色 + 字号层级区分信息,无装饰色块/边框/banner。
+/// - 章节标题(15px 粗 BattlefieldBright) + HSeparator 分隔
+/// - 条目(13px NoteText)左对齐自动换行
+/// - 强 outline (InkBlack 1-2) 保证任何背景下都清晰
 /// </summary>
 public partial class HelpPanel : Panel
 {
     private int _currentTab;
     private readonly string[] _tabNames = { "HUD", "操作", "僵尸", "武器", "机制" };
-    private Panel _contentPanel = null!;
-    private VBoxContainer _contentContainer = null!;
     private readonly List<Button> _tabButtons = new();
+    private VBoxContainer _contentContainer = null!;
 
     public override void _Ready()
     {
@@ -28,11 +32,14 @@ public partial class HelpPanel : Panel
         SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         MouseFilter = MouseFilterEnum.Ignore;
 
-        var bgStyle = new StyleBoxFlat
+        // 暗色背景遮罩(无 Panel 装饰)
+        var bg = new ColorRect
         {
-            BgColor = new Color(BattlefieldBg, 0.75f)
+            Color = new Color(BattlefieldBg, 0.82f),
+            MouseFilter = MouseFilterEnum.Stop
         };
-        AddThemeStyleboxOverride("panel", bgStyle);
+        bg.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        AddChild(bg);
 
         var center = new CenterContainer();
         center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
@@ -40,27 +47,26 @@ public partial class HelpPanel : Panel
         AddChild(center);
 
         var card = new Panel();
-        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(700, 560), viewport);
+        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(720, 580), viewport);
         card.MouseFilter = MouseFilterEnum.Stop;
-        var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 10f);
-        cardStyle.ShadowOffset = new Vector2(4, 4);
+        var cardStyle = MakeNotePanel(borderRadius: 6f, shadowSize: 8f);
+        cardStyle.ShadowOffset = new Vector2(3, 3);
         card.AddThemeStyleboxOverride("panel", cardStyle);
         center.AddChild(card);
 
-        var outerMargin = new MarginContainer();
-        outerMargin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        outerMargin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(16, viewport, 8));
-        outerMargin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(16, viewport, 8));
-        outerMargin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(12, viewport, 6));
-        outerMargin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(12, viewport, 6));
-        outerMargin.MouseFilter = MouseFilterEnum.Ignore;
-        card.AddChild(outerMargin);
+        var margin = new MarginContainer();
+        margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
+        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(28, viewport, 14));
+        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(28, viewport, 14));
+        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(18, viewport, 10));
+        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(18, viewport, 10));
+        card.AddChild(margin);
 
         var mainVbox = new VBoxContainer();
-        mainVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
-        outerMargin.AddChild(mainVbox);
+        mainVbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(10, viewport, 6));
+        margin.AddChild(mainVbox);
 
-        // Title row
+        // 标题行:左标题 + 右关闭提示
         var titleRow = new HBoxContainer();
         titleRow.AddThemeConstantOverride("separation", ResponsiveUi.Px(8, viewport, 4));
         mainVbox.AddChild(titleRow);
@@ -71,21 +77,18 @@ public partial class HelpPanel : Panel
             SizeFlagsHorizontal = SizeFlags.ExpandFill
         };
         titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontTitle, viewport, 18));
-        titleLabel.AddThemeColorOverride("font_color", BattlefieldBright);
-        titleLabel.AddThemeConstantOverride("outline_size", UiOutlineBold);
+        titleLabel.AddThemeColorOverride("font_color", NoteText);
+        titleLabel.AddThemeConstantOverride("outline_size", 2);
         titleLabel.AddThemeColorOverride("font_outline_color", InkBlack);
         titleRow.AddChild(titleLabel);
 
-        var closeHint = new Label
-        {
-            Text = "[ H / ESC 关闭 ]"
-        };
+        var closeHint = new Label { Text = "H / ESC 关闭" };
         closeHint.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 10));
-        closeHint.AddThemeColorOverride("font_color", new Color(NoteText, 0.7f));
+        closeHint.AddThemeColorOverride("font_color", new Color(NoteText, 0.65f));
         closeHint.VerticalAlignment = VerticalAlignment.Center;
         titleRow.AddChild(closeHint);
 
-        // Tab bar
+        // Tab 栏(简化样式,只用 2 色)
         var tabBar = new HBoxContainer();
         tabBar.AddThemeConstantOverride("separation", ResponsiveUi.Px(4, viewport, 2));
         mainVbox.AddChild(tabBar);
@@ -96,7 +99,7 @@ public partial class HelpPanel : Panel
             var btn = new Button
             {
                 Text = _tabNames[i],
-                CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(32, viewport, 24)),
+                CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(28, viewport, 22)),
                 SizeFlagsHorizontal = SizeFlags.ExpandFill,
                 FocusMode = FocusModeEnum.None
             };
@@ -106,26 +109,15 @@ public partial class HelpPanel : Panel
             _tabButtons.Add(btn);
         }
 
-        // Content area
-        _contentPanel = new Panel();
-        _contentPanel.SizeFlagsVertical = SizeFlags.ExpandFill;
-        _contentPanel.MouseFilter = MouseFilterEnum.Ignore;
-        var contentStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(NoteBg, 0.3f),
-            CornerRadiusTopLeft = 4,
-            CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4,
-            CornerRadiusBottomRight = 4
-        };
-        _contentPanel.AddThemeStyleboxOverride("panel", contentStyle);
-        mainVbox.AddChild(_contentPanel);
+        // 章节分隔线
+        mainVbox.AddChild(new HSeparator { Modulate = new Color(NoteBorder, 0.5f) });
 
+        // ScrollContainer(无装饰面板)
         var scroll = new ScrollContainer();
-        scroll.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        scroll.SizeFlagsVertical = SizeFlags.ExpandFill;
         scroll.HorizontalScrollMode = ScrollContainer.ScrollMode.Disabled;
         scroll.MouseFilter = MouseFilterEnum.Pass;
-        _contentPanel.AddChild(scroll);
+        mainVbox.AddChild(scroll);
 
         _contentContainer = new VBoxContainer();
         _contentContainer.SizeFlagsHorizontal = SizeFlags.ExpandFill;
@@ -136,15 +128,8 @@ public partial class HelpPanel : Panel
         _BuildContent();
     }
 
-    public void Toggle()
-    {
-        Visible = !Visible;
-    }
-
-    public void Close()
-    {
-        Visible = false;
-    }
+    public void Toggle() { Visible = !Visible; }
+    public void Close() { Visible = false; }
 
     private void _SwitchTab(int index)
     {
@@ -158,41 +143,21 @@ public partial class HelpPanel : Panel
     private void _StyleTabButton(Button btn, bool active)
     {
         var viewport = ResponsiveUi.ViewportSize(this);
-        int marginL = ResponsiveUi.Px(6, viewport, 3);
-        int marginT = ResponsiveUi.Px(4, viewport, 2);
 
         var normal = new StyleBoxFlat
         {
-            BgColor = active ? new Color(BloodBright, 0.85f) : new Color(InkBlack, 0.5f),
-            BorderColor = active ? BattlefieldBright : new Color(NoteBorder, 0.3f),
-            BorderWidthBottom = active ? UiOutlineNorm : 0,
-            BorderWidthLeft = 0,
-            BorderWidthRight = 0,
-            BorderWidthTop = 0,
-            CornerRadiusTopLeft = 6,
-            CornerRadiusTopRight = 6,
-            ContentMarginLeft = marginL,
-            ContentMarginRight = marginL,
-            ContentMarginTop = marginT,
-            ContentMarginBottom = marginT
+            BgColor = active ? new Color(NoteText, 0.85f) : new Color(NoteText, 0.15f),
+            BorderColor = active ? NoteBorder : new Color(NoteBorder, 0.3f),
+            BorderWidthBottom = active ? 2 : 1,
+            ContentMarginLeft = ResponsiveUi.Px(8, viewport, 4),
+            ContentMarginRight = ResponsiveUi.Px(8, viewport, 4),
+            ContentMarginTop = ResponsiveUi.Px(2, viewport, 1),
+            ContentMarginBottom = ResponsiveUi.Px(2, viewport, 1),
         };
         btn.AddThemeStyleboxOverride("normal", normal);
-
-        var hover = new StyleBoxFlat
-        {
-            BgColor = active ? new Color(BloodBright, 0.9f) : new Color(InkBlack, 0.7f),
-            BorderColor = active ? BattlefieldBright : new Color(NoteBorder, 0.5f),
-            BorderWidthBottom = active ? UiOutlineNorm : 0,
-            CornerRadiusTopLeft = 6,
-            CornerRadiusTopRight = 6,
-            ContentMarginLeft = marginL,
-            ContentMarginRight = marginL,
-            ContentMarginTop = marginT,
-            ContentMarginBottom = marginT
-        };
-        btn.AddThemeStyleboxOverride("hover", hover);
-        btn.AddThemeStyleboxOverride("pressed", hover);
-        btn.AddThemeColorOverride("font_color", active ? NoteBg : NoteText);
+        btn.AddThemeStyleboxOverride("hover", normal);
+        btn.AddThemeStyleboxOverride("pressed", normal);
+        btn.AddThemeColorOverride("font_color", active ? NoteBg : new Color(NoteText, 0.85f));
         btn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
     }
 
@@ -211,39 +176,84 @@ public partial class HelpPanel : Panel
         }
     }
 
+    // ═══ 通用辅助:_AddChapter / _AddEntry ═══
+
+    private void _AddChapter(string text)
+    {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
+        var spacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(6, viewport, 3)) };
+        _contentContainer.AddChild(spacer);
+
+        var label = new Label { Text = text };
+        label.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 14));
+        label.AddThemeColorOverride("font_color", NoteText);
+        label.AddThemeConstantOverride("outline_size", 2);
+        label.AddThemeColorOverride("font_outline_color", InkBlack);
+        _contentContainer.AddChild(label);
+
+        _contentContainer.AddChild(new HSeparator { Modulate = new Color(NoteBorder, 0.4f) });
+    }
+
+    /// <summary>添加一行 "标题: 描述"。标题用 NoteText 粗体,描述用 NoteText 浅色。</summary>
+    private void _AddEntry(string title, string content)
+    {
+        var viewport = ResponsiveUi.ViewportSize(this);
+
+        var row = new HBoxContainer();
+        row.AddThemeConstantOverride("separation", ResponsiveUi.Px(6, viewport, 3));
+        _contentContainer.AddChild(row);
+
+        var titleLabel = new Label
+        {
+            Text = title,
+            CustomMinimumSize = new Vector2(ResponsiveUi.Px(80, viewport, 60), 0),
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
+        titleLabel.AddThemeColorOverride("font_color", NoteText);
+        titleLabel.AddThemeConstantOverride("outline_size", 1);
+        titleLabel.AddThemeColorOverride("font_outline_color", InkBlack);
+        row.AddChild(titleLabel);
+
+        var contentLabel = new Label
+        {
+            Text = content,
+            AutowrapMode = TextServer.AutowrapMode.WordSmart,
+            SizeFlagsHorizontal = SizeFlags.ExpandFill,
+            VerticalAlignment = VerticalAlignment.Top
+        };
+        contentLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
+        contentLabel.AddThemeColorOverride("font_color", new Color(NoteText, 0.78f));
+        row.AddChild(contentLabel);
+    }
+
     // ═══════════════════════════════════════════════
     // Tab: HUD
     // ═══════════════════════════════════════════════
 
     private void _BuildHudTab()
     {
-        _AddTabTOC(new List<(string, string)>
-        {
-            ("hud_top",     "▸ 顶部信息栏（回合/僵尸/天气/负面/分数）"),
-            ("hud_bottom",  "▸ 底部战斗栏（效果/生命/闪避/武器/目标/数值）"),
-            ("hud_special", "▸ 特殊系统提示（力场/共振/装备面板）"),
-        });
+        _AddChapter("顶部信息栏");
+        _AddEntry("回合",   "当前第几回合。每回合开始前抽强化卡,回合越高敌人越强。");
+        _AddEntry("僵尸",   "剩余/本回合总量。清完进入下一回合。");
+        _AddEntry("天气",   "当前天气。危险天气造成持续掉血或额外刷怪。");
+        _AddEntry("负面",   "中毒/燃烧等持续掉血状态,会显示数值例如 -5/s。");
+        _AddEntry("分数",   "击杀僵尸、精英和 BOSS 获得。BOSS 分数最高。");
 
-        _AddSectionLabel("-- 顶部信息栏 --", "hud_top");
-        _AddInfoCard("回合", "当前第几回合。每回合开始前会抽强化卡，回合越高敌人越强。", new Color(0.85f, 0.72f, 0.35f));
-        _AddInfoCard("僵尸", "格式为 剩余/本回合总量。\n清完本回合僵尸后进入结算和下一次强化。", new Color(0.75f, 0.55f, 0.55f));
-        _AddInfoCard("天气", "显示当前天气。危险天气会造成危险效果，例如持续掉血或额外刷怪。", new Color(0.55f, 0.75f, 0.95f));
-        _AddInfoCard("负面状态", "中毒、燃烧等持续掉血状态会在顶部显示，例如: 中毒 -5/s。", new Color(0.9f, 0.35f, 0.85f));
-        _AddInfoCard("分数", "击杀僵尸、精英和 BOSS 获得分数。BOSS 和精英给分更高。", new Color(0.95f, 0.55f, 0.45f));
+        _AddChapter("底部战斗栏");
+        _AddEntry("效果",   "当前武器、装备、护盾、暴击、吸血等图标。鼠标悬停查看详情。");
+        _AddEntry("生命",   "归零死亡;低血量时血条闪烁。回合结算时恢复部分生命。");
+        _AddEntry("闪避",   "就绪时按 Shift 冲刺;冷却中显示剩余秒数。");
+        _AddEntry("武器",   "当前主武器名称 + 攻击类型(近战/远程/范围/魔法)。");
+        _AddEntry("目标",   "自动攻击优先目标:最近/最远/密集。按 Tab 切换。");
+        _AddEntry("伤害/间隔", "单次攻击基础伤害;两次攻击之间时间。");
+        _AddEntry("暴击/吸血/移速", "暴击爆发,吸血回血,移速影响走位。");
 
-        _AddSectionLabel("-- 底部战斗栏 --", "hud_bottom");
-        _AddInfoCard("效果图标", "当前武器、装备、护盾、暴击、吸血等都会显示成图标。\n鼠标悬停图标可查看详细数值和说明。", new Color(0.85f, 0.75f, 0.45f));
-        _AddInfoCard("生命", "生命值归零会死亡；低血量时血条会闪烁。\n回合结算时会恢复一部分最大生命。", new Color(0.35f, 0.75f, 0.45f));
-        _AddInfoCard("闪避", "显示冲刺闪避是否就绪。就绪时按 Shift 冲刺，冷却时会显示剩余秒数。", new Color(0.45f, 0.7f, 1.0f));
-        _AddInfoCard("武器 / 类型", "武器显示当前主要攻击卡；类型说明攻击方式：近战、远程、范围或魔法。", new Color(0.72f, 0.78f, 0.92f));
-        _AddInfoCard("目标", "自动攻击优先锁定谁：最近、最远或密集敌群。\n按 Tab 可切换。", new Color(0.55f, 0.82f, 0.88f));
-        _AddInfoCard("伤害 / 间隔", "伤害是单次攻击基础伤害；间隔是两次攻击之间的时间。\n间隔越短，攻击越快。", new Color(0.92f, 0.70f, 0.52f));
-        _AddInfoCard("暴击 / 吸血 / 移速", "暴击提高爆发伤害；吸血会按伤害比例回血；移速影响走位和拉怪。", new Color(0.80f, 0.65f, 0.45f));
-
-        _AddSectionLabel("-- 特殊系统提示 --", "hud_special");
-        _AddInfoCard("力场", "左下角显示可用力场次数。\n按 ` 进入放置模式，左键放置，右键取消。[+]吸引、[x]排斥、[o]旋涡。", new Color(0.75f, 0.65f, 0.95f));
-        _AddInfoCard("共振", "右上角共振指示器展示武器频率与尸潮波形的接近程度。\n越接近共振，部分伤害加成越明显。", new Color(0.45f, 0.85f, 0.95f));
-        _AddInfoCard("装备面板", "按 C 或点击底部【装备】打开，查看身体部位槽位和每件装备的完整效果。", new Color(0.6f, 0.7f, 0.9f));
+        _AddChapter("特殊系统");
+        _AddEntry("力场",   "左下显示力场次数。按 ` 放置,左键放,右键取消。");
+        _AddEntry("共振",   "右上指示武器频率与尸潮波形的接近程度。越接近加成越大。");
+        _AddEntry("装备",   "按 C 或点底部【装备】打开,查看身体部位槽位。");
     }
 
     // ═══════════════════════════════════════════════
@@ -252,72 +262,51 @@ public partial class HelpPanel : Panel
 
     private void _BuildControlsTab()
     {
-        _AddTabTOC(new List<(string, string)>
-        {
-            ("ctrl_move", "▸ 移动与攻击"),
-            ("ctrl_meta", "▸ 游戏控制（暂停/帮助/装备）"),
-            ("ctrl_card", "▸ 强化阶段快捷键"),
-        });
+        _AddChapter("移动与攻击");
+        _AddEntry("WASD / 方向键", "移动角色");
+        _AddEntry("空格 (按住)",   "持续攻击;魔法类自动锁定目标");
+        _AddEntry("Shift",         "冲刺闪避,有冷却时间");
+        _AddEntry("Tab",           "切换目标优先级 (最近/最远/密集)");
 
-        _AddSectionLabel("-- 移动与攻击 --", "ctrl_move");
-        _AddInfoCard("WASD / 方向键", "移动角色", new Color(0.3f, 0.8f, 0.3f));
-        _AddInfoCard("空格 (按住)", "攻击\n魔法类自动锁定目标", new Color(0.8f, 0.3f, 0.3f));
-        _AddInfoCard("Shift", "冲刺闪避，有冷却时间", new Color(0.4f, 0.7f, 1.0f));
-        _AddInfoCard("Tab", "切换目标优先级 (最近/最远/密集)", new Color(0.5f, 0.8f, 0.9f));
+        _AddChapter("游戏控制");
+        _AddEntry("ESC",  "暂停/继续游戏。强化阶段无法手动暂停。");
+        _AddEntry("H",    "打开/关闭帮助面板");
+        _AddEntry("C",    "打开/关闭角色装备面板");
 
-        _AddSectionLabel("-- 游戏控制 --", "ctrl_meta");
-        _AddInfoCard("ESC", "暂停/继续游戏\n强化阶段无法手动暂停", new Color(0.8f, 0.8f, 0.5f));
-        _AddInfoCard("H", "打开/关闭帮助面板", new Color(0.7f, 0.6f, 0.8f));
-        _AddInfoCard("C", "打开/关闭角色装备面板\n按身体部位查看已装备的武器/防具/饰品", new Color(0.6f, 0.7f, 0.9f));
-
-        _AddSectionLabel("-- 强化阶段快捷键 --", "ctrl_card");
-        _AddInfoCard("1 / 2 / 3", "武器选择阶段快速选牌", new Color(0.6f, 0.7f, 0.4f));
-        _AddInfoCard("Enter / Delete", "武器选择阶段跳过强化", new Color(0.7f, 0.6f, 0.5f));
+        _AddChapter("强化阶段");
+        _AddEntry("1 / 2 / 3",      "武器选择阶段快速选牌");
+        _AddEntry("Enter / Delete", "武器选择阶段跳过强化");
     }
 
     // ═══════════════════════════════════════════════
     // Tab: Zombie Codex
     // ═══════════════════════════════════════════════
 
-    private static readonly (string Name, string Desc, Color Color)[] ZombieEntries = new[]
-    {
-        ("基础僵尸", "最普通的僵尸，数量多但个体较弱", new Color(0.6f, 0.6f, 0.6f)),
-        ("快速僵尸", "移动速度快，难以甩脱", new Color(0.3f, 0.8f, 0.3f)),
-        ("坦克僵尸", "血量厚、伤害高，行动缓慢", new Color(0.5f, 0.5f, 0.7f)),
-        ("爆炸僵尸", "死亡时爆炸，对周围造成范围伤害", new Color(0.9f, 0.5f, 0.2f)),
-        ("隐身僵尸", "可以隐身，定期显形", new Color(0.4f, 0.6f, 0.8f)),
-        ("喷毒僵尸", "远距离发射毒液弹，造成持续伤害", new Color(0.4f, 0.8f, 0.3f)),
-        ("治疗僵尸", "会治愈附近的僵尸，应优先击杀", new Color(0.3f, 0.9f, 0.5f)),
-        ("召唤师僵尸", "召唤小僵尸助战", new Color(0.7f, 0.4f, 0.8f)),
-        ("射手僵尸", "远程射箭攻击", new Color(0.8f, 0.6f, 0.3f)),
-        ("飞船僵尸", "空中单位，成群出现", new Color(0.5f, 0.6f, 0.9f)),
-        ("机甲僵尸", "重型装甲，非常耐打", new Color(0.6f, 0.6f, 0.5f)),
-        ("骑士僵尸", "攻守兼备的精英单位", new Color(0.8f, 0.7f, 0.3f)),
-        ("飞龙僵尸", "强力空中单位，喷火攻击", new Color(0.9f, 0.3f, 0.2f)),
-        ("虫群僵尸", "小型虫类，单体弱但数量多", new Color(0.5f, 0.7f, 0.3f)),
-    };
-
     private void _BuildZombieTab()
     {
-        _AddTabTOC(new List<(string, string)>
-        {
-            ("zom_codex",  "▸ 僵尸图鉴（14 种基础僵尸）"),
-            ("zom_elite",  "▸ 精英前缀（再生/迅捷/爆炸）"),
-            ("zom_boss",   "▸ BOSS 僵尸"),
-        });
+        _AddChapter("基础僵尸");
+        _AddEntry("基础",   "数量多但个体较弱");
+        _AddEntry("快速",   "移动速度快,难以甩脱");
+        _AddEntry("坦克",   "血量厚、伤害高,行动缓慢");
+        _AddEntry("爆炸",   "死亡时爆炸,造成范围伤害");
+        _AddEntry("隐身",   "可以隐身,定期显形");
+        _AddEntry("喷毒",   "远距离发射毒液弹,造成持续伤害");
+        _AddEntry("治疗",   "会治愈附近僵尸,应优先击杀");
+        _AddEntry("召唤师", "召唤小僵尸助战");
+        _AddEntry("射手",   "远程射箭攻击");
+        _AddEntry("飞船",   "空中单位,成群出现");
+        _AddEntry("机甲",   "重型装甲,非常耐打");
+        _AddEntry("骑士",   "攻守兼备的精英单位");
+        _AddEntry("飞龙",   "强力空中单位,喷火攻击");
+        _AddEntry("虫群",   "小型虫类,单体弱但数量多");
 
-        _AddSectionLabel("-- 僵尸图鉴 --", "zom_codex");
+        _AddChapter("精英前缀");
+        _AddEntry("再生", "精英缓慢回复生命值");
+        _AddEntry("迅捷", "精英移动速度大幅提升");
+        _AddEntry("爆炸", "精英死亡时产生爆炸");
 
-        foreach (var entry in ZombieEntries)
-            _AddInfoCard(entry.Name, entry.Desc, entry.Color);
-
-        _AddSectionLabel("-- 精英前缀 --", "zom_elite");
-        _AddInfoCard("再生", "精英僵尸缓慢回复生命值", new Color(0.3f, 0.9f, 0.4f));
-        _AddInfoCard("迅捷", "精英僵尸移动速度大幅提升", new Color(0.3f, 0.7f, 1.0f));
-        _AddInfoCard("爆炸", "精英僵尸死亡时产生爆炸", new Color(0.9f, 0.4f, 0.2f));
-
-        _AddSectionLabel("-- BOSS --", "zom_boss");
-        _AddInfoCard("BOSS 僵尸", "每 5 回合出现一次\n体型巨大、属性强化为普通僵尸的数倍\n击杀后获得大量分数", new Color(0.9f, 0.2f, 0.2f));
+        _AddChapter("BOSS");
+        _AddEntry("BOSS", "每 5 回合出现一次。体型巨大、属性强化为普通数倍,击杀高分。");
     }
 
     // ═══════════════════════════════════════════════
@@ -326,35 +315,25 @@ public partial class HelpPanel : Panel
 
     private void _BuildWeaponTab()
     {
-        _AddTabTOC(new List<(string, string)>
-        {
-            ("wpn_type",   "▸ 武器类型（近战/远程/魔法/范围）"),
-            ("wpn_gear",   "▸ 装备 & 装备效果"),
-            ("wpn_effect", "▸ 武器特效（近战/远程/魔法）"),
-            ("wpn_quality","▸ 品质与强化"),
-        });
+        _AddChapter("武器类型");
+        _AddEntry("近战", "扇形斩击近距离敌人;可搭配溅射、多目标、击退");
+        _AddEntry("远程", "发射子弹打远处敌人;可搭配多射、穿透、轨迹");
+        _AddEntry("魔法", "追踪导弹自动锁定;可搭配魅惑、推力、链式闪电");
+        _AddEntry("范围", "爆炸范围伤害,适合清理密集敌群");
 
-        _AddSectionLabel("-- 武器类型 --", "wpn_type");
-        _AddInfoCard("近战", "扇形斩击攻击近距离敌人\n可搭配溅射、多目标、击退等效果", new Color(0.9f, 0.4f, 0.4f));
-        _AddInfoCard("远程", "发射子弹打击远处敌人\n可搭配多射、穿透、轨迹伤害等", new Color(0.5f, 0.7f, 0.9f));
-        _AddInfoCard("魔法", "发射追踪导弹，自动锁定敌人\n可搭配魅惑、推力、链式闪电等", new Color(0.7f, 0.5f, 0.9f));
-        _AddInfoCard("范围", "爆炸范围伤害\n适合清理密集敌群", new Color(0.9f, 0.7f, 0.3f));
+        _AddChapter("装备");
+        _AddEntry("装备",   "被动增强角色属性,不替换武器,可与武器叠加");
+        _AddEntry("防御类", "反伤:反弹伤害给攻击者;闪避:完全躲避;减控:缩短负面持续");
+        _AddEntry("攻击类", "穿透:贯穿更多敌人;弹跳:反弹多个目标;溅射:波及周围");
 
-        _AddSectionLabel("-- 装备 --", "wpn_gear");
-        _AddInfoCard("装备", "被动增强角色属性\n不会替换当前武器\n可与武器叠加装备", new Color(0.6f, 0.8f, 0.6f));
+        _AddChapter("武器特效");
+        _AddEntry("近战", "溅射/多目标/击杀爆炸/击杀护盾/击退");
+        _AddEntry("远程", "多射/轨迹伤害/回旋/穿透");
+        _AddEntry("魔法", "魅惑/推力/眩晕/链式/中毒");
 
-        _AddSectionLabel("-- 装备特殊效果 --", "wpn_gear");
-        _AddInfoCard("防御类", "反伤: 受伤时有几率反弹伤害给攻击者\n闪避: 有概率完全躲避一次攻击\n减控: 缩短受到的负面效果持续时间", new Color(0.5f, 0.8f, 0.7f));
-        _AddInfoCard("攻击类", "穿透: 子弹可贯穿更多敌人\n弹跳: 子弹反弹攻击多个目标\n溅射: 攻击波及周围敌人", new Color(0.85f, 0.6f, 0.4f));
-
-        _AddSectionLabel("-- 武器特效 --", "wpn_effect");
-        _AddInfoCard("近战特效", "溅射: 攻击波及周围敌人\n多目标: 同时攻击多个目标\n击杀爆炸: 击杀时产生爆炸\n击杀护盾: 击杀时获得护盾\n击退: 击退敌人", new Color(0.85f, 0.5f, 0.5f));
-        _AddInfoCard("远程特效", "多射: 发射多枚子弹\n轨迹伤害: 子弹路径造成伤害\n回旋: 子弹可返回\n穿透: 子弹穿透敌人", new Color(0.5f, 0.65f, 0.85f));
-        _AddInfoCard("魔法特效", "魅惑: 让敌人互相攻击\n推力: 击飞敌人\n眩晕: 短暂眩晕敌人\n链式: 伤害跳跃到附近敌人\n中毒: 持续伤害", new Color(0.65f, 0.5f, 0.85f));
-
-        _AddSectionLabel("-- 品质与强化 --", "wpn_quality");
-        _AddInfoCard("品质等级", "普通 (灰) < 稀有 (红) < 史诗 (金) < 传说\n高品质武器属性更强", new Color(0.85f, 0.75f, 0.5f));
-        _AddInfoCard("强化卡", "选中已有装备的强化卡\n直接提升装备属性和特效等级\n可能附带副作用", new Color(0.8f, 0.6f, 0.3f));
+        _AddChapter("品质与强化");
+        _AddEntry("品质", "普通(灰) < 稀有(红) < 史诗(金) < 传说");
+        _AddEntry("强化", "选中已有装备的强化卡,直接提升属性和特效");
     }
 
     // ═══════════════════════════════════════════════
@@ -363,192 +342,24 @@ public partial class HelpPanel : Panel
 
     private void _BuildMechanicsTab()
     {
-        _AddTabTOC(new List<(string, string)>
-        {
-            ("mch_round",   "▸ 回合流程"),
-            ("mch_combat",  "▸ 战斗机制（连击/暴击/吸血/护盾）"),
-            ("mch_status",  "▸ 状态效果（冰冻/中毒/魅惑/眩晕）"),
-            ("mch_drop",    "▸ 掉落物"),
-            ("mch_weather", "▸ 天气系统"),
-            ("mch_achieve", "▸ 成就系统"),
-        });
+        _AddChapter("回合流程");
+        _AddEntry("循环", "开始 → 选卡 → 战斗 → 结算。回合间恢复 20% 最大生命。");
 
-        _AddSectionLabel("-- 回合流程 --", "mch_round");
-        _AddInfoCard("回合循环", "每回合开始 → 选择武器卡牌 → 战斗 → 回合结算\n回合间恢复 20% 最大生命值", new Color(0.7f, 0.6f, 0.8f));
+        _AddChapter("战斗机制");
+        _AddEntry("连击", "连续击杀积累连击,加成最高 +50%。停止击杀会衰减。");
+        _AddEntry("暴击", "2.5x 伤害,装备可提升暴击率(上限 75%)");
+        _AddEntry("吸血", "命中后回复伤害值一定比例(上限 40%)");
+        _AddEntry("护盾", "装备护盾后,环绕的冰晶伤害并减速接近的敌人");
 
-        _AddSectionLabel("-- 战斗机制 --", "mch_combat");
-        _AddInfoCard("连击系统", "连续击杀僵尸积累连击\n连击越高，伤害加成越大 (最高 +50%)\n停止击杀后连击会衰减", new Color(1.0f, 0.6f, 0.2f));
-        _AddInfoCard("暴击", "暴击造成 2.5x 伤害\n暴击率可通过装备提升", new Color(0.9f, 0.5f, 0.7f));
-        _AddInfoCard("吸血", "命中后回复伤害值一定比例的生命", new Color(0.7f, 0.3f, 0.3f));
-        _AddInfoCard("护盾", "装备护盾领域后\n环绕的冰晶会伤害并减速接近的敌人", new Color(0.3f, 0.7f, 0.9f));
+        _AddChapter("状态效果");
+        _AddEntry("冰冻", "大幅降低敌人移速,持续约 0.8 秒");
+        _AddEntry("中毒", "持续伤害,持续约 3 秒");
+        _AddEntry("魅惑", "使敌人互相攻击,持续一段时间");
+        _AddEntry("眩晕", "短暂使敌人无法行动");
 
-        _AddSectionLabel("-- 状态效果 --", "mch_status");
-        _AddInfoCard("冰冻", "大幅降低敌人移动速度\n持续约 0.8 秒", new Color(0.4f, 0.8f, 1.0f));
-        _AddInfoCard("中毒", "对敌人造成持续伤害\n持续约 3 秒", new Color(0.4f, 0.9f, 0.3f));
-        _AddInfoCard("魅惑", "使敌人互相攻击\n持续一段时间", new Color(0.9f, 0.4f, 0.8f));
-        _AddInfoCard("眩晕", "短暂使敌人无法行动", new Color(0.8f, 0.8f, 0.4f));
-
-        _AddSectionLabel("-- 掉落物 --", "mch_drop");
-        _AddInfoCard("生命药水", "僵尸死亡后有概率掉落\n回复一定生命值", new Color(0.8f, 0.3f, 0.3f));
-        _AddInfoCard("技能书", "僵尸死亡后有概率掉落\n精英和 BOSS 掉落概率更高", new Color(0.4f, 0.5f, 0.9f));
-
-        _AddSectionLabel("-- 天气系统 --", "mch_weather");
-        _AddInfoCard("天气变化", "游戏中天气会随机变化\n暴风天气时可能额外生成僵尸", new Color(0.5f, 0.7f, 0.9f));
-
-        _AddSectionLabel("-- 成就系统 --", "mch_achieve");
-        _AddInfoCard("成就与里程碑", "完成特定目标解锁成就\n首次击杀、存活回合数、连击记录等\n成就会保存到存档中", new Color(0.9f, 0.8f, 0.3f));
-    }
-
-    // ═══════════════════════════════════════════════
-    // UI Helpers
-    // ═══════════════════════════════════════════════
-
-    private void _AddSectionLabel(string text, string? sectionId = null)
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(8, viewport, 4)) };
-        _contentContainer.AddChild(spacer);
-
-        var banner = new Panel();
-        if (sectionId != null) banner.Name = sectionId;  // 供锚点跳转用
-        banner.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(26, viewport, 20));
-        banner.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        var bannerStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(BloodBright, 0.15f),
-            BorderWidthBottom = UiOutlineNorm,
-            BorderColor = new Color(BloodBright, 0.5f),
-            ContentMarginLeft = ResponsiveUi.Px(12, viewport, 6),
-            ContentMarginRight = ResponsiveUi.Px(8, viewport, 4),
-            ContentMarginTop = ResponsiveUi.Px(3, viewport, 2),
-            ContentMarginBottom = ResponsiveUi.Px(3, viewport, 2)
-        };
-        banner.AddThemeStyleboxOverride("panel", bannerStyle);
-        _contentContainer.AddChild(banner);
-
-        var label = new Label
-        {
-            Text = "▎ " + text,
-            VerticalAlignment = VerticalAlignment.Center
-        };
-        label.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
-        label.AddThemeColorOverride("font_color", BattlefieldBright);
-        label.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        label.AddThemeColorOverride("font_outline_color", InkBlack);
-        banner.AddChild(label);
-
-        var spacer2 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(4, viewport, 2)) };
-        _contentContainer.AddChild(spacer2);
-    }
-
-    /// <summary>在 Tab 顶部加一个"章节目录"区，每个条目可点击滚动到对应 section。
-    /// entries 列表 (sectionId, 显示文本) — sectionId 须与 _AddSectionLabel 的 sectionId 一致。</summary>
-    private void _AddTabTOC(List<(string sectionId, string label)> entries)
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-
-        var tocBox = new VBoxContainer();
-        tocBox.Name = "TabTOC";
-        tocBox.AddThemeConstantOverride("separation", ResponsiveUi.Px(2, viewport, 1));
-        _contentContainer.AddChild(tocBox);
-
-        foreach (var (sectionId, label) in entries)
-        {
-            var btn = new Button
-            {
-                Text = $"  {label}",
-                FocusMode = FocusModeEnum.None,
-                Alignment = HorizontalAlignment.Left
-            };
-            btn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 10));
-            btn.AddThemeColorOverride("font_color", new Color(NoteText, 0.85f));
-            var style = new StyleBoxFlat
-            {
-                BgColor = new Color(NoteBg, 0.4f),
-                BorderColor = new Color(NoteBorder, 0.3f),
-                BorderWidthBottom = 1,
-                ContentMarginLeft = ResponsiveUi.Px(8, viewport, 4),
-                ContentMarginRight = ResponsiveUi.Px(8, viewport, 4),
-                ContentMarginTop = ResponsiveUi.Px(2, viewport, 1),
-                ContentMarginBottom = ResponsiveUi.Px(2, viewport, 1),
-            };
-            btn.AddThemeStyleboxOverride("normal", style);
-            var hoverStyle = (StyleBoxFlat)style.Duplicate();
-            hoverStyle.BgColor = new Color(NoteBg, 0.65f);
-            btn.AddThemeStyleboxOverride("hover", hoverStyle);
-            btn.Pressed += () => _ScrollToSection(sectionId);
-            tocBox.AddChild(btn);
-        }
-
-        var tocSpacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(8, viewport, 4)) };
-        _contentContainer.AddChild(tocSpacer);
-    }
-
-    /// <summary>滚动到指定 sectionId 的 banner 位置（带 tween 平滑动画）。</summary>
-    private void _ScrollToSection(string sectionId)
-    {
-        var section = _contentContainer.GetNodeOrNull<Panel>(sectionId);
-        if (section == null) return;
-        if (_contentContainer.GetParent() is not ScrollContainer scroll) return;
-
-        // target Y = banner.GlobalPosition.Y - scroll.GlobalPosition.Y + scroll.ScrollVertical
-        int targetY = (int)(section.GlobalPosition.Y - scroll.GlobalPosition.Y) + scroll.ScrollVertical
-                      - ResponsiveUi.Px(8, ResponsiveUi.ViewportSize(this), 4);
-        targetY = Mathf.Max(0, targetY);
-
-        var tween = CreateTween();
-        tween.TweenProperty(scroll, "scroll_vertical", targetY, 0.25f)
-             .SetTrans(Tween.TransitionType.Cubic)
-             .SetEase(Tween.EaseType.Out);
-    }
-
-    private void _AddInfoCard(string title, string content, Color accentColor)
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-
-        var cardStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(NoteBg, 0.55f),
-            BorderWidthLeft = 4,
-            BorderColor = new Color(accentColor, 0.8f),
-            CornerRadiusTopLeft = 4,
-            CornerRadiusTopRight = 4,
-            CornerRadiusBottomLeft = 4,
-            CornerRadiusBottomRight = 4,
-            ContentMarginLeft = ResponsiveUi.Px(14, viewport, 8),
-            ContentMarginRight = ResponsiveUi.Px(12, viewport, 6),
-            ContentMarginTop = ResponsiveUi.Px(8, viewport, 4),
-            ContentMarginBottom = ResponsiveUi.Px(8, viewport, 4)
-        };
-
-        var card = new PanelContainer();
-        card.SizeFlagsHorizontal = SizeFlags.ExpandFill;
-        card.AddThemeStyleboxOverride("panel", cardStyle);
-        _contentContainer.AddChild(card);
-
-        var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(3, viewport, 2));
-        card.AddChild(vbox);
-
-        var titleLabel = new Label { Text = title };
-        titleLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontBody, viewport, 12));
-        titleLabel.AddThemeColorOverride("font_color", accentColor);
-        titleLabel.AddThemeConstantOverride("outline_size", UiOutlineThin);
-        titleLabel.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.4f));
-        vbox.AddChild(titleLabel);
-
-        var contentLabel = new Label
-        {
-            Text = content,
-            AutowrapMode = TextServer.AutowrapMode.WordSmart,
-            SizeFlagsHorizontal = SizeFlags.ExpandFill
-        };
-        contentLabel.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 10));
-        contentLabel.AddThemeColorOverride("font_color", NoteText);
-        vbox.AddChild(contentLabel);
-
-        var spacer = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(3, viewport, 2)) };
-        _contentContainer.AddChild(spacer);
+        _AddChapter("其他系统");
+        _AddEntry("掉落", "生命药水回血;技能书在精英和 BOSS 掉落概率更高");
+        _AddEntry("天气", "暴风天气时可能额外生成僵尸");
+        _AddEntry("成就", "完成特定目标解锁,首杀/存活/连击记录保存到存档");
     }
 }
