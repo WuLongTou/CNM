@@ -18,13 +18,13 @@ public enum ResourceType { Wood, Stone, Fiber, Berry }
 /// </summary>
 public sealed partial class ResourceNode : Node2D, IDamageable
 {
-    // 资源节点 3D mesh 缓存（按 variant 1/2/3/4 索引）
-    private static readonly Dictionary<int, Mesh?> _meshByVariant = new()
+    // 按 variant 索引的路径（_Ready 时加载为 Mesh）
+    private static readonly Dictionary<int, string> _meshPathByVariant = new()
     {
-        [1] = ModelLoader.LoadMesh("res://assets/models/resources/tree.glb"),
-        [2] = ModelLoader.LoadMesh("res://assets/models/resources/stone.glb"),
-        [3] = ModelLoader.LoadMesh("res://assets/models/resources/bush.glb"),
-        [4] = ModelLoader.LoadMesh("res://assets/models/resources/berry_bush.glb"),
+        [1] = "res://assets/models/resources/tree.glb",
+        [2] = "res://assets/models/resources/stone.glb",
+        [3] = "res://assets/models/resources/bush.glb",
+        [4] = "res://assets/models/resources/berry_bush.glb",
     };
 
     public ResourceType Type;
@@ -62,14 +62,18 @@ public sealed partial class ResourceNode : Node2D, IDamageable
         AddToGroup("mm_resource"); // 小地图标记（后续扩展）
 
         // 主视觉：MeshInstance2D 渲染 .glb 3D 模型
-        if (_meshByVariant.TryGetValue(_variant, out var mesh) && mesh != null)
+        if (_meshPathByVariant.TryGetValue(_variant, out var path))
         {
-            _meshInstance = new MeshInstance2D
+            var mesh = ModelLoader.GetMesh(path);
+            if (mesh != null)
             {
-                Mesh = mesh,
-                Scale = new Vector2(_size / 48f, _size / 48f),  // _size=60 → scale 1.25
-            };
-            AddChild(_meshInstance);
+                _meshInstance = new MeshInstance2D
+                {
+                    Mesh = mesh,
+                    Scale = new Vector2(_size / 48f, _size / 48f),
+                };
+                AddChild(_meshInstance);
+            }
         }
         // 兜底：若 mesh 缺失，QueueRedraw 走老的 _Draw 路径
         QueueRedraw();

@@ -12,10 +12,6 @@ using ZombieWars.Core;
 /// </summary>
 public partial class Workbench : Area2D
 {
-    // 工作台 3D mesh（Blender .glb）
-    private static readonly Mesh? _mesh =
-        ModelLoader.LoadMesh("res://assets/models/props/workbench.glb");
-
     private bool _playerNear;
     private Label? _hint;
 
@@ -32,8 +28,9 @@ public partial class Workbench : Area2D
         ZIndex = 1;
 
         // 主视觉：MeshInstance2D 渲染 .glb
-        if (_mesh != null)
-            AddChild(new MeshInstance2D { Mesh = _mesh });
+        var wbMesh = ModelLoader.GetMesh("res://assets/models/props/workbench.glb");
+        if (wbMesh != null)
+            AddChild(new MeshInstance2D { Mesh = wbMesh });
 
         _hint = new Label { Text = "按 E 合成", Position = new Vector2(-36, -56), ZIndex = 8 };
         _hint.AddThemeFontSizeOverride("font_size", 14);

@@ -45,6 +45,10 @@ RENDER_ENGINE = "BLENDER_EEVEE"  # Eevee 快速
 RENDER_SAMPLES = 64
 FILM_TRANSPARENT = True  # 透明背景
 
+# 全局标志：gltf 格式时设为 True，使 make_material 用纯 Emission 着色
+# （Godot MeshInstance2D 在 2D 场景无光照，纯 Emission 保证颜色可见）
+EMISSION_ONLY_MODE = False
+
 # ─── 工具函数 ────────────────────────────────────────────────
 
 def clear_scene():
@@ -59,13 +63,32 @@ def clear_scene():
 
 
 def make_material(name, rgba, roughness=0.75, metallic=0.0):
-    """创建统一 PBR 材质（Principled BSDF）。"""
+    """创建材质。
+
+    全局标志 EMISSION_ONLY_MODE：
+    - True → 纯 Emission（gltf 格式，Godot 2D 无光照仍可见色）
+    - False → PBR + Emission（PNG/ground 格式，Eevee 渲染保留细节）
+    """
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    bsdf.inputs["Base Color"].default_value = rgba
-    bsdf.inputs["Roughness"].default_value = roughness
-    bsdf.inputs["Metallic"].default_value = metallic
+
+    if EMISSION_ONLY_MODE:
+        # 移除 Principled BSDF，换 Emission
+        mat.node_tree.nodes.remove(mat.node_tree.nodes["Principled BSDF"])
+        emit = mat.node_tree.nodes.new("ShaderNodeEmission")
+        emit.inputs["Color"].default_value = rgba
+        emit.inputs["Strength"].default_value = 1.0
+        mat.node_tree.links.new(
+            emit.outputs["Emission"],
+            mat.node_tree.nodes["Material Output"].inputs["Surface"])
+    else:
+        # PBR + Emission（ground/png 格式用）
+        bsdf = mat.node_tree.nodes["Principled BSDF"]
+        bsdf.inputs["Base Color"].default_value = rgba
+        bsdf.inputs["Roughness"].default_value = roughness
+        bsdf.inputs["Metallic"].default_value = metallic
+        bsdf.inputs["Emission Color"].default_value = rgba
+        bsdf.inputs["Emission Strength"].default_value = 0.6
     return mat
 
 
@@ -215,9 +238,18 @@ def make_altar():
     stone = make_material("AltarStone", PALETTE["stone"], roughness=0.9)
     stone_dk = make_material("AltarStoneDk", PALETTE["stone_dark"], roughness=0.9)
     crystal = make_material("AltarCrystal", PALETTE["crystal"], roughness=0.1, metallic=0.0)
-    # crystal 加发光
-    crystal.node_tree.nodes["Principled BSDF"].inputs["Emission Color"].default_value = (0.4, 0.7, 1.0, 1.0)
-    crystal.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = 0.6
+    # crystal 加发光：Emission 模式默认 str=1.0 已够亮，PBR 模式额外设
+    if EMISSION_ONLY_MODE:
+        # Emission shader: 亮蓝色辉光
+        emit = crystal.node_tree.nodes.get("Emission")
+        if emit:
+            emit.inputs["Color"].default_value = (0.4, 0.7, 1.0, 1.0)
+            emit.inputs["Strength"].default_value = 1.8
+    else:
+        bsdf = crystal.node_tree.nodes.get("Principled BSDF")
+        if bsdf:
+            bsdf.inputs["Emission Color"].default_value = (0.4, 0.7, 1.0, 1.0)
+            bsdf.inputs["Emission Strength"].default_value = 0.6
 
     # 底座（双层圆台）
     base1 = add_cylinder("base1", 0, 0, -0.3, 0.55, 0.18, stone)
@@ -761,6 +793,11 @@ def render_item(item, out_dir):
     """
     canvas_size = item.get("canvas_size", 96)
     fmt = item.get("format", "png")
+
+    # 全局标志：gltf → Emission Only（Godot 2D 无光照）
+    global EMISSION_ONLY_MODE
+    EMISSION_ONLY_MODE = (fmt == "gltf")
+
     rel_path = item["output"]
     output_path = Path(out_dir) / rel_path
     output_path.parent.mkdir(parents=True, exist_ok=True)

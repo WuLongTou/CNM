@@ -12,15 +12,6 @@ using ZombieWars.Vfx;
 /// </summary>
 public partial class Chest : Area2D
 {
-    // 宝箱 4 帧 mesh（盖子 0°/30°/60°/90° 开启过程）
-    private static readonly Mesh?[] _chestMeshes = new Mesh?[]
-    {
-        ModelLoader.LoadMesh("res://assets/models/props/chest_0.glb"),
-        ModelLoader.LoadMesh("res://assets/models/props/chest_1.glb"),
-        ModelLoader.LoadMesh("res://assets/models/props/chest_2.glb"),
-        ModelLoader.LoadMesh("res://assets/models/props/chest_3.glb"),
-    };
-
     public int LootCount { get; set; } = 2;
 
     private bool _opened;
@@ -28,6 +19,7 @@ public partial class Chest : Area2D
     private float _openAnim;
     private MeshInstance2D? _chestInstance;
     private int _currentFrame = -1;
+    private Mesh?[]? _chestFrames;
 
     public override void _Ready()
     {
@@ -41,10 +33,17 @@ public partial class Chest : Area2D
 
         ZIndex = 1;
 
-        // 主视觉：MeshInstance2D 渲染 4 帧 chest 动画
-        if (_chestMeshes[0] != null)
+        // 惰性加载 4 帧 chest mesh（_Ready 时 Godot 资源系统已就绪）
+        _chestFrames = new Mesh?[]
         {
-            _chestInstance = new MeshInstance2D { Mesh = _chestMeshes[0] };
+            ModelLoader.GetMesh("res://assets/models/props/chest_0.glb"),
+            ModelLoader.GetMesh("res://assets/models/props/chest_1.glb"),
+            ModelLoader.GetMesh("res://assets/models/props/chest_2.glb"),
+            ModelLoader.GetMesh("res://assets/models/props/chest_3.glb"),
+        };
+        if (_chestFrames[0] != null)
+        {
+            _chestInstance = new MeshInstance2D { Mesh = _chestFrames[0] };
             AddChild(_chestInstance);
         }
 
@@ -68,9 +67,9 @@ public partial class Chest : Area2D
             _openAnim = Mathf.Min(1f, _openAnim + (float)delta / 0.35f);
             // 切换 chest mesh 帧（0/1/2/3 对应开启动画 0%/33%/66%/100%）
             int frame = Mathf.Min(3, (int)(_openAnim * 3.99f));
-            if (frame != _currentFrame && _chestInstance != null && _chestMeshes[frame] != null)
+            if (frame != _currentFrame && _chestInstance != null && _chestFrames != null && _chestFrames[frame] != null)
             {
-                _chestInstance.Mesh = _chestMeshes[frame];
+                _chestInstance.Mesh = _chestFrames[frame];
                 _currentFrame = frame;
             }
             QueueRedraw();

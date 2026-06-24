@@ -1,87 +1,41 @@
 {
-  "version": 4,
-  "description": "Blender 烘焙清单 —— 9 张地面大纹理 + 障碍物 + 探索道具 + 资源节点",
+  "version": 5,
+  "description": "完整清单 — 26 .glb + 9 地面（Emission 自发光修复）",
   "items": [
-    {
-      "key": "ground_graveyard",
-      "model": "ground",
-      "format": "ground",
-      "seed": 11111,
-      "tint": [0.88, 0.90, 0.92, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_graveyard.png"
-    },
-    {
-      "key": "ground_ruins",
-      "model": "ground",
-      "format": "ground",
-      "seed": 22222,
-      "tint": [0.92, 0.88, 0.82, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_ruins.png"
-    },
-    {
-      "key": "ground_dungeon",
-      "model": "ground",
-      "format": "ground",
-      "seed": 33333,
-      "tint": [0.65, 0.68, 0.75, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_dungeon.png"
-    },
-    {
-      "key": "ground_swamp",
-      "model": "ground",
-      "format": "ground",
-      "seed": 44444,
-      "tint": [0.65, 0.75, 0.60, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_swamp.png"
-    },
-    {
-      "key": "ground_cathedral",
-      "model": "ground",
-      "format": "ground",
-      "seed": 55555,
-      "tint": [0.88, 0.82, 0.75, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_cathedral.png"
-    },
-    {
-      "key": "ground_wasteland",
-      "model": "ground",
-      "format": "ground",
-      "seed": 66666,
-      "tint": [0.88, 0.75, 0.60, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_wasteland.png"
-    },
-    {
-      "key": "ground_glacier",
-      "model": "ground",
-      "format": "ground",
-      "seed": 77777,
-      "tint": [0.80, 0.88, 0.92, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_glacier.png"
-    },
-    {
-      "key": "ground_volcano",
-      "model": "ground",
-      "format": "ground",
-      "seed": 88888,
-      "tint": [0.50, 0.34, 0.28, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_volcano.png"
-    },
-    {
-      "key": "ground_desert",
-      "model": "ground",
-      "format": "ground",
-      "seed": 99999,
-      "tint": [0.86, 0.76, 0.52, 1.0],
-      "canvas_size": 1920,
-      "output": "ground/ground_desert.png"
-    }
+    {"key":"chest_0","model":"chest","args":{"lid_tilt":0},"format":"gltf","output":"props/chest_0.glb"},
+    {"key":"chest_1","model":"chest","args":{"lid_tilt":30},"format":"gltf","output":"props/chest_1.glb"},
+    {"key":"chest_2","model":"chest","args":{"lid_tilt":60},"format":"gltf","output":"props/chest_2.glb"},
+    {"key":"chest_3","model":"chest","args":{"lid_tilt":90},"format":"gltf","output":"props/chest_3.glb"},
+    {"key":"altar","model":"altar","format":"gltf","output":"props/altar.glb"},
+    {"key":"workbench","model":"workbench","format":"gltf","output":"props/workbench.glb"},
+    {"key":"forge","model":"forge","format":"gltf","output":"props/forge_station.glb"},
+    {"key":"tree","model":"tree","format":"gltf","output":"resources/tree.glb"},
+    {"key":"stone","model":"stone","format":"gltf","output":"resources/stone.glb"},
+    {"key":"bush","model":"bush","args":{"berry":false},"format":"gltf","output":"resources/bush.glb"},
+    {"key":"berry","model":"bush","args":{"berry":true},"format":"gltf","output":"resources/berry_bush.glb"},
+    {"key":"sol_stone","model":"stone_block","format":"gltf","output":"obstacles/solid_stone_block.glb"},
+    {"key":"sol_tomb","model":"tombstone_row","format":"gltf","output":"obstacles/solid_tombstone_row.glb"},
+    {"key":"sol_pillar","model":"pillar","format":"gltf","output":"obstacles/solid_pillar.glb"},
+    {"key":"sol_metal","model":"metal_bunker","format":"gltf","output":"obstacles/solid_metal_bunker.glb"},
+    {"key":"sol_obelisk","model":"obelisk","format":"gltf","output":"obstacles/solid_obelisk.glb"},
+    {"key":"sol_arch","model":"archway","format":"gltf","output":"obstacles/solid_archway.glb"},
+    {"key":"sol_tree","model":"giant_tree","format":"gltf","output":"obstacles/solid_giant_tree.glb"},
+    {"key":"sol_tower","model":"tower","format":"gltf","output":"obstacles/solid_tower.glb"},
+    {"key":"dest_wood","model":"wood_fence","format":"gltf","output":"obstacles/destruct_wood_fence.glb"},
+    {"key":"dest_stone","model":"stone_rubble","format":"gltf","output":"obstacles/destruct_stone_rubble.glb"},
+    {"key":"explosive","model":"explosive_barrel","format":"gltf","output":"obstacles/explosive_barrel.glb"},
+    {"key":"low_water","model":"water_puddle","format":"gltf","output":"obstacles/low_water_puddle.glb"},
+    {"key":"low_grass","model":"grass_low","format":"gltf","output":"obstacles/low_grass.glb"},
+    {"key":"haz_toxic","model":"toxic_swamp","format":"gltf","output":"obstacles/hazard_toxic.glb"},
+    {"key":"haz_fire","model":"fire_ground","format":"gltf","output":"obstacles/hazard_fire.glb"},
+    {"key":"g_graveyard","model":"ground","format":"ground","seed":11111,"tint":[0.88,0.90,0.92,1],"canvas_size":1920,"output":"ground/ground_graveyard.png"},
+    {"key":"g_ruins","model":"ground","format":"ground","seed":22222,"tint":[0.92,0.88,0.82,1],"canvas_size":1920,"output":"ground/ground_ruins.png"},
+    {"key":"g_dungeon","model":"ground","format":"ground","seed":33333,"tint":[0.65,0.68,0.75,1],"canvas_size":1920,"output":"ground/ground_dungeon.png"},
+    {"key":"g_swamp","model":"ground","format":"ground","seed":44444,"tint":[0.65,0.75,0.60,1],"canvas_size":1920,"output":"ground/ground_swamp.png"},
+    {"key":"g_cathedral","model":"ground","format":"ground","seed":55555,"tint":[0.88,0.82,0.75,1],"canvas_size":1920,"output":"ground/ground_cathedral.png"},
+    {"key":"g_wasteland","model":"ground","format":"ground","seed":66666,"tint":[0.88,0.75,0.60,1],"canvas_size":1920,"output":"ground/ground_wasteland.png"},
+    {"key":"g_glacier","model":"ground","format":"ground","seed":77777,"tint":[0.80,0.88,0.92,1],"canvas_size":1920,"output":"ground/ground_glacier.png"},
+    {"key":"g_volcano","model":"ground","format":"ground","seed":88888,"tint":[0.50,0.34,0.28,1],"canvas_size":1920,"output":"ground/ground_volcano.png"},
+    {"key":"g_desert","model":"ground","format":"ground","seed":99999,"tint":[0.86,0.76,0.52,1],"canvas_size":1920,"output":"ground/ground_desert.png"}
   ]
 }

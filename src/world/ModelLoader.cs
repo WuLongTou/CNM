@@ -1,33 +1,71 @@
 namespace ZombieWars.World;
 
+using System.Collections.Generic;
 using Godot;
+using ZombieWars.Core;
 
 /// <summary>
-/// 3D 模型（.glb）加载工具 —— 烘焙自 Blender，导入 Godot 后为 PackedScene。
-/// 提取场景内第一个 MeshInstance3D 的 Mesh 资源，缓存为静态字段。
+/// 3D 模型（.glb）加载工具 — 惰性加载 + 缓存 Mesh。
 ///
-/// 用法：
-///   private static readonly Mesh? _mesh = ModelLoader.LoadMesh("res://assets/models/foo.glb");
-///   var mi = new MeshInstance2D { Mesh = _mesh, Scale = new Vector2(2, 2) };
-///   AddChild(mi);
+/// 关键：Godot 的 ResourceLoader 必须在引擎初始化后才能调用，不能放在
+/// static readonly 字段 = ... 中（CLR 会在 Godot ready 前跑 .cctor）。
+/// 所以改用 Lazy 包装，首次 GetMesh() 时真正加载。
 ///
-/// 兜底：路径不存在 / Mesh 提取失败时返回 null，调用方继续走老的 _Draw 路径。
+/// Emission-only 材质（Blender 烘焙用纯 Emission 适配 2D 无光照场景）。
 /// </summary>
 public static class ModelLoader
 {
-    /// <summary>从 .glb PackedScene 提取第一个 Mesh。失败返回 null。</summary>
-    public static Mesh? LoadMesh(string scenePath)
+    private static readonly Dictionary<string, Mesh?> _cache = new();
+    private static readonly HashSet<string> _failed = new();
+    private static readonly HashSet<string> _logged = new();
+    private static readonly object _lock = new();
+
+    /// <summary>获取 .glb 中的 Mesh（惰性加载 + 缓存）。不存在返回 null。</summary>
+    public static Mesh? GetMesh(string scenePath)
     {
-        if (!ResourceLoader.Exists(scenePath)) return null;
-        var ps = ResourceLoader.Load<PackedScene>(scenePath);
-        if (ps == null) return null;
-        var inst = ps.Instantiate();
-        var mi3d = FindFirstMeshInstance3D(inst);
-        Mesh? mesh = mi3d?.Mesh;
-        inst.QueueFree();
-        return mesh;
+        lock (_lock)
+        {
+            if (_failed.Contains(scenePath)) return null;
+            if (_cache.TryGetValue(scenePath, out var m)) return m;
+
+            if (!ResourceLoader.Exists(scenePath))
+            {
+                _failed.Add(scenePath);
+                if (!_logged.Contains(scenePath))
+                { LogUtils.Print($"[ModelLoader] 路径不存在: {scenePath}"); _logged.Add(scenePath); }
+                return null;
+            }
+            var ps = ResourceLoader.Load<PackedScene>(scenePath);
+            if (ps == null)
+            {
+                _failed.Add(scenePath);
+                if (!_logged.Contains(scenePath))
+                { LogUtils.Print($"[ModelLoader] 加载 PackedScene 失败: {scenePath}"); _logged.Add(scenePath); }
+                return null;
+            }
+            var inst = ps.Instantiate();
+            var mi3d = FindFirstMeshInstance3D(inst);
+            Mesh? mesh = mi3d?.Mesh;
+            if (mesh != null) mesh = (Mesh)mesh.Duplicate();
+            inst.QueueFree();
+
+            if (mesh != null)
+            {
+                _cache[scenePath] = mesh;
+                if (!_logged.Contains(scenePath))
+                { LogUtils.Print($"[ModelLoader] ✓ {scenePath}"); _logged.Add(scenePath); }
+            }
+            else
+            {
+                _failed.Add(scenePath);
+                if (!_logged.Contains(scenePath))
+                { LogUtils.Print($"[ModelLoader] ✗ 未识别 Mesh: {scenePath}"); _logged.Add(scenePath); }
+            }
+            return mesh;
+        }
     }
 
+    /// <summary>查找节点树中第一个 MeshInstance3D。</summary>
     private static MeshInstance3D? FindFirstMeshInstance3D(Node node)
     {
         if (node is MeshInstance3D mi) return mi;

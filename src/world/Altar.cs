@@ -13,10 +13,6 @@ using static ZombieWars.Core.GameEnums;
 /// </summary>
 public partial class Altar : Area2D
 {
-    // 祭坛 3D mesh（Blender .glb 烘焙）
-    private static readonly Mesh? _altarMesh =
-        ModelLoader.LoadMesh("res://assets/models/props/altar.glb");
-
     public enum BoonKind { Damage, Heal, Shield, Haste, WeaponFusion }
     public BoonKind Boon { get; set; } = BoonKind.Damage;
     /// <summary>融合祭坛的"对偶武器"名：玩家武器与此名匹配方可触发融合。</summary>
@@ -50,11 +46,12 @@ public partial class Altar : Area2D
         ZIndex = 1;
 
         // 主视觉：MeshInstance2D 渲染 .glb 模型，5 种 boon 用 Modulate 调色
-        if (_altarMesh != null)
+        var altarMesh = ModelLoader.GetMesh("res://assets/models/props/altar.glb");
+        if (altarMesh != null)
         {
             _altarInstance = new MeshInstance2D
             {
-                Mesh = _altarMesh,
+                Mesh = altarMesh,
                 Modulate = _BoonColor(),
             };
             AddChild(_altarInstance);

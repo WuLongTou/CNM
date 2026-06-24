@@ -5,10 +5,6 @@ using ZombieWars.Core;
 
 public partial class ForgeStation : Area2D
 {
-    // 锻造台 3D mesh（Blender .glb）
-    private static readonly Mesh? _mesh =
-        ModelLoader.LoadMesh("res://assets/models/props/forge_station.glb");
-
     private bool _playerNear;
     private Label? _hint;
 
@@ -25,8 +21,9 @@ public partial class ForgeStation : Area2D
         ZIndex = 1;
 
         // 主视觉：MeshInstance2D 渲染 .glb
-        if (_mesh != null)
-            AddChild(new MeshInstance2D { Mesh = _mesh });
+        var fgMesh = ModelLoader.GetMesh("res://assets/models/props/forge_station.glb");
+        if (fgMesh != null)
+            AddChild(new MeshInstance2D { Mesh = fgMesh });
 
         _hint = new Label { Text = "按 F 锻造", Position = new Vector2(-36, -56), ZIndex = 8 };
         _hint.AddThemeFontSizeOverride("font_size", 14);

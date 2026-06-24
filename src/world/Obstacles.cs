@@ -59,18 +59,18 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
 {
     // Solid 障碍 3D mesh 缓存（按 variant 0-9 索引）
     // 注：variant 0 砖石墙使用 4 共享（DrawStoneBlock 通用）
-    private static readonly Dictionary<int, Mesh?> _solidMeshByVariant = new()
+    private static readonly Dictionary<int, string> _solidMeshPathByVariant = new()
     {
-        [0] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_stone_block.glb"),
-        [1] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_tombstone_row.glb"),
-        [2] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_pillar.glb"),  // 注：枯树 variant 2 借用石柱（2.5D 演示）
-        [3] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_pillar.glb"),
-        [4] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_stone_block.glb"),
-        [5] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_metal_bunker.glb"),
-        [6] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_obelisk.glb"),
-        [7] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_archway.glb"),
-        [8] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_giant_tree.glb"),
-        [9] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_tower.glb"),
+        [0] = "res://assets/models/obstacles/solid_stone_block.glb",
+        [1] = "res://assets/models/obstacles/solid_tombstone_row.glb",
+        [2] = "res://assets/models/obstacles/solid_pillar.glb",
+        [3] = "res://assets/models/obstacles/solid_pillar.glb",
+        [4] = "res://assets/models/obstacles/solid_stone_block.glb",
+        [5] = "res://assets/models/obstacles/solid_metal_bunker.glb",
+        [6] = "res://assets/models/obstacles/solid_obelisk.glb",
+        [7] = "res://assets/models/obstacles/solid_archway.glb",
+        [8] = "res://assets/models/obstacles/solid_giant_tree.glb",
+        [9] = "res://assets/models/obstacles/solid_tower.glb",
     };
 
     private Vector2 _size;
@@ -113,14 +113,18 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
     public override void _Ready()
     {
         // 主视觉：MeshInstance2D 加载对应 variant 的 .glb
-        if (_solidMeshByVariant.TryGetValue(_variant, out var mesh) && mesh != null)
+        if (_solidMeshPathByVariant.TryGetValue(_variant, out var meshPath))
         {
-            _meshInstance = new MeshInstance2D
+            var solidMesh = ModelLoader.GetMesh(meshPath);
+            if (solidMesh != null)
             {
-                Mesh = mesh,
-                Scale = _ComputeScale(),
-            };
-            AddChild(_meshInstance);
+                _meshInstance = new MeshInstance2D
+                {
+                    Mesh = solidMesh,
+                    Scale = _ComputeScale(),
+                };
+                AddChild(_meshInstance);
+            }
         }
         // 兜底：mesh 缺失时走老 _Draw
         if (_meshInstance == null) QueueRedraw();
@@ -150,8 +154,8 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
 public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IObstacleSetup
 {
     // Destructible 障碍 3D mesh（variant 2/3 = 木栅栏，其他 = 石堆）
-    private static readonly Mesh? _woodFenceMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/destruct_wood_fence.glb");
-    private static readonly Mesh? _stoneRubbleMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/destruct_stone_rubble.glb");
+    private static readonly string _woodFencePath = "res://assets/models/obstacles/destruct_wood_fence.glb";
+    private static readonly string _stoneRubblePath = "res://assets/models/obstacles/destruct_stone_rubble.glb";
 
     private Vector2 _size;
     private int _variant;
@@ -205,12 +209,13 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     {
         AddToGroup("destructibles");
         // 主视觉：MeshInstance2D 加载对应 variant 的 .glb
-        var mesh = _variant is 2 or 3 ? _woodFenceMesh : _stoneRubbleMesh;
-        if (mesh != null)
+        var meshPath = _variant is 2 or 3 ? _woodFencePath : _stoneRubblePath;
+        var desMesh = ModelLoader.GetMesh(meshPath);
+        if (desMesh != null)
         {
             _meshInstance = new MeshInstance2D
             {
-                Mesh = mesh,
+                Mesh = desMesh,
                 Scale = new Vector2(_size.X / 1.0f, _size.Y / 1.0f),
             };
             AddChild(_meshInstance);
@@ -341,7 +346,7 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
 // ── 爆炸桶：可破坏战术物，破碎时范围爆炸 + 击退（实现 IDamageable）──
 public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstacleSetup
 {
-    private static readonly Mesh? _barrelMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/explosive_barrel.glb");
+    private static readonly string _barrelPath = "res://assets/models/obstacles/explosive_barrel.glb";
 
     private Vector2 _size;
     private readonly int _maxHealth = GameConfig.ExplosiveBarrelHealth;
@@ -392,11 +397,12 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     public override void _Ready()
     {
         AddToGroup("destructibles");
-        if (_barrelMesh != null)
+        var barrelMesh = ModelLoader.GetMesh(_barrelPath);
+        if (barrelMesh != null)
         {
             _meshInstance = new MeshInstance2D
             {
-                Mesh = _barrelMesh,
+                Mesh = barrelMesh,
                 Scale = new Vector2(_size.X / 0.5f, _size.Y / 0.5f),
             };
             AddChild(_meshInstance);
@@ -510,8 +516,8 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
 public sealed partial class LowObstacle : Area2D, IObstacleSetup
 {
     // Low 障碍 3D mesh（variant 1 = 水洼，其他 = 草丛）
-    private static readonly Mesh? _waterMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/low_water_puddle.glb");
-    private static readonly Mesh? _grassMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/low_grass.glb");
+    private static readonly string _waterPath = "res://assets/models/obstacles/low_water_puddle.glb";
+    private static readonly string _grassPath = "res://assets/models/obstacles/low_grass.glb";
 
     private Vector2 _size;
     private int _variant;
@@ -536,12 +542,13 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
     public override void _Ready()
     {
         // variant 1 = 水洼，其他 = 草丛
-        var mesh = _variant == 1 ? _waterMesh : _grassMesh;
-        if (mesh != null)
+        var lowPath = _variant == 1 ? _waterPath : _grassPath;
+        var lowMesh = ModelLoader.GetMesh(lowPath);
+        if (lowMesh != null)
         {
             _meshInstance = new MeshInstance2D
             {
-                Mesh = mesh,
+                Mesh = lowMesh,
                 Scale = new Vector2(_size.X / 0.9f, _size.Y / 0.9f),
             };
             AddChild(_meshInstance);
@@ -606,8 +613,8 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
 public sealed partial class HazardZone : Area2D, IObstacleSetup
 {
     // Hazard 3D mesh（variant 1/3 = 毒沼，2/4 = 燃烧）
-    private static readonly Mesh? _toxicMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/hazard_toxic.glb");
-    private static readonly Mesh? _fireMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/hazard_fire.glb");
+    private static readonly string _toxicPath = "res://assets/models/obstacles/hazard_toxic.glb";
+    private static readonly string _firePath = "res://assets/models/obstacles/hazard_fire.glb";
 
     private Vector2 _size;
     private int _variant;
@@ -646,12 +653,13 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
     public override void _Ready()
     {
         // variant 1/3 = 毒沼，2/4 = 燃烧
-        var mesh = _variant is 1 or 3 ? _toxicMesh : _fireMesh;
-        if (mesh != null)
+        var hazPath = _variant is 1 or 3 ? _toxicPath : _firePath;
+        var hazMesh = ModelLoader.GetMesh(hazPath);
+        if (hazMesh != null)
         {
             _meshInstance = new MeshInstance2D
             {
-                Mesh = mesh,
+                Mesh = hazMesh,
                 Scale = new Vector2(_size.X / 0.9f, _size.Y / 0.9f),
             };
             AddChild(_meshInstance);
