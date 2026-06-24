@@ -375,6 +375,284 @@ def make_bush(berry=False):
     return join_objects(objs, "bush_with_berry" if berry else "bush")
 
 
+# ─── 障碍物模型（程序化） ────────────────────────────────
+# 命名规则：make_<kind>[_<variant>]，统一适配 ortho_scale=1.6 视野（约 1.0-1.4 单位宽）
+# 所有函数返回 bpy.types.Object（joined 复合 mesh），居中在 X-Y 平面
+
+def make_stone_block():
+    """Solid variant 0/4：砖石墙段（横长方形，灰岩石砖错缝）"""
+    stone = make_material("StoneBlock", PALETTE["stone"], roughness=0.9)
+    stone_dk = make_material("StoneBlockDk", PALETTE["stone_dark"], roughness=0.95)
+    stone_lit = make_material("StoneBlockLit", PALETTE["stone_lit"], roughness=0.85)
+    # 主体墙段
+    body = add_box("body", 0, 0, 0, 1.0, 0.4, 0.5, stone)
+    # 顶面亮边
+    top = add_box("top", 0, 0, 0.26, 1.0, 0.4, 0.04, stone_lit)
+    # 暗底
+    bot = add_box("bot", 0, 0, -0.26, 1.02, 0.42, 0.05, stone_dk)
+    return join_objects([body, top, bot], "stone_block")
+
+
+def make_tombstone_row():
+    """Solid variant 1：墓碑排（并排 3 个圆顶墓碑 + 苔藓底座）"""
+    stone = make_material("TombStone", PALETTE["stone"], roughness=0.9)
+    stone_dk = make_material("TombStoneDk", PALETTE["stone_dark"], roughness=0.95)
+    moss = make_material("TombMoss", (0.13, 0.19, 0.11, 1.0), roughness=0.95)
+    objs = []
+    # 苔藓底座
+    objs.append(add_box("moss_base", 0, 0, -0.10, 1.0, 0.35, 0.05, moss))
+    # 3 个墓碑
+    for i, x in enumerate([-0.35, 0, 0.35]):
+        objs.append(add_box(f"tomb_{i}", x, 0, 0.10, 0.18, 0.10, 0.35, stone))
+        objs.append(add_cylinder(f"top_{i}", x, 0, 0.28, 0.09, 0.04, stone, segments=12))
+    return join_objects(objs, "tombstone_row")
+
+
+def make_pillar():
+    """Solid variant 3：石柱（柱头 + 凹槽柱身 + 柱础）"""
+    stone = make_material("PillarStone", PALETTE["stone"], roughness=0.85)
+    stone_dk = make_material("PillarStoneDk", PALETTE["stone_dark"], roughness=0.9)
+    stone_lit = make_material("PillarStoneLit", PALETTE["stone_lit"], roughness=0.85)
+    objs = []
+    # 柱础（方形底座）
+    objs.append(add_box("base", 0, 0, -0.20, 0.45, 0.45, 0.10, stone_dk))
+    # 柱身（凹槽圆柱）
+    objs.append(add_cylinder("shaft", 0, 0, 0.0, 0.15, 0.6, stone, segments=16))
+    # 柱头（方形顶）
+    objs.append(add_box("cap", 0, 0, 0.35, 0.45, 0.45, 0.10, stone_lit))
+    # 柱头小装饰
+    objs.append(add_box("cap_top", 0, 0, 0.42, 0.5, 0.5, 0.04, stone))
+    return join_objects(objs, "pillar")
+
+
+def make_metal_bunker():
+    """Solid variant 5：金属掩体（锈蚀钢板 + 警示条 + 铆钉）"""
+    metal = make_material("BunkerMetal", PALETTE["metal"], roughness=0.5, metallic=0.5)
+    metal_dk = make_material("BunkerMetalDk", PALETTE["metal_dark"], roughness=0.55, metallic=0.45)
+    metal_lit = make_material("BunkerMetalLit", PALETTE["metal_lit"], roughness=0.45, metallic=0.55)
+    warn = make_material("BunkerWarn", (0.95, 0.75, 0.10, 1.0), roughness=0.7)
+    objs = []
+    # 主体钢板
+    objs.append(add_box("body", 0, 0, 0.0, 0.9, 0.5, 0.45, metal))
+    # 顶面亮边
+    objs.append(add_box("top", 0, 0, 0.24, 0.92, 0.52, 0.04, metal_lit))
+    # 底面暗
+    objs.append(add_box("bot", 0, 0, -0.24, 0.92, 0.52, 0.05, metal_dk))
+    # 黄色警示条
+    objs.append(add_box("warn", 0, 0, -0.05, 0.92, 0.52, 0.06, warn))
+    return join_objects(objs, "metal_bunker")
+
+
+def make_obelisk():
+    """Solid variant 6：方尖碑（窄高梯形碑身 + 斜尖顶）"""
+    stone = make_material("ObeliskStone", PALETTE["stone"], roughness=0.85)
+    stone_dk = make_material("ObeliskStoneDk", PALETTE["stone_dark"], roughness=0.9)
+    objs = []
+    # 宽底座
+    objs.append(add_box("base", 0, 0, -0.25, 0.35, 0.35, 0.10, stone_dk))
+    # 主体（梯形：用两个 box 叠加）
+    objs.append(add_box("body1", 0, 0, 0.0, 0.22, 0.22, 0.30, stone))
+    objs.append(add_box("body2", 0, 0, 0.35, 0.16, 0.16, 0.30, stone))
+    # 斜尖顶
+    bpy.ops.mesh.primitive_cone_add(radius1=0.10, radius2=0, depth=0.20, vertices=4, location=(0, 0, 0.60))
+    top = bpy.context.active_object
+    top.name = "top"
+    apply_mat(top, stone_dk)
+    objs.append(top)
+    return join_objects(objs, "obelisk")
+
+
+def make_archway():
+    """Solid variant 7：拱门（左右方柱 + 残缺横梁 + 地面碎石）"""
+    stone = make_material("ArchStone", PALETTE["stone"], roughness=0.9)
+    stone_dk = make_material("ArchStoneDk", PALETTE["stone_dark"], roughness=0.95)
+    stone_lit = make_material("ArchStoneLit", PALETTE["stone_lit"], roughness=0.85)
+    objs = []
+    # 左柱
+    objs.append(add_box("left", -0.30, 0, 0, 0.20, 0.20, 0.60, stone))
+    # 右柱
+    objs.append(add_box("right", 0.30, 0, 0, 0.20, 0.20, 0.60, stone))
+    # 横梁（中间断开）
+    objs.append(add_box("beam_l", -0.15, 0, 0.40, 0.30, 0.25, 0.20, stone_lit))
+    objs.append(add_box("beam_r", 0.20, 0, 0.40, 0.20, 0.25, 0.20, stone_dk))
+    # 拱顶（半圆柱顶）
+    objs.append(add_cylinder("arch", 0, 0, 0.55, 0.30, 0.10, stone_lit, segments=16))
+    return join_objects(objs, "archway")
+
+
+def make_giant_tree():
+    """Solid variant 8：枯巨树（粗树干 + 大团枯枝冠）"""
+    wood = make_material("GiantWood", PALETTE["wood_dark"], roughness=0.9)
+    wood_lit = make_material("GiantWoodLit", PALETTE["wood"], roughness=0.85)
+    objs = []
+    # 粗树干
+    objs.append(add_cylinder("trunk", 0, 0, 0.10, 0.12, 0.60, wood, segments=12))
+    # 树根加宽
+    objs.append(add_cylinder("root", 0, 0, -0.20, 0.20, 0.10, wood, segments=8))
+    # 枯枝（4 段，从树顶伸出）
+    branch_pos = [
+        (0.18, 0, 0.40, 0.30), (-0.18, 0, 0.40, 0.30),
+        (0, 0.18, 0.35, 0.25), (0, -0.18, 0.35, 0.25),
+    ]
+    for i, (x, y, z, len) in enumerate(branch_pos):
+        bpy.ops.mesh.primitive_cone_add(
+            radius1=0.02, radius2=0.05, depth=len, vertices=6,
+            location=(x * 0.5, y * 0.5, z + len * 0.3))
+        branch = bpy.context.active_object
+        branch.name = f"branch_{i}"
+        # 旋转：向外倾斜
+        branch.rotation_euler = (
+            math.atan2(y * 0.5, len * 0.5) if y != 0 else 0,
+            -math.atan2(x * 0.5, len * 0.5) if x != 0 else 0,
+            0)
+        apply_mat(branch, wood_lit)
+        objs.append(branch)
+    return join_objects(objs, "giant_tree")
+
+
+def make_tower():
+    """Solid variant 9：钟楼/塔楼（三层收分方塔 + 拱形钟窗 + 尖顶）"""
+    stone = make_material("TowerStone", PALETTE["stone"], roughness=0.9)
+    stone_dk = make_material("TowerStoneDk", PALETTE["stone_dark"], roughness=0.95)
+    stone_lit = make_material("TowerStoneLit", PALETTE["stone_lit"], roughness=0.85)
+    objs = []
+    # 底层（最大）
+    objs.append(add_box("base1", 0, 0, 0.0, 0.45, 0.45, 0.30, stone_dk))
+    # 中层
+    objs.append(add_box("base2", 0, 0, 0.35, 0.38, 0.38, 0.25, stone))
+    # 顶层
+    objs.append(add_box("base3", 0, 0, 0.55, 0.32, 0.32, 0.20, stone_lit))
+    # 钟窗（拱形凹槽，用小 cylinder 模拟）
+    objs.append(add_cylinder("bell", 0, 0.16, 0.50, 0.08, 0.04, stone_dk, segments=12))
+    # 尖顶
+    bpy.ops.mesh.primitive_cone_add(radius1=0.20, radius2=0, depth=0.25, vertices=4, location=(0, 0, 0.78))
+    top = bpy.context.active_object
+    top.name = "spire"
+    apply_mat(top, stone_dk)
+    objs.append(top)
+    return join_objects(objs, "tower")
+
+
+def make_wood_fence():
+    """Destructible variant 1/2/3：木栅栏（横木 + 立柱）"""
+    wood = make_material("FenceWood", PALETTE["wood"], roughness=0.85)
+    wood_dk = make_material("FenceWoodDk", PALETTE["wood_dark"], roughness=0.9)
+    objs = []
+    # 立柱（3 根）
+    for i, x in enumerate([-0.40, 0, 0.40]):
+        objs.append(add_box(f"post_{i}", x, 0, 0, 0.05, 0.05, 0.30, wood_dk))
+    # 横木（2 根）
+    objs.append(add_box("rail1", 0, 0, 0.10, 0.90, 0.05, 0.05, wood))
+    objs.append(add_box("rail2", 0, 0, -0.05, 0.90, 0.05, 0.05, wood))
+    return join_objects(objs, "wood_fence")
+
+
+def make_stone_rubble():
+    """Destructible variant 4+：石堆（多块碎石叠放）"""
+    stone = make_material("RubbleStone", PALETTE["stone"], roughness=0.95)
+    stone_dk = make_material("RubbleStoneDk", PALETTE["stone_dark"], roughness=0.95)
+    stone_lit = make_material("RubbleStoneLit", PALETTE["stone_lit"], roughness=0.9)
+    objs = []
+    # 主体大石
+    objs.append(add_box("big1", -0.10, 0, -0.05, 0.30, 0.25, 0.20, stone))
+    # 中石
+    objs.append(add_box("mid", 0.15, 0.05, 0.0, 0.20, 0.20, 0.15, stone_lit))
+    # 小石
+    objs.append(add_box("small1", 0.0, -0.10, 0.05, 0.15, 0.12, 0.12, stone_dk))
+    objs.append(add_box("small2", -0.20, 0.10, 0.0, 0.12, 0.10, 0.10, stone_dk))
+    return join_objects(objs, "stone_rubble")
+
+
+def make_explosive_barrel():
+    """ExplosiveBarrel：红色桶身 + 黄黑警示条纹 + 顶盖"""
+    barrel = make_material("BarrelRed", (0.70, 0.18, 0.12, 1.0), roughness=0.75)
+    barrel_dk = make_material("BarrelRedDk", (0.42, 0.10, 0.06, 1.0), roughness=0.8)
+    warn = make_material("BarrelWarn", (0.95, 0.75, 0.10, 1.0), roughness=0.7)
+    metal = make_material("BarrelMetal", PALETTE["metal_dark"], roughness=0.4, metallic=0.6)
+    objs = []
+    # 桶身
+    objs.append(add_cylinder("body", 0, 0, 0, 0.18, 0.45, barrel, segments=16))
+    # 顶盖
+    objs.append(add_cylinder("top", 0, 0, 0.24, 0.19, 0.03, barrel_dk, segments=16))
+    # 底圈
+    objs.append(add_cylinder("rim_bot", 0, 0, -0.20, 0.185, 0.04, metal, segments=16))
+    objs.append(add_cylinder("rim_mid", 0, 0, 0.0, 0.185, 0.04, metal, segments=16))
+    objs.append(add_cylinder("rim_top", 0, 0, 0.18, 0.185, 0.04, metal, segments=16))
+    # 黄色警示带（中圈）
+    objs.append(add_cylinder("warn", 0, 0, 0.06, 0.186, 0.04, warn, segments=16))
+    return join_objects(objs, "explosive_barrel")
+
+
+def make_water_puddle():
+    """Low variant 1：水洼（蓝色半透明圆盘 + 高光）"""
+    water = make_material("PuddleWater", (0.20, 0.30, 0.45, 0.85), roughness=0.2, metallic=0.0)
+    objs = []
+    # 主体圆盘（扁圆柱）
+    objs.append(add_cylinder("puddle", 0, 0, -0.05, 0.40, 0.05, water, segments=20))
+    # 边缘高光环
+    objs.append(add_torus("highlight", 0, 0, -0.02, 0.35, 0.02, water))
+    return join_objects(objs, "water_puddle")
+
+
+def make_grass_low():
+    """Low 其他：草丛（多束绿色尖草）"""
+    grass = make_material("LowGrass", PALETTE["leaves"], roughness=0.85)
+    grass_dk = make_material("LowGrassDk", PALETTE["leaves_dk"], roughness=0.9)
+    objs = []
+    # 5 束草（圆锥体）
+    positions = [(0, 0), (0.20, 0.10), (-0.15, 0.05), (0.10, -0.15), (-0.10, -0.10)]
+    mats = [grass, grass_dk, grass, grass_dk, grass]
+    for i, ((x, y), m) in enumerate(zip(positions, mats)):
+        bpy.ops.mesh.primitive_cone_add(
+            radius1=0.03, radius2=0.01, depth=0.20, vertices=4,
+            location=(x, y, 0.10))
+        blade = bpy.context.active_object
+        blade.name = f"blade_{i}"
+        apply_mat(blade, m)
+        objs.append(blade)
+    return join_objects(objs, "grass_low")
+
+
+def make_toxic_swamp():
+    """Hazard variant 1/3：毒沼（绿色毒气 + 中心深潭）"""
+    toxic = make_material("Toxic", (0.40, 0.65, 0.20, 0.75), roughness=0.5)
+    toxic_dk = make_material("ToxicDk", (0.20, 0.40, 0.10, 0.85), roughness=0.5)
+    bubble = make_material("Bubble", (0.70, 0.95, 0.40, 0.6), roughness=0.3)
+    objs = []
+    # 中心深潭
+    objs.append(add_cylinder("pool", 0, 0, -0.10, 0.35, 0.08, toxic_dk, segments=20))
+    # 毒气层（外圈）
+    objs.append(add_cylinder("mist", 0, 0, 0.0, 0.45, 0.05, toxic, segments=20))
+    # 气泡（3 颗）
+    for i, (x, y) in enumerate([(0.15, 0.10), (-0.10, 0.15), (0, -0.18)]):
+        objs.append(add_sphere(f"bubble_{i}", x, y, 0.04, 0.04, bubble, segments=10, rings=6))
+    return join_objects(objs, "toxic_swamp")
+
+
+def make_fire_ground():
+    """Hazard variant 2/4：燃烧地带（火焰环 + 中心熔岩）"""
+    fire = make_material("Fire", (1.0, 0.50, 0.10, 0.85), roughness=0.4)
+    fire_dk = make_material("FireDk", (0.80, 0.20, 0.05, 0.9), roughness=0.4)
+    lava = make_material("Lava", (0.95, 0.30, 0.05, 1.0), roughness=0.3)
+    objs = []
+    # 中心熔岩
+    objs.append(add_cylinder("lava", 0, 0, -0.05, 0.25, 0.06, lava, segments=20))
+    # 火焰锥（4 束绕中心）
+    for i, a in enumerate([0, math.pi/2, math.pi, 3*math.pi/2]):
+        x = math.cos(a) * 0.32
+        y = math.sin(a) * 0.32
+        bpy.ops.mesh.primitive_cone_add(
+            radius1=0.08, radius2=0.02, depth=0.25, vertices=8,
+            location=(x, y, 0.10))
+        flame = bpy.context.active_object
+        flame.name = f"flame_{i}"
+        apply_mat(flame, fire)
+        objs.append(flame)
+    # 外圈暗火
+    objs.append(add_torus("ring", 0, 0, 0.0, 0.40, 0.03, fire_dk))
+    return join_objects(objs, "fire_ground")
+
+
 # ─── 场景模板（统一相机/灯光/渲染） ───────────────────────
 
 def setup_template(canvas_size, output_path):

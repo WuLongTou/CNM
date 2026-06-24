@@ -1,78 +1,96 @@
 {
-  "version": 2,
-  "description": "Blender 烘焙清单 —— 导出 .glb 3D 模型（Godot MeshInstance2D 渲染用）",
+  "version": 3,
+  "description": "Blender 烘焙清单 —— 障碍物（Solid/Destructible/Explosive/Low/Hazard）+ 探索道具 + 资源节点 .glb 3D 模型",
   "items": [
     {
-      "key": "chest_frame_0",
-      "model": "chest",
-      "args": { "lid_tilt": 0 },
+      "key": "stone_block",
+      "model": "stone_block",
       "format": "gltf",
-      "output": "props/chest_0.glb"
+      "output": "obstacles/solid_stone_block.glb"
     },
     {
-      "key": "chest_frame_1",
-      "model": "chest",
-      "args": { "lid_tilt": 30 },
+      "key": "tombstone_row",
+      "model": "tombstone_row",
       "format": "gltf",
-      "output": "props/chest_1.glb"
+      "output": "obstacles/solid_tombstone_row.glb"
     },
     {
-      "key": "chest_frame_2",
-      "model": "chest",
-      "args": { "lid_tilt": 60 },
+      "key": "pillar",
+      "model": "pillar",
       "format": "gltf",
-      "output": "props/chest_2.glb"
+      "output": "obstacles/solid_pillar.glb"
     },
     {
-      "key": "chest_frame_3",
-      "model": "chest",
-      "args": { "lid_tilt": 90 },
+      "key": "metal_bunker",
+      "model": "metal_bunker",
       "format": "gltf",
-      "output": "props/chest_3.glb"
+      "output": "obstacles/solid_metal_bunker.glb"
     },
     {
-      "key": "altar",
-      "model": "altar",
+      "key": "obelisk",
+      "model": "obelisk",
       "format": "gltf",
-      "output": "props/altar.glb"
+      "output": "obstacles/solid_obelisk.glb"
     },
     {
-      "key": "workbench",
-      "model": "workbench",
+      "key": "archway",
+      "model": "archway",
       "format": "gltf",
-      "output": "props/workbench.glb"
+      "output": "obstacles/solid_archway.glb"
     },
     {
-      "key": "forge_station",
-      "model": "forge",
+      "key": "giant_tree",
+      "model": "giant_tree",
       "format": "gltf",
-      "output": "props/forge_station.glb"
+      "output": "obstacles/solid_giant_tree.glb"
     },
     {
-      "key": "tree",
-      "model": "tree",
+      "key": "tower",
+      "model": "tower",
       "format": "gltf",
-      "output": "resources/tree.glb"
+      "output": "obstacles/solid_tower.glb"
     },
     {
-      "key": "stone",
-      "model": "stone",
+      "key": "wood_fence",
+      "model": "wood_fence",
       "format": "gltf",
-      "output": "resources/stone.glb"
+      "output": "obstacles/destruct_wood_fence.glb"
     },
     {
-      "key": "bush",
-      "model": "bush",
-      "args": { "berry": false },
+      "key": "stone_rubble",
+      "model": "stone_rubble",
       "format": "gltf",
-      "output": "resources/bush.glb"
+      "output": "obstacles/destruct_stone_rubble.glb"
     },
     {
-      "key": "berry_bush",
-      "model": "bush",
-      "args": { "berry": true },
+      "key": "explosive_barrel",
+      "model": "explosive_barrel",
       "format": "gltf",
-      "output": "resources/berry_bush.glb"
+      "output": "obstacles/explosive_barrel.glb"
+    },
+    {
+      "key": "water_puddle",
+      "model": "water_puddle",
+      "format": "gltf",
+      "output": "obstacles/low_water_puddle.glb"
+    },
+    {
+      "key": "grass_low",
+      "model": "grass_low",
+      "format": "gltf",
+      "output": "obstacles/low_grass.glb"
+    },
+    {
+      "key": "toxic_swamp",
+      "model": "toxic_swamp",
+      "format": "gltf",
+      "output": "obstacles/hazard_toxic.glb"
+    },
+    {
+      "key": "fire_ground",
+      "model": "fire_ground",
+      "format": "gltf",
+      "output": "obstacles/hazard_fire.glb"
     }
   ]
 }

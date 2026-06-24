@@ -1,6 +1,7 @@
 namespace ZombieWars.World;
 
 using System;
+using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Enemy;
@@ -720,11 +721,28 @@ internal static class ObstacleDraw
 // ── 固体障碍：StaticBody2D，完全阻挡 ─────────────────────
 public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
 {
+    // Solid 障碍 3D mesh 缓存（按 variant 0-9 索引）
+    // 注：variant 0 砖石墙使用 4 共享（DrawStoneBlock 通用）
+    private static readonly Dictionary<int, Mesh?> _solidMeshByVariant = new()
+    {
+        [0] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_stone_block.glb"),
+        [1] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_tombstone_row.glb"),
+        [2] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_pillar.glb"),  // 注：枯树 variant 2 借用石柱（2.5D 演示）
+        [3] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_pillar.glb"),
+        [4] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_stone_block.glb"),
+        [5] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_metal_bunker.glb"),
+        [6] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_obelisk.glb"),
+        [7] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_archway.glb"),
+        [8] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_giant_tree.glb"),
+        [9] = ModelLoader.LoadMesh("res://assets/models/obstacles/solid_tower.glb"),
+    };
+
     private Vector2 _size;
     private int _variant;
     private Color _baseCol;
     private Color _litCol;
     private Color _darkCol;
+    private MeshInstance2D? _meshInstance;
 
     public void Setup(in ObstacleDef def)
     {
@@ -756,40 +774,52 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
         };
     }
 
-    public override void _Ready() => QueueRedraw();
+    public override void _Ready()
+    {
+        // 主视觉：MeshInstance2D 加载对应 variant 的 .glb
+        if (_solidMeshByVariant.TryGetValue(_variant, out var mesh) && mesh != null)
+        {
+            _meshInstance = new MeshInstance2D
+            {
+                Mesh = mesh,
+                Scale = _ComputeScale(),
+            };
+            AddChild(_meshInstance);
+        }
+        // 兜底：mesh 缺失时走老 _Draw
+        if (_meshInstance == null) QueueRedraw();
+    }
+
+    /// <summary>根据 _size 缩放 mesh 到合适大小（参考碰撞体尺寸）</summary>
+    private Vector2 _ComputeScale()
+    {
+        // 烘焙的 mesh 大约 1.0-1.4 单位宽，目标视觉宽度 = _size.X
+        return new Vector2(_size.X / 1.0f, _size.Y / 1.0f);
+    }
 
     public override void _Draw()
     {
+        // mesh 模式：只画阴影
+        if (_meshInstance != null)
+        {
+            ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 8f);
+            return;
+        }
+        // 兜底：mesh 缺失时走老 _Draw 全路径
         var rect = new Rect2(-_size * 0.5f, _size);
         ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 8f);
         var rng = new RandomNumberGenerator { Seed = (ulong)(_variant * 9999 + 7) };
         switch (_variant)
         {
-            case 1: // 墓碑排
-                ObstacleDraw.DrawTombstoneRow(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 2: // 枯树
-                ObstacleDraw.DrawDeadTree(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 3: // 石柱
-                ObstacleDraw.DrawPillar(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 5: // 金属掩体
-                ObstacleDraw.DrawMetalBunker(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 6: // 方尖碑（地标）
-                ObstacleDraw.DrawObelisk(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 7: // 拱门（地标）
-                ObstacleDraw.DrawArchway(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 8: // 枯巨树（地标）
-                ObstacleDraw.DrawGiantTree(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            case 9: // 钟楼（地标）
-                ObstacleDraw.DrawTower(this, rect, _baseCol, _litCol, _darkCol, rng);
-                break;
-            default: // variant 4 / 其他：砖石墙
+            case 1: ObstacleDraw.DrawTombstoneRow(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 2: ObstacleDraw.DrawDeadTree(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 3: ObstacleDraw.DrawPillar(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 5: ObstacleDraw.DrawMetalBunker(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 6: ObstacleDraw.DrawObelisk(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 7: ObstacleDraw.DrawArchway(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 8: ObstacleDraw.DrawGiantTree(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            case 9: ObstacleDraw.DrawTower(this, rect, _baseCol, _litCol, _darkCol, rng); break;
+            default:
                 ObstacleDraw.DrawStoneBlock(this, rect, _baseCol, _litCol, _darkCol, _variant, rng);
                 DrawRect(rect, _darkCol.Darkened(0.3f), false, 1.5f);
                 break;
@@ -800,6 +830,10 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
 // ── 可破坏障碍：StaticBody2D + IDamageable + 血量 ────────
 public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IObstacleSetup
 {
+    // Destructible 障碍 3D mesh（variant 2/3 = 木栅栏，其他 = 石堆）
+    private static readonly Mesh? _woodFenceMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/destruct_wood_fence.glb");
+    private static readonly Mesh? _stoneRubbleMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/destruct_stone_rubble.glb");
+
     private Vector2 _size;
     private int _variant;
     private int _maxHealth = GameConfig.DestructibleObstacleHealth;
@@ -808,6 +842,7 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     private float _biteTick; // 僵尸啃咬累计
     private Area2D? _biteArea; // 僵尸啃咬监测区（替代全局距离，避免跨障碍误伤）
     private Vector2 _drawShake;
+    private MeshInstance2D? _meshInstance;
 
     int IDamageable.CurrentHealth => _health;
     int IDamageable.MaxHealth => _maxHealth;
@@ -850,7 +885,19 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     public override void _Ready()
     {
         AddToGroup("destructibles");
-        QueueRedraw();
+        // 主视觉：MeshInstance2D 加载对应 variant 的 .glb
+        var mesh = _variant is 2 or 3 ? _woodFenceMesh : _stoneRubbleMesh;
+        if (mesh != null)
+        {
+            _meshInstance = new MeshInstance2D
+            {
+                Mesh = mesh,
+                Scale = new Vector2(_size.X / 1.0f, _size.Y / 1.0f),
+            };
+            AddChild(_meshInstance);
+        }
+        // 兜底：mesh 缺失时走老 _Draw
+        if (_meshInstance == null) QueueRedraw();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -941,38 +988,60 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     public override void _Draw()
     {
         DrawSetTransform(_drawShake, 0f, Vector2.One);
-        var rect = new Rect2(-_size * 0.5f, _size);
+        // mesh 模式：只画阴影 + 受损裂纹 overlay
+        if (_meshInstance != null)
+        {
+            ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
+            float dmgRatio = 1f - (float)_health / _maxHealth;
+            if (dmgRatio > 0.1f)
+            {
+                var rng = new RandomNumberGenerator { Seed = (ulong)(_variant * 7777 + 11) };
+                var crackCol = new Color(0.05f, 0.04f, 0.03f, dmgRatio);
+                int crackCount = (int)(dmgRatio * 5) + 1;
+                var rect = new Rect2(-_size * 0.5f, _size);
+                for (int i = 0; i < crackCount; i++)
+                {
+                    float cx = rng.RandfRange(rect.Position.X + 4f, rect.End.X - 4f);
+                    float cy = rng.RandfRange(rect.Position.Y + 4f, rect.End.Y - 4f);
+                    float ang = rng.RandfRange(0f, Mathf.Tau);
+                    float len = rng.RandfRange(6f, _size.X * 0.4f);
+                    DrawLine(new Vector2(cx, cy),
+                        new Vector2(cx + Mathf.Cos(ang) * len, cy + Mathf.Sin(ang) * len),
+                        crackCol, 1.5f);
+                }
+            }
+            DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+            return;
+        }
+        // 兜底：mesh 缺失时走老 _Draw 全路径
+        var rect2 = new Rect2(-_size * 0.5f, _size);
         ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
-        var rng = new RandomNumberGenerator { Seed = (ulong)(_variant * 7777 + 11) };
-
+        var rng2 = new RandomNumberGenerator { Seed = (ulong)(_variant * 7777 + 11) };
         bool isWood = _variant is 2 or 3;
         var baseCol = isWood ? new Color(0.26f, 0.17f, 0.09f) : new Color(0.34f, 0.31f, 0.26f);
         var lit = isWood ? new Color(0.34f, 0.23f, 0.13f) : new Color(0.44f, 0.41f, 0.34f);
         var dark = isWood ? new Color(0.16f, 0.10f, 0.05f) : new Color(0.20f, 0.18f, 0.14f);
-
         if (isWood)
-            ObstacleDraw.DrawWoodFence(this, rect, baseCol, lit, dark, rng);
+            ObstacleDraw.DrawWoodFence(this, rect2, baseCol, lit, dark, rng2);
         else
-            ObstacleDraw.DrawStoneRubble(this, rect, baseCol, lit, dark, rng);
-
-        // 按受损程度叠加裂纹
-        float dmgRatio = 1f - (float)_health / _maxHealth;
-        if (dmgRatio > 0.1f)
+            ObstacleDraw.DrawStoneRubble(this, rect2, baseCol, lit, dark, rng2);
+        float dmgRatio2 = 1f - (float)_health / _maxHealth;
+        if (dmgRatio2 > 0.1f)
         {
             var crackCol = dark.Darkened(0.4f);
-            int crackCount = (int)(dmgRatio * 5) + 1;
+            int crackCount = (int)(dmgRatio2 * 5) + 1;
             for (int i = 0; i < crackCount; i++)
             {
-                float cx = rng.RandfRange(rect.Position.X + 4f, rect.End.X - 4f);
-                float cy = rng.RandfRange(rect.Position.Y + 4f, rect.End.Y - 4f);
-                float ang = rng.RandfRange(0f, Mathf.Tau);
-                float len = rng.RandfRange(6f, _size.X * 0.4f);
+                float cx = rng2.RandfRange(rect2.Position.X + 4f, rect2.End.X - 4f);
+                float cy = rng2.RandfRange(rect2.Position.Y + 4f, rect2.End.Y - 4f);
+                float ang = rng2.RandfRange(0f, Mathf.Tau);
+                float len = rng2.RandfRange(6f, _size.X * 0.4f);
                 DrawLine(new Vector2(cx, cy),
                     new Vector2(cx + Mathf.Cos(ang) * len, cy + Mathf.Sin(ang) * len),
                     crackCol, 1.5f);
             }
         }
-        DrawRect(rect, dark, false, 1.2f);
+        DrawRect(rect2, dark, false, 1.2f);
         DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
     }
 }
@@ -980,6 +1049,8 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
 // ── 爆炸桶：可破坏战术物，破碎时范围爆炸 + 击退（实现 IDamageable）──
 public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstacleSetup
 {
+    private static readonly Mesh? _barrelMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/explosive_barrel.glb");
+
     private Vector2 _size;
     private readonly int _maxHealth = GameConfig.ExplosiveBarrelHealth;
     private int _health;
@@ -988,6 +1059,7 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     private int _biteCount;
     private Area2D? _biteArea;
     private Vector2 _drawShake;
+    private MeshInstance2D? _meshInstance;
 
     int IDamageable.CurrentHealth => _health;
     int IDamageable.MaxHealth => _maxHealth;
@@ -1028,7 +1100,16 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     public override void _Ready()
     {
         AddToGroup("destructibles");
-        QueueRedraw();
+        if (_barrelMesh != null)
+        {
+            _meshInstance = new MeshInstance2D
+            {
+                Mesh = _barrelMesh,
+                Scale = new Vector2(_size.X / 0.5f, _size.Y / 0.5f),
+            };
+            AddChild(_meshInstance);
+        }
+        if (_meshInstance == null) QueueRedraw();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -1121,6 +1202,13 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     public override void _Draw()
     {
         DrawSetTransform(_drawShake, 0f, Vector2.One);
+        if (_meshInstance != null)
+        {
+            ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
+            DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+            return;
+        }
+        // 兜底：mesh 缺失时走老 _Draw
         var rect = new Rect2(-_size * 0.5f, _size);
         ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
         var rng = new RandomNumberGenerator { Seed = (ulong)((long)GlobalPosition.X * 13 + (long)GlobalPosition.Y * 7 + 1) };
@@ -1135,8 +1223,13 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
 // ── 低矮障碍：Area2D，可穿过但减速 ──────────────────────
 public sealed partial class LowObstacle : Area2D, IObstacleSetup
 {
+    // Low 障碍 3D mesh（variant 1 = 水洼，其他 = 草丛）
+    private static readonly Mesh? _waterMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/low_water_puddle.glb");
+    private static readonly Mesh? _grassMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/low_grass.glb");
+
     private Vector2 _size;
     private int _variant;
+    private MeshInstance2D? _meshInstance;
 
     public void Setup(in ObstacleDef def)
     {
@@ -1154,7 +1247,21 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
         AddChild(col);
     }
 
-    public override void _Ready() => QueueRedraw();
+    public override void _Ready()
+    {
+        // variant 1 = 水洼，其他 = 草丛
+        var mesh = _variant == 1 ? _waterMesh : _grassMesh;
+        if (mesh != null)
+        {
+            _meshInstance = new MeshInstance2D
+            {
+                Mesh = mesh,
+                Scale = new Vector2(_size.X / 0.9f, _size.Y / 0.9f),
+            };
+            AddChild(_meshInstance);
+        }
+        else QueueRedraw();
+    }
 
     public override void _PhysicsProcess(double delta)
     {
@@ -1175,6 +1282,7 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
 
     public override void _Draw()
     {
+        if (_meshInstance != null) return;  // 静态视觉已由 mesh 提供
         var rect = new Rect2(-_size * 0.5f, _size);
         var rng = new RandomNumberGenerator { Seed = (ulong)(_variant * 5555 + 3) };
 
@@ -1211,10 +1319,15 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
 // ── 陷阱/危险区域：Area2D，持续掉血 + 减速 ───────────────
 public sealed partial class HazardZone : Area2D, IObstacleSetup
 {
+    // Hazard 3D mesh（variant 1/3 = 毒沼，2/4 = 燃烧）
+    private static readonly Mesh? _toxicMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/hazard_toxic.glb");
+    private static readonly Mesh? _fireMesh = ModelLoader.LoadMesh("res://assets/models/obstacles/hazard_fire.glb");
+
     private Vector2 _size;
     private int _variant;
     private float _tickTimer;
     private float _redrawTimer;
+    private MeshInstance2D? _meshInstance;
 
     // 脉冲陷阱（variant 3=脉冲毒 / 4=脉冲火）：周期激活/休眠，休眠期无害，逼玩家踩时机
     private bool _IsPulse => _variant is 3 or 4;
@@ -1246,7 +1359,19 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
 
     public override void _Ready()
     {
-        QueueRedraw();
+        // variant 1/3 = 毒沼，2/4 = 燃烧
+        var mesh = _variant is 1 or 3 ? _toxicMesh : _fireMesh;
+        if (mesh != null)
+        {
+            _meshInstance = new MeshInstance2D
+            {
+                Mesh = mesh,
+                Scale = new Vector2(_size.X / 0.9f, _size.Y / 0.9f),
+            };
+            AddChild(_meshInstance);
+        }
+        // 脉冲陷阱需要每帧 QueueRedraw 画光圈
+        if (_IsPulse || _meshInstance == null) QueueRedraw();
         SetProcess(true);
     }
 
@@ -1300,14 +1425,25 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
 
     public override void _Draw()
     {
-        var rect = new Rect2(-_size * 0.5f, _size);
-        double t = Time.GetTicksMsec() / 1000.0;
-        float pulse = 0.5f + 0.5f * Mathf.Sin((float)t * 4f);
+        // 脉冲陷阱：画光圈（提示危险范围）
+        if (_IsPulse && _meshInstance != null)
+        {
+            var rect = new Rect2(-_size * 0.5f, _size);
+            double t = Time.GetTicksMsec() / 1000.0;
+            float pulse = 0.4f + 0.3f * Mathf.Sin((float)t * 4f);
+            var c = _variant == 3 ? new Color(0.4f, 0.8f, 0.2f) : new Color(1.0f, 0.5f, 0.1f);
+            // 外圈脉动警告线
+            DrawArc(Vector2.Zero, _size.X * 0.5f, 0, Mathf.Tau, 24, new Color(c.R, c.G, c.B, pulse), 2f);
+            return;
+        }
+        // 兜底：mesh 缺失时走老 _Draw 全路径
+        var rect2 = new Rect2(-_size * 0.5f, _size);
+        double t2 = Time.GetTicksMsec() / 1000.0;
+        float pulse2 = 0.5f + 0.5f * Mathf.Sin((float)t2 * 4f);
         var rng = new RandomNumberGenerator { Seed = (ulong)(_size.X * 127.0 + _size.Y * 31.0 + _variant * 7L) };
-
         if (_variant is 1 or 3)
-            ObstacleDraw.DrawToxicSwamp(this, rect, pulse, rng);
+            ObstacleDraw.DrawToxicSwamp(this, rect2, pulse2, rng);
         else
-            ObstacleDraw.DrawFireGround(this, rect, pulse, rng);
+            ObstacleDraw.DrawFireGround(this, rect2, pulse2, rng);
     }
 }
