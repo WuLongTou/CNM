@@ -51,9 +51,11 @@ public static class ModelLoader
 
             if (mesh != null)
             {
+                // 务必将所有 surface 材质设为 Unshaded（2D 场景无 3D 光照）
+                _SetUnshaded(mesh);
                 _cache[scenePath] = mesh;
                 if (!_logged.Contains(scenePath))
-                { LogUtils.Print($"[ModelLoader] ✓ {scenePath}"); _logged.Add(scenePath); }
+                { LogUtils.Print($"[ModelLoader] ✓ {scenePath} (surfaces={mesh.GetSurfaceCount()})"); _logged.Add(scenePath); }
             }
             else
             {
@@ -62,6 +64,20 @@ public static class ModelLoader
                 { LogUtils.Print($"[ModelLoader] ✗ 未识别 Mesh: {scenePath}"); _logged.Add(scenePath); }
             }
             return mesh;
+        }
+    }
+
+    /// <summary>将 Mesh 所有 surface 的材质设为 Unshaded（2D 场景无光照必需）。</summary>
+    private static void _SetUnshaded(Mesh mesh)
+    {
+        for (int i = 0; i < mesh.GetSurfaceCount(); i++)
+        {
+            var mat = mesh.SurfaceGetMaterial(i);
+            if (mat is BaseMaterial3D bm)
+            {
+                bm.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
+                LogUtils.Print($"[ModelLoader] surface {i} → Unshaded");
+            }
         }
     }
 
