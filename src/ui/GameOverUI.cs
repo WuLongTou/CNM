@@ -69,7 +69,6 @@ public partial class GameOverUI : Control
         var centerWrapper = new CenterContainer
         {
             ZIndex = 52,
-            MouseFilter = MouseFilterEnum.Ignore
         };
         centerWrapper.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         AddChild(centerWrapper);
