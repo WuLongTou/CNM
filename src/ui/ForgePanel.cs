@@ -228,8 +228,7 @@ public partial class ForgePanel : Panel
             return;
         }
 
-        foreach (var kv in cost)
-            Inventory.Add(kv.Key, -kv.Value);
+        Inventory.TryConsume(cost);
 
         option.Apply(_targetWeapon);
         _player.Combat?.RecalculateStats();

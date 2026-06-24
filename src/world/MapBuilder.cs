@@ -131,13 +131,16 @@ public partial class MapBuilder : Node2D
     /// <summary>放置探索奖励：宝箱（触碰开启掉落拾取物）+ 祭坛（触碰获得增益）。</summary>
     private void _SpawnExplorationProps(Vector2 ws)
     {
+        // 追踪所有已放置位置，确保间距避免重叠
+        var placed = new List<Vector2>();
+
         // 宝箱：大世界放更多，每张图散布若干
         int chestCount = 3 + (int)GameConfig.WorldScale;
         for (int i = 0; i < chestCount; i++)
         {
             var chest = new Chest
             {
-                GlobalPosition = _RandomPosAwayFromCenter(ws),
+                GlobalPosition = _PlaceWithSpacing(ws, placed, 140f),
                 LootCount = (int)GD.RandRange(2, 3)
             };
             _obstacleLayer.AddChild(chest);
@@ -151,7 +154,7 @@ public partial class MapBuilder : Node2D
         {
             var altar = new Altar
             {
-                GlobalPosition = _RandomPosAwayFromCenter(ws),
+                GlobalPosition = _PlaceWithSpacing(ws, placed, 150f),
             };
 
             // 15% 概率生成为武器融合祭坛
@@ -180,50 +183,97 @@ public partial class MapBuilder : Node2D
         }
 
         // 资源节点（饥荒式采集）：树/石/灌木散布
-        _SpawnResourceNodes(ws);
+        _SpawnResourceNodes(ws, placed);
 
-        // 工作台（合成）—— 2 处，便于玩家就近合成
+        // 工作台（合成）—— 2 处
         for (int i = 0; i < 2; i++)
         {
-            var wb = new Workbench { GlobalPosition = _RandomPosAwayFromCenter(ws) };
+            var wb = new Workbench { GlobalPosition = _PlaceWithSpacing(ws, placed, 150f) };
             _obstacleLayer.AddChild(wb);
         }
         // 锻造台（锻造）—— 1 处
-        var fs = new ForgeStation { GlobalPosition = _RandomPosAwayFromCenter(ws) };
+        var fs = new ForgeStation { GlobalPosition = _PlaceWithSpacing(ws, placed, 160f) };
         _obstacleLayer.AddChild(fs);
     }
 
     /// <summary>散布可采集资源节点：树丛（木材）、矿点（石头）、灌木（纤维/浆果）。</summary>
-    private void _SpawnResourceNodes(Vector2 ws)
+    private void _SpawnResourceNodes(Vector2 ws, List<Vector2> placed)
     {
         // 树丛（木材）—— 4 片小树林
         for (int g = 0; g < 4; g++)
         {
-            var center = _RandomPosAwayFromCenter(ws);
+            var center = _PlaceWithSpacing(ws, placed, 130f);
             int count = (int)GD.RandRange(3, 5);
             for (int i = 0; i < count; i++)
             {
-                var pos = center + new Vector2((float)GD.RandRange(-90, 90), (float)GD.RandRange(-90, 90));
+                var pos = center + new Vector2((float)GD.RandRange(-60, 60), (float)GD.RandRange(-60, 60));
                 _AddResource(ResourceType.Wood, pos);
             }
         }
         // 矿点（石头）—— 3 处
         for (int g = 0; g < 3; g++)
         {
-            var center = _RandomPosAwayFromCenter(ws);
+            var center = _PlaceWithSpacing(ws, placed, 130f);
             int count = (int)GD.RandRange(2, 3);
             for (int i = 0; i < count; i++)
             {
-                var pos = center + new Vector2((float)GD.RandRange(-70, 70), (float)GD.RandRange(-70, 70));
+                var pos = center + new Vector2((float)GD.RandRange(-50, 50), (float)GD.RandRange(-50, 50));
                 _AddResource(ResourceType.Stone, pos);
             }
         }
         // 灌木/浆果丛 —— 散布
         for (int i = 0; i < 10; i++)
         {
-            var pos = _RandomPosAwayFromCenter(ws);
+            var pos = _PlaceWithSpacing(ws, placed, 100f);
             _AddResource(GD.Randf() < 0.5f ? ResourceType.Fiber : ResourceType.Berry, pos);
         }
+    }
+
+    /// <summary>在避开已放置位置的前提下取随机点，最小间距 minDist。</summary>
+    private static Vector2 _PlaceWithSpacing(Vector2 ws, List<Vector2> placed, float minDist)
+    {
+        float minDistSq = minDist * minDist;
+        for (int i = 0; i < 25; i++)
+        {
+            var pos = _RandomPosAwayFromCenter(ws);
+            bool tooClose = false;
+            foreach (var p in placed)
+            {
+                if ((pos - p).LengthSquared() < minDistSq)
+                {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (!tooClose)
+            {
+                placed.Add(pos);
+                return pos;
+            }
+        }
+        // 降级：放宽距离再试一次（避免地图过空仅因密度过高）
+        float relaxedSq = minDist * minDist * 0.5f;
+        for (int i = 0; i < 10; i++)
+        {
+            var pos = _RandomPosAwayFromCenter(ws);
+            bool tooClose = false;
+            foreach (var p in placed)
+            {
+                if ((pos - p).LengthSquared() < relaxedSq)
+                {
+                    tooClose = true;
+                    break;
+                }
+            }
+            if (!tooClose)
+            {
+                placed.Add(pos);
+                return pos;
+            }
+        }
+        var fallback = _RandomPosAwayFromCenter(ws);
+        placed.Add(fallback);
+        return fallback;
     }
 
     private void _AddResource(ResourceType type, Vector2 pos)

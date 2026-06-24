@@ -45,7 +45,8 @@ public partial class GameOverUI : Control
         // Dark background fade-in
         var bg = new ColorRect
         {
-            ZIndex = 50
+            ZIndex = 50,
+            MouseFilter = MouseFilterEnum.Ignore
         };
         bg.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
         bg.Color = new Color(0, 0, 0, 0);
@@ -54,6 +55,7 @@ public partial class GameOverUI : Control
         var redTint = new ColorRect
         {
             ZIndex = 51,
+            MouseFilter = MouseFilterEnum.Ignore,
             Color = new Color(0.3f, 0.05f, 0.02f, 0)
         };
         redTint.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
