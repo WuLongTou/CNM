@@ -45,17 +45,30 @@ public partial class Altar : Area2D
         AddChild(col);
         ZIndex = 1;
 
-        // 主视觉：MeshInstance2D 渲染 .glb 模型，5 种 boon 用 Modulate 调色
-        var altarMesh = ModelLoader.GetMesh("res://assets/models/props/altar.glb");
-        if (altarMesh != null)
+        // 诊断：MeshInstance2D 是否渲染？用代码 BoxMesh 验证
+        var box = new BoxMesh();
+        var boxMat = new StandardMaterial3D
         {
-            _altarInstance = new MeshInstance2D
-            {
-                Mesh = altarMesh,
-                Modulate = _BoonColor(),
-            };
-            AddChild(_altarInstance);
-        }
+            ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+            AlbedoColor = new Color(1f, 0.2f, 0.8f), // 亮紫色
+        };
+        box.Material = boxMat;
+
+        // 主视觉：先用 BoxMesh 验证 MeshInstance2D 渲染
+        _altarInstance = new MeshInstance2D
+        {
+            Mesh = box,  // 临时：用紫色 box 替代 glTF mesh 调试
+            Scale = new Vector2(64f / 1f, 64f / 1f),
+            Modulate = _BoonColor(),
+        };
+        AddChild(_altarInstance);
+
+        // 真实 mesh（注释掉，等紫色 box 可见后再恢复）
+        // var altarMesh = ModelLoader.GetMesh("res://assets/models/props/altar.glb");
+        // if (altarMesh != null)
+        // {
+        //     _altarInstance.Mesh = altarMesh;
+        // }
 
         // 远距离指引光柱（祭坛增益色脉动）
         var beam = new Sprite2D

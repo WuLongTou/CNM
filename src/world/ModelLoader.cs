@@ -67,16 +67,41 @@ public static class ModelLoader
         }
     }
 
-    /// <summary>将 Mesh 所有 surface 的材质设为 Unshaded（2D 场景无光照必需）。</summary>
+    /// <summary>将 Mesh 所有 surface 的材质替换为 Unshaded（2D 场景无光照必需）。
+    /// 原有材质的 Albedo Color / Emission Color 保留但关掉光照计算。</summary>
     private static void _SetUnshaded(Mesh mesh)
     {
         for (int i = 0; i < mesh.GetSurfaceCount(); i++)
         {
-            var mat = mesh.SurfaceGetMaterial(i);
-            if (mat is BaseMaterial3D bm)
+            var srcMat = mesh.SurfaceGetMaterial(i);
+            if (srcMat == null)
+            {
+                // 无材质 surface → 创建一个最小 Unshaded 材质用白色标记
+                var fallback = new StandardMaterial3D
+                {
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    AlbedoColor = new Color(1f, 0.2f, 0.2f), // 红色标记无材质 surface
+                };
+                mesh.SurfaceSetMaterial(i, fallback);
+                LogUtils.Print($"[ModelLoader] surface {i} ← 新建 Unshaded (原为空)");
+                continue;
+            }
+
+            if (srcMat is BaseMaterial3D bm)
             {
                 bm.ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded;
-                LogUtils.Print($"[ModelLoader] surface {i} → Unshaded");
+                LogUtils.Print($"[ModelLoader] surface {i} → Unshaded (albedo={bm.AlbedoColor})");
+            }
+            else
+            {
+                // 非 BaseMaterial3D（如 ShaderMaterial）→ 替换为 Unshaded StandardMaterial3D
+                var replacement = new StandardMaterial3D
+                {
+                    ShadingMode = BaseMaterial3D.ShadingModeEnum.Unshaded,
+                    AlbedoColor = new Color(0.5f, 0.8f, 1.0f), // 浅蓝色标记
+                };
+                mesh.SurfaceSetMaterial(i, replacement);
+                LogUtils.Print($"[ModelLoader] surface {i} ← 替换为 Unshaded (原为 {srcMat.GetType().Name})");
             }
         }
     }
