@@ -1,96 +1,87 @@
 {
-  "version": 3,
-  "description": "Blender 烘焙清单 —— 障碍物（Solid/Destructible/Explosive/Low/Hazard）+ 探索道具 + 资源节点 .glb 3D 模型",
+  "version": 4,
+  "description": "Blender 烘焙清单 —— 9 张地面大纹理 + 障碍物 + 探索道具 + 资源节点",
   "items": [
     {
-      "key": "stone_block",
-      "model": "stone_block",
-      "format": "gltf",
-      "output": "obstacles/solid_stone_block.glb"
+      "key": "ground_graveyard",
+      "model": "ground",
+      "format": "ground",
+      "seed": 11111,
+      "tint": [0.88, 0.90, 0.92, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_graveyard.png"
     },
     {
-      "key": "tombstone_row",
-      "model": "tombstone_row",
-      "format": "gltf",
-      "output": "obstacles/solid_tombstone_row.glb"
+      "key": "ground_ruins",
+      "model": "ground",
+      "format": "ground",
+      "seed": 22222,
+      "tint": [0.92, 0.88, 0.82, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_ruins.png"
     },
     {
-      "key": "pillar",
-      "model": "pillar",
-      "format": "gltf",
-      "output": "obstacles/solid_pillar.glb"
+      "key": "ground_dungeon",
+      "model": "ground",
+      "format": "ground",
+      "seed": 33333,
+      "tint": [0.65, 0.68, 0.75, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_dungeon.png"
     },
     {
-      "key": "metal_bunker",
-      "model": "metal_bunker",
-      "format": "gltf",
-      "output": "obstacles/solid_metal_bunker.glb"
+      "key": "ground_swamp",
+      "model": "ground",
+      "format": "ground",
+      "seed": 44444,
+      "tint": [0.65, 0.75, 0.60, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_swamp.png"
     },
     {
-      "key": "obelisk",
-      "model": "obelisk",
-      "format": "gltf",
-      "output": "obstacles/solid_obelisk.glb"
+      "key": "ground_cathedral",
+      "model": "ground",
+      "format": "ground",
+      "seed": 55555,
+      "tint": [0.88, 0.82, 0.75, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_cathedral.png"
     },
     {
-      "key": "archway",
-      "model": "archway",
-      "format": "gltf",
-      "output": "obstacles/solid_archway.glb"
+      "key": "ground_wasteland",
+      "model": "ground",
+      "format": "ground",
+      "seed": 66666,
+      "tint": [0.88, 0.75, 0.60, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_wasteland.png"
     },
     {
-      "key": "giant_tree",
-      "model": "giant_tree",
-      "format": "gltf",
-      "output": "obstacles/solid_giant_tree.glb"
+      "key": "ground_glacier",
+      "model": "ground",
+      "format": "ground",
+      "seed": 77777,
+      "tint": [0.80, 0.88, 0.92, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_glacier.png"
     },
     {
-      "key": "tower",
-      "model": "tower",
-      "format": "gltf",
-      "output": "obstacles/solid_tower.glb"
+      "key": "ground_volcano",
+      "model": "ground",
+      "format": "ground",
+      "seed": 88888,
+      "tint": [0.50, 0.34, 0.28, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_volcano.png"
     },
     {
-      "key": "wood_fence",
-      "model": "wood_fence",
-      "format": "gltf",
-      "output": "obstacles/destruct_wood_fence.glb"
-    },
-    {
-      "key": "stone_rubble",
-      "model": "stone_rubble",
-      "format": "gltf",
-      "output": "obstacles/destruct_stone_rubble.glb"
-    },
-    {
-      "key": "explosive_barrel",
-      "model": "explosive_barrel",
-      "format": "gltf",
-      "output": "obstacles/explosive_barrel.glb"
-    },
-    {
-      "key": "water_puddle",
-      "model": "water_puddle",
-      "format": "gltf",
-      "output": "obstacles/low_water_puddle.glb"
-    },
-    {
-      "key": "grass_low",
-      "model": "grass_low",
-      "format": "gltf",
-      "output": "obstacles/low_grass.glb"
-    },
-    {
-      "key": "toxic_swamp",
-      "model": "toxic_swamp",
-      "format": "gltf",
-      "output": "obstacles/hazard_toxic.glb"
-    },
-    {
-      "key": "fire_ground",
-      "model": "fire_ground",
-      "format": "gltf",
-      "output": "obstacles/hazard_fire.glb"
+      "key": "ground_desert",
+      "model": "ground",
+      "format": "ground",
+      "seed": 99999,
+      "tint": [0.86, 0.76, 0.52, 1.0],
+      "canvas_size": 1920,
+      "output": "ground/ground_desert.png"
     }
   ]
 }

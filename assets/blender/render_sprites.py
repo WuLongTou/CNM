@@ -653,6 +653,36 @@ def make_fire_ground():
     return join_objects(objs, "fire_ground")
 
 
+# ─── 地面（程序化大纹理） ───────────────────────────────────
+# 输出大 PNG（1920×1080），替换 ProceduralGround.cs 的程序化烘焙
+# 参数：seed（噪声） + tint（基色）
+
+def make_ground(seed=0, tint=(0.3, 0.3, 0.3, 1.0)):
+    """地面 Plane：1.0×1.0 单位，高细分 + 噪声 displacement + tint 材质。
+    适合 ortho_scale=1.0 + camera Z=0.5 渲染。
+    """
+    mat = make_material(f"Ground_{seed}", tint, roughness=0.95)
+    # 高细分 Plane
+    bpy.ops.mesh.primitive_plane_add(size=1, location=(0, 0, 0))
+    plane = bpy.context.active_object
+    plane.name = "ground_plane"
+    # Subdivision（提供顶点 displacement 用）
+    bpy.ops.object.modifier_add(type='SUBSURF')
+    plane.modifiers["Subdivision"].subdivision_type = 'CATMULL_CLARK'
+    plane.modifiers["Subdivision"].levels = 6
+    # 噪声 displacement
+    bpy.ops.object.modifier_add(type='DISPLACE')
+    plane.modifiers["Displace"].strength = 0.04
+    plane.modifiers["Displace"].mid_level = 0.0
+    # 复用 Blender 自带 stucci 纹理（不依赖外部）
+    tex = bpy.data.textures.new(f"DisplaceTex_{seed}", type='STUCCI')
+    tex.noise_scale = 0.3
+    tex.noise_basis = 'BLENDER_ORIGINAL'
+    plane.modifiers["Displace"].texture = tex
+    apply_mat(plane, mat)
+    return plane
+
+
 # ─── 场景模板（统一相机/灯光/渲染） ───────────────────────
 
 def setup_template(canvas_size, output_path):
@@ -743,7 +773,11 @@ def render_item(item, out_dir):
     fn = globals().get(fn_name)
     if fn is None:
         raise ValueError(f"Unknown model: {item['model']} (no {fn_name})")
-    obj = fn(**item.get("args", {}))
+    # ground 格式从 item 顶层取 seed/tint，其他用 args
+    if fmt == "ground":
+        obj = fn(seed=item.get("seed", 0), tint=tuple(item.get("tint", [0.3, 0.3, 0.3, 1.0])))
+    else:
+        obj = fn(**item.get("args", {}))
     obj.location = (0, 0, 0)  # 居中
     bpy.context.view_layer.objects.active = obj
 
@@ -753,6 +787,10 @@ def render_item(item, out_dir):
 
     if fmt == "gltf":
         _export_gltf(output_path, item)
+    elif fmt == "ground":
+        # 已经用 fn(seed, tint) 创建好 obj，直接渲染
+        _render_ground_setup(canvas_size, output_path)
+        bpy.ops.render.render(write_still=True)
     else:
         # PNG 模式：需要灯光/相机
         setup_template(canvas_size, output_path)
@@ -760,6 +798,52 @@ def render_item(item, out_dir):
 
     print(f"  ✓ {rel_path}  ({fmt})")
     return output_path
+
+
+def _render_ground_setup(canvas_size, output_path):
+    """地面渲染设置：相机/灯光/输出（前提：场景中已有 ground mesh）。"""
+    # 相机（正交 1.0 单位视野，Z=0.5 朝下）
+    bpy.ops.object.camera_add(location=(0, 0, 0.5))
+    cam = bpy.context.active_object
+    cam.name = "GroundCam"
+    cam.data.type = 'ORTHO'
+    cam.data.ortho_scale = 1.0
+    bpy.context.scene.camera = cam
+
+    # 灯光：Sun 暖色斜射
+    bpy.ops.object.light_add(type='SUN', location=(4, 4, 5))
+    sun = bpy.context.active_object
+    sun.name = "KeyLight"
+    sun.data.energy = 4.5
+    sun.data.color = (1.0, 0.93, 0.78)
+    sun.rotation_euler = (math.radians(45), math.radians(35), 0)
+    sun.data.shadow_soft_size = 3.0
+
+    # 补光
+    bpy.ops.object.light_add(type='AREA', location=(0, 0, 5))
+    area = bpy.context.active_object
+    area.name = "FillLight"
+    area.data.energy = 200
+    area.data.size = 4.0
+    area.data.color = (0.60, 0.70, 0.90)
+    area.rotation_euler = (0, 0, 0)
+
+    # 渲染设置
+    scene = bpy.context.scene
+    scene.render.engine = RENDER_ENGINE
+    scene.render.resolution_x = canvas_size
+    scene.render.resolution_y = canvas_size
+    scene.render.resolution_percentage = 100
+    scene.render.film_transparent = FILM_TRANSPARENT
+    scene.render.image_settings.file_format = 'PNG'
+    scene.render.image_settings.color_mode = 'RGBA'
+    scene.render.image_settings.compression = 15
+    scene.render.filepath = str(output_path)
+    if RENDER_ENGINE == "BLENDER_EEVEE":
+        try:
+            scene.eevee.taa_samples = RENDER_SAMPLES
+        except AttributeError:
+            pass
 
 
 def _export_gltf(output_path, item):
