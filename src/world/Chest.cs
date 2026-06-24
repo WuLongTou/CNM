@@ -12,11 +12,22 @@ using ZombieWars.Vfx;
 /// </summary>
 public partial class Chest : Area2D
 {
+    // 宝箱 4 帧 mesh（盖子 0°/30°/60°/90° 开启过程）
+    private static readonly Mesh?[] _chestMeshes = new Mesh?[]
+    {
+        ModelLoader.LoadMesh("res://assets/models/props/chest_0.glb"),
+        ModelLoader.LoadMesh("res://assets/models/props/chest_1.glb"),
+        ModelLoader.LoadMesh("res://assets/models/props/chest_2.glb"),
+        ModelLoader.LoadMesh("res://assets/models/props/chest_3.glb"),
+    };
+
     public int LootCount { get; set; } = 2;
 
     private bool _opened;
     private bool _looted;
     private float _openAnim;
+    private MeshInstance2D? _chestInstance;
+    private int _currentFrame = -1;
 
     public override void _Ready()
     {
@@ -29,6 +40,13 @@ public partial class Chest : Area2D
         AddChild(col);
 
         ZIndex = 1;
+
+        // 主视觉：MeshInstance2D 渲染 4 帧 chest 动画
+        if (_chestMeshes[0] != null)
+        {
+            _chestInstance = new MeshInstance2D { Mesh = _chestMeshes[0] };
+            AddChild(_chestInstance);
+        }
 
         // 远距离指引光柱：大场景里让玩家从远处发现宝箱（金色脉动光柱）
         var beam = new Sprite2D
@@ -48,6 +66,13 @@ public partial class Chest : Area2D
         if (_opened && _openAnim < 1f)
         {
             _openAnim = Mathf.Min(1f, _openAnim + (float)delta / 0.35f);
+            // 切换 chest mesh 帧（0/1/2/3 对应开启动画 0%/33%/66%/100%）
+            int frame = Mathf.Min(3, (int)(_openAnim * 3.99f));
+            if (frame != _currentFrame && _chestInstance != null && _chestMeshes[frame] != null)
+            {
+                _chestInstance.Mesh = _chestMeshes[frame];
+                _currentFrame = frame;
+            }
             QueueRedraw();
             if (_openAnim >= 1f && !_looted)
             {
@@ -63,25 +88,10 @@ public partial class Chest : Area2D
 
     public override void _Draw()
     {
-        float open = _openAnim;
-        // 箱身
-        var bodyRect = new Rect2(-24, -8, 48, 32);
-        DrawRect(bodyRect, new Color(0.45f, 0.30f, 0.16f), filled: true);
-        DrawRect(bodyRect, new Color(0.28f, 0.18f, 0.10f), filled: false, width: 2f);
-        // 金属包边
-        DrawRect(new Rect2(-24, 2, 48, 4), new Color(0.62f, 0.55f, 0.38f), filled: true);
-        // 盖子（开启时上移 + 淡出）
-        float lidOffset = -open * 16f;
-        float lidA = 1f - open;
-        var lidRect = new Rect2(-24, -20 + lidOffset, 48, 12);
-        DrawRect(lidRect, new Color(0.50f, 0.34f, 0.18f, lidA), filled: true);
-        DrawRect(lidRect, new Color(0.30f, 0.20f, 0.10f, lidA), filled: false, width: 2f);
-        // 锁（关闭时可见）
-        if (open < 0.2f)
-            DrawRect(new Rect2(-5, -6, 10, 10), new Color(0.82f, 0.66f, 0.25f), filled: true);
-        // 金光（开启时迸发）
-        if (open > 0.3f)
+        // 金光（开启时迸发）—— 静态视觉由 MeshInstance2D 提供
+        if (_openAnim > 0.3f)
         {
+            float open = _openAnim;
             float glowA = Mathf.Clamp((open - 0.3f) / 0.5f, 0f, 1f) * 0.7f;
             DrawCircle(new Vector2(0, -2), 14f + open * 10f, new Color(1f, 0.85f, 0.3f, glowA));
         }

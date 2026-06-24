@@ -5,6 +5,10 @@ using ZombieWars.Core;
 
 public partial class ForgeStation : Area2D
 {
+    // 锻造台 3D mesh（Blender .glb）
+    private static readonly Mesh? _mesh =
+        ModelLoader.LoadMesh("res://assets/models/props/forge_station.glb");
+
     private bool _playerNear;
     private Label? _hint;
 
@@ -19,6 +23,10 @@ public partial class ForgeStation : Area2D
         var col = new CollisionShape2D { Shape = new CircleShape2D { Radius = 44 } };
         AddChild(col);
         ZIndex = 1;
+
+        // 主视觉：MeshInstance2D 渲染 .glb
+        if (_mesh != null)
+            AddChild(new MeshInstance2D { Mesh = _mesh });
 
         _hint = new Label { Text = "按 F 锻造", Position = new Vector2(-36, -56), ZIndex = 8 };
         _hint.AddThemeFontSizeOverride("font_size", 14);
@@ -71,32 +79,15 @@ public partial class ForgeStation : Area2D
 
     public override void _Draw()
     {
-        DrawCircle(new Vector2(4, 12), 30, new Color(0, 0, 0, 0.25f));
-
-        // 铁砧底座
-        DrawRect(new Rect2(-20, 4, 40, 16), new Color(0.30f, 0.30f, 0.33f), true);
-        DrawRect(new Rect2(-20, 4, 40, 16), new Color(0.15f, 0.15f, 0.17f), false, 2f);
-        // 铁砧主体
-        DrawRect(new Rect2(-14, -10, 28, 14), new Color(0.38f, 0.38f, 0.40f), true);
-        DrawRect(new Rect2(-14, -10, 28, 14), new Color(0.20f, 0.20f, 0.22f), false, 2f);
-        // 铁砧顶面
-        DrawRect(new Rect2(-18, -14, 36, 4), new Color(0.42f, 0.42f, 0.45f), true);
-        DrawRect(new Rect2(-18, -14, 36, 4), new Color(0.22f, 0.22f, 0.24f), false, 2f);
-        // 铁锤
-        DrawLine(new Vector2(16, -14), new Vector2(28, -28), new Color(0.45f, 0.30f, 0.15f), 3f);
-        DrawRect(new Rect2(24, -32, 10, 8), new Color(0.40f, 0.40f, 0.43f), true);
-        // 火花（铁砧上方）
+        // 交互光圈 + 火花（玩家靠近时）—— 静态视觉由 MeshInstance2D 提供
         if (_playerNear)
         {
             double t = Time.GetTicksMsec() / 1000.0;
+            // 火花
             float sparkle = 0.05f + 0.10f * Mathf.Sin((float)t * 8f);
             DrawRect(new Rect2(-8, -18, 4, 3), new Color(1f, 0.7f, 0.2f, sparkle), true);
             DrawRect(new Rect2(4, -20, 3, 3), new Color(1f, 0.6f, 0.1f, sparkle * 0.7f), true);
-        }
-        // 交互光圈
-        if (_playerNear)
-        {
-            double t = Time.GetTicksMsec() / 1000.0;
+            // 交互光圈
             float pulse = 0.4f + 0.3f * Mathf.Sin((float)t * 4f);
             DrawArc(Vector2.Zero, 40f, 0, Mathf.Tau, 24, new Color(1f, 0.7f, 0.3f, pulse), 2f);
         }

@@ -1,5 +1,6 @@
 namespace ZombieWars.World;
 
+using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Pickups;
@@ -11,9 +12,21 @@ public enum ResourceType { Wood, Stone, Fiber, Berry }
 /// 可采集资源节点（饥荒式）：树/石头/灌木/浆果丛。
 /// 实现 IDamageable，被玩家近战攻击时扣耐久，归零掉落资源 Pickup。
 /// 不阻挡通行（阶段 1 简化），加入 "resource_nodes" group 供攻击查询。
+///
+/// 视觉：Blender 3D 模型（.glb）经 MeshInstance2D 在 2D 场景中渲染。
+/// 攻击时仍用 _Draw 画抖动（DrawSetTransform），保留代码绘制的灵活性。
 /// </summary>
 public sealed partial class ResourceNode : Node2D, IDamageable
 {
+    // 资源节点 3D mesh 缓存（按 variant 1/2/3/4 索引）
+    private static readonly Dictionary<int, Mesh?> _meshByVariant = new()
+    {
+        [1] = ModelLoader.LoadMesh("res://assets/models/resources/tree.glb"),
+        [2] = ModelLoader.LoadMesh("res://assets/models/resources/stone.glb"),
+        [3] = ModelLoader.LoadMesh("res://assets/models/resources/bush.glb"),
+        [4] = ModelLoader.LoadMesh("res://assets/models/resources/berry_bush.glb"),
+    };
+
     public ResourceType Type;
     private int _maxHealth = 3;
     private int _health;
@@ -22,6 +35,7 @@ public sealed partial class ResourceNode : Node2D, IDamageable
     private int _variant;
     private float _shakeTime;
     private Vector2 _drawShake;
+    private MeshInstance2D? _meshInstance;
 
     int IDamageable.CurrentHealth => _health;
     int IDamageable.MaxHealth => _maxHealth;
@@ -46,6 +60,18 @@ public sealed partial class ResourceNode : Node2D, IDamageable
     {
         AddToGroup("resource_nodes");
         AddToGroup("mm_resource"); // 小地图标记（后续扩展）
+
+        // 主视觉：MeshInstance2D 渲染 .glb 3D 模型
+        if (_meshByVariant.TryGetValue(_variant, out var mesh) && mesh != null)
+        {
+            _meshInstance = new MeshInstance2D
+            {
+                Mesh = mesh,
+                Scale = new Vector2(_size / 48f, _size / 48f),  // _size=60 → scale 1.25
+            };
+            AddChild(_meshInstance);
+        }
+        // 兜底：若 mesh 缺失，QueueRedraw 走老的 _Draw 路径
         QueueRedraw();
     }
 
@@ -101,17 +127,43 @@ public sealed partial class ResourceNode : Node2D, IDamageable
 
     public override void _Draw()
     {
+        // 有 mesh 走新路径：仅画抖动 + 受伤裂纹 overlay
+        if (_meshInstance != null)
+        {
+            DrawSetTransform(_drawShake, 0f, Vector2.One);
+            float dmgRatio = 1f - (float)_health / _maxHealth;
+            if (dmgRatio > 0.3f)
+                _DrawDamageOverlay(dmgRatio);
+            DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+            return;
+        }
+        // 兜底：mesh 缺失时走老的 _Draw 全路径
         DrawSetTransform(_drawShake, 0f, Vector2.One);
-        float dmgRatio = 1f - (float)_health / _maxHealth;
+        float dmgRatioFallback = 1f - (float)_health / _maxHealth;
         var rng = new RandomNumberGenerator { Seed = (ulong)((long)GlobalPosition.X * 7 + (long)GlobalPosition.Y * 13 + (int)Type) };
         switch (_variant)
         {
-            case 1: _DrawTree(rng, dmgRatio); break;
-            case 2: _DrawRock(rng, dmgRatio); break;
-            case 3: _DrawBush(rng, dmgRatio, false); break;
-            case 4: _DrawBush(rng, dmgRatio, true); break;
+            case 1: _DrawTree(rng, dmgRatioFallback); break;
+            case 2: _DrawRock(rng, dmgRatioFallback); break;
+            case 3: _DrawBush(rng, dmgRatioFallback, false); break;
+            case 4: _DrawBush(rng, dmgRatioFallback, true); break;
         }
         DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
+    }
+
+    /// <summary>mesh 模式下的受伤裂纹 overlay（深色折线）。</summary>
+    private void _DrawDamageOverlay(float dmg)
+    {
+        var crack = new Color(0.05f, 0.04f, 0.03f, Mathf.Clamp(dmg, 0f, 1f));
+        var rng = new RandomNumberGenerator { Seed = (ulong)(GlobalPosition.X * 11 + GlobalPosition.Y * 17) };
+        for (int i = 0; i < 3; i++)
+        {
+            float ax = rng.RandfRange(-_size * 0.3f, _size * 0.3f);
+            float ay = rng.RandfRange(-_size * 0.3f, _size * 0.3f);
+            float bx = ax + rng.RandfRange(-_size * 0.2f, _size * 0.2f);
+            float by = ay + rng.RandfRange(-_size * 0.2f, _size * 0.2f);
+            DrawLine(new Vector2(ax, ay), new Vector2(bx, by), crack, 1.5f);
+        }
     }
 
     // 树：棕树干 + 多团绿冠（饥荒侧视纸片感）

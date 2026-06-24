@@ -6,9 +6,16 @@ using ZombieWars.Core;
 /// <summary>
 /// 工作台（饥荒式合成）：地图固定放置，玩家靠近按 E 打开合成面板。
 /// Area2D + CollisionMask=Player 范式（复用 Chest/Altar 交互模式）。
+///
+/// 视觉：Blender 3D 模型（.glb）经 MeshInstance2D 渲染。
+/// 保留 _Draw 画玩家靠近时的交互光圈脉动。
 /// </summary>
 public partial class Workbench : Area2D
 {
+    // 工作台 3D mesh（Blender .glb）
+    private static readonly Mesh? _mesh =
+        ModelLoader.LoadMesh("res://assets/models/props/workbench.glb");
+
     private bool _playerNear;
     private Label? _hint;
 
@@ -23,6 +30,10 @@ public partial class Workbench : Area2D
         var col = new CollisionShape2D { Shape = new CircleShape2D { Radius = 44 } };
         AddChild(col);
         ZIndex = 1;
+
+        // 主视觉：MeshInstance2D 渲染 .glb
+        if (_mesh != null)
+            AddChild(new MeshInstance2D { Mesh = _mesh });
 
         _hint = new Label { Text = "按 E 合成", Position = new Vector2(-36, -56), ZIndex = 8 };
         _hint.AddThemeFontSizeOverride("font_size", 14);
@@ -56,23 +67,7 @@ public partial class Workbench : Area2D
 
     public override void _Draw()
     {
-        // 阴影
-        DrawCircle(new Vector2(4, 12), 30, new Color(0, 0, 0, 0.25f));
-        // 桌面（厚木板）
-        DrawRect(new Rect2(-32, -10, 64, 26), new Color(0.36f, 0.23f, 0.13f), true);
-        DrawRect(new Rect2(-32, -10, 64, 4), new Color(0.46f, 0.31f, 0.18f), true);
-        DrawRect(new Rect2(-32, -10, 64, 26), new Color(0.20f, 0.12f, 0.06f), false, 2f);
-        // 桌腿
-        DrawLine(new Vector2(-24, 16), new Vector2(-24, 32), new Color(0.25f, 0.16f, 0.08f), 5f);
-        DrawLine(new Vector2(24, 16), new Vector2(24, 32), new Color(0.25f, 0.16f, 0.08f), 5f);
-        // 铁砧
-        DrawRect(new Rect2(-12, -22, 24, 4), new Color(0.42f, 0.42f, 0.45f), true);
-        DrawRect(new Rect2(-9, -18, 18, 12), new Color(0.32f, 0.32f, 0.35f), true);
-        DrawRect(new Rect2(-12, -6, 24, 5), new Color(0.38f, 0.38f, 0.40f), true);
-        // 锤子（斜放）
-        DrawLine(new Vector2(8, -20), new Vector2(20, -32), new Color(0.45f, 0.30f, 0.15f), 3f);
-        DrawRect(new Rect2(16, -36, 10, 8), new Color(0.40f, 0.40f, 0.43f), true);
-        // 交互光圈（玩家靠近时脉动）
+        // 交互光圈（玩家靠近时脉动）—— 静态视觉由 MeshInstance2D 提供
         if (_playerNear)
         {
             double t = Time.GetTicksMsec() / 1000.0;

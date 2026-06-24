@@ -13,6 +13,10 @@ using static ZombieWars.Core.GameEnums;
 /// </summary>
 public partial class Altar : Area2D
 {
+    // 祭坛 3D mesh（Blender .glb 烘焙）
+    private static readonly Mesh? _altarMesh =
+        ModelLoader.LoadMesh("res://assets/models/props/altar.glb");
+
     public enum BoonKind { Damage, Heal, Shield, Haste, WeaponFusion }
     public BoonKind Boon { get; set; } = BoonKind.Damage;
     /// <summary>融合祭坛的"对偶武器"名：玩家武器与此名匹配方可触发融合。</summary>
@@ -22,6 +26,7 @@ public partial class Altar : Area2D
 
     private bool _activated;
     private float _glowPhase;
+    private MeshInstance2D? _altarInstance;
 
     /// <summary>供融合面板关闭后调用：拒绝时退化为回血，接受时已 QueueFree。</summary>
     public void ActivateAndDestroy()
@@ -43,6 +48,17 @@ public partial class Altar : Area2D
         var col = new CollisionShape2D { Shape = new CircleShape2D { Radius = 32f } };
         AddChild(col);
         ZIndex = 1;
+
+        // 主视觉：MeshInstance2D 渲染 .glb 模型，5 种 boon 用 Modulate 调色
+        if (_altarMesh != null)
+        {
+            _altarInstance = new MeshInstance2D
+            {
+                Mesh = _altarMesh,
+                Modulate = _BoonColor(),
+            };
+            AddChild(_altarInstance);
+        }
 
         // 远距离指引光柱（祭坛增益色脉动）
         var beam = new Sprite2D
@@ -67,20 +83,30 @@ public partial class Altar : Area2D
     {
         var c = _BoonColor();
         float pulse = 0.65f + Mathf.Sin(_glowPhase) * 0.35f;
-        // 石祭坛底座
+        // 有 mesh 时只画符文圆环 + 5 颗脉动符文（动态光效 overlay）
+        if (_altarInstance != null)
+        {
+            DrawArc(new Vector2(0, -2), 22f, 0f, Mathf.Tau, 28,
+                new Color(c.R, c.G, c.B, pulse * 0.7f), 2.2f);
+            for (int i = 0; i < 5; i++)
+            {
+                float a = i / 5f * Mathf.Tau + _glowPhase * 0.3f;
+                DrawCircle(new Vector2(Mathf.Cos(a) * 20f, Mathf.Sin(a) * 11f - 2f), 3.5f,
+                    new Color(c.R, c.G, c.B, pulse));
+            }
+            return;
+        }
+        // 兜底：mesh 缺失时画完整祭坛
         DrawRect(new Rect2(-24, -4, 48, 14), new Color(0.36f, 0.33f, 0.30f), filled: true);
         DrawRect(new Rect2(-28, 2, 56, 8), new Color(0.27f, 0.25f, 0.23f), filled: true);
-        // 符文圆环
         DrawArc(new Vector2(0, -2), 22f, 0f, Mathf.Tau, 28,
             new Color(c.R, c.G, c.B, pulse * 0.7f), 2.2f);
-        // 五颗脉动符文
         for (int i = 0; i < 5; i++)
         {
             float a = i / 5f * Mathf.Tau + _glowPhase * 0.3f;
             DrawCircle(new Vector2(Mathf.Cos(a) * 20f, Mathf.Sin(a) * 11f - 2f), 3.5f,
                 new Color(c.R, c.G, c.B, pulse));
         }
-        // 中心光柱
         DrawRect(new Rect2(-3, -34, 6, 30), new Color(c.R, c.G, c.B, pulse * 0.45f), filled: true);
     }
 

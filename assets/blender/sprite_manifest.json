@@ -1,0 +1,78 @@
+{
+  "version": 2,
+  "description": "Blender 烘焙清单 —— 导出 .glb 3D 模型（Godot MeshInstance2D 渲染用）",
+  "items": [
+    {
+      "key": "chest_frame_0",
+      "model": "chest",
+      "args": { "lid_tilt": 0 },
+      "format": "gltf",
+      "output": "props/chest_0.glb"
+    },
+    {
+      "key": "chest_frame_1",
+      "model": "chest",
+      "args": { "lid_tilt": 30 },
+      "format": "gltf",
+      "output": "props/chest_1.glb"
+    },
+    {
+      "key": "chest_frame_2",
+      "model": "chest",
+      "args": { "lid_tilt": 60 },
+      "format": "gltf",
+      "output": "props/chest_2.glb"
+    },
+    {
+      "key": "chest_frame_3",
+      "model": "chest",
+      "args": { "lid_tilt": 90 },
+      "format": "gltf",
+      "output": "props/chest_3.glb"
+    },
+    {
+      "key": "altar",
+      "model": "altar",
+      "format": "gltf",
+      "output": "props/altar.glb"
+    },
+    {
+      "key": "workbench",
+      "model": "workbench",
+      "format": "gltf",
+      "output": "props/workbench.glb"
+    },
+    {
+      "key": "forge_station",
+      "model": "forge",
+      "format": "gltf",
+      "output": "props/forge_station.glb"
+    },
+    {
+      "key": "tree",
+      "model": "tree",
+      "format": "gltf",
+      "output": "resources/tree.glb"
+    },
+    {
+      "key": "stone",
+      "model": "stone",
+      "format": "gltf",
+      "output": "resources/stone.glb"
+    },
+    {
+      "key": "bush",
+      "model": "bush",
+      "args": { "berry": false },
+      "format": "gltf",
+      "output": "resources/bush.glb"
+    },
+    {
+      "key": "berry_bush",
+      "model": "bush",
+      "args": { "berry": true },
+      "format": "gltf",
+      "output": "resources/berry_bush.glb"
+    }
+  ]
+}
