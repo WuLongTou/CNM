@@ -174,7 +174,11 @@ public partial class Main : Node2D
         _renderViewport.InitCamera(_player);
         _renderViewport.UpdateCameraLimits(MapContext.CurrentWorldSize);
 
-        _renderRect = new TextureRect { Name = "RenderRect" };
+        _renderRect = new TextureRect
+        {
+            Name = "RenderRect",
+            MouseFilter = Control.MouseFilterEnum.Ignore, // 纯视觉叠加层,不拦鼠标(否则主菜单/UI 全点不到)
+        };
         _renderRect.Position = Vector2.Zero;
         _renderRect.Size = _screenSize;
         _renderRect.Texture = _renderViewport.GetTexture();
