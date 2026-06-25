@@ -242,14 +242,17 @@ public partial class VFXManager : Node
             float alpha = alphas[i];
 
             // 残影进 3D 渲染层(与玩家 Sprite3D 同层),固定在 pos(不跟随)
+            // 注意:GlobalPosition 必须在 AddProxy 之后设——对象初始化器里设时节点未入树,
+            // SetGlobalPosition 内部会 assert !is_inside_tree() 并静默返回默认 Transform,
+            // 残影会被卡在 (0, 0, 0) 世界原点。
             var ghost = new SpriteProxy3D
             {
                 Texture = sourceSprite.Texture,
                 FlipH = sourceSprite.FlipH,
                 Modulate = new Color(0.88f, 0.85f, 0.82f, alpha),
-                GlobalPosition = Coord.World2DTo3D(pos),
             };
             rv.AddProxy(ghost);
+            ghost.GlobalPosition = Coord.World2DTo3D(pos);
 
             var tw = ghost.CreateTween();
             tw.TweenInterval(delay);
