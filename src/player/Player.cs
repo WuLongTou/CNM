@@ -4,6 +4,7 @@ using Godot;
 using Godot.Collections;
 using System;
 using ZombieWars.Core;
+using ZombieWars.Render;
 using ZombieWars.Enemy;
 using ZombieWars.Vfx;
 using ZombieWars.Weapons;
@@ -104,7 +105,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
     public int TotalKills { get; set; } = 0;
     public float TotalSurvivalTime { get; set; } = 0.0f;
 
-    public Sprite2D? Sprite { get; set; }
+    public Sprite3D? Sprite { get; set; }
     public Sprite2D? Shadow { get; set; }
     public CollisionShape2D? Collision { get; set; }
     public Control? HealthDisplay { get; set; }
@@ -133,12 +134,12 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
         CurrentDamage = BaseDamage;
         CurrentSpeed = BaseSpeed;
 
-        Sprite = new Sprite2D
+        Sprite = new SpriteProxy3D
         {
-            TextureFilter = TextureFilterEnum.Linear,
             Modulate = new Color(0.82f, 0.72f, 0.62f)  // 棕褐覆盖：饥荒式暗暖色调
         };
-        AddChild(Sprite);
+        if (Sprite is SpriteProxy3D sp) sp.BindTo2D(this);
+        AddChild(Sprite); // 先挂 Player;SpriteProxy3D._Process 自动 reparent 到 3D 渲染层
 
         Collision = new CollisionShape2D();
         var shape = new RectangleShape2D();

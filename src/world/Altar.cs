@@ -5,6 +5,7 @@ using ZombieWars.Core;
 using ZombieWars.Player;
 using ZombieWars.Vfx;
 using ZombieWars.Weapons;
+using ZombieWars.Render;
 using static ZombieWars.Core.GameEnums;
 
 /// <summary>
@@ -22,7 +23,7 @@ public partial class Altar : Area2D
 
     private bool _activated;
     private float _glowPhase;
-    private MeshInstance2D? _altarInstance;
+    private ModelProxy3D? _altarProxy;
 
     /// <summary>供融合面板关闭后调用：拒绝时退化为回血，接受时已 QueueFree。</summary>
     public void ActivateAndDestroy()
@@ -45,17 +46,9 @@ public partial class Altar : Area2D
         AddChild(col);
         ZIndex = 1;
 
-        // 主视觉：MeshInstance2D 渲染 .glb 模型，5 种 boon 用 Modulate 调色
-        var altarMesh = ModelLoader.GetMesh("res://assets/models/props/altar.glb");
-        if (altarMesh != null)
-        {
-            _altarInstance = new MeshInstance2D
-            {
-                Mesh = altarMesh,
-                Modulate = _BoonColor(),
-            };
-            AddChild(_altarInstance);
-        }
+        // 主视觉:3D 代理(MeshInstance3D 原生渲染,材质正常显色),5 种 boon 用 SetModulate 调色
+        _altarProxy = ModelProxy3D.CreateFor(this, "res://assets/models/props/altar.glb", 52f);
+        _altarProxy?.SetModulate(_BoonColor());
 
         // 远距离指引光柱（祭坛增益色脉动）
         var beam = new Sprite2D
@@ -81,7 +74,7 @@ public partial class Altar : Area2D
         var c = _BoonColor();
         float pulse = 0.65f + Mathf.Sin(_glowPhase) * 0.35f;
         // 有 mesh 时只画符文圆环 + 5 颗脉动符文（动态光效 overlay）
-        if (_altarInstance != null)
+        if (_altarProxy != null && _altarProxy.HasModel)
         {
             DrawArc(new Vector2(0, -2), 22f, 0f, Mathf.Tau, 28,
                 new Color(c.R, c.G, c.B, pulse * 0.7f), 2.2f);

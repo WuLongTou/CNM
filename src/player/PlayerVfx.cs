@@ -103,7 +103,7 @@ public partial class PlayerVfx : Node
             _dashFrame = _idleFrame;
             if (_walkFrames.Count == 0)
                 Player.Sprite.Texture = _idleFrame;
-            Player.Sprite.Scale = Vector2.One;
+            Player.Sprite.Scale = Vector3.One;
             Player.Sprite.FlipH = _facingLeft;
             return;
         }
@@ -117,7 +117,7 @@ public partial class PlayerVfx : Node
         _idleFrame = ImageTexture.CreateFromImage(img);
         if (_walkFrames.Count == 0)
             Player.Sprite.Texture = _idleFrame;
-        Player.Sprite.Scale = Vector2.One;
+        Player.Sprite.Scale = Vector3.One;
         Player.Sprite.FlipH = _facingLeft;
 
         var attackImg = img.Duplicate() as Image;
@@ -393,7 +393,7 @@ public partial class PlayerVfx : Node
 
         if (Player?.Sprite != null)
         {
-            Player.Sprite.Scale = Vector2.One;
+            Player.Sprite.Scale = Vector3.One;
             Player.Sprite.FlipH = _facingLeft;
         }
 
@@ -1061,7 +1061,7 @@ public partial class PlayerVfx : Node
                 _animState = AnimState.Idle;
                 Player.Sprite.Texture = _idleFrame ?? (_walkFrames.Count > 0 ? _walkFrames[0] : null);
                 // 朝向锁定为 _facingLeft 状态，避免 idle 时重置朝向
-                Player.Sprite.Scale = Vector2.One;
+                Player.Sprite.Scale = Vector3.One;
                 Player.Sprite.FlipH = _facingLeft;
             }
             _ApplyWeaponVisualTint();
@@ -1088,7 +1088,7 @@ public partial class PlayerVfx : Node
         {
             _animState = AnimState.Walk;
             _breatheTimer = 0.0f;
-            Player.Sprite.Scale = Vector2.One;
+            Player.Sprite.Scale = Vector3.One;
             _animTimer += delta;
             float frameInterval = Core.GameConfig.WalkAnimSpeed;
             if (_animTimer >= frameInterval)
@@ -1128,11 +1128,11 @@ public partial class PlayerVfx : Node
         if (_isMoving)
         {
             float b = 0.95f + Mathf.Abs(Mathf.Sin(_animTimer * 4.0f)) * 0.1f;
-            Player.Sprite.SelfModulate = new Color(b, b, b, 1.0f);
+            Player.Sprite.Modulate = new Color(b, b, b, 1.0f);
         }
         else
         {
-            Player.Sprite.SelfModulate = Colors.White;
+            Player.Sprite.Modulate = Colors.White;
         }
 
         // Breathing animation for idle（朝向只由 FlipH 控制，避免和负 scale 双重翻转）
@@ -1140,9 +1140,10 @@ public partial class PlayerVfx : Node
         {
             _breatheTimer += delta;
             float breathe = Mathf.Sin(_breatheTimer * Mathf.Tau / Core.GameConfig.IdleBreathSpeed) * 0.02f;
-            Player.Sprite.Scale = new Vector2(
+            Player.Sprite.Scale = new Vector3(
                 1.0f + breathe * 0.8f,
-                1.0f - breathe * 0.8f
+                1.0f - breathe * 0.8f,
+                1f
             );
             Player.Sprite.FlipH = _facingLeft;
         }

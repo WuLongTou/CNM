@@ -117,7 +117,7 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
     // Node References
     // ═══════════════════════════════════════════════
 
-    public Sprite2D? Sprite => _vfx?.Sprite;
+    public Sprite3D? Sprite => _vfx?.Sprite;
 
     private CollisionShape2D _collision = null!;
     private NavigationAgent2D? _navAgent;

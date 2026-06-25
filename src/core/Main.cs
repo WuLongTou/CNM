@@ -7,6 +7,7 @@ using ZombieWars.UI;
 using ZombieWars.Vfx;
 using ZombieWars.Audio;
 using ZombieWars.World;
+using ZombieWars.Render;
 using PlayerClass = ZombieWars.Player.Player;
 using WeaponDeck = ZombieWars.Weapons.WeaponDeck;
 
@@ -31,6 +32,8 @@ public partial class Main : Node2D
     private WeatherSystem? _weatherSystem;
     private AutoTestRunner? _autoTestRunner;
     private GameCamera _camera = null!;
+    private RenderViewport _renderViewport = null!;
+    private TextureRect _renderRect = null!;
     private MapManager _mapManager = null!;
     private MapBuilder _mapBuilder = null!;
 
@@ -78,6 +81,7 @@ public partial class Main : Node2D
 
         // 用选定地图构建可交互场景（Background._Ready 已用默认构建氛围，这里按选定地图重建）
         _background.LoadMap(_mapManager.Current);
+        _CreateRenderViewport(); // 必须在 Build 前:世界节点 _Ready 时挂 3D 代理
         _mapBuilder.Build(_mapManager.Current);
         _mapManager.MapChanged += OnMapChanged;
 
@@ -158,6 +162,35 @@ public partial class Main : Node2D
         miniMap.Setup(_player);
     }
 
+    /// <summary>创建 3D 渲染桥(2.5D)。必须在地图构建前调用,
+    /// 使世界节点 _Ready 时可通过 RenderViewport.Instance 挂载 3D 代理。</summary>
+    private void _CreateRenderViewport()
+    {
+        _renderViewport = new RenderViewport { Name = "RenderViewport" };
+        AddChild(_renderViewport);
+        _renderViewport.SetupCamera(
+            new Vector2I((int)_screenSize.X, (int)_screenSize.Y),
+            MapContext.CurrentWorldSize / 2f);
+        _renderViewport.InitCamera(_player);
+        _renderViewport.UpdateCameraLimits(MapContext.CurrentWorldSize);
+
+        _renderRect = new TextureRect { Name = "RenderRect" };
+        _renderRect.Position = Vector2.Zero;
+        _renderRect.Size = _screenSize;
+        _renderRect.Texture = _renderViewport.GetTexture();
+        _renderRect.ZIndex = 0; // 阶段1 微调(Background 之上、玩家 Sprite2D 之下)
+        AddChild(_renderRect);
+    }
+
+    public override void _Process(double delta)
+    {
+        // TextureRect(3D 层)跟随 2D 相机位置+震动,保持屏幕固定。
+        // 它在 default canvas 里会被 Camera2D 拖到屏幕外,必须每帧补偿回屏幕中心。
+        // zoom 由 Camera2D 的 Zoom 自然缩放 TextureRect(3D 内容随之缩放,单次 zoom)。
+        if (_renderRect != null && _camera != null)
+            _renderRect.GlobalPosition = _camera.GlobalPosition + _camera.Offset;
+    }
+
     public override void _UnhandledInput(InputEvent @event)
     {
     }
@@ -172,6 +205,14 @@ public partial class Main : Node2D
         _screenSize = GetViewport().GetVisibleRect().Size;
         if (_background != null)
             _background.UpdateBackgroundSize();
+        // 同步 3D 渲染桥的渲染分辨率、正交视野与显示尺寸
+        if (_renderViewport != null)
+        {
+            _renderViewport.Size = new Vector2I((int)_screenSize.X, (int)_screenSize.Y);
+            _renderViewport.Camera.Size = _screenSize.Y;
+        }
+        if (_renderRect != null)
+            _renderRect.Size = _screenSize;
     }
 
     private void OnMapChanged(MapData map)
@@ -182,6 +223,7 @@ public partial class Main : Node2D
         _player.GlobalPosition = MapContext.CurrentWorldSize / 2;
         // 刷新摄像机边界到新地图尺寸
         _camera.UpdateLimits(MapContext.CurrentWorldSize);
+        _renderViewport.UpdateCameraLimits(MapContext.CurrentWorldSize);
         LogUtils.Print($"[Main] 地图已切换：{map.Name}");
     }
 

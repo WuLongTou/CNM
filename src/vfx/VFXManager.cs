@@ -3,6 +3,7 @@ namespace ZombieWars.Vfx;
 using Godot;
 using Godot.Collections;
 using ZombieWars.Core;
+using ZombieWars.Render;
 using ZombieWars.UI;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
 
@@ -207,7 +208,7 @@ public partial class VFXManager : Node
 
     // ══ Sprite Flash ══
 
-    public static void FlashSprite(Node node, Sprite2D sprite, Color flashColor, float flashDuration = 0.03f, float restoreDuration = 0.07f)
+    public static void FlashSprite(Node node, Sprite3D sprite, Color flashColor, float flashDuration = 0.03f, float restoreDuration = 0.07f)
     {
         if (sprite == null) return;
         var tw = node.CreateTween();
@@ -215,7 +216,7 @@ public partial class VFXManager : Node
         tw.TweenProperty(sprite, ModulatePath, Colors.White, restoreDuration);
     }
 
-    public static void FlashHurt(Node node, Sprite2D sprite)
+    public static void FlashHurt(Node node, Sprite3D sprite)
     {
         if (sprite == null) return;
         var tw = node.CreateTween();
@@ -225,9 +226,11 @@ public partial class VFXManager : Node
 
     // ══ Ghost Trail ══
 
-    public static void SpawnGhostTrail(Node parent, Sprite2D? sourceSprite, Vector2 pos, float fadeTime = 0.3f)
+    public static void SpawnGhostTrail(Node parent, Sprite3D? sourceSprite, Vector2 pos, float fadeTime = 0.3f)
     {
         if (sourceSprite == null || sourceSprite.Texture == null) return;
+        var rv = RenderViewport.Instance;
+        if (rv == null) return;
 
         int count = 5;
         float interval = 0.045f;
@@ -238,15 +241,15 @@ public partial class VFXManager : Node
             float delay = i * interval;
             float alpha = alphas[i];
 
-            var ghost = new Sprite2D
+            // 残影进 3D 渲染层(与玩家 Sprite3D 同层),固定在 pos(不跟随)
+            var ghost = new SpriteProxy3D
             {
                 Texture = sourceSprite.Texture,
-                GlobalPosition = pos,
                 FlipH = sourceSprite.FlipH,
                 Modulate = new Color(0.88f, 0.85f, 0.82f, alpha),
-                ZIndex = sourceSprite.ZIndex - 1
+                GlobalPosition = Coord.World2DTo3D(pos),
             };
-            parent.AddChild(ghost);
+            rv.AddProxy(ghost);
 
             var tw = ghost.CreateTween();
             tw.TweenInterval(delay);

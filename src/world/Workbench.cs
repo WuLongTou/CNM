@@ -2,6 +2,7 @@ namespace ZombieWars.World;
 
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.Render;
 
 /// <summary>
 /// 工作台（饥荒式合成）：地图固定放置，玩家靠近按 E 打开合成面板。
@@ -27,10 +28,8 @@ public partial class Workbench : Area2D
         AddChild(col);
         ZIndex = 1;
 
-        // 主视觉：MeshInstance2D 渲染 .glb
-        var wbMesh = ModelLoader.GetMesh("res://assets/models/props/workbench.glb");
-        if (wbMesh != null)
-            AddChild(new MeshInstance2D { Mesh = wbMesh });
+        // 主视觉:3D 代理(MeshInstance3D 原生渲染,材质正常显色)
+        ModelProxy3D.CreateFor(this, "res://assets/models/props/workbench.glb", 50f);
 
         _hint = new Label { Text = "按 E 合成", Position = new Vector2(-36, -56), ZIndex = 8 };
         _hint.AddThemeFontSizeOverride("font_size", 14);

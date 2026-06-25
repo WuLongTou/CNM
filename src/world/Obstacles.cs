@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Enemy;
+using ZombieWars.Render;
 using PlayerClass = ZombieWars.Player.Player;
 
 /// <summary>
@@ -78,7 +79,7 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
     private Color _baseCol;
     private Color _litCol;
     private Color _darkCol;
-    private MeshInstance2D? _meshInstance;
+    private ModelProxy3D? _proxy;
 
     public void Setup(in ObstacleDef def)
     {
@@ -112,40 +113,16 @@ public sealed partial class SolidObstacle : StaticBody2D, IObstacleSetup
 
     public override void _Ready()
     {
-        // 主视觉：MeshInstance2D 加载对应 variant 的 .glb
+        // 主视觉:3D 代理(MeshInstance3D 原生渲染,材质正常显色)
         if (_solidMeshPathByVariant.TryGetValue(_variant, out var meshPath))
-        {
-            var solidMesh = ModelLoader.GetMesh(meshPath);
-            if (solidMesh != null)
-            {
-                _meshInstance = new MeshInstance2D
-                {
-                    Mesh = solidMesh,
-                    Scale = _ComputeScale(),
-                };
-                AddChild(_meshInstance);
-            }
-        }
-        // 兜底：mesh 缺失时走老 _Draw
-        if (_meshInstance == null) QueueRedraw();
-    }
-
-    /// <summary>根据 _size 缩放 mesh 到合适大小（参考碰撞体尺寸）</summary>
-    private Vector2 _ComputeScale()
-    {
-        // 烘焙的 mesh 大约 1.0-1.4 单位宽，目标视觉宽度 = _size.X
-        return new Vector2(_size.X / 1.0f, _size.Y / 1.0f);
+            _proxy = ModelProxy3D.CreateFor(this, meshPath, _size.X);
+        // 兜底:模型缺失时走老 _Draw
+        if (_proxy == null || !_proxy.HasModel) QueueRedraw();
     }
 
     public override void _Draw()
     {
-        // mesh 模式：只画阴影
-        if (_meshInstance != null)
-        {
-            ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 8f);
-            return;
-        }
-        // 兜底：mesh 缺失时只画阴影（具体视觉由 mesh 提供）
+        // 3D 模型由代理渲染;这里画阴影(2D overlay),模型缺失也画阴影兜底
         ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 8f);
     }
 }
@@ -165,7 +142,7 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     private float _biteTick; // 僵尸啃咬累计
     private Area2D? _biteArea; // 僵尸啃咬监测区（替代全局距离，避免跨障碍误伤）
     private Vector2 _drawShake;
-    private MeshInstance2D? _meshInstance;
+    private ModelProxy3D? _proxy;
 
     int IDamageable.CurrentHealth => _health;
     int IDamageable.MaxHealth => _maxHealth;
@@ -208,20 +185,10 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     public override void _Ready()
     {
         AddToGroup("destructibles");
-        // 主视觉：MeshInstance2D 加载对应 variant 的 .glb
+        // 主视觉:3D 代理
         var meshPath = _variant is 2 or 3 ? _woodFencePath : _stoneRubblePath;
-        var desMesh = ModelLoader.GetMesh(meshPath);
-        if (desMesh != null)
-        {
-            _meshInstance = new MeshInstance2D
-            {
-                Mesh = desMesh,
-                Scale = new Vector2(_size.X / 1.0f, _size.Y / 1.0f),
-            };
-            AddChild(_meshInstance);
-        }
-        // 兜底：mesh 缺失时走老 _Draw
-        if (_meshInstance == null) QueueRedraw();
+        _proxy = ModelProxy3D.CreateFor(this, meshPath, _size.X);
+        if (_proxy == null || !_proxy.HasModel) QueueRedraw();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -313,7 +280,7 @@ public sealed partial class DestructibleObstacle : StaticBody2D, IDamageable, IO
     {
         DrawSetTransform(_drawShake, 0f, Vector2.One);
         // mesh 模式：只画阴影 + 受损裂纹 overlay
-        if (_meshInstance != null)
+        if (_proxy != null && _proxy.HasModel)
         {
             ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
             float dmgRatio = 1f - (float)_health / _maxHealth;
@@ -356,7 +323,7 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     private int _biteCount;
     private Area2D? _biteArea;
     private Vector2 _drawShake;
-    private MeshInstance2D? _meshInstance;
+    private ModelProxy3D? _proxy;
 
     int IDamageable.CurrentHealth => _health;
     int IDamageable.MaxHealth => _maxHealth;
@@ -397,17 +364,8 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     public override void _Ready()
     {
         AddToGroup("destructibles");
-        var barrelMesh = ModelLoader.GetMesh(_barrelPath);
-        if (barrelMesh != null)
-        {
-            _meshInstance = new MeshInstance2D
-            {
-                Mesh = barrelMesh,
-                Scale = new Vector2(_size.X / 0.5f, _size.Y / 0.5f),
-            };
-            AddChild(_meshInstance);
-        }
-        if (_meshInstance == null) QueueRedraw();
+        _proxy = ModelProxy3D.CreateFor(this, _barrelPath, _size.X);
+        if (_proxy == null || !_proxy.HasModel) QueueRedraw();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -500,13 +458,7 @@ public sealed partial class ExplosiveBarrel : StaticBody2D, IDamageable, IObstac
     public override void _Draw()
     {
         DrawSetTransform(_drawShake, 0f, Vector2.One);
-        if (_meshInstance != null)
-        {
-            ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
-            DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
-            return;
-        }
-        // 兜底：mesh 缺失时只画阴影（具体视觉由 mesh 提供）
+        // 3D 模型由代理渲染;这里画阴影(2D overlay)
         ObstacleDraw.DrawShadow(this, new Vector2(0, _size.Y * 0.4f), _size.X * 0.5f, 7f);
         DrawSetTransform(Vector2.Zero, 0f, Vector2.One);
     }
@@ -521,7 +473,7 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
 
     private Vector2 _size;
     private int _variant;
-    private MeshInstance2D? _meshInstance;
+    private ModelProxy3D? _proxy;
 
     public void Setup(in ObstacleDef def)
     {
@@ -541,19 +493,10 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
 
     public override void _Ready()
     {
-        // variant 1 = 水洼，其他 = 草丛
+        // variant 1 = 水洼,其他 = 草丛
         var lowPath = _variant == 1 ? _waterPath : _grassPath;
-        var lowMesh = ModelLoader.GetMesh(lowPath);
-        if (lowMesh != null)
-        {
-            _meshInstance = new MeshInstance2D
-            {
-                Mesh = lowMesh,
-                Scale = new Vector2(_size.X / 0.9f, _size.Y / 0.9f),
-            };
-            AddChild(_meshInstance);
-        }
-        else QueueRedraw();
+        _proxy = ModelProxy3D.CreateFor(this, lowPath, _size.X);
+        if (_proxy == null || !_proxy.HasModel) QueueRedraw();
     }
 
     public override void _PhysicsProcess(double delta)
@@ -575,7 +518,7 @@ public sealed partial class LowObstacle : Area2D, IObstacleSetup
 
     public override void _Draw()
     {
-        if (_meshInstance != null) return;  // 静态视觉已由 mesh 提供
+        if (_proxy != null && _proxy.HasModel) return;  // 静态视觉已由 3D 代理提供
         var rect = new Rect2(-_size * 0.5f, _size);
         var rng = new RandomNumberGenerator { Seed = (ulong)(_variant * 5555 + 3) };
 
@@ -620,7 +563,7 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
     private int _variant;
     private float _tickTimer;
     private float _redrawTimer;
-    private MeshInstance2D? _meshInstance;
+    private ModelProxy3D? _proxy;
 
     // 脉冲陷阱（variant 3=脉冲毒 / 4=脉冲火）：周期激活/休眠，休眠期无害，逼玩家踩时机
     private bool _IsPulse => _variant is 3 or 4;
@@ -652,20 +595,11 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
 
     public override void _Ready()
     {
-        // variant 1/3 = 毒沼，2/4 = 燃烧
+        // variant 1/3 = 毒沼,2/4 = 燃烧
         var hazPath = _variant is 1 or 3 ? _toxicPath : _firePath;
-        var hazMesh = ModelLoader.GetMesh(hazPath);
-        if (hazMesh != null)
-        {
-            _meshInstance = new MeshInstance2D
-            {
-                Mesh = hazMesh,
-                Scale = new Vector2(_size.X / 0.9f, _size.Y / 0.9f),
-            };
-            AddChild(_meshInstance);
-        }
+        _proxy = ModelProxy3D.CreateFor(this, hazPath, _size.X);
         // 脉冲陷阱需要每帧 QueueRedraw 画光圈
-        if (_IsPulse || _meshInstance == null) QueueRedraw();
+        if (_IsPulse || _proxy == null || !_proxy.HasModel) QueueRedraw();
         SetProcess(true);
     }
 
@@ -681,9 +615,9 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
 
         // 脉冲陷阱：休眠期不减速不掉血，仅激活期生效
         bool active = _PulseActive;
-        // 视觉：休眠期整体压暗，激活期恢复（提示玩家当前是否危险）
+        // 视觉:休眠期整体压暗,激活期恢复(3D 代理调色,提示玩家当前是否危险)
         var targetMod = active ? Colors.White : new Color(0.45f, 0.45f, 0.45f, 0.55f);
-        if (Modulate != targetMod) Modulate = targetMod;
+        if (_proxy != null && _proxy.Modulate != targetMod) _proxy.SetModulate(targetMod);
         if (!active) return;
 
         float slow = GameConfig.HazardSlowMult;
@@ -720,7 +654,7 @@ public sealed partial class HazardZone : Area2D, IObstacleSetup
     public override void _Draw()
     {
         // 脉冲陷阱：画光圈（提示危险范围）
-        if (_IsPulse && _meshInstance != null)
+        if (_IsPulse && _proxy != null && _proxy.HasModel)
         {
             var rect = new Rect2(-_size * 0.5f, _size);
             double t = Time.GetTicksMsec() / 1000.0;

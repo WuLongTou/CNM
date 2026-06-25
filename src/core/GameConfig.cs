@@ -84,7 +84,7 @@ public static class GameConfig
     // Camera System（镜头动感：平滑跟随 + 前瞻 + 震动 + zoom punch + 冲刺）
     // ═══════════════════════════════════════════════
 
-    public static readonly Godot.Vector2 CameraBaseZoom = new(1.05f, 0.85f); // X 轻微聚焦，Y 压缩做斜俯视
+    public static readonly Godot.Vector2 CameraBaseZoom = new(1.0f, 1.0f); // 纯等比:2.5D 下与 3D 正交相机同步(放弃 2D 斜俯视,避免两层 Y 比例不一致导致模型漂移/变形)
     public const float CameraSmoothing = 6.5f;        // 跟随平滑系数（指数阻尼，越大越贴）
     public const float CameraLookaheadFactor = 0.20f; // 速度 → 前瞻距离系数
     public const float CameraLookaheadMax = 90f;      // 前瞻距离上限（像素）

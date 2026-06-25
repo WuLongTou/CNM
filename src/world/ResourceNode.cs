@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
 using ZombieWars.Pickups;
+using ZombieWars.Render;
 
 /// <summary>资源类型 —— 决定产出材料与节点外观。</summary>
 public enum ResourceType { Wood, Stone, Fiber, Berry }
@@ -35,7 +36,7 @@ public sealed partial class ResourceNode : Node2D, IDamageable
     private int _variant;
     private float _shakeTime;
     private Vector2 _drawShake;
-    private MeshInstance2D? _meshInstance;
+    private ModelProxy3D? _proxy;
 
     int IDamageable.CurrentHealth => _health;
     int IDamageable.MaxHealth => _maxHealth;
@@ -61,20 +62,9 @@ public sealed partial class ResourceNode : Node2D, IDamageable
         AddToGroup("resource_nodes");
         AddToGroup("mm_resource"); // 小地图标记（后续扩展）
 
-        // 主视觉：MeshInstance2D 渲染 .glb 3D 模型
+        // 主视觉:3D 代理(MeshInstance3D 原生渲染,材质正常显色)
         if (_meshPathByVariant.TryGetValue(_variant, out var path))
-        {
-            var mesh = ModelLoader.GetMesh(path);
-            if (mesh != null)
-            {
-                _meshInstance = new MeshInstance2D
-                {
-                    Mesh = mesh,
-                    Scale = new Vector2(_size / 48f, _size / 48f),
-                };
-                AddChild(_meshInstance);
-            }
-        }
+            _proxy = ModelProxy3D.CreateFor(this, path, _size);
         // 兜底：若 mesh 缺失，QueueRedraw 走老的 _Draw 路径
         QueueRedraw();
     }
@@ -132,7 +122,7 @@ public sealed partial class ResourceNode : Node2D, IDamageable
     public override void _Draw()
     {
         // 有 mesh 走新路径：仅画抖动 + 受伤裂纹 overlay
-        if (_meshInstance != null)
+        if (_proxy != null && _proxy.HasModel)
         {
             DrawSetTransform(_drawShake, 0f, Vector2.One);
             float dmgRatio = 1f - (float)_health / _maxHealth;

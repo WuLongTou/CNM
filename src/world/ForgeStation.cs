@@ -2,6 +2,7 @@ namespace ZombieWars.World;
 
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.Render;
 
 public partial class ForgeStation : Area2D
 {
@@ -20,10 +21,8 @@ public partial class ForgeStation : Area2D
         AddChild(col);
         ZIndex = 1;
 
-        // 主视觉：MeshInstance2D 渲染 .glb
-        var fgMesh = ModelLoader.GetMesh("res://assets/models/props/forge_station.glb");
-        if (fgMesh != null)
-            AddChild(new MeshInstance2D { Mesh = fgMesh });
+        // 主视觉:3D 代理(MeshInstance3D 原生渲染,材质正常显色)
+        ModelProxy3D.CreateFor(this, "res://assets/models/props/forge_station.glb", 50f);
 
         _hint = new Label { Text = "按 F 锻造", Position = new Vector2(-36, -56), ZIndex = 8 };
         _hint.AddThemeFontSizeOverride("font_size", 14);

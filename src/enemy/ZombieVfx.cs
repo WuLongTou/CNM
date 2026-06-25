@@ -3,6 +3,7 @@ namespace ZombieWars.Enemy;
 using System.Collections.Generic;
 using Godot;
 using ZombieWars.Core;
+using ZombieWars.Render;
 using ZombieWars.UI;
 using static ZombieWars.Core.GameEnums;
 using static ZombieWars.UI.HandDrawnTheme.Colors;
@@ -69,7 +70,7 @@ public partial class ZombieVfx : Node
 
     private Zombie _zombie = null!;
 
-    private Sprite2D _sprite = null!;
+    private SpriteProxy3D _sprite = null!;
     private Sprite2D? _outlineSprite;
     private Sprite2D _shadow = null!;
     private Label _healthLabel = null!;
@@ -84,7 +85,7 @@ public partial class ZombieVfx : Node
     private bool _facingLeft = false;
     private bool _pngLoaded;
 
-    public Sprite2D Sprite => _sprite;
+    public Sprite3D Sprite => _sprite;
 
     public void Setup(Zombie z)
     {
@@ -243,8 +244,9 @@ public partial class ZombieVfx : Node
     public void CreateVisuals()
     {
         _CreateShadow();
-        _sprite = new Sprite2D { TextureFilter = CanvasItem.TextureFilterEnum.Linear };
-        _zombie.AddChild(_sprite);
+        _sprite = new SpriteProxy3D();
+        _sprite.BindTo2D(_zombie);
+        RenderViewport.Instance?.AddProxy(_sprite);
 
         // Priority: PNG assets > cached generated sprites > generate on the fly
         _pngLoaded = false;
@@ -255,7 +257,7 @@ public partial class ZombieVfx : Node
             if (_spriteCache.TryGetValue(_zombie.ZombieType, out var cached) && cached != null)
             {
                 _sprite.Texture = cached;
-                _sprite.Scale = new Godot.Vector2(1.0f, 1.0f);
+                _sprite.Scale = Vector3.One;
             }
             else
             {
@@ -356,7 +358,7 @@ public partial class ZombieVfx : Node
             if (_zombie.IsElite)
             {
                 _CreateEliteRing(size * 0.7f, baseColor.Lightened(0.4f));
-                _sprite.Scale = GameConfig.ZombieEliteScale;
+                _sprite.Scale = new Vector3(GameConfig.ZombieEliteScale.X, GameConfig.ZombieEliteScale.Y, 1f);
             }
         }
     }
@@ -667,11 +669,11 @@ public partial class ZombieVfx : Node
         if (_isMoving)
         {
             float b = 0.95f + Mathf.Abs(Mathf.Sin(_animTimer * 4.0f)) * 0.1f;
-            _sprite.SelfModulate = new Color(b, b, b, 1.0f);
+            _sprite.Modulate = new Color(b, b, b, 1.0f);
         }
         else
         {
-            _sprite.SelfModulate = Colors.White;
+            _sprite.Modulate = Colors.White;
         }
 
         // Handle facing direction

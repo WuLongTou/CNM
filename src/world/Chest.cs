@@ -5,6 +5,7 @@ using ZombieWars.Core;
 using ZombieWars.Pickups;
 using ZombieWars.Player;
 using ZombieWars.Vfx;
+using ZombieWars.Render;
 
 /// <summary>
 /// 宝箱：玩家触碰自动开启，翻开盖子 + 金光迸发 + 掉落 2~3 件随机拾取物。
@@ -17,9 +18,15 @@ public partial class Chest : Area2D
     private bool _opened;
     private bool _looted;
     private float _openAnim;
-    private MeshInstance2D? _chestInstance;
+    private static readonly string[] _chestPaths =
+    {
+        "res://assets/models/props/chest_0.glb",
+        "res://assets/models/props/chest_1.glb",
+        "res://assets/models/props/chest_2.glb",
+        "res://assets/models/props/chest_3.glb",
+    };
+    private ModelProxy3D? _chestProxy;
     private int _currentFrame = -1;
-    private Mesh?[]? _chestFrames;
 
     public override void _Ready()
     {
@@ -33,19 +40,9 @@ public partial class Chest : Area2D
 
         ZIndex = 1;
 
-        // 惰性加载 4 帧 chest mesh（_Ready 时 Godot 资源系统已就绪）
-        _chestFrames = new Mesh?[]
-        {
-            ModelLoader.GetMesh("res://assets/models/props/chest_0.glb"),
-            ModelLoader.GetMesh("res://assets/models/props/chest_1.glb"),
-            ModelLoader.GetMesh("res://assets/models/props/chest_2.glb"),
-            ModelLoader.GetMesh("res://assets/models/props/chest_3.glb"),
-        };
-        if (_chestFrames[0] != null)
-        {
-            _chestInstance = new MeshInstance2D { Mesh = _chestFrames[0] };
-            AddChild(_chestInstance);
-        }
+        // 主视觉:3D 代理(0 帧 = 关闭态;开启时 SetMeshFromPath 切 1/2/3 帧)
+        _chestProxy = ModelProxy3D.CreateFor(this, _chestPaths[0], 48f);
+        _currentFrame = 0;
 
         // 远距离指引光柱：大场景里让玩家从远处发现宝箱（金色脉动光柱）
         var beam = new Sprite2D
@@ -65,11 +62,11 @@ public partial class Chest : Area2D
         if (_opened && _openAnim < 1f)
         {
             _openAnim = Mathf.Min(1f, _openAnim + (float)delta / 0.35f);
-            // 切换 chest mesh 帧（0/1/2/3 对应开启动画 0%/33%/66%/100%）
+            // 切换 chest mesh 帧(0/1/2/3 对应开盖动画 0%/33%/66%/100%)
             int frame = Mathf.Min(3, (int)(_openAnim * 3.99f));
-            if (frame != _currentFrame && _chestInstance != null && _chestFrames != null && _chestFrames[frame] != null)
+            if (frame != _currentFrame && _chestProxy != null)
             {
-                _chestInstance.Mesh = _chestFrames[frame];
+                _chestProxy.SetMeshFromPath(_chestPaths[frame]);
                 _currentFrame = frame;
             }
             QueueRedraw();

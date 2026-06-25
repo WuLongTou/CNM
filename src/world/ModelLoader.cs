@@ -5,17 +5,20 @@ using Godot;
 using ZombieWars.Core;
 
 /// <summary>
-/// 3D 模型（.glb）加载工具 — 惰性加载 + 缓存 Mesh。
+/// 3D 模型（.glb）加载工具 — 惰性加载 + 缓存。
 ///
 /// 关键：Godot 的 ResourceLoader 必须在引擎初始化后才能调用，不能放在
-/// static readonly 字段 = ... 中（CLR 会在 Godot ready 前跑 .cctor）。
-/// 所以改用 Lazy 包装，首次 GetMesh() 时真正加载。
+/// static readonly 字段 = ... 中（CLR 会在 Godot ready 前跑 .cctor），
+/// 故用 Dictionary 在首次访问时惰性加载。
 ///
-/// Emission-only 材质（Blender 烘焙用纯 Emission 适配 2D 无光照场景）。
+/// GetScene：原生 3D 加载（供 ModelProxy3D 用 MeshInstance3D 渲染，材质在 3D 管线下
+/// 正常显色，解决 MeshInstance2D 把 albedo 当白色的白方块问题）。
+/// GetMesh：旧 2D 路径（剥 Mesh + Unshaded hack，已废弃，保留兼容）。
 /// </summary>
 public static class ModelLoader
 {
     private static readonly Dictionary<string, Mesh?> _cache = new();
+    private static readonly Dictionary<string, PackedScene?> _sceneCache = new();
     private static readonly HashSet<string> _failed = new();
     private static readonly HashSet<string> _logged = new();
     private static readonly object _lock = new();
@@ -64,6 +67,37 @@ public static class ModelLoader
                 { LogUtils.Print($"[ModelLoader] ✗ 未识别 Mesh: {scenePath}"); _logged.Add(scenePath); }
             }
             return mesh;
+        }
+    }
+
+    /// <summary>原生 3D 加载 .glb 为 PackedScene（不改材质，3D 渲染下原材质正常显色）。
+    /// 供 ModelProxy3D 用。不存在返回 null。</summary>
+    public static PackedScene? GetScene(string scenePath)
+    {
+        lock (_lock)
+        {
+            if (_sceneCache.TryGetValue(scenePath, out var ps)) return ps;
+            if (_failed.Contains(scenePath)) return null;
+
+            if (!ResourceLoader.Exists(scenePath))
+            {
+                _failed.Add(scenePath);
+                if (!_logged.Contains(scenePath))
+                { LogUtils.Print($"[ModelLoader] 路径不存在: {scenePath}"); _logged.Add(scenePath); }
+                return null;
+            }
+            ps = ResourceLoader.Load<PackedScene>(scenePath);
+            if (ps == null)
+            {
+                _failed.Add(scenePath);
+                if (!_logged.Contains(scenePath))
+                { LogUtils.Print($"[ModelLoader] 加载 PackedScene 失败: {scenePath}"); _logged.Add(scenePath); }
+                return null;
+            }
+            _sceneCache[scenePath] = ps;
+            if (!_logged.Contains(scenePath))
+            { LogUtils.Print($"[ModelLoader] ✓ 3D {scenePath}"); _logged.Add(scenePath); }
+            return ps;
         }
     }
 
