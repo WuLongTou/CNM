@@ -184,11 +184,12 @@ public partial class Main : Node2D
 
     public override void _Process(double delta)
     {
-        // TextureRect(3D 层)跟随 2D 相机位置+震动,保持屏幕固定。
-        // 它在 default canvas 里会被 Camera2D 拖到屏幕外,必须每帧补偿回屏幕中心。
+        // TextureRect(3D 层)中心对齐 2D 相机位置 + 震动偏移。
+        // 相机位置在画布上是参考点,TextureRect 中心对齐它,3D 内容的中心(玩家位置)就
+        // 落在 2D 玩家位置上,两层重合。Offset 叠加震动,让 3D 与 2D 一起抖。
         // zoom 由 Camera2D 的 Zoom 自然缩放 TextureRect(3D 内容随之缩放,单次 zoom)。
         if (_renderRect != null && _camera != null)
-            _renderRect.GlobalPosition = _camera.GlobalPosition + _camera.Offset;
+            _renderRect.GlobalPosition = _camera.GlobalPosition - _screenSize * 0.5f + _camera.Offset;
     }
 
     public override void _UnhandledInput(InputEvent @event)
