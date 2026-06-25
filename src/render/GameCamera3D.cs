@@ -36,8 +36,13 @@ public partial class GameCamera3D : Camera3D
     /// <summary>更新世界边界(地图切换时)。</summary>
     public void UpdateLimits(Vector2 worldSize) => _worldSize = worldSize;
 
-    public override void _PhysicsProcess(double delta)
+    public override void _Process(double delta)
     {
+        // 注意:必须用 _Process 而非 _PhysicsProcess。本节点挂在 SubViewport 内,
+        // SubViewport 的 ProcessMode 默认 = Idle(IDLE),idle 模式下子节点只收 _Process,
+        // _PhysicsProcess 不会被引擎调用,相机会卡在初始 (0, 1000, 0) 不动,
+        // 表现就是"3D 世界不跟随玩家、模型看起来在跟着人走"。
+        // 帧率相关的平滑系数 t = 1 - exp(-k*dt) 天然 frame-rate independent,改 _Process 无副作用。
         if (!IsInstanceValid(_target)) return;
         float d = (float)delta;
 
