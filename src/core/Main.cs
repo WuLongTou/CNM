@@ -193,7 +193,16 @@ public partial class Main : Node2D
         // 落在 2D 玩家位置上,两层重合。Offset 叠加震动,让 3D 与 2D 一起抖。
         // zoom 由 Camera2D 的 Zoom 自然缩放 TextureRect(3D 内容随之缩放,单次 zoom)。
         if (_renderRect != null && _camera != null)
+        {
             _renderRect.GlobalPosition = _camera.GlobalPosition - _screenSize * 0.5f + _camera.Offset;
+            // 诊断:每 60 帧打印一次对齐状态
+            if (Engine.GetProcessFrames() % 60 == 1)
+            {
+                var cam3D = _renderViewport?.Camera;
+                Vector3 cam3DPos = cam3D != null ? cam3D.GlobalPosition : Vector3.Zero;
+                GD.Print($"[Diag] Main._Process cam2D={_camera.GlobalPosition} cam3D={cam3DPos} rect={_renderRect.GlobalPosition} player={_player.GlobalPosition} worldSize={MapContext.CurrentWorldSize}");
+            }
+        }
     }
 
     public override void _UnhandledInput(InputEvent @event)
