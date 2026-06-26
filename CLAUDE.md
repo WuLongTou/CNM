@@ -23,8 +23,8 @@ Godot 4.6 + C# 游戏项目（僵尸大战）。
     2. 任何新增的模态/选择/UI 页面必须接入 `GameManager.CurrentState` 状态机，
        或在自身 `_Ready`/`Toggle` 时显式禁用 PlayerInput。
     3. 修改 `project.godot` 里的 input action 绑定前，必须先 grep 检查目标键是否已绑定其他 action。
-  - 反例：原 `UIManager._Input` 把"跳过强化"绑到 `S/Enter`，但 `move_down` 已绑 S 键——
-    玩家在卡片页按 S 既触发"跳过"又触发"向下走"。已修复为 `Enter/Delete`（不与 move 冲突）。
+  - 错误示范：把"跳过强化"绑到 `S/Enter`，而 `move_down` 已绑 S 键——
+    玩家在卡片页按 S 会同时触发"跳过"和"向下走"。正确做法：UI 快捷键用未绑定的键（如 `Enter`、`Delete`）。
 
 ## 任务分级
 - **L0**：问答、只读分析、查文档。
@@ -43,35 +43,13 @@ Godot 4.6 + C# 游戏项目（僵尸大战）。
 - `dotnet build` — 编译 C# 脚本
 
 ## 约束
-- **C# 规范**：遵循 Godot C# 风格，类名 PascalCase，节点引用通过 `[Export]` 或 `GetNode<T>()`。
+- **C# 规范**：遵循 Godot C# 风格，节点引用通过 `[Export]` 或 `GetNode<T>()`。
 - **场景结构**：场景树层级在 `scenes/` 中组织，C# 脚本在 `src/` 中组织。
 - **资源管理**：美术/音频资源放入 `assets/`，数据文件放入 `data/`。
 
 ## 视觉资源（Blender 烘焙管线）
 
-所有地图场景的视觉资源（障碍、探索道具、资源节点、地面）由 Blender 烘焙生成，Godot 2.5D 折中加载。
-
-**3 种输出格式**（在 `assets/blender/sprite_manifest.json` 的 `format` 字段指定）：
-
-| format | 用途 | 输出位置 | C# 加载 |
-|---|---|---|---|
-| `gltf` | 3D 模型（MeshInstance2D 渲染） | `assets/models/{props,resources,obstacles}/` | `ModelLoader.LoadMesh()` |
-| `ground` | 大尺寸地面贴图（1920×1080 PNG） | `assets/sprites/ground/` | `ProceduralGround.GetTexture(seed)` |
-| `png` | 2D sprite 透明 PNG（备选） | `assets/sprites/{props,resources}/` | `GD.Load<Texture2D>` + `Sprite2D` |
-
-**完整工作流**：
-1. 修改 `assets/blender/sprite_manifest.json`（加/改 item）
-2. 跑 Blender 烘焙：`/Applications/Blender.app/Contents/MacOS/Blender -b -P assets/blender/render_sprites.py -- assets/blender/sprite_manifest.json <out_dir>/`
-3. 跑 Godot import 生成 `.import`：`/Applications/Godot_mono.app/Contents/MacOS/Godot --headless --import`
-4. 修改 C# 集成代码（`src/world/*.cs`）
-5. 编译 + 冒烟测试
-
-详细文档见 `assets/blender/README.md`。新增模型需在 `render_sprites.py` 加 `make_xxx()` 函数，使用 `PALETTE` 调色板和 `add_*` 工具函数保证风格统一。
-
-**关键约定**：
-- 风格不漂移：所有材质用 `PALETTE` 字典调色，禁止硬编码 RGB
-- mesh 缺失时 fallback：每个改造类保留 `_Draw` 只画阴影，提示位置
-- 动画优先用 `Modulate` 调色 / 切换 Mesh，少用 sprite sheet
+多步骤工作流迁移到 skill：`/blender-bake 输出目录`。详见 `.claude/skills/blender-bake/SKILL.md`。
 
 ## 协作入口
 - 默认先理解上下文，再做最小必要改动；低风险任务直接实现，高风险任务再升级流程。
