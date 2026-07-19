@@ -47,5 +47,5 @@ browser-data/
 .claude/settings.local.json
 *.import
 
-# Project-level scratch / audit / screenshot directory (see CLAUDE.md)
+# Project-level scratch / audit / screenshot directory (see AGENTS.md)
 .local/
