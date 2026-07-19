@@ -43,7 +43,8 @@ browser-data/
 
 
 # Claude Code worktree metadata
-.claude/
+.claude/worktrees/
+.claude/settings.local.json
 *.import
 
 # Project-level scratch / audit / screenshot directory (see CLAUDE.md)
