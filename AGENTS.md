@@ -1,8 +1,8 @@
 # 僵尸大战 (CNM)
 
-Godot 4.6 + C# 游戏项目（僵尸大战）。
+Godot 4.7 + C# 游戏项目（僵尸大战）。
 
-> 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好、Godot 路径等）以全局 `~/AGENTS.md` 为准，本文件只做项目特有补充，不得放宽或违背全局约束。
+> 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好、Godot 路径等）以全局 `~/.config/opencode/AGENTS.md` 为准，本文件只做项目特有补充，不得放宽或违背全局约束。
 
 ## 硬约束
 - **Git 额外约束**：在全局 Git 规范之上，本项目**额外禁止 `git cherry-pick`**（保持线性历史）。
@@ -36,9 +36,9 @@ Godot 4.6 + C# 游戏项目（僵尸大战）。
 - **准备合并**：在"开发完成"基础上，按全局「完成前验证」过完整 format → lint →（如有用例）test → build；改动涉及场景/资源时，额外在 Godot 编辑器中验证。
 
 ## 构建 & 测试
-- `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless --export-debug "macOS"` — 导出调试构建
+- `mkdir -p build && /Applications/Godot_mono.app/Contents/MacOS/Godot --headless --export-debug "macOS" "build/CNM-debug.zip"` — 导出调试构建（需先在 Godot 编辑器中配置 `export_presets.cfg` 的 "macOS" 预设）
 - `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless --quit-after 1` — 启动场景冒烟检查
-- `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless -- --autotest` — 自动回归测试
+- `/Applications/Godot_mono.app/Contents/MacOS/Godot --headless -- --autotest` — 自动回归测试（`--autotest` 是项目自定义参数，由 `Main.cs` 解析，跳过欢迎画面并禁用刷怪）
 - `dotnet build` — 编译 C# 脚本
 
 ## 约束
