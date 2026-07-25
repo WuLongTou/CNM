@@ -35,6 +35,9 @@ Thumbs.db
 builds/
 exports/
 
+# AI Agent working directory
+.workwork/
+
 # Auto-generated
 .superpowers/
 
