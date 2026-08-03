@@ -45,8 +45,8 @@ exports/
 browser-data/
 
 
-# Claude Code worktree metadata
-.claude/worktrees/
+# AI worktree metadata
+.worktrees/
 .claude/settings.local.json
 *.import
 
