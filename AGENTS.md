@@ -43,6 +43,9 @@ Godot 4.7 + C# 游戏项目（僵尸大战）。
 - `mkdir -p build && $GODOT --headless --export-debug "macOS" "build/CNM-debug.zip"` — 导出调试构建（需先在 Godot 编辑器中配置 `export_presets.cfg` 的 "macOS" 预设）
 - `$GODOT --headless --quit-after 1` — 启动场景冒烟检查
 - `$GODOT --headless -- --autotest` — 自动回归测试（`--autotest` 是项目自定义参数，由 `Main.cs` 解析，跳过欢迎画面并禁用刷怪）
+- `$GODOT --headless -- --cmd-listen=/tmp/cnm.cmd` — 外部指令接口：向文件 append
+  `{"id":1,"action":"status"}` 等 JSON 行，回执在 `/tmp/cnm.cmd.resp`（动作集见
+  `src/core/ExternalCommandService.cs` 类注释；`--cmd='{...}'` 执行单条）
 - `dotnet build` — 编译 C# 脚本
 
 ## 本机工具链备注（2026-09 实测）

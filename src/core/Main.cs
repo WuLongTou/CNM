@@ -140,6 +140,34 @@ public partial class Main : Node2D
             LogUtils.Print("[EVOTEST] enabled");
             AddChild(new EvoTestRunner { Name = "EvoTestRunner" });
         }
+
+        // 外部指令接口（自动化测试/外部程序控制）：默认关闭，传参才启用
+        string? cmdListen = null;
+        string? cmdOnce = null;
+        foreach (var arg in args)
+        {
+            if (arg.StartsWith("--cmd-listen=")) cmdListen = arg.Substring("--cmd-listen=".Length);
+            else if (arg.StartsWith("--cmd=")) cmdOnce = arg.Substring("--cmd=".Length);
+        }
+        if (cmdListen != null || cmdOnce != null)
+        {
+            var cmdService = new ExternalCommandService { Name = "ExternalCommandService" };
+            AddChild(cmdService);
+            if (cmdListen != null)
+            {
+                cmdService.Setup(cmdListen);
+                LogUtils.Print($"[CMD] listen: {cmdListen}");
+            }
+            if (cmdOnce != null)
+            {
+                string once = cmdOnce;
+                Callable.From(() =>
+                {
+                    var resp = cmdService.ExecuteJson(once);
+                    LogUtils.Print($"[CMD] once: {Json.Stringify(resp)}");
+                }).CallDeferred();
+            }
+        }
     }
 
     private void _SetupCamera()

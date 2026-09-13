@@ -714,6 +714,9 @@ public partial class UIManager : Control
         _SetGameplayHudVisible(true);
     }
 
+    /// <summary>外部指令/自动化入口：开始游戏（等价点击欢迎画面的"开始游戏"）。幂等。</summary>
+    public void StartGame() => _StartGame();
+
     private void _SetGameplayHudVisible(bool visible)
     {
         if (_hudPanel != null) _hudPanel.Visible = visible;
