@@ -82,12 +82,12 @@ public partial class FusionOfferPanel : Control
 
         _acceptBtn = new Button { Text = "接受融合 [Enter]" };
         _acceptBtn.AddThemeFontSizeOverride("font_size", 15);
-        _acceptBtn.Pressed += () => { FusionAccepted?.Invoke(); Visible = false; };
+        _acceptBtn.Pressed += Accept;
         btnRow.AddChild(_acceptBtn);
 
         _rejectBtn = new Button { Text = "拒绝 [Delete]" };
         _rejectBtn.AddThemeFontSizeOverride("font_size", 15);
-        _rejectBtn.Pressed += () => { FusionRejected?.Invoke(); Visible = false; };
+        _rejectBtn.Pressed += Reject;
         btnRow.AddChild(_rejectBtn);
 
         vbox.AddChild(btnRow);
@@ -100,6 +100,22 @@ public partial class FusionOfferPanel : Control
         Visible = true;
     }
 
+    /// <summary>接受融合（按钮/Enter 共用入口）。</summary>
+    public void Accept()
+    {
+        if (!Visible) return;
+        FusionAccepted?.Invoke();
+        Visible = false;
+    }
+
+    /// <summary>拒绝融合（按钮/Delete/ESC 共用入口，ESC 由 UIManager 转调）。</summary>
+    public void Reject()
+    {
+        if (!Visible) return;
+        FusionRejected?.Invoke();
+        Visible = false;
+    }
+
     public override void _Input(InputEvent @event)
     {
         if (!Visible) return;
@@ -107,14 +123,12 @@ public partial class FusionOfferPanel : Control
         {
             if (key.Keycode == Key.Enter || key.Keycode == Key.KpEnter)
             {
-                FusionAccepted?.Invoke();
-                Visible = false;
+                Accept();
                 GetViewport().SetInputAsHandled();
             }
             else if (key.Keycode == Key.Delete)
             {
-                FusionRejected?.Invoke();
-                Visible = false;
+                Reject();
                 GetViewport().SetInputAsHandled();
             }
         }

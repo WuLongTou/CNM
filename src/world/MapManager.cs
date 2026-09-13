@@ -6,8 +6,8 @@ using Godot;
 using ZombieWars.Core;
 
 /// <summary>
-/// 地图管理器 —— 持有当前地图数据，按回合随机切换，并同步更新 MapContext。
-/// 挂载于 Main 场景下，加入 "map_manager" group，由 GameManager 在回合开始时通知。
+/// 地图管理器 —— 持有当前地图数据并同步更新 MapContext。
+/// 持续探索模式下一局内地图固定：开局随机选一张，局内不再切换。
 /// 场景重建由 Main 订阅 MapChanged 事件后委托 MapBuilder/Background 完成。
 /// </summary>
 public partial class MapManager : Node
@@ -17,7 +17,6 @@ public partial class MapManager : Node
 
     private List<MapData> _maps = new();
     private int _lastIndex = -1;
-    private int _roundsSinceChange = 0;
 
     public override void _Ready()
     {
@@ -31,13 +30,6 @@ public partial class MapManager : Node
     public void SelectInitialRandom()
     {
         SelectRandom();
-    }
-
-    /// <summary>每回合开始由 GameManager.CallGroup("map_manager", "OnRoundStarted", round) 触发。</summary>
-    public void OnRoundStarted(Variant roundVar)
-    {
-        // 持续探索模式（饥荒式）：世界一局内持久固定，不再按回合换图。
-        // 保留方法以兼容 CallGroup 调用，但不再触发地图切换。
     }
 
     /// <summary>随机选一张地图（避免与上一张相同），同步上下文并广播事件。</summary>

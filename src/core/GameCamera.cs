@@ -12,7 +12,6 @@ public partial class GameCamera : Camera2D
     private ZombieWars.Player.Player _target = null!;
     private Vector2 _currentPos;
     private bool _initialized;
-    private int _diagCount;     // 诊断
 
     private float _shake;       // 当前震动幅度
     private float _zoomPunch;   // 当前 zoom punch（正=拉近）
@@ -23,7 +22,6 @@ public partial class GameCamera : Camera2D
         AddToGroup("game_camera");
         Zoom = GameConfig.CameraBaseZoom;
         PositionSmoothingEnabled = false; // 自己实现阻尼跟随
-        GD.Print($"[Diag] GameCamera2D.Init target={target?.Name ?? "null"} inTree={IsInsideTree()}");
     }
 
     public void UpdateLimits(Vector2 worldSize)
@@ -36,14 +34,6 @@ public partial class GameCamera : Camera2D
 
     public override void _PhysicsProcess(double delta)
     {
-        // 诊断:每 60 帧打印一次
-        _diagCount++;
-        if (_diagCount % 60 == 1)
-        {
-            string tgt = (_target != null && IsInstanceValid(_target)) ? _target.GlobalPosition.ToString() : "null/invalid";
-            GD.Print($"[Diag] GC2D._Physics #{_diagCount} inTree={IsInsideTree()} targetPos={tgt} camPos={GlobalPosition} curPos={_currentPos} init={_initialized}");
-        }
-
         if (!IsInstanceValid(_target)) return;
         float d = (float)delta;
 

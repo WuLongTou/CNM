@@ -2,14 +2,12 @@ namespace ZombieWars.Core;
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Godot;
 using static ZombieWars.Core.GameEnums;
 using Player = ZombieWars.Player.Player;
 using Zombie = ZombieWars.Enemy.Zombie;
 using WeaponDeck = ZombieWars.Weapons.WeaponDeck;
 using UIManager = ZombieWars.UI.UIManager;
-using Background = ZombieWars.World.Background;
 using WaveResonanceSystem = ZombieWars.Math.WaveResonanceSystem;
 using VectorFieldSystem = ZombieWars.Math.VectorFieldSystem;
 using ZombieType = ZombieWars.Core.GameEnums.ZombieType;
@@ -17,56 +15,32 @@ using FractalSystem = ZombieWars.Math.FractalSystem;
 using StrategySystem = ZombieWars.Math.StrategySystem;
 
 /// <summary>
-/// Game Manager — orchestrates game state, round flow, zombie spawning, and difficulty scaling.
+/// Game Manager — orchestrates game state, explore-mode spawning, and difficulty scaling.
 /// </summary>
 public partial class GameManager : Node
 {
-    public event Action<int> RoundStarted = delegate { };
-    public event Action<int> RoundEnded = delegate { };
-    public event Action WeaponSelectionStarted = delegate { };
-    public event Action WeaponSelectionEnded = delegate { };
     public event Action GameOver = delegate { };
 
-    [Export] public int ZombiesPerRoundBase = 3;
-    [Export] public int ZombiesIncreasePerRound = 1;
     [Export] public int ZombiesMaxPerRound = 40;
-
-    [Export] public float SpawnInterval = 2.0f;
-    [Export] public float SpawnIntervalMin = 0.8f;
-    [Export] public float SpawnIntervalDecay = 0.06f;
 
     [Export] public float RoundMultiplierBase = 0.04f;
     [Export] public float EliteChanceBase = 0.02f;
     [Export] public float EliteChancePerRound = 0.010f;
     [Export] public float EliteChanceMax = 0.18f; // Balanced from 0.25f
 
-    [Export] public bool HealBetweenRounds = true;
-    [Export] public float HealPercent = 0.20f;
-
     public GameState CurrentState { get; private set; } = GameState.WeaponSelection;
     public int CurrentRound { get; private set; } = 0;
 
-    private int _zombiesToSpawn;
-    private int _zombiesSpawned;
+    private int _zombiesSpawned; // 累计生成数（Boss 首刷判定与波形相位用）
     private int _zombiesAlive;
-    private int _currentRoundTotalZombies; // 本回合总僵尸数（含天气额外生成）
-    private float _spawnTimer;
-    private float _currentSpawnInterval;
+    private int _currentRoundTotalZombies; // 本局累计生成僵尸数（含天气额外生成）
     // 持续探索模式（饥荒式）：维持世界僵尸数 + 时间推进难度，替代波次
     private float _exploreMaintainTimer;
     private float _difficultyRampTimer;
 
-    // Per-round battle stats
-    private int _roundKills;
-    private int _roundDamageDealt;
-    private int _roundDamageTaken;
+    // 战斗统计（持续探索模式按整局累计）
     private int _totalKills;
     private int _totalDamageDealt;
-    private RoundDirective _roundDirective = RoundDirective.Standard;
-    private Vector2 _riftPosition;
-    private Node2D? _riftVisual;
-    private int _directiveProgress;
-    private const float RiftRadius = 190.0f;
 
     // 提取的独立组件
     private PickupSpawner _pickupSpawner = null!;
@@ -109,14 +83,6 @@ public partial class GameManager : Node
         { 4, 35 }, { 5, 40 }, { 6, 50 }, { 7, 60 }, { 8, 45 },
         { 9, 55 }, { 10, 65 }, { 11, 50 }, { 12, 70 }, { 13, 20 }
     };
-
-    private enum RoundDirective
-    {
-        Standard,
-        RiftHarvest,
-        EliteHunt,
-        SwarmSurge
-    }
 
     private struct SpawnEntry
     {
@@ -309,7 +275,7 @@ public partial class GameManager : Node
 
     private void _HandleCombat(double delta)
     {
-        // 持续探索模式：维持世界僵尸数（去波次/去 EndRound）
+        // 持续探索模式：维持世界僵尸数（无波次、无回合结算）
         _MaintainZombies(delta);
         // 时间推进难度（替代波次结束推进 CurrentRound）
         _RampDifficultyOverTime(delta);
@@ -364,6 +330,8 @@ public partial class GameManager : Node
         }
         _uiManager?.UpdateRoundDisplay(CurrentRound);
         _uiManager?.ShowRoundBanner($"威胁加剧 · 第 {CurrentRound} 阶");
+        // 威胁阶数即回合并进：恢复回合成就/生存里程碑（随波次制删除后曾无触发源）
+        AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
 
         // Boss 周期触发（替代原每 5 回合），当前无 Boss 时才出
         if (CurrentRound % GameConfig.BossInterval == 0 && (BossZombie == null || !IsInstanceValid(BossZombie)))
@@ -467,14 +435,11 @@ public partial class GameManager : Node
             StrategySys?.ConfigureForRound(CurrentRound);
         }
 
-        _roundKills = 0;
         _directiveSystem.OnRoundStart(CurrentRound);
         _directiveSystem.OnCombatActivated();
 
         _exploreMaintainTimer = 0.5f;  // 短延迟后开始补充僵尸
         _difficultyRampTimer = 0f;
-
-        RoundStarted?.Invoke(CurrentRound);
 
         if (_uiManager != null)
         {
@@ -487,176 +452,16 @@ public partial class GameManager : Node
         LogUtils.Print("进入持续探索模式（饥荒式）— 自由探索，僵尸持续刷新");
     }
 
-    public void StartNewRound()
+    /// <summary>测试专用跳关：回归/性能测试在 headless 下无欢迎画面点击时，
+    /// 直接切入战斗态。正式流程经 _StartExploring 进入，此方法仅测试调用。</summary>
+    public void DebugForceCombat()
     {
-        if (CurrentState == GameState.GameOver) return;
-        CurrentRound++;
-        _bossPhase = 0; // 防御：每回合重置 Boss 阶段状态机，避免幽灵阶段
-        CurrentState = GameState.WeaponSelection;
-
-        // 通知地图系统按回合检查切换（每 MapRerollRounds 回合换图）
-        GetTree().CallGroup("map_manager", "OnRoundStarted", CurrentRound);
-
-        // 配置 4 大数学玩法系统
-        if (GameConfig.MathSystemsEnabled)
-        {
-            WaveSystem?.ConfigureForRound(CurrentRound);
-            FieldSystem?.ConfigureForRound(CurrentRound);
-            FractalSys?.ConfigureForRound(CurrentRound);
-            StrategySys?.ConfigureForRound(CurrentRound);
-        }
-
-        // Reset per-round stats
-        _roundKills = 0;
-        _roundDamageDealt = 0;
-        _roundDamageTaken = 0;
-        _directiveProgress = 0;
-        _directiveSystem.OnRoundStart(CurrentRound);
-
-        var roundFactor = Mathf.Sqrt((float)CurrentRound) * 1.5f;
-        _zombiesToSpawn = ZombiesPerRoundBase + (int)roundFactor + (CurrentRound - 1) * ZombiesIncreasePerRound;
-        // 数学系统：黄金比例——叠加斐波那契调制，让难度有"黄金呼吸"而非单调线性递增
-        if (GameConfig.MathSystemsEnabled)
-            _zombiesToSpawn = ZombieWars.Math.GoldenProgression.ModulateZombieCount(_zombiesToSpawn, CurrentRound);
-        // 大场景：刷怪上限随世界面积放大，保持敌人密度（否则大地图敌人太稀疏）
-        _zombiesToSpawn = Mathf.Min(_zombiesToSpawn, (int)(ZombiesMaxPerRound * Core.GameConfig.WorldScale));
-        _zombiesSpawned = 0;
-        _zombiesAlive = 0;
-        _currentRoundTotalZombies = 0;
-
-        _currentSpawnInterval = Mathf.Max(SpawnIntervalMin, SpawnInterval * Mathf.Pow(0.94f, Mathf.Max(0, CurrentRound - 1)));
-        if (_roundDirective == RoundDirective.SwarmSurge)
-            _currentSpawnInterval = Mathf.Max(SpawnIntervalMin * 0.85f, _currentSpawnInterval * 0.72f);
-        _spawnTimer = _currentSpawnInterval;
-
-        if (HealBetweenRounds && _player != null && CurrentRound > 1)
-        {
-            var playerMaxHp = _player.MaxHealth;
-            // 回血比例随回合递减：后期 20% 固定回血太强，每回合衰减 1%
-            var effectiveHeal = HealPercent * Mathf.Max(0.05f, 1.0f - CurrentRound * 0.01f);
-            var healAmount = (int)(playerMaxHp * effectiveHeal);
-            _player.Heal(healAmount);
-            _uiManager?.ShowDamageNumber(_player.GlobalPosition, -healAmount, false);
-        }
-
-        RoundStarted?.Invoke(CurrentRound);
-        WeaponSelectionStarted?.Invoke();
-
-        if (_uiManager != null)
-        {
-            _uiManager.UpdateRoundDisplay(CurrentRound);
-            _uiManager.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
-            if (_player != null)
-            {
-                _uiManager.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
-            }
-        }
-
-        var currentScene = GetTree().CurrentScene;
-        var bg = currentScene?.GetNodeOrNull("Background");
-        if (bg != null)
-        {
-            if (bg is Background background)
-            {
-                background.SetTension(Mathf.Clamp((float)(CurrentRound - 1) / 15.0f, 0.0f, 1.0f));
-                _directiveSystem.ApplyAtmosphere(background);
-            }
-        }
-
-        if (CurrentRound % 5 == 0 && _uiManager != null)
-        {
-            _uiManager.TriggerBossAtmosphere();
-        }
-
-        LogUtils.Print($"第 {CurrentRound} 回合开始！需要消灭 {_zombiesToSpawn} 只僵尸");
-    }
-
-    private bool _endingRound;
-
-    public async void EndRound()
-    {
-        if (_endingRound || CurrentState == GameState.GameOver) return;
-        _endingRound = true;
-
-        try
-        {
-            CurrentState = GameState.RoundTransition;
-            RoundEnded?.Invoke(CurrentRound);
-
-            AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
-            AchievementSystem.Instance?.ResetRoundStats();
-
-            LogUtils.Print($"第 {CurrentRound} 回合结束！");
-
-            _uiManager?.ShowRoundSummary(CurrentRound, _roundKills, _totalKills, Score);
-
-            await ToSignal(GetTree().CreateTimer(GameConfig.RoundTransitionDelay), Timer.SignalName.Timeout);
-
-            _uiManager?.HideRoundSummary();
-            await ToSignal(GetTree().CreateTimer(0.4f), Timer.SignalName.Timeout);
-
-            GameServices.Audio.ResetKillStreak();
-        }
-        finally
-        {
-            _endingRound = false;
-        }
-
-        StartNewRound();
-    }
-
-    private bool _transitioningToCombat;
-
-    public async void OnWeaponSelected(object? card)
-    {
-        if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
-        _transitioningToCombat = true;
-
-        if (_player != null)
-        {
-            if (card != null && card.GetType().Name.Contains("UpgradeCard"))
-            {
-                _player.ApplyUpgradeCard(card);
-            }
-            else
-            {
-                _player.ApplyWeaponEffect(card);
-            }
-
-            _uiManager?.UpdateHealthDisplay(_player.CurrentHealth, _player.MaxHealth);
-        }
-
-        _uiManager?.CloseWeaponSelection();
-        _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
-        await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
-
-        _transitioningToCombat = false;
         if (CurrentState == GameState.GameOver) return;
         CurrentState = GameState.Combat;
         _directiveSystem.OnCombatActivated();
-        WeaponSelectionEnded?.Invoke();
-
-        var cardName = card != null ? card.GetType().Name : "null";
-        LogUtils.Print($"选择了: {cardName}，效果已生效！");
     }
 
-    public async void OnUpgradeSkipped()
-    {
-        if (CurrentState != GameState.WeaponSelection || _transitioningToCombat) return;
-        _transitioningToCombat = true;
-
-        _uiManager?.CloseWeaponSelection();
-        _uiManager?.ShowRoundBanner($"第 {CurrentRound} 回合开始");
-        await ToSignal(GetTree().CreateTimer(1.5f), Timer.SignalName.Timeout);
-
-        _transitioningToCombat = false;
-        if (CurrentState == GameState.GameOver) return;
-        CurrentState = GameState.Combat;
-        _directiveSystem.OnCombatActivated();
-        WeaponSelectionEnded?.Invoke();
-
-        LogUtils.Print("跳过升级！直接战斗！");
-    }
+    /// <summary>测试专用跳关见 DebugForceCombat。</summary>
 
     public void SpawnZombie(Vector2? forcedPos = null)
     {
@@ -687,10 +492,6 @@ public partial class GameManager : Node
         {
             zombieInstance.SetElite(true);
         }
-        else if (_roundDirective == RoundDirective.EliteHunt && _zombiesSpawned == 0)
-        {
-            zombieInstance.SetElite(true);
-        }
 
         var spawnPos = forcedPos ?? _spawnPointGrid.PickRandom();
         var offset = new Vector2(
@@ -699,11 +500,11 @@ public partial class GameManager : Node
         );
 
         // 数学系统：波形共振——僵尸按傅里叶合成波分布生成
+        // （持续探索模式无波次总量，进度固定 0，相位仍随累计生成数推进）
         Vector2 waveOffset = Vector2.Zero;
         if (GameConfig.MathSystemsEnabled && WaveSystem != null && WaveSystem.HarmonicCount > 0)
         {
-            float progress = _zombiesToSpawn > 0 ? (float)_zombiesSpawned / _zombiesToSpawn : 0.0f;
-            waveOffset = WaveSystem.GetSpawnOffset(progress, _zombiesSpawned * 0.5f);
+            waveOffset = WaveSystem.GetSpawnOffset(0.0f, _zombiesSpawned * 0.5f);
         }
 
         // 世界边界 clamp：waveOffset 可能把僵尸推出世界外
@@ -732,16 +533,13 @@ public partial class GameManager : Node
         _zombiesAlive++;
         _currentRoundTotalZombies++;
 
-        if (_roundDirective == RoundDirective.SwarmSurge && _zombiesSpawned % 4 == 0 && !zombieInstance.IsBoss)
-            _TrySpawnSwarmGroup(zombieInstance.GlobalPosition);
-
         _uiManager?.UpdateZombiesDisplay(_zombiesAlive, _currentRoundTotalZombies);
 
         // 仅 Boss/精英/分形时打印日志，普通僵尸生成不刷屏
         if (zombieInstance.IsBoss || zombieInstance.IsElite || zombieInstance.IsFractal)
         {
             var typeName = TypeNames.TryGetValue((int)zombieType, out var name) ? name : "未知";
-            LogUtils.Print($"生成僵尸 {_zombiesSpawned}/{_zombiesToSpawn} (类型: {typeName}, 强度: x{roundMult:F2})");
+            LogUtils.Print($"生成僵尸 #{_zombiesSpawned} (类型: {typeName}, 强度: x{roundMult:F2})");
         }
     }
 
@@ -912,7 +710,6 @@ public partial class GameManager : Node
     private void _OnZombieDied(Zombie zombie)
     {
         _zombiesAlive = Math.Max(0, _zombiesAlive - 1);
-        _roundKills++;
         _totalKills++;
 
         // Notify achievement system
@@ -971,6 +768,7 @@ public partial class GameManager : Node
     {
         // 游戏结束立即解除任何命中停顿，避免 GameOver 界面凝固
         HitStopController.Instance?.Reset();
+        GameServices.Audio.ResetKillStreak();
         CurrentState = GameState.GameOver;
         GameOver?.Invoke();
 
@@ -980,8 +778,6 @@ public partial class GameManager : Node
                 zombie.QueueFree();
         }
 
-        _spawnTimer = 999999.0f;
-        _zombiesToSpawn = 0;
         _zombiesAlive = 0;
         _directiveSystem.OnPlayerDied();
         ZombieRegistry.Clear();
@@ -1086,7 +882,6 @@ public partial class GameManager : Node
     private void _OnMinionDied(Zombie zombie)
     {
         _zombiesAlive = Math.Max(0, _zombiesAlive - 1);
-        _roundKills++;
         _totalKills++;
 
         AchievementSystem.Instance?.OnZombieKilled(zombie.ZombieType, false, false);

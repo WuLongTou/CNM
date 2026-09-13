@@ -1,8 +1,6 @@
 namespace ZombieWars.UI;
 
 using Godot;
-using System;
-using System.Collections.Generic;
 using ZombieWars.Core;
 using ZombieWars.Weapons;
 using ZombieWars.World;
@@ -15,24 +13,14 @@ using static ZombieWars.UI.HandDrawnTheme.Colors;
 
 /// <summary>
 /// UI Manager — creates and manages all in-game UI elements.
-/// Handles HUD, weapon selection panel, tooltip, pause overlay, controls panel, and welcome screen.
+/// Handles HUD, tooltip, pause overlay, controls panel, and welcome screen.
 ///
-/// REFACTORING IN PROGRESS: 部分功能已拆分到独立组件:
-/// - HudManager: HUD 元素管理
-/// - WeaponSelectionPanel: 武器选择面板
-/// - TooltipSystem: 提示信息显示
-///
-/// 这些组件作为子节点添加到场景中，当前 UIManager 保留所有功能以确保向后兼容。
-/// 未来计划：逐步将功能迁移到独立组件，减少 UIManager 的复杂度。
+/// 各子面板均为独立组件（HudPanel/GameOverUI/HelpPanel/PausePanel/SettingsPanel
+/// 走 .tscn 加载，Equipment/Inventory/Crafting/Forge/Meta/Fusion/Tooltip 等代码创建），
+/// UIManager 负责装配、模态暂停锁与跨面板调度。
 /// </summary>
 public partial class UIManager : Control
 {
-    // ═══════════════════════════════════════════════
-    // Signals
-    // ═══════════════════════════════════════════════
-    public event Action<object?> WeaponCardSelected = delegate { };
-    public event Action UpgradeSkipped = delegate { };
-
     // ═══════════════════════════════════════════════
     // Component References
     // ═══════════════════════════════════════════════
@@ -42,7 +30,6 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     // HUD
     // ═══════════════════════════════════════════════
-    private WeaponSelectionPanel _weaponSelectionPanel = null!;
     private HudPanel? _hudPanel;
     private HelpPanel _helpPanel = null!;
     private EquipmentPanel _equipmentPanel = null!;
@@ -75,11 +62,9 @@ public partial class UIManager : Control
     // ═══════════════════════════════════════════════
     private PausePanel? _pausePanel;
     private SettingsPanel? _settingsPanel;
-    private bool _pauseLockedByUpgrade;
     private bool _userPaused;
     private float _hazardTimer;  // 陷阱 HUD 提示残留时间（玩家离开陷阱区后倒计时清除）
     private RoundBanner? _roundBanner;
-    private Panel? _roundSummaryPanel;
 
     // ═══════════════════════════════════════════════
     // Notifications（委托给 NotificationPanel）
@@ -87,7 +72,6 @@ public partial class UIManager : Control
     // ═══ PackedScene 导出（编辑器中可替换 .tscn；运行时 Instantiate）══
     [Export] public PackedScene? HudPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/HudPanel.tscn");
     [Export] public PackedScene? GameOverUIScene { get; set; } = GD.Load<PackedScene>("res://scenes/GameOverUI.tscn");
-    [Export] public PackedScene? WeaponSelectionPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/WeaponSelectionPanel.tscn");
     [Export] public PackedScene? HelpPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/HelpPanel.tscn");
     [Export] public PackedScene? PausePanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/PausePanel.tscn");
     [Export] public PackedScene? SettingsPanelScene { get; set; } = GD.Load<PackedScene>("res://scenes/SettingsPanel.tscn");
@@ -126,13 +110,6 @@ public partial class UIManager : Control
         AddChild(_hudPanel);
         _CreateBossHealthBar();
 
-        _weaponSelectionPanel = WeaponSelectionPanelScene!.Instantiate<WeaponSelectionPanel>();
-        _weaponSelectionPanel.Name = "WeaponSelectionPanel";
-        _weaponSelectionPanel.ZIndex = 160;
-        AddChild(_weaponSelectionPanel);
-        // 转发 WeaponSelectionPanel 事件到 UIManager 同名事件（GameManager 订阅的是后者）
-        _weaponSelectionPanel.WeaponCardSelected += (card) => WeaponCardSelected?.Invoke(card);
-        _weaponSelectionPanel.UpgradeSkipped += () => UpgradeSkipped?.Invoke();
         _helpPanel = HelpPanelScene!.Instantiate<HelpPanel>();
         _helpPanel.Name = "HelpPanel";
         _helpPanel.ZIndex = 170;
@@ -146,7 +123,6 @@ public partial class UIManager : Control
         AddChild(_craftingPanel);
         _forgePanel = new ForgePanel { Name = "ForgePanel", ZIndex = 170 };
         AddChild(_forgePanel);
-        // _weaponSelectionPanel.Setup 延迟到 SetWeaponDeck 时调用（此时 _gameManager/_weaponDeck 已就位）
         _metaPanel = new MetaUpgradePanel { Name = "MetaUpgradePanel" };
         AddChild(_metaPanel);
         _fusionPanel = new FusionOfferPanel { Name = "FusionOfferPanel" };
@@ -161,7 +137,6 @@ public partial class UIManager : Control
         // 数学系统：波形共振指示器
         _CreateResonanceIndicator();
 
-        _SetupConnections();
         _tooltipSystem = new TooltipSystem { Name = "TooltipSystem" };
         AddChild(_tooltipSystem);
         _notificationPanel = new NotificationPanel { Name = "NotificationPanel" };
@@ -406,57 +381,40 @@ public partial class UIManager : Control
         bannerTween.TweenCallback(Callable.From(banner.QueueFree));
     }
 
-    public string GetWeaponTooltipText(WeaponCard weapon)
-    {
-        return _GetWeaponTooltipText(weapon);
-    }
-
-    public string GetUpgradeTooltipText(UpgradeCard upgrade)
-    {
-        return _GetUpgradeTooltipText(upgrade);
-    }
-
-
     // ═══════════════════════════════════════════════
-    // Connections
+    // Input & Modal Pause
     // ═══════════════════════════════════════════════
-
-    private void _SetupConnections()
-    {
-        if (_gameManager != null)
-        {
-            _gameManager.WeaponSelectionStarted += _OnWeaponSelectionStarted;
-            _gameManager.RoundStarted += _OnRoundStarted;
-        }
-    }
 
     public override void _Input(InputEvent @event)
     {
         if (@event is InputEventKey key && key.Pressed && !key.Echo)
         {
-            // 武器选择快捷键 (1/2/3/Enter/Delete) 由 WeaponSelectionPanel._Input 处理
+            // 欢迎/GameOver/设置/融合确认打开时，不响应 H/C/I 快捷键，避免误触叠加模态
+            // （设置面板自己处理 ESC 关闭；融合确认走 Enter/Delete/ESC 拒绝）
+            bool modalBlocking = (_welcomePanel != null && _welcomePanel.Visible)
+                || _gameOverUi.Visible
+                || (_settingsPanel != null && _settingsPanel.Visible)
+                || (_fusionPanel != null && _fusionPanel.Visible);
 
-            if (@event.IsActionPressed("toggle_help") || key.Keycode == Key.H)
+            if ((@event.IsActionPressed("toggle_help") || key.Keycode == Key.H) && !modalBlocking)
             {
                 _ToggleControlsPanel();
                 GetViewport().SetInputAsHandled();
                 return;
             }
-            else if (@event.IsActionPressed("toggle_equipment") || key.Keycode == Key.C)
+            else if ((@event.IsActionPressed("toggle_equipment") || key.Keycode == Key.C) && !modalBlocking)
             {
                 _ToggleEquipmentPanel();
                 GetViewport().SetInputAsHandled();
                 return;
             }
-            else if (key.Keycode == Key.I)
+            else if (key.Keycode == Key.I && !modalBlocking)
             {
                 _ToggleInventoryPanel();
                 GetViewport().SetInputAsHandled();
                 return;
             }
         }
-
-        // 武器选择面板的 skip 按钮点击由 WeaponSelectionPanel 内部处理
     }
 
     public override void _UnhandledInput(InputEvent @event)
@@ -467,7 +425,7 @@ public partial class UIManager : Control
 
     /// <summary>
     /// 统一 ESC 键处理：按优先级短路求值状态机。
-    /// 优先级：HelpPanel > 武器选择 > 普通暂停。
+    /// 优先级：设置 > 融合确认(按拒绝处理) > Help > 背包/合成/锻造/装备 > 普通暂停。
     /// GameOver/Welcome 不处理 ESC（让玩家通过按钮操作，防止误退出）。
     /// 返回 true 表示事件已消费（调用方应 SetInputAsHandled）。
     /// </summary>
@@ -476,6 +434,12 @@ public partial class UIManager : Control
         // GameOver/Welcome 界面下不响应 ESC
         if (_gameOverUi.Visible || (_welcomePanel != null && _welcomePanel.Visible))
             return true;
+        // 融合确认：ESC 等同拒绝（设置面板自己处理 ESC，此处无需分支）
+        if (_fusionPanel != null && _fusionPanel.Visible)
+        {
+            _fusionPanel.Reject();
+            return true;
+        }
         // 关闭帮助面板
         if (_helpPanel.Visible)
         {
@@ -504,12 +468,6 @@ public partial class UIManager : Control
         if (_equipmentPanel.Visible)
         {
             _CloseEquipmentPanel();
-            return true;
-        }
-        // 3. 关闭武器选择
-        if (_weaponSelectionPanel.IsOpen())
-        {
-            CloseWeaponSelection();
             return true;
         }
         // 4. 切换暂停
@@ -615,15 +573,12 @@ public partial class UIManager : Control
         if (_pausePanel != null) _pausePanel.Visible = paused;
         if (paused)
             GetTree().Paused = true;
-        else if (!_pauseLockedByUpgrade && !_IsUiModalVisible())
+        else if (!_IsUiModalVisible())
             GetTree().Paused = false;
     }
 
-    public bool IsUpgradeActive() => _weaponSelectionPanel.IsOpen();
-
     private void _ToggleControlsPanel()
     {
-        if (_weaponSelectionPanel.IsOpen() && !_helpPanel.Visible) return;
         if (!_helpPanel.Visible && _equipmentPanel.Visible)
             _equipmentPanel.Close();
         _helpPanel.Toggle();
@@ -633,8 +588,6 @@ public partial class UIManager : Control
     /// <summary>C 键 / HUD [装备] 按钮：开关 MMO 式装备面板。</summary>
     private void _ToggleEquipmentPanel()
     {
-        // 武器选择阶段不弹装备面板，避免遮挡选卡
-        if (_weaponSelectionPanel.IsOpen() && !_equipmentPanel.Visible) return;
         if (!_equipmentPanel.Visible && _helpPanel.Visible)
             _helpPanel.Close();
         _equipmentPanel.Toggle();
@@ -663,7 +616,6 @@ public partial class UIManager : Control
     private void _ToggleInventoryPanel()
     {
         if (_inventoryPanel == null) return;
-        if (_weaponSelectionPanel.IsOpen() && !_inventoryPanel.Visible) return;
         _inventoryPanel.Toggle();
         _RefreshUiModalPauseLock();
     }
@@ -680,7 +632,6 @@ public partial class UIManager : Control
         if (_craftingPanel == null) return;
         var player = _gameManager?.PlayerRef;
         if (player == null) return;
-        if (_weaponSelectionPanel.IsOpen()) return;
         _craftingPanel.Open(player);
         GetTree().Paused = true;
     }
@@ -699,7 +650,6 @@ public partial class UIManager : Control
         if (_forgePanel == null) return;
         var player = _gameManager?.PlayerRef;
         if (player == null) return;
-        if (_weaponSelectionPanel.IsOpen()) return;
         _forgePanel.Open(player);
         GetTree().Paused = true;
     }
@@ -714,7 +664,7 @@ public partial class UIManager : Control
 
     private bool _IsUiModalVisible() => _helpPanel.Visible || _equipmentPanel.Visible
         || (_inventoryPanel?.Visible ?? false) || (_craftingPanel?.Visible ?? false)
-        || (_forgePanel?.Visible ?? false);
+        || (_forgePanel?.Visible ?? false) || (_fusionPanel?.Visible ?? false);
 
     private void _RefreshUiModalPauseLock()
     {
@@ -722,7 +672,7 @@ public partial class UIManager : Control
         {
             GetTree().Paused = true;
         }
-        else if (!_pauseLockedByUpgrade && !_userPaused)
+        else if (!_userPaused)
         {
             GetTree().Paused = false;
         }
@@ -777,34 +727,6 @@ public partial class UIManager : Control
     }
 
     // ═══════════════════════════════════════════════
-    // Weapon Selection
-    // ═══════════════════════════════════════════════
-
-    public void OpenWeaponSelection()
-    {
-        _pauseLockedByUpgrade = true;
-        GetTree().Paused = true;
-        if (_pausePanel != null) _pausePanel.Visible = false;
-        if (_helpPanel.Visible) _CloseHelpPanel();
-        if (_equipmentPanel.Visible) _CloseEquipmentPanel();
-
-        if (_gameManager?.PlayerRef != null)
-            _weaponSelectionPanel.UpdateCurrentWeaponLabel(_gameManager.PlayerRef);
-        _weaponSelectionPanel.Open();
-    }
-
-    public void CloseWeaponSelection()
-    {
-        _weaponSelectionPanel.Close();
-        _HideTooltip();
-        _pauseLockedByUpgrade = false;
-        if (!_userPaused && !_IsUiModalVisible())
-            GetTree().Paused = false;
-        else if (_userPaused && _pausePanel != null)
-            _pausePanel.Visible = true;
-    }
-
-    // ═══════════════════════════════════════════════
     // Tooltip Display（委托给 TooltipSystem）
     // ═══════════════════════════════════════════════
 
@@ -816,315 +738,6 @@ public partial class UIManager : Control
 
     private void _ShowTooltip(string text) => _tooltipSystem?.Show(text);
 
-    // ═══════════════════════════════════════════════
-    // Card Rendering
-    // ═══════════════════════════════════════════════
-
-
-
-    // ═══════════════════════════════════════════════
-    // Tooltip Text Generators
-    // ═══════════════════════════════════════════════
-
-    private string _GetUpgradeTooltipText(UpgradeCard upgrade)
-    {
-        var bb = "";
-        var targetName = upgrade.TargetRef?.CardName ?? "未知";
-        var count = upgrade.TargetRef?.UpgradeCount ?? 0;
-        bb += $"[center][b][color=#c0392b]{upgrade.DisplayName}[/color][/b][/center]\n";
-        bb += $"[center][color=#8a6060]强化目标: {targetName} · 已强化 {count} 次[/color][/center]\n";
-        bb += "[center]━━━━━━━━━━━━━━━━━━━━[/center]\n\n";
-        bb += "[color=#d47a7a]【强化效果】[/color]\n";
-
-        if (upgrade.DamageDelta > 0)
-            bb += $"• 伤害 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.DamageDelta * 100)}%[/color]\n";
-        if (upgrade.AttackSpeedDelta > 0)
-            bb += $"• 攻速 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.AttackSpeedDelta * 100)}%[/color]\n";
-        if (upgrade.HealthDelta > 0)
-            bb += $"• 生命 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.HealthDelta)}[/color]\n";
-        if (upgrade.SpeedDelta > 0)
-            bb += $"• 速度 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.SpeedDelta)}[/color]\n";
-        if (upgrade.CritDelta > 0)
-            bb += $"• 暴击 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.CritDelta)}%[/color]\n";
-        if (upgrade.LifeStealDelta > 0)
-            bb += $"• 吸血 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.LifeStealDelta)}%[/color]\n";
-        if (upgrade.FreezeDelta > 0)
-            bb += $"• 冰冻 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.FreezeDelta)}%[/color]\n";
-        if (upgrade.PoisonDelta > 0)
-            bb += $"• 中毒 [color=#d47a7a]+{Mathf.RoundToInt(upgrade.PoisonDelta)}%[/color]\n";
-        if (upgrade.EffectUpgrades.Count > 0)
-            bb += "• [color=#d47a7a]特效等级 +1[/color]\n";
-
-        var tradeoffKind = upgrade.TradeoffKind;
-        if (tradeoffKind != UpgradeCard.TradeoffType.None)
-        {
-            bb += "\n[color=#e74c3c]【副作用】[/color]\n";
-            if (tradeoffKind == UpgradeCard.TradeoffType.HealthCost)
-                bb += $"• 每次攻击额外消耗 [color=#e74c3c]+{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color] 生命\n";
-            else if (tradeoffKind == UpgradeCard.TradeoffType.Speed)
-                bb += $"• 速度 [color=#e74c3c]{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color]\n";
-            else if (tradeoffKind == UpgradeCard.TradeoffType.HealthMax)
-                bb += $"• 生命上限 [color=#e74c3c]{Mathf.RoundToInt(upgrade.TradeoffValue)}[/color]\n";
-        }
-        bb += "\n[color=#8a6060]选择后将直接强化你已有的装备。[/color]";
-        return bb;
-    }
-
-    private string _GetWeaponTooltipText(WeaponCard weapon)
-    {
-        var bb = "";
-
-        var rarityColor = _GetRarityColor(weapon.Rarity);
-        bb += $"[center][b][color={rarityColor}]{weapon.CardName}[/color][/b][/center]\n";
-
-        string typeText = weapon.Category == WeaponCategory.Weapon
-            ? weapon.GetWeaponTypeText() + "武器"
-            : "装备";
-        typeText += $" · Lv.{weapon.Tier} · {WeaponFormatter.GetRarityText(weapon.Rarity)}";
-        bb += $"[center][color=#8a6060]{typeText}[/color][/center]\n";
-        bb += "[center]━━━━━━━━━━━━━━━━━━━━[/center]\n\n";
-
-        Player? player = _gameManager?.PlayerRef;
-
-        bb += "[color=#e0b060]【属性效果】[/color]\n";
-        bool hasStats = false;
-
-        if (!Mathf.IsEqualApprox(weapon.DamageModifier, 1.0f))
-        {
-            int mod = Mathf.RoundToInt((weapon.DamageModifier - 1.0f) * 100);
-            string color = mod > 0 ? "#d47a7a" : "#e74c3c";
-            bb += $"  [color={color}]● 伤害: {(mod > 0 ? "+" : "")}{mod}%[/color]";
-            if (player != null)
-            {
-                int currentVal = Mathf.RoundToInt(player.CurrentDamage);
-                int newVal = Mathf.RoundToInt(player.CurrentDamage * weapon.DamageModifier);
-                bb += $"  [color=#5a4040]({currentVal} → {newVal})[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (!Mathf.IsEqualApprox(weapon.AttackSpeedModifier, 1.0f))
-        {
-            int mod = Mathf.RoundToInt((weapon.AttackSpeedModifier - 1.0f) * 100);
-            string color = mod > 0 ? "#d47a7a" : "#e74c3c";
-            bb += $"  [color={color}]● 攻速: {(mod > 0 ? "+" : "")}{mod}%[/color]\n";
-            hasStats = true;
-        }
-
-        if (weapon.Category == WeaponCategory.Weapon)
-        {
-            float attackInterval = 0.5f / weapon.AttackSpeedModifier;
-            if (weapon.Cooldown > 0)
-                attackInterval = Mathf.Max(attackInterval, (float)weapon.Cooldown);
-            bb += $"  [color=#d4a574]● 攻击间隔: {Mathf.Snapped(attackInterval, 0.01f)}秒[/color]";
-            if (player != null)
-                bb += $"  [color=#5a4040](当前: {Mathf.Snapped(player.AttackCooldown, 0.01f)}秒)[/color]";
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (!Mathf.IsEqualApprox(weapon.HealthModifier, 0))
-        {
-            string color = weapon.HealthModifier > 0 ? "#d47a7a" : "#e74c3c";
-            bb += $"  [color={color}]● 生命上限: {(weapon.HealthModifier > 0 ? "+" : "")}{Mathf.RoundToInt(weapon.HealthModifier)}[/color]";
-            if (player != null)
-            {
-                int currentVal = player.MaxHealth;
-                int newVal = currentVal + Mathf.RoundToInt(weapon.HealthModifier);
-                bb += $"  [color=#5a4040]({currentVal} → {newVal})[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (!Mathf.IsEqualApprox(weapon.SpeedModifier, 0))
-        {
-            string color = weapon.SpeedModifier > 0 ? "#d47a7a" : "#e74c3c";
-            bb += $"  [color={color}]● 移动速度: {(weapon.SpeedModifier > 0 ? "+" : "")}{Mathf.RoundToInt(weapon.SpeedModifier)}[/color]";
-            if (player != null)
-            {
-                int currentVal = Mathf.RoundToInt(player.CurrentSpeed);
-                int newVal = currentVal + Mathf.RoundToInt(weapon.SpeedModifier);
-                bb += $"  [color=#5a4040]({currentVal} → {newVal})[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (weapon.CriticalBonus > 0)
-        {
-            bb += $"  [color=#e0a040]● 暴击几率: +{Mathf.RoundToInt(weapon.CriticalBonus)}%[/color]";
-            if (player != null)
-            {
-                int currentVal = Mathf.RoundToInt(player.CriticalChance);
-                int newVal = currentVal + Mathf.RoundToInt(weapon.CriticalBonus);
-                bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (weapon.LifeStealBonus > 0)
-        {
-            bb += $"  [color=#c07979]● 吸血比例: +{Mathf.RoundToInt(weapon.LifeStealBonus)}%[/color]";
-            if (player != null)
-            {
-                int currentVal = Mathf.RoundToInt(player.LifeStealPercent);
-                int newVal = currentVal + Mathf.RoundToInt(weapon.LifeStealBonus);
-                bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (weapon.FreezeBonus > 0)
-        {
-            bb += $"  [color=#a08070]● 冰冻几率: +{Mathf.RoundToInt(weapon.FreezeBonus)}%[/color]";
-            if (player != null)
-            {
-                int currentVal = Mathf.RoundToInt(player.FreezeDuration);
-                int newVal = currentVal + Mathf.RoundToInt(weapon.FreezeBonus);
-                bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (weapon.PoisonBonus > 0)
-        {
-            bb += $"  [color=#a09070]● 中毒几率: +{Mathf.RoundToInt(weapon.PoisonBonus)}%[/color]";
-            if (player != null)
-            {
-                int currentVal = Mathf.RoundToInt(player.PoisonDamage);
-                int newVal = currentVal + Mathf.RoundToInt(weapon.PoisonBonus);
-                bb += $"  [color=#5a4040]({currentVal}% → {newVal}%)[/color]";
-            }
-            bb += "\n";
-            hasStats = true;
-        }
-
-        if (weapon.ThornsChance > 0)
-        {
-            bb += $"  [color=#c08060]● 反伤: {Mathf.RoundToInt(weapon.ThornsChance)}%几率 ({Mathf.RoundToInt(weapon.ThornsRatio)}%反弹)[/color]\n";
-            hasStats = true;
-        }
-        if (weapon.DodgeChance > 0)
-        {
-            bb += $"  [color=#80d080]● 闪避: +{Mathf.RoundToInt(weapon.DodgeChance)}%[/color]\n";
-            hasStats = true;
-        }
-        if (weapon.PiercingBonus > 0)
-        {
-            bb += $"  [color=#a0a0d0]● 穿透: +{weapon.PiercingBonus}[/color]\n";
-            hasStats = true;
-        }
-        if (weapon.BounceBonus > 0)
-        {
-            bb += $"  [color=#a0a0d0]● 弹跳: +{weapon.BounceBonus}[/color]\n";
-            hasStats = true;
-        }
-        if (weapon.SplashBonus > 0)
-        {
-            bb += $"  [color=#d0a070]● 溅射: +{Mathf.RoundToInt(weapon.SplashBonus)}半径[/color]\n";
-            hasStats = true;
-        }
-        if (weapon.Tenacity > 0)
-        {
-            bb += $"  [color=#a0c0c0]● 减控: -{Mathf.RoundToInt(weapon.Tenacity)}%负面时长[/color]\n";
-            hasStats = true;
-        }
-
-        if (weapon.GrantsAura)
-        {
-            if (player?.Aura != null && player.Aura.Active)
-                bb += "  [color=#b09080]● 护盾领域: 升级 (伤害+3, 范围+15)[/color]\n";
-            else
-                bb += "  [color=#b09080]● 护盾领域: 启用[/color]\n";
-            hasStats = true;
-        }
-
-        if (!hasStats)
-            bb += "  [color=#5a4040]● 无属性变化[/color]\n";
-
-        bb += "\n";
-
-        // Effects
-        bool hasEffects = weapon.MeleeEffects.Count > 0 || weapon.RangedEffects.Count > 0 || weapon.MagicEffects.Count > 0;
-
-        if (hasEffects)
-        {
-            bb += "[b][color=#b09080]【特殊效果】[/color][/b]\n";
-            foreach (var effect in weapon.MeleeEffects)
-            {
-                int key = (int)effect;
-                int level = weapon.MeleeEffectLevels.TryGetValue(key, out var l) ? l.AsInt32() : 1;
-                bb += $"  [color=#ddaaff]★ {WeaponCard.GetMeleeEffectDesc((MeleeEffect)key, level)}[/color]\n";
-                string detail = weapon.GetEffectDetail(((MeleeEffect)key).ToString(), "melee", level);
-                if (!string.IsNullOrEmpty(detail))
-                    bb += $"     [color=#999999]{detail}[/color]\n";
-            }
-            foreach (var effect in weapon.RangedEffects)
-            {
-                int key = (int)effect;
-                int level = weapon.RangedEffectLevels.TryGetValue(key, out var l) ? l.AsInt32() : 1;
-                bb += $"  [color=#ddaaff]★ {WeaponCard.GetRangedEffectDesc((RangedEffect)key, level)}[/color]\n";
-                string detail = weapon.GetEffectDetail(((RangedEffect)key).ToString(), "ranged", level);
-                if (!string.IsNullOrEmpty(detail))
-                    bb += $"     [color=#999999]{detail}[/color]\n";
-            }
-            foreach (var effect in weapon.MagicEffects)
-            {
-                int key = (int)effect;
-                int level = weapon.MagicEffectLevels.TryGetValue(key, out var l) ? l.AsInt32() : 1;
-                bb += $"  [color=#ddaaff]★ {WeaponCard.GetMagicEffectDesc((MagicEffect)key, level)}[/color]\n";
-                string detail = weapon.GetEffectDetail(((MagicEffect)key).ToString(), "magic", level);
-                if (!string.IsNullOrEmpty(detail))
-                    bb += $"     [color=#999999]{detail}[/color]\n";
-            }
-            bb += "\n";
-        }
-
-        // Risk section
-        bool hasRisk = weapon.HealthCost > 0 || weapon.HealthModifier < 0 ||
-                       weapon.SpeedModifier < 0 || weapon.DamageModifier < 1.0f ||
-                       weapon.AttackSpeedModifier < 1.0f;
-        if (hasRisk)
-        {
-            bb += "[color=#ff6666]【风险提示】[/color]\n";
-            if (weapon.HealthCost > 0)
-                bb += $"  [color=#e74c3c]● 每次攻击消耗 {weapon.HealthCost} 点生命[/color]\n";
-            if (weapon.HealthModifier < 0)
-                bb += $"  [color=#e74c3c]● 生命上限降低 {Mathf.Abs(Mathf.RoundToInt(weapon.HealthModifier))} 点[/color]\n";
-            if (weapon.SpeedModifier < 0)
-                bb += $"  [color=#e74c3c]● 移动速度降低 {Mathf.Abs(Mathf.RoundToInt(weapon.SpeedModifier))} 点[/color]\n";
-            if (weapon.DamageModifier < 1.0f)
-                bb += $"  [color=#e74c3c]● 伤害降低 {Mathf.RoundToInt((1.0f - weapon.DamageModifier) * 100)}%[/color]\n";
-            if (weapon.AttackSpeedModifier < 1.0f)
-                bb += $"  [color=#e74c3c]● 攻击速度降低 {Mathf.RoundToInt((1.0f - weapon.AttackSpeedModifier) * 100)}%[/color]\n";
-            bb += "\n";
-        }
-
-        // Replacement hint
-        if (weapon.Category == WeaponCategory.Weapon && player != null)
-        {
-            string currentWeaponName = "";
-            foreach (var eff in player.ActiveEffects)
-            {
-                if (eff.Category == WeaponCategory.Weapon)
-                {
-                    currentWeaponName = eff.CardName;
-                    break;
-                }
-            }
-            if (!string.IsNullOrEmpty(currentWeaponName) && currentWeaponName != weapon.CardName)
-                bb += $"[color=#e0a040]将替换当前武器: {currentWeaponName}[/color]\n";
-        }
-
-        return bb;
-    }
-
-    private string _GetRarityColor(int rarity) => WeaponFormatter.GetRarityColor(rarity);
 
     // ═══════════════════════════════════════════════
     // Viewport Resize
@@ -1142,14 +755,8 @@ public partial class UIManager : Control
         float scale = ResponsiveUi.Scale(viewportSize);
         // tooltip/levelup 响应式布局由各自组件内部处理
 
-        _ApplyWeaponSelectionResponsive(viewportSize);
         _ApplyBossHealthResponsive(viewportSize);
         _ApplyMathUiResponsive(viewportSize);
-    }
-
-    private void _ApplyWeaponSelectionResponsive(Vector2 viewportSize)
-    {
-        _weaponSelectionPanel.ApplyResponsiveLayout();
     }
 
     private void _ApplyBossHealthResponsive(Vector2 viewportSize)
@@ -1204,15 +811,8 @@ public partial class UIManager : Control
     }
 
     // ═══════════════════════════════════════════════
-    // Game Manager Events
+    // Round / Score Display
     // ═══════════════════════════════════════════════
-
-    private void _OnWeaponSelectionStarted() => OpenWeaponSelection();
-
-    private void _OnRoundStarted(int roundNumber)
-    {
-        UpdateRoundDisplay(roundNumber);
-    }
 
     public void UpdateRoundDisplay(int roundNumber)
     {
@@ -1228,173 +828,6 @@ public partial class UIManager : Control
     {
         _roundBanner?.Hide();
     }
-    public void ShowRoundSummary(int round, int kills, int totalKills, int score)
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-        HideRoundBanner();
-        // 关闭可能打开的模态面板，避免遮挡回合结算卡（Help/Equipment ZIndex 170 高于 RoundSummary 55）
-        _helpPanel?.Close();
-        _equipmentPanel?.Close();
-        _HideTooltip();
-
-        if (_roundSummaryPanel != null && IsInstanceValid(_roundSummaryPanel))
-            _roundSummaryPanel.QueueFree();
-
-        // Wrapper fills the screen so inner panel centers correctly
-        _roundSummaryPanel = new Panel();
-        _roundSummaryPanel.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        _roundSummaryPanel.ZIndex = 55;
-        _roundSummaryPanel.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-        var bgStyle = new StyleBoxFlat
-        {
-            BgColor = new Color(BattlefieldBg, 0.6f)
-        };
-        _roundSummaryPanel.AddThemeStyleboxOverride("panel", bgStyle);
-        AddChild(_roundSummaryPanel);
-
-        // CenterContainer ensures card is always at screen center
-        var center = new CenterContainer();
-        center.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        center.MouseFilter = Control.MouseFilterEnum.Ignore;
-        _roundSummaryPanel.AddChild(center);
-
-        // The actual card
-        var card = new Panel();
-        card.CustomMinimumSize = ResponsiveUi.FitPanel(new Vector2(340, 260), viewport, 0.84f, 0.72f);
-        card.MouseFilter = Control.MouseFilterEnum.Ignore;
-
-        var cardStyle = MakeNotePanel(borderRadius: 8f, shadowSize: 8f);
-        cardStyle.ShadowOffset = new Vector2(4, 4);
-        card.AddThemeStyleboxOverride("panel", cardStyle);
-        center.AddChild(card);
-
-        var margin = new MarginContainer();
-        margin.SetAnchorsAndOffsetsPreset(Control.LayoutPreset.FullRect);
-        margin.AddThemeConstantOverride("margin_left", ResponsiveUi.Px(UiMarginHeroCard, viewport, 12));
-        margin.AddThemeConstantOverride("margin_right", ResponsiveUi.Px(UiMarginHeroCard, viewport, 12));
-        margin.AddThemeConstantOverride("margin_top", ResponsiveUi.Px(UiMarginHeroPad, viewport, 10));
-        margin.AddThemeConstantOverride("margin_bottom", ResponsiveUi.Px(UiMarginHeroPad, viewport, 10));
-        margin.MouseFilter = Control.MouseFilterEnum.Ignore;
-        card.AddChild(margin);
-
-        var vbox = new VBoxContainer();
-        vbox.AddThemeConstantOverride("separation", ResponsiveUi.Px(UiSpacingNormal, viewport, 4));
-        vbox.MouseFilter = Control.MouseFilterEnum.Ignore;
-        margin.AddChild(vbox);
-
-        // Title
-        var titleLbl = new Label
-        {
-            Text = $"第 {round} 回合完成",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        titleLbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(26, viewport, 18));
-        titleLbl.AddThemeColorOverride("font_color", BloodBright);
-        titleLbl.AddThemeConstantOverride("outline_size", UiOutlineBold);
-        titleLbl.AddThemeColorOverride("font_outline_color", InkBlack);
-        vbox.AddChild(titleLbl);
-
-        // Subtitle
-        var subLbl = new Label
-        {
-            Text = "ROUND COMPLETE",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        subLbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontMicro, viewport, 9));
-        subLbl.AddThemeColorOverride("font_color", new Color(0.6f, 0.55f, 0.40f));
-        vbox.AddChild(subLbl);
-
-        // Separator
-        var sep = new HSeparator();
-        sep.AddThemeColorOverride("separator", new Color(0.85f, 0.70f, 0.25f, 0.3f));
-        sep.CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(6, viewport, 3));
-        vbox.AddChild(sep);
-
-        // Spacer
-        var sp1 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(4, viewport, 2)), MouseFilter = Control.MouseFilterEnum.Ignore };
-        vbox.AddChild(sp1);
-
-        _AddStatRow(vbox, "本波击杀", kills.ToString(), new Color(0.8f, 0.5f, 0.4f));
-        _AddStatRow(vbox, "累计击杀", totalKills.ToString(), BloodRed);
-        _AddStatRow(vbox, "当前得分", score.ToString(), new Color(0.85f, 0.6f, 0.45f));
-
-        // Spacer
-        var sp2 = new Control { CustomMinimumSize = new Vector2(0, ResponsiveUi.Px(6, viewport, 3)), MouseFilter = Control.MouseFilterEnum.Ignore };
-        vbox.AddChild(sp2);
-
-        // Bottom hint
-        var hint = new Label
-        {
-            Text = "准备进入下一波...",
-            HorizontalAlignment = HorizontalAlignment.Center
-        };
-        hint.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontSmall, viewport, 9));
-        hint.AddThemeColorOverride("font_color", new Color(0.5f, 0.5f, 0.55f));
-        vbox.AddChild(hint);
-
-        // Animate in
-        card.Modulate = card.Modulate with { A = 0.0f };
-        card.Scale = new Vector2(0.7f, 0.7f);
-        var tween = CreateTween();
-        tween.Parallel().TweenProperty(card, Control.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.4f)
-            .SetTrans(Tween.TransitionType.Cubic);
-        tween.Parallel().TweenProperty(card, "scale", new Vector2(1.0f, 1.0f), 0.4f)
-            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
-        // Dim background in
-        _roundSummaryPanel.Modulate = _roundSummaryPanel.Modulate with { A = 0.0f };
-        tween.Parallel().TweenProperty(_roundSummaryPanel, Control.PropertyName.Modulate.ToString() + ":a", 1.0f, 0.3f);
-    }
-
-    private void _AddStatRow(VBoxContainer parent, string label, string value, Color accentColor)
-    {
-        var viewport = ResponsiveUi.ViewportSize(this);
-        var row = new HBoxContainer();
-        row.MouseFilter = Control.MouseFilterEnum.Ignore;
-        row.AddThemeConstantOverride("separation", 0);
-        parent.AddChild(row);
-
-        // Label (left-aligned, takes half width)
-        var lbl = new Label
-        {
-            Text = label,
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill
-        };
-        lbl.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(UiFontEmph, viewport, 11));
-        lbl.AddThemeColorOverride("font_color", new Color(0.65f, 0.65f, 0.70f));
-        lbl.AddThemeConstantOverride("outline_size", UiOutlineThin);
-        lbl.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.5f));
-        row.AddChild(lbl);
-
-        // Value (right-aligned, takes half width)
-        var val = new Label
-        {
-            Text = value,
-            SizeFlagsHorizontal = Control.SizeFlags.ExpandFill,
-            HorizontalAlignment = HorizontalAlignment.Right
-        };
-        val.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(20, viewport, 14));
-        val.AddThemeColorOverride("font_color", accentColor);
-        val.AddThemeConstantOverride("outline_size", UiOutlineNorm);
-        val.AddThemeColorOverride("font_outline_color", new Color(0, 0, 0, 0.6f));
-        row.AddChild(val);
-    }
-
-    public void HideRoundSummary()
-    {
-        if (_roundSummaryPanel == null || !IsInstanceValid(_roundSummaryPanel)) return;
-
-        var panel = _roundSummaryPanel;
-        var tween = CreateTween();
-        tween.Parallel().TweenProperty(panel, Control.PropertyName.Modulate.ToString() + ":a", 0.0f, 0.3f);
-        tween.TweenCallback(Callable.From(() =>
-        {
-            if (IsInstanceValid(panel)) panel.QueueFree();
-        }));
-        _roundSummaryPanel = null;
-    }
-
-
     public void UpdateScoreDisplay(int newScore)
     {
         _hudPanel?.UpdateScore(newScore);
@@ -1428,23 +861,17 @@ public partial class UIManager : Control
     public void SetGameManager(GameManager manager)
     {
         _gameManager = manager;
-        _SetupConnections();
     }
 
     public void SetWeaponDeck(WeaponDeck deck)
     {
         _weaponDeck = deck;
-        // 现在两个依赖都已就位，初始化武器选择面板
-        _weaponSelectionPanel.Setup(
-            _gameManager!, _weaponDeck!,
-            GetWeaponTooltipText, GetUpgradeTooltipText,
-            (ctrl, text) => _ShowTooltip(text),
-            _HideTooltip);
     }
 
     public bool TryShowFusionOffer(World.Altar altar, WeaponCard currentWeapon)
     {
         if (_fusionPanel == null || _weaponDeck == null || _gameManager?.PlayerRef == null) return false;
+        if (_fusionPanel.Visible) return false; // 已有未处理的融合确认，不叠加
         string? resultName = _weaponDeck.GetFusionResultName(currentWeapon,
             new WeaponCard { CardName = altar.MateWeaponName ?? "" });
         if (resultName == null) return false;
@@ -1453,16 +880,30 @@ public partial class UIManager : Control
         _fusionPanel.ShowOffer(currentWeapon.CardName, altar.MateWeaponName ?? "",
             resultName, altar.FusionResultDesc ?? "", _gameManager);
 
-        _fusionPanel.FusionAccepted += () =>
+        // 一次性订阅：面板关闭即退订，避免重复祭坛触发时处理器堆积导致多次融合/多次销毁
+        void OnAccepted()
         {
+            _fusionPanel!.FusionAccepted -= OnAccepted;
+            _fusionPanel!.FusionRejected -= OnRejected;
             ApplyFusion(currentWeapon, altar);
-            altar.QueueFree();
-        };
-        _fusionPanel.FusionRejected += () =>
+            if (IsInstanceValid(altar)) altar.QueueFree();
+            _RefreshUiModalPauseLock();
+        }
+        void OnRejected()
         {
-            altar.Boon = Altar.BoonKind.Damage;
-            altar.ActivateAndDestroy();
-        };
+            _fusionPanel!.FusionAccepted -= OnAccepted;
+            _fusionPanel!.FusionRejected -= OnRejected;
+            if (IsInstanceValid(altar))
+            {
+                altar.Boon = Altar.BoonKind.Damage;
+                altar.ActivateAndDestroy();
+            }
+            _RefreshUiModalPauseLock();
+        }
+        _fusionPanel.FusionAccepted += OnAccepted;
+        _fusionPanel.FusionRejected += OnRejected;
+        // 模态暂停：融合确认期间冻结战斗，保证快捷键独占（硬约束）
+        GetTree().Paused = true;
         return true;
     }
 
@@ -1481,19 +922,20 @@ public partial class UIManager : Control
             player.Combat?.RecalculateStats();
         }
         GameServices.Audio.PlayUpgrade();
-        _weaponSelectionPanel.UpdateCurrentWeaponLabel(player);
         ShowLevelUpNotification($"融合成功! 获得 {fused.CardName}", new Color(0.7f, 0.3f, 1.0f));
     }
 
     public void ShowGameOver()
     {
         HideRoundBanner();
-        HideRoundSummary();
-        if (_weaponSelectionPanel != null && _weaponSelectionPanel.IsOpen())
-            CloseWeaponSelection();
-        // 关闭可能打开的模态面板，避免遮挡 GameOver（Help/Equipment ZIndex 170 高于 GameOver 50）
+        // 关闭所有可能打开的模态面板，避免遮挡 GameOver（Help/Equipment ZIndex 170 高于 GameOver 50）
         _helpPanel?.Close();
         _equipmentPanel?.Close();
+        if (_inventoryPanel != null) _inventoryPanel.Visible = false;
+        if (_craftingPanel != null) _craftingPanel.Visible = false;
+        if (_forgePanel != null) _forgePanel.Visible = false;
+        if (_fusionPanel != null) _fusionPanel.Visible = false;
+        if (_settingsPanel != null) _settingsPanel.Visible = false;
         if (_pausePanel != null) _pausePanel.Visible = false;
         _HideTooltip();
 

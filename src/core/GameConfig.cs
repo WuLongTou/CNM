@@ -251,13 +251,12 @@ public static class GameConfig
     public const float RoundSpeedScaleFactor = 0.6f;
 
     // ═══════════════════════════════════════════════
-    // Round Management
+    // Spawning
     // ═══════════════════════════════════════════════
 
     public const float SpawnMargin = 30.0f;
     public const float SpawnTopMarginFallback = 110.0f;
     public const float SpawnOffsetRange = 20.0f;
-    public const float RoundTransitionDelay = 2.0f;
     public const float EdgeIndicatorInterval = 0.5f;
     public const int EdgeIndicatorMinCount = 2;
     public const float EliteScoreMult = 1.5f;
@@ -272,6 +271,7 @@ public static class GameConfig
     public const float ComboDecayTime = 2.0f;
     public const float ComboDamageBonusPerLevel = 0.05f;
     public const float ComboMaxBonus = 0.5f;
+    public const float KillStreakWindowSec = 4.0f; // 击杀音效连击窗口：间隔超过此秒数则连击断档
 
     // ═══════════════════════════════════════════════
     // HitStop（命中停顿 / 打击感凝固）

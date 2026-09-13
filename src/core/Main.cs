@@ -104,8 +104,6 @@ public partial class Main : Node2D
         _uiManager.SetWeaponDeck(_weaponDeck);
 
         // Connect UI signals → game manager handlers.
-        _uiManager.WeaponCardSelected += _gameManager.OnWeaponSelected;
-        _uiManager.UpgradeSkipped += _gameManager.OnUpgradeSkipped;
         _player.HealthChanged += OnPlayerHealthChanged;
         _gameManager.GameOver += _uiManager.ShowGameOver;
 
@@ -119,8 +117,8 @@ public partial class Main : Node2D
         LogUtils.Print("僵尸大战游戏启动！");
         LogUtils.Print("使用方向键或 WASD 移动玩家");
         LogUtils.Print("按住空格攻击，Shift 冲刺");
-        LogUtils.Print("每回合开始时选择一张武器卡牌来增强你的能力");
-        LogUtils.Print("消灭所有僵尸进入下一回合！");
+        LogUtils.Print("消灭僵尸、开启宝箱来增强你的能力");
+        LogUtils.Print("在持续刷新的尸潮中活下去！");
 
         GameServices.Audio.StartMusic();
 
@@ -195,18 +193,7 @@ public partial class Main : Node2D
         if (_renderRect != null && _camera != null)
         {
             _renderRect.GlobalPosition = _camera.GlobalPosition - _screenSize * 0.5f + _camera.Offset;
-            // 诊断:每 60 帧打印一次对齐状态
-            if (Engine.GetProcessFrames() % 60 == 1)
-            {
-                var cam3D = _renderViewport?.Camera;
-                Vector3 cam3DPos = cam3D != null ? cam3D.GlobalPosition : Vector3.Zero;
-                GD.Print($"[Diag] Main._Process cam2D={_camera.GlobalPosition} cam3D={cam3DPos} rect={_renderRect.GlobalPosition} player={_player.GlobalPosition} worldSize={MapContext.CurrentWorldSize}");
-            }
         }
-    }
-
-    public override void _UnhandledInput(InputEvent @event)
-    {
     }
 
     private void OnPlayerHealthChanged(int newHealth)

@@ -137,8 +137,15 @@ public partial class SoundManager : Node
     public void PlayDash() => _PlaySfx("dash");
 
     private int _killStreak;
+    private ulong _lastKillMsec;
     public void NotifyKill()
     {
+        // 时间窗口连击：击杀间隔超过窗口则重新计数（此前仅在已删除的波次结算里重置，
+        // 会导致 5 杀后每杀都播 combo_5）。窗口取战斗连击衰减的 2 倍，容错更高。
+        ulong now = Time.GetTicksMsec();
+        if (now - _lastKillMsec > (ulong)(GameConfig.KillStreakWindowSec * 1000.0f))
+            _killStreak = 0;
+        _lastKillMsec = now;
         _killStreak++;
         if (_killStreak >= 5)
             _PlaySfx("combo_5");

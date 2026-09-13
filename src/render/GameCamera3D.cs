@@ -21,13 +21,11 @@ public partial class GameCamera3D : Camera3D
     private float _baseSize = 720f;     // 正交视野高度(= 视口像素高,固定不 zoom)
     private float _aspect = 16f / 9f;
     private Vector2 _worldSize;          // 2D 世界尺寸(X, Y→Z)
-    private int _diagCount;              // 诊断:每 60 帧打印一次
 
     /// <summary>绑定跟随目标(2D 玩家)。</summary>
     public void Init(Player target)
     {
         _target = target;
-        GD.Print($"[Diag] GameCamera3D.Init target={target?.Name ?? "null"} scene={GetPath()} inTree={IsInsideTree()}");
     }
 
     /// <summary>设置视口尺寸:正交 Size = 视口高(固定),aspect 用于 Limit。</summary>
@@ -43,14 +41,6 @@ public partial class GameCamera3D : Camera3D
 
     public override void _Process(double delta)
     {
-        // 诊断:每 60 帧打印一次,确认 _Process 真在被调用、_target 有效、相机位置在变
-        _diagCount++;
-        if (_diagCount % 60 == 1)
-        {
-            string tgt = (_target != null && IsInstanceValid(_target)) ? _target.GlobalPosition.ToString() : "null/invalid";
-            GD.Print($"[Diag] GC3D._Process #{_diagCount} inTree={IsInsideTree()} targetPos={tgt} camPos={GlobalPosition} curPos={_currentPos} init={_initialized} worldSize={_worldSize}");
-        }
-
         if (!IsInstanceValid(_target)) return;
         float d = (float)delta;
 

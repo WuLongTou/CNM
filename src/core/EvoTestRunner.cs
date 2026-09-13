@@ -36,12 +36,12 @@ public partial class EvoTestRunner : Node
             return;
         }
 
-        // 推进到 Combat
+        // 推进到 Combat（headless 下无欢迎画面点击，用测试跳关直达）
         for (int i = 0; i < 300; i++)
         {
             await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
             if (_gameManager.CurrentState == GameState.WeaponSelection)
-                _gameManager.OnUpgradeSkipped();
+                _gameManager.DebugForceCombat();
             else if (_gameManager.CurrentState == GameState.Combat)
                 break;
         }
