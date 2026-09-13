@@ -39,6 +39,8 @@ Godot 4.7 + C# 游戏项目（僵尸大战）。
 
 `$GODOT` 指本机 Godot 路径（2026-09 实测为 `/Applications/Godot.app/Contents/MacOS/Godot`，4.7.2；
 若安装的是 .NET 版则为 `Godot_mono.app` 同级路径，使用前先 `ls` 验证存在）：
+**警告：禁止用非 .NET 版 `Godot.app` 打开/运行本项目**——它会剥离 `project.godot` 的
+`C#` 特性标记并损坏中文注释（2026-09 实测）。凡涉及 C# 一律用 .NET 版。
 
 - `mkdir -p build && $GODOT --headless --export-debug "macOS" "build/CNM-debug.zip"` — 导出调试构建（需先在 Godot 编辑器中配置 `export_presets.cfg` 的 "macOS" 预设）
 - `$GODOT --headless --quit-after 1` — 启动场景冒烟检查
