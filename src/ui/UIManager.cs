@@ -577,6 +577,29 @@ public partial class UIManager : Control
             GetTree().Paused = false;
     }
 
+    /// <summary>玩家是否处于手动暂停（供外部指令接口查询）。</summary>
+    public bool IsUserPaused() => _userPaused;
+
+    // ── 外部指令接口（AI 操作）────────────────────────────────────────
+
+    /// <summary>融合确认面板是否打开。</summary>
+    public bool IsFusionOfferVisible() => _fusionPanel?.Visible ?? false;
+
+    /// <summary>融合报价面板引用（报价内容读其 Offer* 属性；未打开时 Visible 为假）。</summary>
+    public FusionOfferPanel? FusionPanel => _fusionPanel;
+
+    /// <summary>融合确认的外部应答：true=接受，false=拒绝；面板未打开返回 false。</summary>
+    public bool TryFusionResponse(bool accept)
+    {
+        if (_fusionPanel == null || !_fusionPanel.Visible)
+            return false;
+        if (accept)
+            _fusionPanel.Accept();
+        else
+            _fusionPanel.Reject();
+        return true;
+    }
+
     private void _ToggleControlsPanel()
     {
         if (!_helpPanel.Visible && _equipmentPanel.Visible)

@@ -19,6 +19,24 @@ public partial class FusionOfferPanel : Control
     private Button _rejectBtn = null!;
     private GameManager? _gameManager;
 
+    // 当前报价内容（供外部指令接口 game_state 读取）
+    private string _offerCurrent = "";
+    private string _offerMate = "";
+    private string _offerResult = "";
+    private string _offerResultDesc = "";
+
+    /// <summary>被献祭的原武器名（无报价时为空串）。</summary>
+    public string OfferCurrentWeapon => _offerCurrent;
+
+    /// <summary>祭坛提供的融合对象武器名。</summary>
+    public string OfferMateWeapon => _offerMate;
+
+    /// <summary>融合结果武器名。</summary>
+    public string OfferResultName => _offerResult;
+
+    /// <summary>融合结果描述。</summary>
+    public string OfferResultDesc => _offerResultDesc;
+
     public override void _Ready()
     {
         var viewport = ResponsiveUi.ViewportSize(this);
@@ -96,6 +114,10 @@ public partial class FusionOfferPanel : Control
     public void ShowOffer(string currentWeapon, string mateWeapon, string resultName, string resultDesc, GameManager gm)
     {
         _gameManager = gm;
+        _offerCurrent = currentWeapon;
+        _offerMate = mateWeapon;
+        _offerResult = resultName;
+        _offerResultDesc = resultDesc;
         _descLabel.Text = $"你的 {currentWeapon}\n+ {mateWeapon}\n\n→ {resultName} ({resultDesc})";
         Visible = true;
     }

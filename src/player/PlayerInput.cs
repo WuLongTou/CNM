@@ -42,6 +42,28 @@ public partial class PlayerInput : Node
     public bool IsCombatEnabled { get; private set; }
 
     // ─────────────────────────────────────────────────────────────────────────
+    // External input (AI operation) — written by ExternalCommandService,
+    // merged with keyboard input below. Cleared together with everything else
+    // when a modal/UI page is open (hard constraint: gameplay keys must be
+    // 100% dead outside Combat).
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /// <summary>Externally injected movement vector (each component -1..1).</summary>
+    public Vector2 ExternalMove { get; set; }
+
+    /// <summary>Externally injected attack hold state.</summary>
+    public bool ExternalAttack { get; set; }
+
+    private bool _externalDashQueued;
+    private bool _externalCycleQueued;
+
+    /// <summary>External one-shot dash request (consumed on next capture).</summary>
+    public void QueueExternalDash() => _externalDashQueued = true;
+
+    /// <summary>External one-shot cycle-target request (consumed on next capture).</summary>
+    public void QueueExternalCycleTarget() => _externalCycleQueued = true;
+
+    // ─────────────────────────────────────────────────────────────────────────
     // Input action names — mirror project.godot [input] section
     // ─────────────────────────────────────────────────────────────────────────
 
@@ -66,6 +88,7 @@ public partial class PlayerInput : Node
         // Input capture must happen before physics so state is ready for
         // Player._PhysicsProcess().
         ProcessPriority = -10; // Run before the Player node
+        AddToGroup("player_input"); // 外部指令接口按组定位，注入 AI 输入
     }
 
     public void CaptureFrameState()
@@ -79,28 +102,36 @@ public partial class PlayerInput : Node
         IsCombatEnabled = _gameManager == null || _gameManager.CurrentState == GameState.Combat;
         if (!IsCombatEnabled)
         {
+            ExternalMove = Vector2.Zero;
+            ExternalAttack = false;
+            _externalDashQueued = false;
+            _externalCycleQueued = false;
             Reset();
             return;
         }
 
-        // ── Movement axis ──────────────────────────────────────────────────
+        // ── Movement axis (keyboard + external injection) ──────────────────
         float horizontal = Input.GetAxis(ACTION_MOVE_LEFT, ACTION_MOVE_RIGHT);
         float vertical = Input.GetAxis(ACTION_MOVE_UP, ACTION_MOVE_DOWN);
-        MoveDirection = new Vector2(horizontal, vertical);
+        MoveDirection = new Vector2(horizontal, vertical) + ExternalMove;
 
         if (MoveDirection.Length() > 1.0f)
             MoveDirection = MoveDirection.Normalized();
 
-        // ── Attack (space bar OR left mouse button held) ─────────────────
+        // ── Attack (space bar OR left mouse button held OR external) ─────
         IsAttackActionPressed = Input.IsActionPressed(ACTION_ATTACK);
         IsPrimaryMousePressed = Input.IsMouseButtonPressed(MouseButton.Left);
-        IsAttackPressed = IsAttackActionPressed || IsPrimaryMousePressed;
+        IsAttackPressed = IsAttackActionPressed || IsPrimaryMousePressed || ExternalAttack;
 
-        // ── Dash — single frame ─────────────────────────────────────────────
-        IsDashPressed = Input.IsActionJustPressed(ACTION_DASH);
+        // ── Dash — single frame (keyboard JustPressed or external pulse) ──
+        bool externalDash = _externalDashQueued;
+        _externalDashQueued = false;
+        IsDashPressed = Input.IsActionJustPressed(ACTION_DASH) || externalDash;
 
-        // ── Cycle target — single frame ─────────────────────────────────────
-        IsCycleTargetPressed = Input.IsActionJustPressed(ACTION_CYCLE_TARGET);
+        // ── Cycle target — single frame (keyboard JustPressed or external) ─
+        bool externalCycle = _externalCycleQueued;
+        _externalCycleQueued = false;
+        IsCycleTargetPressed = Input.IsActionJustPressed(ACTION_CYCLE_TARGET) || externalCycle;
 
         // ── Help toggle ────────────────────────────────────────────────────
         IsHelpToggled = Input.IsActionJustPressed(ACTION_TOGGLE_HELP);

@@ -4,9 +4,13 @@ using Godot;
 using Godot.Collections;
 using SysColGen = System.Collections.Generic;
 using System.Text;
+using ZombieWars.Enemy;
+using ZombieWars.Player;
+using ZombieWars.Weapons;
+using ZombieWars.World;
 
 /// <summary>
-/// 外部指令接口 —— 供自动化测试与外部程序实时控制游戏。
+/// 外部指令接口 —— 供自动化测试与外部 AI 程序实时观测和操作游戏。
 ///
 /// 传输：TCP 回环服务（默认关闭，只有传参才启用；只绑 127.0.0.1，不出本机）。
 ///   --cmd-port=&lt;端口&gt;  启动指令服务；多客户端可同时连接，各自收发独立，
@@ -19,8 +23,15 @@ using System.Text;
 ///                     {"event":"threat_tier","data":{"tier":3}}
 ///
 /// 动作集：
-///   status      游戏状态（state/round/score/kills/僵尸数/玩家血量位置）
+///   status      轻量状态（state/round/score/kills/僵尸数/玩家血量位置）
+///   game_state  完整观测快照（Dota2 GSI 风格）：天气/地图/玩家(武器效果/连击/
+///               攻速频率)/僵尸列表(按距离取前30)/宝箱祭坛位置/UI 模态(含融合
+///               报价内容)/成就统计 —— AI 决策所需的全量数据
 ///   start       关闭欢迎画面进入游戏（等价点"开始游戏"）
+///   input       注入玩家输入（与真实键鼠叠加，模态/非战斗阶段被 PlayerInput
+///               拦截清零）args:{move_x,move_y(-1..1),attack(bool),
+///               dash(bool 脉冲),cycle_target(bool 脉冲)}
+///   choose      模态选择 args:{target:"fusion",choice:"accept"|"reject"}
 ///   force_combat 测试跳关直达战斗态（复用 GameManager.DebugForceCombat）
 ///   spawn       刷怪 args:{count,type("random"|"basic"),near("player"|"random"|"x,y")}
 ///   give        宝箱奖励随机武器 args:{count}
@@ -187,7 +198,10 @@ public partial class ExternalCommandService : Node
             return action switch
             {
                 "status" => _Resp(id, client, true, _Status(gm, ui)),
+                "game_state" => _Resp(id, client, true, _GameState(gm, ui)),
                 "start" => _Resp(id, client, true, _Start(ui)),
+                "input" => _Resp(id, client, true, _ExtInput(args)),
+                "choose" => _Resp(id, client, true, _Choose(ui, args)),
                 "force_combat" => _Resp(id, client, true, _ForceCombat(gm)),
                 "spawn" => _Resp(id, client, true, _Spawn(gm, args)),
                 "give" => _Resp(id, client, true, _Give(gm, args)),
@@ -238,6 +252,180 @@ public partial class ExternalCommandService : Node
         if (ui == null) return new Dictionary { ["started"] = false };
         ui.StartGame();
         return new Dictionary { ["started"] = true };
+    }
+
+    /// <summary>
+    /// 完整游戏状态快照（Dota2 GSI 风格）：AI 决策所需的全量观测数据。
+    /// 僵尸列表按与玩家的距离从近到远排序，最多返回 30 只。
+    /// </summary>
+    private Dictionary _GameState(GameManager? gm, UI.UIManager? ui)
+    {
+        var d = new Dictionary
+        {
+            ["state"] = gm?.CurrentState.ToString() ?? "NoGame",
+            ["round"] = gm?.GetCurrentRound() ?? 0,
+            ["score"] = gm?.Score ?? 0,
+            ["kills"] = gm?.TotalKills ?? 0,
+            ["zombies_alive"] = gm?.GetZombiesRemaining() ?? 0,
+            ["survival_time"] = AchievementSystem.Instance?.GetSurvivalTime() ?? 0f,
+            ["paused"] = ui?.IsUserPaused() ?? false,
+        };
+
+        if (GetTree().GetFirstNodeInGroup("weather_system") is WeatherSystem weather)
+            d["weather"] = new Dictionary
+            {
+                ["type"] = weather.CurrentWeather.ToString(),
+                ["intensity"] = weather.Intensity.ToString(),
+            };
+
+        if (GetTree().GetFirstNodeInGroup("map_manager") is MapManager maps)
+            d["map"] = new Dictionary
+            {
+                ["name"] = maps.Current.Name,
+                ["size"] = new Dictionary { ["x"] = maps.Current.WorldSize.X, ["y"] = maps.Current.WorldSize.Y },
+            };
+
+        var player = gm?.PlayerRef;
+        if (player != null)
+        {
+            var effects = new Array();
+            foreach (var card in player.ActiveEffects)
+                effects.Add(new Dictionary
+                {
+                    ["name"] = card.CardName,
+                    ["type"] = card.WeaponType.ToString(),
+                    ["category"] = card.Category.ToString(),
+                    ["tier"] = card.Tier,
+                    ["damage_modifier"] = card.DamageModifier,
+                    ["attack_speed_modifier"] = card.AttackSpeedModifier,
+                    ["range_modifier"] = card.RangeModifier,
+                    ["health_cost"] = card.HealthCost,
+                });
+
+            var combat = player.Combat;
+            d["player"] = new Dictionary
+            {
+                ["hp"] = player.CurrentHealth,
+                ["max_hp"] = player.MaxHealth,
+                ["pos"] = new Dictionary { ["x"] = player.GlobalPosition.X, ["y"] = player.GlobalPosition.Y },
+                ["combo"] = combat?.CurrentCombo ?? 0,
+                ["can_attack"] = combat?.CanAttack ?? false,
+                ["weapon_frequency"] = combat?.GetCurrentWeaponFrequency() ?? 0f,
+                ["effects"] = effects,
+            };
+
+            // 敌人：按与玩家的距离从近到远排序，最多 30 只
+            var pos = player.GlobalPosition;
+            var sorted = new SysColGen.List<Zombie>(ZombieRegistry.All);
+            sorted.Sort((a, b) => a.GlobalPosition.DistanceSquaredTo(pos)
+                .CompareTo(b.GlobalPosition.DistanceSquaredTo(pos)));
+            int take = Mathf.Min(sorted.Count, 30);
+            var list = new Array();
+            for (int i = 0; i < take; i++)
+            {
+                var z = sorted[i];
+                list.Add(new Dictionary
+                {
+                    ["type"] = z.ZombieType.ToString(),
+                    ["hp"] = z.CurrentHealth,
+                    ["max_hp"] = z.MaxHealth,
+                    ["pos"] = new Dictionary { ["x"] = z.GlobalPosition.X, ["y"] = z.GlobalPosition.Y },
+                    ["elite"] = z.IsElite,
+                    ["boss"] = z.IsBoss,
+                });
+            }
+            d["zombies"] = new Dictionary { ["total"] = ZombieRegistry.Count, ["list"] = list };
+
+            var chests = new Array();
+            foreach (var node in GetTree().GetNodesInGroup("mm_chest"))
+                if (node is Node2D chest)
+                    chests.Add(new Dictionary { ["x"] = chest.GlobalPosition.X, ["y"] = chest.GlobalPosition.Y });
+            d["chests"] = chests;
+
+            var altars = new Array();
+            foreach (var node in GetTree().GetNodesInGroup("mm_altar"))
+                if (node is Node2D altar)
+                    altars.Add(new Dictionary { ["x"] = altar.GlobalPosition.X, ["y"] = altar.GlobalPosition.Y });
+            d["altars"] = altars;
+        }
+
+        d["ui"] = new Dictionary
+        {
+            ["welcome_visible"] = ui?.GetWelcomeVisible() ?? false,
+            ["crafting_open"] = ui?.IsCraftingOpen() ?? false,
+            ["forge_open"] = ui?.IsForgeOpen() ?? false,
+            ["paused"] = ui?.IsUserPaused() ?? false,
+            ["fusion"] = _FusionState(ui),
+        };
+
+        d["achievements"] = new Dictionary
+        {
+            ["kills"] = AchievementSystem.Instance?.GetTotalKills() ?? 0,
+            ["damage"] = AchievementSystem.Instance?.GetTotalDamage() ?? 0,
+            ["rounds"] = AchievementSystem.Instance?.GetRoundsSurvived() ?? 0,
+            ["survival_time"] = AchievementSystem.Instance?.GetSurvivalTime() ?? 0f,
+        };
+
+        return d;
+    }
+
+    private static Dictionary _FusionState(UI.UIManager? ui)
+    {
+        var panel = ui?.FusionPanel;
+        if (ui == null || panel == null || !ui.IsFusionOfferVisible())
+            return new Dictionary { ["visible"] = false };
+        return new Dictionary
+        {
+            ["visible"] = true,
+            ["current_weapon"] = panel.OfferCurrentWeapon,
+            ["mate_weapon"] = panel.OfferMateWeapon,
+            ["result_name"] = panel.OfferResultName,
+            ["result_desc"] = panel.OfferResultDesc,
+        };
+    }
+
+    /// <summary>
+    /// 注入外部输入（AI 操作）：与真实键鼠输入叠加，模态/非战斗阶段被
+    /// PlayerInput 的硬约束拦截清零。args 键（全部可选）：
+    /// move_x/move_y(-1..1 持续移动)、attack(bool 持续攻击)、
+    /// dash(bool 单帧脉冲)、cycle_target(bool 单帧脉冲)。
+    /// </summary>
+    private Dictionary _ExtInput(Dictionary? args)
+    {
+        var pi = GetTree().GetFirstNodeInGroup("player_input") as PlayerInput;
+        if (pi == null)
+            return new Dictionary { ["applied"] = false, ["note"] = "PlayerInput 未就绪" };
+        if (args != null)
+        {
+            if (args.TryGetValue("move_x", out Variant mx))
+                pi.ExternalMove = new Vector2(Mathf.Clamp(mx.AsSingle(), -1f, 1f), pi.ExternalMove.Y);
+            if (args.TryGetValue("move_y", out Variant my))
+                pi.ExternalMove = new Vector2(pi.ExternalMove.X, Mathf.Clamp(my.AsSingle(), -1f, 1f));
+            if (args.TryGetValue("attack", out Variant at))
+                pi.ExternalAttack = at.AsBool();
+            if (args.TryGetValue("dash", out Variant da) && da.AsBool())
+                pi.QueueExternalDash();
+            if (args.TryGetValue("cycle_target", out Variant ct) && ct.AsBool())
+                pi.QueueExternalCycleTarget();
+        }
+        return new Dictionary
+        {
+            ["applied"] = true,
+            ["move"] = new Dictionary { ["x"] = pi.ExternalMove.X, ["y"] = pi.ExternalMove.Y },
+            ["attack"] = pi.ExternalAttack,
+        };
+    }
+
+    /// <summary>模态选择的对外操作：target="fusion"，choice="accept"/"reject"。</summary>
+    private static Dictionary _Choose(UI.UIManager? ui, Dictionary? args)
+    {
+        string target = args?.TryGetValue("target", out Variant t) == true ? t.AsString() : "";
+        if (target == "fusion")
+        {
+            bool accept = args?.TryGetValue("choice", out Variant c) == true && c.AsString() == "accept";
+            return new Dictionary { ["handled"] = ui?.TryFusionResponse(accept) ?? false };
+        }
+        return new Dictionary { ["handled"] = false, ["note"] = "未知 target（当前支持 fusion）: " + target };
     }
 
     private static Dictionary _ForceCombat(GameManager? gm)

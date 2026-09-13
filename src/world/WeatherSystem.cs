@@ -110,6 +110,7 @@ public partial class WeatherSystem : CanvasLayer
 
     public override void _Ready()
     {
+        AddToGroup("weather_system"); // 外部指令接口按组读取当前天气
         _CreateOverlays();
         _CreateParticles();
         _SetupTimers();
