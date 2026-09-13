@@ -121,6 +121,10 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
 
     private CollisionShape2D _collision = null!;
     private NavigationAgent2D? _navAgent;
+    private Vector2 _lastNavTarget = new(float.NaN, float.NaN); // 导航重算节流：目标位移超阈值才更新
+    private float _navRetargetTimer;
+    private const float NavRetargetInterval = 0.25f; // 寻路重算节流（秒）：路径点仍每帧跟随
+    private const float NavRetargetMinDistSq = 900.0f; // 30px 内不重算
     private ZombieVfx _vfx = null!;
 
     public ZombieVfx Vfx => _vfx;
@@ -411,10 +415,17 @@ public partial class Zombie : CharacterBody2D, IDamager, IZombie, IDamageable
         }
 
         // 导航寻路：地面普通僵尸绕开障碍；无导航代理时直线（飞行类由 mask 穿墙）
+        // TargetPosition 按节流更新（NavigationServer 全图重算贵），GetNextPathPosition 仍每帧取点
         Vector2 nextPos;
         if (_navAgent != null)
         {
-            _navAgent.TargetPosition = target;
+            _navRetargetTimer -= (float)GetPhysicsProcessDeltaTime();
+            if (_navRetargetTimer <= 0f || _lastNavTarget.DistanceSquaredTo(target) > NavRetargetMinDistSq)
+            {
+                _navAgent.TargetPosition = target;
+                _lastNavTarget = target;
+                _navRetargetTimer = NavRetargetInterval;
+            }
             nextPos = _navAgent.GetNextPathPosition();
         }
         else

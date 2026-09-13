@@ -152,11 +152,7 @@ public partial class GameManager : Node
 
         if (_uiManager != null)
         {
-            // 预生成所有地图的地面纹理（每张图 ~50ms 像素处理，分散到欢迎画面期间完成）
-            var allMaps = ZombieWars.World.MapLibrary.BuildAll();
-            ZombieWars.World.ProceduralGround.PreGenerateAll(
-                System.Array.ConvertAll(allMaps.ToArray(), m => m.Seed));
-
+            // 地面纹理按需加载（Background.LoadMap 时取当前地图一张），无需预热
             // 预加载武器图标纹理
             _weaponDeck?.PreWarmTextures();
 

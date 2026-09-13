@@ -50,10 +50,12 @@ public partial class Background : Node2D
 
     private Vector2 _WorldSize => MapContext.CurrentWorldSize;
 
+    private const string GroundBlendShaderPath = "res://assets/shaders/ground_blend.gdshader";
+
     private void _BakeGroundTexture()
     {
         int seed = _currentMap?.Seed ?? 20240615;
-        var tex = ProceduralGround.GetTexture(seed); // 命中缓存时零开销
+        var tex = ProceduralGround.GetTexture(seed); // 按需加载，命中缓存时零开销
         var groundSprite = new TextureRect
         {
             Texture = tex,
@@ -64,6 +66,21 @@ public partial class Background : Node2D
             TextureFilter = CanvasItem.TextureFilterEnum.Linear,
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
+        // 有区域 mask 时挂混色 shader：底图细节 + 主题三区柔和染色（与障碍分布一致）
+        if (_currentMap?.GroundMask != null && ResourceLoader.Exists(GroundBlendShaderPath))
+        {
+            var shader = ResourceLoader.Load<Shader>(GroundBlendShaderPath);
+            if (shader != null)
+            {
+                var mat = new ShaderMaterial { Shader = shader };
+                mat.SetShaderParameter("mask_tex", ImageTexture.CreateFromImage(_currentMap.GroundMask));
+                mat.SetShaderParameter("forest_tint", _currentMap.MaskForestTint);
+                mat.SetShaderParameter("rock_tint", _currentMap.MaskRockTint);
+                mat.SetShaderParameter("water_tint", _currentMap.MaskWaterTint);
+                mat.SetShaderParameter("strength", _currentMap.MaskStrength);
+                groundSprite.Material = mat;
+            }
+        }
         _backgroundRect!.AddChild(groundSprite);
         _backgroundRect.MoveChild(groundSprite, 0);
         _groundLayer = groundSprite;

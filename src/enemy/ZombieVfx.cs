@@ -566,8 +566,8 @@ public partial class ZombieVfx : Node
         {
             case ZombieType.Exploder:
                 // Pulsing scale for danger
-                tw.TweenProperty(_sprite, "scale", new Vector2(1.08f, 1.08f), 1.2f).SetTrans(Tween.TransitionType.Sine);
-                tw.TweenProperty(_sprite, "scale", new Vector2(0.92f, 0.92f), 1.2f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector3(1.08f, 1.08f, 1.0f), 1.2f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector3(0.92f, 0.92f, 1.0f), 1.2f).SetTrans(Tween.TransitionType.Sine);
                 break;
 
             case ZombieType.Fast:
@@ -579,8 +579,8 @@ public partial class ZombieVfx : Node
 
             case ZombieType.Tank:
                 // Slow heavy breathing
-                tw.TweenProperty(_sprite, "scale", new Vector2(1.03f, 1.02f), 2.5f).SetTrans(Tween.TransitionType.Sine);
-                tw.TweenProperty(_sprite, "scale", new Vector2(1.0f, 1.0f), 2.5f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector3(1.03f, 1.02f, 1.0f), 2.5f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", Vector3.One, 2.5f).SetTrans(Tween.TransitionType.Sine);
                 break;
 
             case ZombieType.Healer:
@@ -615,8 +615,8 @@ public partial class ZombieVfx : Node
 
             default:
                 // Normal breathing - subtle scale pulse
-                tw.TweenProperty(_sprite, "scale", new Vector2(1.02f, 1.015f), 2.0f).SetTrans(Tween.TransitionType.Sine);
-                tw.TweenProperty(_sprite, "scale", new Vector2(1.0f, 1.0f), 2.0f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", new Vector3(1.02f, 1.015f, 1.0f), 2.0f).SetTrans(Tween.TransitionType.Sine);
+                tw.TweenProperty(_sprite, "scale", Vector3.One, 2.0f).SetTrans(Tween.TransitionType.Sine);
                 break;
         }
     }

@@ -45,6 +45,15 @@ Godot 4.7 + C# 游戏项目（僵尸大战）。
 - `$GODOT --headless -- --autotest` — 自动回归测试（`--autotest` 是项目自定义参数，由 `Main.cs` 解析，跳过欢迎画面并禁用刷怪）
 - `dotnet build` — 编译 C# 脚本
 
+## 本机工具链备注（2026-09 实测）
+
+- dotnet SDK：`brew install dotnet@8`（formula 版，无需 sudo）；每次使用前导出
+  `DOTNET_ROOT=/opt/homebrew/opt/dotnet@8/libexec` 并把其 `bin` 加入 `PATH`。
+- C# 运行需 Godot .NET 版：`brew install --cask godot-mono` 会连带装官方 `dotnet-sdk`
+  　　cask（.pkg 安装器，需要 sudo，沙盒/无密码环境会失败）。替代做法：从 brew 缓存
+  取已下载的 `Godot_v*-stable_mono_macos.universal.zip` 手动解压到用户目录运行，
+  配合上面的 dotnet@8 即可 headless 运行 C# 项目。
+
 ## 约束
 - C# 规范：遵循 Godot C# 风格，节点引用通过 `[Export]` 或 `GetNode<T>()`。
 - 场景结构：场景树层级在 `scenes/` 中组织，C# 脚本在 `src/` 中组织。

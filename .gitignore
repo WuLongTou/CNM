@@ -13,6 +13,7 @@ export_presets.cfg
 .mono/
 data_*/
 mono_crash.*.json
+*.csproj.old
 
 # System/Editor-specific ignores
 .tmp/

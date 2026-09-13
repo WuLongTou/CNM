@@ -66,18 +66,23 @@ public partial class MapBuilder : Node2D
         // 放置探索奖励（宝箱 + 祭坛）—— 大场景探索动机
         _SpawnExplorationProps(map.WorldSize);
 
-        // 等一帧让旧节点 free 后再烘焙，避免导航引用已失效的碰撞
-        CallDeferred(nameof(_BakeNavigation));
+        // 等一帧让旧节点 free 后再烘焙，避免导航引用已失效的碰撞（走去重通道）
+        RequestNavRebuild();
     }
 
-    /// <summary>可破坏障碍破碎时由 CallGroup 触发，重新烘焙导航网格。</summary>
+    /// <summary>可破坏障碍破碎时由 CallGroup 触发，重新烘焙导航网格。
+    /// 同一帧多次破碎只烘焙一次（全图重烘焙贵，CallDeferred 不去重）。</summary>
+    private bool _bakeQueued;
     public void RequestNavRebuild()
     {
+        if (_bakeQueued) return;
+        _bakeQueued = true;
         CallDeferred(nameof(_BakeNavigation));
     }
 
     private void _BakeNavigation()
     {
+        _bakeQueued = false;
         if (_current == null) return;
         var ws = _current.WorldSize;
         float pad = GameConfig.BoundsPadding;

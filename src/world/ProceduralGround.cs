@@ -6,12 +6,13 @@ using ZombieWars.Core;
 
 /// <summary>
 /// 地面纹理加载器 —— 从 Blender 烘焙的 PNG 文件加载（assets/sprites/ground/ground_*.png）。
-/// 替代了原来的程序化烘焙（_Paint* 函数族），保留缓存和接口签名。
-/// 启动时 GameManager.PreGenerateAll 预热所有地图纹理，避免运行时卡顿。
+/// 按需加载当前地图一张纹理（探索模式下一局只用一张，不再全量预热 9 张）。
+/// 直接使用 PNG 原生分辨率（1920），由 GPU 拉伸显示——CPU 侧不再放大
+/// （放大不增加细节，只浪费启动时间与显存：3840×2160 RGBA ≈ 33MB/张）。
 /// </summary>
 public static class ProceduralGround
 {
-    // 纹理缓存：同一 seed 只加载一次
+    // 纹理缓存：同一 seed 只加载一次（探索模式下实际只会驻留一张）
     private static readonly Dictionary<int, ImageTexture> _cache = new();
 
     // seed → 文件名映射（与 MapData._Gen* 函数的 seed 一致）
@@ -28,27 +29,14 @@ public static class ProceduralGround
         [99999] = "res://assets/sprites/ground/ground_desert.png",
     };
 
-    /// <summary>获取烘焙好的地面纹理（带缓存）。首次调用从 PNG 加载，后续直接返回缓存。</summary>
-    public static ImageTexture GetTexture(int seed = 20240615)
+    /// <summary>获取烘焙好的地面纹理（带缓存）。缺失时返回 null，由调用方兜底。</summary>
+    public static ImageTexture? GetTexture(int seed = 20240615)
     {
         if (_cache.TryGetValue(seed, out var cached))
             return cached;
         var tex = _LoadFromPng(seed);
         if (tex != null) _cache[seed] = tex;
         return tex;
-    }
-
-    /// <summary>预生成所有地图的地面纹理（在欢迎画面期间调用，分散首次加载开销）。</summary>
-    public static void PreGenerateAll(int[] seeds)
-    {
-        foreach (var seed in seeds)
-        {
-            if (!_cache.ContainsKey(seed))
-            {
-                var tex = _LoadFromPng(seed);
-                if (tex != null) _cache[seed] = tex;
-            }
-        }
     }
 
     /// <summary>保留旧 API 兼容：返回 raw Image（不再程序化生成，直接从 PNG 加载）。</summary>
@@ -77,12 +65,6 @@ public static class ProceduralGround
         {
             LogUtils.Print($"[ProceduralGround] 地面纹理加载失败: {path}");
             return null;
-        }
-        // 调整为世界尺寸（按需 resize 到 WorldSize）
-        var targetSize = MapContext.CurrentWorldSize;
-        if (img.GetWidth() != (int)targetSize.X || img.GetHeight() != (int)targetSize.Y)
-        {
-            img.Resize((int)targetSize.X, (int)targetSize.Y, Image.Interpolation.Bilinear);
         }
         return ImageTexture.CreateFromImage(img);
     }

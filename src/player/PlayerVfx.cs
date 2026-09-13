@@ -442,10 +442,16 @@ public partial class PlayerVfx : Node
         {
             float offsetX = (float)GD.RandRange(-6f, 6f);
             float offsetY = (float)GD.RandRange(-6f, 6f);
-            var tw = Player.CreateTween();
-            tw.Parallel().TweenProperty(Player.Sprite, "modulate:a", 0.0f, 0.8f);
-            tw.Parallel().TweenProperty(Player.Sprite, "position", new Vector2(offsetX, offsetY), 0.8f)
-                .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+            // Sprite 是 Sprite3D（3D 代理层）：position/scale 均为 Vector3，用错类型会导致
+            // tween 报 Type mismatch 且动画失效；CreateTween 可能返回 null（节点不在树中），需判空
+            var tw = Player.IsInsideTree() ? Player.CreateTween() : null;
+            if (tw != null)
+            {
+                tw.Parallel().TweenProperty(Player.Sprite, "modulate:a", 0.0f, 0.8f);
+                tw.Parallel().TweenProperty(Player.Sprite, "position",
+                    new Vector3(offsetX, offsetY, Player.Sprite.Position.Z), 0.8f)
+                    .SetTrans(Tween.TransitionType.Quad).SetEase(Tween.EaseType.Out);
+            }
         }
 
         Vector2 center = Player.GlobalPosition;

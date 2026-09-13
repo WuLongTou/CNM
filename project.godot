@@ -300,3 +300,5 @@ toggle_equipment={
 
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0, 0, 0, 1)
+# 3D 代理层只有一盏平行光阴影：2048 足够（默认 4096），俯视小视角下视觉无差
+lights_and_shadows/directional_shadow/size=2048
