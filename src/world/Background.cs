@@ -15,7 +15,6 @@ public partial class Background : Node2D
 
     private ColorRect? _backgroundRect;
     private TextureRect? _groundLayer;
-    private TextureRect? _groundOverlay;
     private TextureRect? _atmosphereLayer;
     private readonly Godot.Collections.Array<TextureRect> _fogLayers = new();
     private MapData? _currentMap;
@@ -29,7 +28,6 @@ public partial class Background : Node2D
         _currentMap = (GetTree().GetFirstNodeInGroup("map_manager") as MapManager)?.Current;
         _CreateBaseBackground();
         _BakeGroundTexture();
-        _TryLoadGroundOverlay();
         _CreateAtmosphereOverlay();
         SetProcess(false);
         // 非核心视觉（雾/火光/粒子/地标/装饰物）延迟到下一帧创建，避免阻塞启动
@@ -54,8 +52,14 @@ public partial class Background : Node2D
 
     private void _BakeGroundTexture()
     {
-        int seed = _currentMap?.Seed ?? 20240615;
-        var tex = ProceduralGround.GetTexture(seed); // 按需加载，命中缓存时零开销
+        // 主地面：优先主题背景 jpg（真实纹理内容，原色铺满）；
+        // 缺失时回退 Blender 烘焙 png（当前资产为空白占位，待重烘后自动生效）。
+        // 区域混色（GroundMask shader）仍由程序化 seed 驱动，保留每局变化。
+        Texture2D? tex = null;
+        string? path = _currentMap?.GroundTexturePath;
+        if (path != null && FileAccess.FileExists(path))
+            tex = TextureUtils.LoadTexture(path);
+        tex ??= _currentMap != null ? ProceduralGround.GetTextureForTheme(_currentMap.Theme) : null;
         var groundSprite = new TextureRect
         {
             Texture = tex,
@@ -64,6 +68,7 @@ public partial class Background : Node2D
             Size = _WorldSize,
             ZIndex = -5,
             TextureFilter = CanvasItem.TextureFilterEnum.Linear,
+            Modulate = _currentMap?.GroundTint ?? new Color(1, 1, 1),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
         // 有区域 mask 时挂混色 shader：底图细节 + 主题三区柔和染色（与障碍分布一致）
@@ -149,30 +154,6 @@ public partial class Background : Node2D
         vignette.Texture = vigTex;
         vignette.StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered;
         _backgroundRect!.AddChild(vignette);
-    }
-
-    private void _TryLoadGroundOverlay()
-    {
-        string? path = _currentMap?.GroundTexturePath;
-        if (path == null || !FileAccess.FileExists(path))
-            return;
-        var tex = TextureUtils.LoadTexture(path);
-        if (tex == null)
-            return;
-
-        var tint = _currentMap?.GroundTint ?? new Color(1.0f, 0.95f, 0.90f);
-        _groundOverlay = new TextureRect
-        {
-            Texture = tex,
-            ExpandMode = TextureRect.ExpandModeEnum.IgnoreSize,
-            StretchMode = TextureRect.StretchModeEnum.KeepAspectCovered,
-            Size = _WorldSize,
-            ZIndex = -4,
-            TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-            Modulate = new Color(tint.R, tint.G, tint.B, 0.16f),
-            MouseFilter = Control.MouseFilterEnum.Ignore
-        };
-        _backgroundRect!.AddChild(_groundOverlay);
     }
 
     private void _CreateSceneProps()
@@ -584,8 +565,6 @@ public partial class Background : Node2D
             _groundLayer.Size = MapContext.CurrentWorldSize;
         if (_atmosphereLayer != null)
             _atmosphereLayer.Size = MapContext.CurrentWorldSize;
-        if (_groundOverlay != null)
-            _groundOverlay.Size = MapContext.CurrentWorldSize;
     }
 
     /// <summary>切换地图时重建全部视觉层（地面/装饰/氛围粒子/灯），避免旧地图主题残留。</summary>
@@ -599,14 +578,12 @@ public partial class Background : Node2D
                 if (child is Node n) n.QueueFree();
         }
         _groundLayer = null;
-        _groundOverlay = null;
         _atmosphereLayer = null;
         _fogLayers.Clear();
         // 等一帧让旧节点真正释放，再重建（避免 MoveChild 与待释放节点索引冲突）
         await ToSignal(GetTree(), SceneTree.SignalName.ProcessFrame);
         _CreateVignette();
         _BakeGroundTexture();
-        _TryLoadGroundOverlay();
         _CreateAtmosphereOverlay();
         UpdateBackgroundSize();
         // 非核心视觉延迟到下一帧

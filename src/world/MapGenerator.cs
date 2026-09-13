@@ -40,7 +40,7 @@ public static class MapGenerator
         public Color ForestTint = new(0.35f, 0.42f, 0.30f);
         public Color RockTint = new(0.45f, 0.43f, 0.40f);
         public Color WaterTint = new(0.25f, 0.32f, 0.38f);
-        public float MaskStrength = 0.55f;
+        public float MaskStrength = 0.38f;
     }
 
     private static ThemeParams _ParamsFor(MapTheme theme) => theme switch
@@ -56,7 +56,7 @@ public static class MapGenerator
               ForestTint = new Color(0.26f, 0.26f, 0.34f), RockTint = new Color(0.36f, 0.35f, 0.42f), WaterTint = new Color(0.20f, 0.22f, 0.32f) },
         MapTheme.Swamp => new ThemeParams
             { ForestSolid = 2, RockSolid = 0, HazardVariant = 1, LowVariant = 1,
-              ForestTint = new Color(0.24f, 0.38f, 0.22f), RockTint = new Color(0.36f, 0.38f, 0.30f), WaterTint = new Color(0.16f, 0.30f, 0.22f), MaskStrength = 0.65f },
+              ForestTint = new Color(0.24f, 0.38f, 0.22f), RockTint = new Color(0.36f, 0.38f, 0.30f), WaterTint = new Color(0.16f, 0.30f, 0.22f), MaskStrength = 0.45f },
         MapTheme.Cathedral => new ThemeParams
             { ForestSolid = 3, RockSolid = 4, HazardVariant = 2,
               ForestTint = new Color(0.40f, 0.32f, 0.26f), RockTint = new Color(0.48f, 0.42f, 0.36f), WaterTint = new Color(0.32f, 0.26f, 0.24f) },
@@ -68,7 +68,7 @@ public static class MapGenerator
               ForestTint = new Color(0.52f, 0.62f, 0.70f), RockTint = new Color(0.60f, 0.68f, 0.74f), WaterTint = new Color(0.36f, 0.50f, 0.62f) },
         MapTheme.Volcano => new ThemeParams
             { ForestSolid = 3, RockSolid = 0, HazardVariant = 2, ExplosiveDots = true,
-              ForestTint = new Color(0.34f, 0.22f, 0.18f), RockTint = new Color(0.42f, 0.28f, 0.22f), WaterTint = new Color(0.62f, 0.22f, 0.06f), MaskStrength = 0.65f },
+              ForestTint = new Color(0.34f, 0.22f, 0.18f), RockTint = new Color(0.42f, 0.28f, 0.22f), WaterTint = new Color(0.62f, 0.22f, 0.06f), MaskStrength = 0.45f },
         _ => new ThemeParams // Desert
             { ForestSolid = 0, RockSolid = 0, HazardVariant = 1, WallVariant = 6,
               ForestTint = new Color(0.58f, 0.48f, 0.30f), RockTint = new Color(0.62f, 0.54f, 0.36f), WaterTint = new Color(0.50f, 0.40f, 0.24f) },
@@ -367,55 +367,55 @@ public static class MapGenerator
         switch (theme)
         {
             case MapTheme.Graveyard:
-                m.AtmosphereTint = new Color(0.45f, 0.55f, 0.72f); m.AtmosphereAlpha = 0.28f;
+                m.AtmosphereTint = new Color(0.45f, 0.55f, 0.72f); m.AtmosphereAlpha = 0.16f;
                 m.FogTint = new Color(0.12f, 0.14f, 0.20f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_blood_moon2.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_graveyard.jpg";
                 break;
             case MapTheme.Ruins:
-                m.AtmosphereTint = new Color(0.75f, 0.48f, 0.30f); m.AtmosphereAlpha = 0.28f;
+                m.AtmosphereTint = new Color(0.75f, 0.48f, 0.30f); m.AtmosphereAlpha = 0.16f;
                 m.FogTint = new Color(0.18f, 0.14f, 0.10f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_storm.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_ruins.jpg";
                 break;
             case MapTheme.Dungeon:
-                m.AtmosphereTint = new Color(0.35f, 0.30f, 0.55f); m.AtmosphereAlpha = 0.32f;
+                m.AtmosphereTint = new Color(0.35f, 0.30f, 0.55f); m.AtmosphereAlpha = 0.18f;
                 m.FogTint = new Color(0.08f, 0.06f, 0.12f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_storm2.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_dungeon.jpg";
                 break;
             case MapTheme.Swamp:
-                m.AtmosphereTint = new Color(0.30f, 0.55f, 0.30f); m.AtmosphereAlpha = 0.35f;
+                m.AtmosphereTint = new Color(0.30f, 0.55f, 0.30f); m.AtmosphereAlpha = 0.20f;
                 m.FogTint = new Color(0.10f, 0.16f, 0.10f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_swamp.jpg";
-                m.GroundTexturePath = "res://assets/sprites/backgrounds/atmosphere_swamp.jpg";
+                m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_graveyard.jpg"; // 苔藓石板正俯视，绿调贴合沼泽
                 break;
             case MapTheme.Cathedral:
-                m.AtmosphereTint = new Color(0.85f, 0.35f, 0.20f); m.AtmosphereAlpha = 0.30f;
+                m.AtmosphereTint = new Color(0.85f, 0.35f, 0.20f); m.AtmosphereAlpha = 0.18f;
                 m.FogTint = new Color(0.20f, 0.10f, 0.08f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_blood_moon.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_stone.jpg";
                 break;
             case MapTheme.Wasteland:
-                m.AtmosphereTint = new Color(0.90f, 0.45f, 0.15f); m.AtmosphereAlpha = 0.28f;
+                m.AtmosphereTint = new Color(0.90f, 0.45f, 0.15f); m.AtmosphereAlpha = 0.16f;
                 m.FogTint = new Color(0.20f, 0.12f, 0.06f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_storm.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_cemetery.jpg";
                 break;
             case MapTheme.Glacier:
-                m.AtmosphereTint = new Color(0.42f, 0.58f, 0.78f); m.AtmosphereAlpha = 0.32f;
+                m.AtmosphereTint = new Color(0.42f, 0.58f, 0.78f); m.AtmosphereAlpha = 0.18f;
                 m.FogTint = new Color(0.10f, 0.14f, 0.22f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_storm2.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_dungeon.jpg";
                 break;
             case MapTheme.Volcano:
-                m.AtmosphereTint = new Color(0.90f, 0.42f, 0.15f); m.AtmosphereAlpha = 0.34f;
+                m.AtmosphereTint = new Color(0.90f, 0.42f, 0.15f); m.AtmosphereAlpha = 0.20f;
                 m.FogTint = new Color(0.16f, 0.08f, 0.05f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_storm.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_cemetery.jpg";
                 break;
             default:
-                m.AtmosphereTint = new Color(0.90f, 0.76f, 0.42f); m.AtmosphereAlpha = 0.28f;
+                m.AtmosphereTint = new Color(0.90f, 0.76f, 0.42f); m.AtmosphereAlpha = 0.16f;
                 m.FogTint = new Color(0.26f, 0.18f, 0.10f);
                 m.AtmosphereTexturePath = "res://assets/sprites/backgrounds/atmosphere_storm.jpg";
                 m.GroundTexturePath = "res://assets/sprites/backgrounds/ground_ruins.jpg";
