@@ -29,8 +29,8 @@ public static class GameEnums
         Combo3,                // 完成3连击
         Combo5,                // 完成5连击
         Combo10,               // 完成10连击
-        FullHealthSurvive,     // 满血存活一回合
-        NoDamageSurvive,       // 无伤通过
+        FullHealthSurvive,     // 满血存活一个威胁阶
+        NoDamageSurvive,       // 无伤通过一个威胁阶
         MaxWeaponsCollected,   // 收集满所有武器
         AllEliteKills,         // 击杀所有类型精英
     }

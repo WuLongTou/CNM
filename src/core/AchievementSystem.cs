@@ -22,8 +22,7 @@ public partial class AchievementSystem : Node
     private int _totalDamage;
     private float _survivalTime;
     private int _roundsSurvived;
-    private bool _fullHealthRound;
-    private bool _noDamageRound;
+    private bool _noDamageRound = true;
 
     // Unlocked achievements
     private readonly HashSet<AchievementType> _unlockedAchievements = new();
@@ -95,20 +94,25 @@ public partial class AchievementSystem : Node
         _CheckSurvivalMilestones();
     }
 
-    public void OnRoundHealthCheck(bool fullHealth)
+    /// <summary>玩家实际受伤时打标（生命消耗走独立扣血路径，不影响无伤判定）。</summary>
+    public void OnPlayerTookDamage()
     {
-        if (fullHealth) _fullHealthRound = true;
+        _noDamageRound = false;
     }
 
-    public void OnRoundDamageCheck(bool noDamage)
+    /// <summary>威胁阶推进时结算满血/无伤成就（探索模式下"回合"即威胁阶）。</summary>
+    public void SettleTierAchievements(bool playerAtFullHealth)
     {
-        if (noDamage) _noDamageRound = true;
+        if (_noDamageRound)
+            TryUnlock(AchievementType.NoDamageSurvive);
+        if (playerAtFullHealth)
+            TryUnlock(AchievementType.FullHealthSurvive);
+        _noDamageRound = true;
     }
 
     public void ResetRoundStats()
     {
-        _fullHealthRound = false;
-        _noDamageRound = false;
+        _noDamageRound = true;
     }
 
     private void _CheckKillMilestones()
@@ -199,8 +203,8 @@ public partial class AchievementSystem : Node
             AchievementType.Combo3 => ("小小连击", "完成3连击", new Color(0.6f, 0.8f, 0.6f)),
             AchievementType.Combo5 => ("连击高手", "完成5连击", new Color(0.5f, 0.9f, 0.5f)),
             AchievementType.Combo10 => ("连击之王", "完成10连击", new Color(1.0f, 0.9f, 0.3f)),
-            AchievementType.FullHealthSurvive => ("完好无损", "满血存活一回合", new Color(0.4f, 1.0f, 0.6f)),
-            AchievementType.NoDamageSurvive => ("完美闪避", "无伤通过一回合", new Color(0.3f, 0.9f, 1.0f)),
+            AchievementType.FullHealthSurvive => ("完好无损", "满血存活一个威胁阶", new Color(0.4f, 1.0f, 0.6f)),
+            AchievementType.NoDamageSurvive => ("完美闪避", "无伤通过一个威胁阶", new Color(0.3f, 0.9f, 1.0f)),
             AchievementType.MaxWeaponsCollected => ("全副武装", "收集所有武器", new Color(0.8f, 0.4f, 1.0f)),
             AchievementType.AllEliteKills => ("精英杀手", "击杀所有类型精英", new Color(1.0f, 0.7f, 0.5f)),
             _ => ("未知成就", "未知的成就", Colors.Gray)
@@ -220,11 +224,11 @@ public partial class AchievementSystem : Node
         return $"{mins}:{secs:D2}";
     }
 
-    public void OnGameEnded(int totalKills, int totalDamage, float survivalTime)
+    public void OnGameEnded()
     {
         // Round survival achievements already handled by OnRoundSurvived per round
         // — 不再无条件解锁，避免第 1 回合死也拿到"存活 20 回合"
-        // 使用实例字段记录结算日志
+        // 无参化：统计统一以实例字段为准，原参数化入口的实参（GameManager._totalDamageDealt 等）长期无写入源
         LogUtils.Print($"游戏结算: 回合={_roundsSurvived}, 击杀={_totalKills}," +
             $"伤害={_totalDamage}, 时间={_survivalTime:F1}秒");
     }

@@ -240,7 +240,7 @@ public partial class GameManager : Node
         if (what == NotificationPredelete)
         {
             HitStopController.Instance?.Reset();
-            AchievementSystem.Instance?.OnGameEnded(_totalKills, _totalDamageDealt, _survivalTime);
+            AchievementSystem.Instance?.OnGameEnded();
         }
     }
 
@@ -328,6 +328,9 @@ public partial class GameManager : Node
         }
         _uiManager?.UpdateRoundDisplay(CurrentRound);
         _uiManager?.ShowRoundBanner($"威胁加剧 · 第 {CurrentRound} 阶");
+        // 满血/无伤成就按威胁阶结算（探索模式下"回合"即威胁阶，阶推进即结算点）
+        AchievementSystem.Instance?.SettleTierAchievements(
+            PlayerRef is { } player && player.CurrentHealth >= player.MaxHealth);
         // 威胁阶数即回合并进：恢复回合成就/生存里程碑（随波次制删除后曾无触发源）
         AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
         ThreatTierAdvanced?.Invoke(CurrentRound);
@@ -705,6 +708,9 @@ public partial class GameManager : Node
             _currentRoundTotalZombies++;
         }
     }
+
+    /// <summary>累计玩家造成的总伤害（PlayerCombat 伤害落点调用，供结算统计）。</summary>
+    public void AddDamageDealt(int amount) => _totalDamageDealt += amount;
 
     private void _OnZombieDied(Zombie zombie)
     {

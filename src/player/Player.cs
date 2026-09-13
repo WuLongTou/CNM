@@ -517,6 +517,7 @@ public partial class Player : CharacterBody2D, IDamageable, IPlayer
 
         if (amount > 0)
         {
+            Core.AchievementSystem.Instance?.OnPlayerTookDamage();
             CurrentHealth = Math.Max(0, CurrentHealth - amount);
             HealthChanged?.Invoke(CurrentHealth);
             GameServices.UI.ShowDamageNumber(GlobalPosition, amount, true);

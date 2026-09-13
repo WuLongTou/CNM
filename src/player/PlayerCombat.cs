@@ -1091,7 +1091,10 @@ public partial class PlayerCombat : Node
     public void RegisterDamageDealt(Zombie zombie, float damage)
     {
         ApplyLifesteal(damage);
-        Core.AchievementSystem.Instance?.OnDamageDealt((int)damage);
+        int dmg = (int)damage;
+        Core.AchievementSystem.Instance?.OnDamageDealt(dmg);
+        Player!.TotalDamageDealt += dmg;
+        GameServices.GameOrNull?.AddDamageDealt(dmg);
         if (zombie != null && zombie.CurrentHealth <= 0 && !zombie.HasMeta("player_kill_processed"))
         {
             zombie.SetMeta("player_kill_processed", true);
