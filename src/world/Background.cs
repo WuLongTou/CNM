@@ -68,7 +68,8 @@ public partial class Background : Node2D
             Size = _WorldSize,
             ZIndex = -5,
             TextureFilter = CanvasItem.TextureFilterEnum.Linear,
-            Modulate = _currentMap?.GroundTint ?? new Color(1, 1, 1),
+            // 暗红滤镜统一压向涂鸦设计文档的血色暗调（#140a0a 系），纹理细节保留
+            Modulate = (_currentMap?.GroundTint ?? new Color(1, 1, 1)) * new Color(0.72f, 0.42f, 0.42f),
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
         // 有区域 mask 时挂混色 shader：底图细节 + 主题三区柔和染色（与障碍分布一致）
@@ -123,7 +124,7 @@ public partial class Background : Node2D
     {
         _backgroundRect = new ColorRect
         {
-            Color = new Color(0.065f, 0.060f, 0.055f),
+            Color = new Color(0.078f, 0.039f, 0.039f), // 涂鸦设计文档战场底色 #140a0a
             Size = _WorldSize,
             MouseFilter = Control.MouseFilterEnum.Ignore
         };
