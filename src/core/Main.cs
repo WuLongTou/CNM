@@ -142,29 +142,27 @@ public partial class Main : Node2D
         }
 
         // 外部指令接口（自动化测试/外部程序控制）：默认关闭，传参才启用
-        string? cmdListen = null;
+        int cmdPort = 0;
         string? cmdOnce = null;
         foreach (var arg in args)
         {
-            if (arg.StartsWith("--cmd-listen=")) cmdListen = arg.Substring("--cmd-listen=".Length);
+            if (arg.StartsWith("--cmd-port=") && int.TryParse(arg.Substring("--cmd-port=".Length), out int p))
+                cmdPort = p;
             else if (arg.StartsWith("--cmd=")) cmdOnce = arg.Substring("--cmd=".Length);
         }
-        if (cmdListen != null || cmdOnce != null)
+        if (cmdPort > 0 || cmdOnce != null)
         {
             var cmdService = new ExternalCommandService { Name = "ExternalCommandService" };
             AddChild(cmdService);
-            if (cmdListen != null)
-            {
-                cmdService.Setup(cmdListen);
-                LogUtils.Print($"[CMD] listen: {cmdListen}");
-            }
+            if (cmdPort > 0)
+                cmdService.Listen(cmdPort);
             if (cmdOnce != null)
             {
                 string once = cmdOnce;
                 Callable.From(() =>
                 {
                     var resp = cmdService.ExecuteJson(once);
-                    LogUtils.Print($"[CMD] once: {Json.Stringify(resp)}");
+                    GD.Print("[CMD] once: " + Json.Stringify(resp));
                 }).CallDeferred();
             }
         }

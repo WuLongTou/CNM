@@ -20,6 +20,8 @@ using StrategySystem = ZombieWars.Math.StrategySystem;
 public partial class GameManager : Node
 {
     public event Action GameOver = delegate { };
+    /// <summary>威胁阶数推进时触发（参数=新阶数）。外部指令接口据此向订阅端推送事件。</summary>
+    public event Action<int> ThreatTierAdvanced = delegate { };
 
     [Export] public int ZombiesMaxPerRound = 40;
 
@@ -328,6 +330,7 @@ public partial class GameManager : Node
         _uiManager?.ShowRoundBanner($"威胁加剧 · 第 {CurrentRound} 阶");
         // 威胁阶数即回合并进：恢复回合成就/生存里程碑（随波次制删除后曾无触发源）
         AchievementSystem.Instance?.OnRoundSurvived(CurrentRound);
+        ThreatTierAdvanced?.Invoke(CurrentRound);
 
         // Boss 周期触发（替代原每 5 回合），当前无 Boss 时才出
         if (CurrentRound % GameConfig.BossInterval == 0 && (BossZombie == null || !IsInstanceValid(BossZombie)))
