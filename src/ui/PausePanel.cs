@@ -71,13 +71,10 @@ public partial class PausePanel : Panel
             FocusMode = FocusModeEnum.None
         };
         resumeBtn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewport, 13));
-        var (n, h, _) = MakeButtonStyles(
+        HandDrawnTheme.StyleButton(
+            resumeBtn,
             new Color(BattlefieldBg, 0.9f), new Color(BattlefieldMid, 0.95f),
-            BattlefieldAccent, radius: 5);
-        resumeBtn.AddThemeStyleboxOverride("normal", n);
-        resumeBtn.AddThemeStyleboxOverride("hover", h);
-        resumeBtn.AddThemeStyleboxOverride("pressed", h);
-        resumeBtn.AddThemeColorOverride("font_color", BattlefieldBright);
+            BattlefieldAccent, fontColor: BattlefieldBright, radius: 5);
         resumeBtn.Pressed += () => ResumeRequested?.Invoke();
         vbox.AddChild(resumeBtn);
 
@@ -89,13 +86,10 @@ public partial class PausePanel : Panel
             FocusMode = FocusModeEnum.None
         };
         settingsBtn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(14, viewport, 11));
-        var (sn, sh, _) = MakeButtonStyles(
+        HandDrawnTheme.StyleButton(
+            settingsBtn,
             new Color(BattlefieldBg, 0.85f), new Color(BattlefieldMid, 0.90f),
-            BattlefieldAccent, radius: 4, shadowSize: 2);
-        settingsBtn.AddThemeStyleboxOverride("normal", sn);
-        settingsBtn.AddThemeStyleboxOverride("hover", sh);
-        settingsBtn.AddThemeStyleboxOverride("pressed", sh);
-        settingsBtn.AddThemeColorOverride("font_color", NoteBg);
+            BattlefieldAccent, fontColor: NoteBg, radius: 4, shadowSize: 2);
         settingsBtn.Pressed += () => SettingsRequested?.Invoke();
         vbox.AddChild(settingsBtn);
 

@@ -90,15 +90,13 @@ public partial class WelcomePanel : Panel
             CustomMinimumSize = ResponsiveUi.Size(180, 50, viewport, 32)
         };
         startButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(22, viewport, 16));
-        var (startNormal, startHover, startPressed) = HandDrawnTheme.MakeButtonStyles(
+        HandDrawnTheme.StyleButton(
+            startButton,
             new Color(0.25f, 0.12f, 0.12f, 0.9f),
             new Color(0.35f, 0.18f, 0.18f, 0.9f),
             HandDrawnTheme.Colors.NoteBorder,
-            radius: 4, shadowSize: 4);
-        startButton.AddThemeStyleboxOverride("normal", startNormal);
-        startButton.AddThemeStyleboxOverride("hover", startHover);
-        startButton.AddThemeStyleboxOverride("pressed", startPressed);
-        startButton.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteBg);
+            fontColor: HandDrawnTheme.Colors.NoteBg,
+            radius: 5, shadowSize: 4);
         startButton.Pressed += _onStart;
         vbox.AddChild(startButton);
 
@@ -108,15 +106,13 @@ public partial class WelcomePanel : Panel
             CustomMinimumSize = ResponsiveUi.Size(120, 40, viewport, 28)
         };
         helpButton.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(16, viewport, 12));
-        var (helpNormal, helpHover, helpPressed) = HandDrawnTheme.MakeButtonStyles(
+        HandDrawnTheme.StyleButton(
+            helpButton,
             new Color(0.2f, 0.15f, 0.15f, 0.9f),
             new Color(0.3f, 0.22f, 0.22f, 0.9f),
             HandDrawnTheme.Colors.NoteBorder,
-            radius: 3, shadowSize: 3);
-        helpButton.AddThemeStyleboxOverride("normal", helpNormal);
-        helpButton.AddThemeStyleboxOverride("hover", helpHover);
-        helpButton.AddThemeStyleboxOverride("pressed", helpPressed);
-        helpButton.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.NoteBg);
+            fontColor: HandDrawnTheme.Colors.NoteBg,
+            radius: 4, shadowSize: 3);
         helpButton.Pressed += _onToggleHelp;
         vbox.AddChild(helpButton);
     }

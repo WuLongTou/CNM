@@ -318,12 +318,9 @@ public partial class GameOverUI : Control
             CustomMinimumSize = ResponsiveUi.Size(140, 40, viewport, 30)
         };
         btn.AddThemeFontSizeOverride("font_size", ResponsiveUi.Font(15, viewport, 11));
-        btn.AddThemeColorOverride("font_color", NoteBg);
 
-        var (s, h, p) = MakeButtonStyles(bgColor, hoverColor, borderColor, radius: 4, shadowSize: 3);
-        btn.AddThemeStyleboxOverride("normal", s);
-        btn.AddThemeStyleboxOverride("hover", h);
-        btn.AddThemeStyleboxOverride("pressed", p);
+        HandDrawnTheme.StyleButton(btn, bgColor, hoverColor, borderColor,
+            fontColor: NoteBg, radius: 4, shadowSize: 3);
         return btn;
     }
 }

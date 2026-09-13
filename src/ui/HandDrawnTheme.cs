@@ -7,51 +7,51 @@ public static class HandDrawnTheme
 {
     public static class Colors
     {
-        // ══ 饥荒式暗黑童话棕褐调（原炼金术手稿→暖棕复古）══
-        public static readonly Color BattlefieldBg = new(0.055f, 0.038f, 0.028f);
-        public static readonly Color BattlefieldMid = new(0.105f, 0.072f, 0.048f);
-        public static readonly Color BattlefieldAccent = new(0.68f, 0.52f, 0.22f);
-        public static readonly Color BattlefieldBright = new(0.82f, 0.70f, 0.35f);
+        // ══ 手绘血色涂鸦调（2026-06 涂鸦版原版色，恢复自 8a73dcf）══
+        public static readonly Color BattlefieldBg = new(0.078f, 0.039f, 0.039f);
+        public static readonly Color BattlefieldMid = new(0.239f, 0.102f, 0.102f);
+        public static readonly Color BattlefieldAccent = new(0.753f, 0.224f, 0.169f);
+        public static readonly Color BattlefieldBright = new(0.906f, 0.298f, 0.235f);
 
-        public static readonly Color NoteBg = new(0.78f, 0.72f, 0.60f);           // 旧羊皮纸
-        public static readonly Color NoteBgHover = new(0.86f, 0.81f, 0.72f);
-        public static readonly Color NoteMid = new(0.60f, 0.52f, 0.40f);
-        public static readonly Color NoteBorder = new(0.35f, 0.28f, 0.20f);
-        public static readonly Color NoteText = new(0.22f, 0.16f, 0.10f);         // 深棕墨
-        public static readonly Color NoteTextDim = new(0.42f, 0.34f, 0.24f);
+        public static readonly Color NoteBg = new(0.941f, 0.910f, 0.910f);        // 灰白纸
+        public static readonly Color NoteBgHover = new(0.96f, 0.94f, 0.94f);
+        public static readonly Color NoteMid = new(0.878f, 0.816f, 0.816f);
+        public static readonly Color NoteBorder = new(0.545f, 0.227f, 0.227f);    // 暗红描边
+        public static readonly Color NoteText = new(0.290f, 0.102f, 0.102f);      // 深红墨
+        public static readonly Color NoteTextDim = new(0.353f, 0.227f, 0.227f);
 
-        public static readonly Color BloodRed = new(0.48f, 0.18f, 0.12f);         // 猪肝棕
-        public static readonly Color BloodBright = new(0.70f, 0.55f, 0.25f);      // 暗金
-        public static readonly Color InkBlack = new(0.09f, 0.07f, 0.05f);
-        public static readonly Color PencilGray = new(0.25f, 0.22f, 0.18f);       // 炭灰
-        public static readonly Color NetherPurple = new(0.32f, 0.22f, 0.14f);     // 土棕（原炼紫）
-        public static readonly Color CandleGlow = new(0.88f, 0.72f, 0.38f);       // 烛光金
+        public static readonly Color BloodRed = new(0.753f, 0.224f, 0.169f);      // 血红
+        public static readonly Color BloodBright = new(0.906f, 0.298f, 0.235f);   // 亮血红
+        public static readonly Color InkBlack = new(0.09f, 0.04f, 0.04f);
+        public static readonly Color PencilGray = new(0.35f, 0.28f, 0.28f);
+        public static readonly Color NetherPurple = new(0.32f, 0.14f, 0.14f);     // 暗红（原炼紫位）
+        public static readonly Color CandleGlow = new(0.953f, 0.612f, 0.071f);    // 血橙
 
-        public static readonly Color RarityCommon = new(0.55f, 0.48f, 0.38f);
-        public static readonly Color RarityRare = new(0.25f, 0.42f, 0.35f);      // 冷绿
-        public static readonly Color RarityEpic = new(0.70f, 0.55f, 0.25f);      // 暗金
+        public static readonly Color RarityCommon = new(0.4f, 0.35f, 0.35f);
+        public static readonly Color RarityRare = BloodRed;
+        public static readonly Color RarityEpic = new(0.953f, 0.612f, 0.071f);
         public static readonly Color RarityLegendary = new(0.95f, 0.75f, 0.22f);
-        public static readonly Color RarityCommonBg = new(0.18f, 0.14f, 0.10f, 0.95f);
-        public static readonly Color RarityRareBg = new(0.10f, 0.16f, 0.14f, 0.95f);
-        public static readonly Color RarityEpicBg = new(0.20f, 0.16f, 0.08f, 0.95f);
+        public static readonly Color RarityCommonBg = new(0.25f, 0.2f, 0.2f, 0.95f);
+        public static readonly Color RarityRareBg = new(0.2f, 0.1f, 0.1f, 0.95f);
+        public static readonly Color RarityEpicBg = new(0.25f, 0.2f, 0.1f, 0.95f);
 
-        public static readonly Color UpgradeBg = new(0.14f, 0.10f, 0.07f, 0.95f);
-        public static readonly Color UpgradeBorder = new(0.50f, 0.38f, 0.20f);
-        public static readonly Color UpgradeTitle = new(0.82f, 0.72f, 0.48f);
+        public static readonly Color UpgradeBg = new(0.2f, 0.15f, 0.15f, 0.95f);
+        public static readonly Color UpgradeBorder = new(0.6f, 0.35f, 0.35f);
+        public static readonly Color UpgradeTitle = new(0.85f, 0.65f, 0.65f);
 
-        public static readonly Color HpHigh = new(0.22f, 0.42f, 0.30f);          // 暖绿
-        public static readonly Color HpMed = new(0.72f, 0.50f, 0.20f);           // 琥珀
-        public static readonly Color HpLow = new(0.48f, 0.18f, 0.12f);           // 猪肝
+        public static readonly Color HpHigh = new(0.65f, 0.35f, 0.35f);
+        public static readonly Color HpMed = new(0.75f, 0.45f, 0.25f);
+        public static readonly Color HpLow = BloodRed;
 
-        // ═══ HUD 通用底色与描边（暗棕暗黑童话风格）══
-        public static readonly Color HudBottomBg = new(0.06f, 0.04f, 0.03f, 0.92f);
-        public static readonly Color HudBottomBorder = new(0.45f, 0.15f, 0.10f, 0.6f);
+        // ═══ HUD 通用底色与描边（暗血色涂鸦风）══
+        public static readonly Color HudBottomBg = new(0.078f, 0.039f, 0.039f, 0.92f);
+        public static readonly Color HudBottomBorder = new(0.545f, 0.227f, 0.227f, 0.6f);
         public static readonly Color HudTopBorder = new(0.239f, 0.102f, 0.102f, 0.4f);
-        public static readonly Color HudChipBg = new(0.10f, 0.08f, 0.06f, 0.70f);
-        public static readonly Color HudGroupBg = new(0.05f, 0.03f, 0.02f, 0.50f);
-        public static readonly Color HudGroupBorder = new(0.20f, 0.12f, 0.08f, 0.35f);
+        public static readonly Color HudChipBg = new(0.15f, 0.07f, 0.07f, 0.70f);
+        public static readonly Color HudGroupBg = new(0.06f, 0.03f, 0.03f, 0.50f);
+        public static readonly Color HudGroupBorder = new(0.30f, 0.12f, 0.12f, 0.35f);
 
-        public static readonly Color NotePaperShadow = new(0f, 0f, 0f, 0.50f);
+        public static readonly Color NotePaperShadow = new(0f, 0f, 0f, 0.45f);
     }
 
     public static StyleBoxFlat MakeNotePanel(
@@ -137,10 +137,15 @@ public static class HandDrawnTheme
         return new StyleBoxFlat
         {
             BgColor = new Color(0.12f, 0.05f, 0.05f),
-            CornerRadiusBottomLeft = 2,
-            CornerRadiusBottomRight = 2,
-            CornerRadiusTopLeft = 2,
-            CornerRadiusTopRight = 2,
+            BorderColor = new Color(Colors.InkBlack, 0.8f),
+            BorderWidthBottom = 1,
+            BorderWidthLeft = 1,
+            BorderWidthRight = 1,
+            BorderWidthTop = 1,
+            CornerRadiusBottomLeft = 4,
+            CornerRadiusBottomRight = 4,
+            CornerRadiusTopLeft = 4,
+            CornerRadiusTopRight = 4,
         };
     }
 
@@ -149,10 +154,10 @@ public static class HandDrawnTheme
         return new StyleBoxFlat
         {
             BgColor = color,
-            CornerRadiusBottomLeft = 2,
-            CornerRadiusBottomRight = 2,
-            CornerRadiusTopLeft = 2,
-            CornerRadiusTopRight = 2,
+            CornerRadiusBottomLeft = 3,
+            CornerRadiusBottomRight = 3,
+            CornerRadiusTopLeft = 3,
+            CornerRadiusTopRight = 3,
         };
     }
 
@@ -219,5 +224,107 @@ public static class HandDrawnTheme
         lbl.AddThemeConstantOverride("outline_size", outlineSize);
         lbl.AddThemeColorOverride("font_outline_color", outlineColor ?? Colors.InkBlack);
         return lbl;
+    }
+
+    /// <summary>
+    /// 一体化按钮工厂：三态样式 + 字色 + 悬停/按下缩放动画（hover 1.03 / pressed 0.97）。
+    /// 缩放围绕按钮中心（PivotOffset 随尺寸变化自动居中）。取代各面板手挂样式的样板代码。
+    /// </summary>
+    public static void StyleButton(
+        Button btn, Color bgColor, Color hoverBg, Color borderColor,
+        Color? fontColor = null, int radius = 4, int shadowSize = 3,
+        bool bottomOnlyBorder = false)
+    {
+        var (n, h, p) = MakeButtonStyles(bgColor, hoverBg, borderColor, radius, shadowSize, bottomOnlyBorder);
+        btn.AddThemeStyleboxOverride("normal", n);
+        btn.AddThemeStyleboxOverride("hover", h);
+        btn.AddThemeStyleboxOverride("pressed", p);
+        btn.AddThemeStyleboxOverride("focus", new StyleBoxEmpty());
+        if (fontColor.HasValue)
+        {
+            btn.AddThemeColorOverride("font_color", fontColor.Value);
+            btn.AddThemeColorOverride("font_hover_color", ColorUtils.Lighten(fontColor.Value, 0.15f));
+            btn.AddThemeColorOverride("font_pressed_color", fontColor.Value);
+        }
+
+        btn.Resized += () => btn.PivotOffset = btn.Size / 2f;
+        btn.MouseEntered += () => _Punch(btn, 1.03f);
+        btn.MouseExited += () => _Punch(btn, 1.0f);
+        btn.ButtonDown += () => _Punch(btn, 0.97f);
+        btn.ButtonUp += () => _Punch(btn, 1.03f);
+    }
+
+    private static void _Punch(Control ctrl, float targetScale)
+    {
+        var tw = ctrl.CreateTween();
+        tw.TweenProperty(ctrl, "scale", new Vector2(targetScale, targetScale), 0.08f)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+    }
+
+    /// <summary>
+    /// 装饰面板：双层边框（外深内亮）+ 四角角标，返回外层容器（调用方 AddChild 即用）。
+    /// content 会被放进内层并自动获得边距。
+    /// </summary>
+    public static PanelContainer MakeOrnatePanel(Control content, Color bgColor, Color borderColor,
+        int outerBorder = 2, int innerBorder = 1, int margin = 12, int radius = 6)
+    {
+        var outer = new StyleBoxFlat
+        {
+            BgColor = bgColor,
+            BorderColor = borderColor,
+            BorderWidthBottom = outerBorder,
+            BorderWidthLeft = outerBorder,
+            BorderWidthRight = outerBorder,
+            BorderWidthTop = outerBorder,
+            CornerRadiusBottomLeft = radius,
+            CornerRadiusBottomRight = radius,
+            CornerRadiusTopLeft = radius,
+            CornerRadiusTopRight = radius,
+            ShadowColor = Colors.NotePaperShadow,
+            ShadowSize = 8,
+        };
+        var inner = new StyleBoxFlat
+        {
+            BgColor = new Color(Colors.BattlefieldBright, 0.06f),
+            BorderColor = new Color(Colors.BattlefieldBright, 0.35f),
+            BorderWidthBottom = innerBorder,
+            BorderWidthLeft = innerBorder,
+            BorderWidthRight = innerBorder,
+            BorderWidthTop = innerBorder,
+            CornerRadiusBottomLeft = radius - 2,
+            CornerRadiusBottomRight = radius - 2,
+            CornerRadiusTopLeft = radius - 2,
+            CornerRadiusTopRight = radius - 2,
+        };
+
+        var outerPanel = new PanelContainer();
+        outerPanel.AddThemeStyleboxOverride("panel", outer);
+
+        var innerPanel = new PanelContainer();
+        innerPanel.AddThemeStyleboxOverride("panel", inner);
+        outerPanel.AddChild(innerPanel);
+
+        var marginContainer = new MarginContainer();
+        marginContainer.AddThemeConstantOverride("margin_left", margin);
+        marginContainer.AddThemeConstantOverride("margin_right", margin);
+        marginContainer.AddThemeConstantOverride("margin_top", margin);
+        marginContainer.AddThemeConstantOverride("margin_bottom", margin);
+        innerPanel.AddChild(marginContainer);
+        marginContainer.AddChild(content);
+
+        // 四角角标（小方点，暗金）
+        var cornerColor = Colors.BattlefieldBright;
+        foreach (var (anchorH, anchorV) in new[] {
+            (Control.LayoutPreset.TopLeft, Control.LayoutPreset.TopLeft),
+            (Control.LayoutPreset.TopRight, Control.LayoutPreset.TopRight),
+            (Control.LayoutPreset.BottomLeft, Control.LayoutPreset.BottomLeft),
+            (Control.LayoutPreset.BottomRight, Control.LayoutPreset.BottomRight) })
+        {
+            var dot = new ColorRect { Color = cornerColor, CustomMinimumSize = new Vector2(5, 5) };
+            dot.SetAnchorsAndOffsetsPreset(anchorH);
+            outerPanel.AddChild(dot);
+        }
+
+        return outerPanel;
     }
 }

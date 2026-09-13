@@ -129,20 +129,22 @@ public partial class AutoTestRunner : Node
         var rangerWalk = rangerWalkField?.GetValue(null) as Godot.Collections.Array<Texture2D>;
         var mageWalk = mageWalkField?.GetValue(null) as Godot.Collections.Array<Texture2D>;
 
-        if (warriorWalk == null || warriorWalk.Count != 8)
-            throw new Exception($"[AUTOTEST] warrior walk should load 8 frames, got {warriorWalk?.Count ?? -1}");
+        // 帧数下限断言：运行时按 Count 取模循环播放，任意帧数均可工作；
+        // 断言只守住"够播动画"的下限，兼容不同美术版本的构图（涂鸦版 5 帧 / 2.5D 版 8 帧）。
+        if (warriorWalk == null || warriorWalk.Count < 5)
+            throw new Exception($"[AUTOTEST] warrior walk should load >= 5 frames, got {warriorWalk?.Count ?? -1}");
 
-        if (warriorAttack == null || warriorAttack.Count < 6)
-            throw new Exception($"[AUTOTEST] warrior attack should load >= 6 frames, got {warriorAttack?.Count ?? -1}");
+        if (warriorAttack == null || warriorAttack.Count < 4)
+            throw new Exception($"[AUTOTEST] warrior attack should load >= 4 frames, got {warriorAttack?.Count ?? -1}");
 
         if (warriorIdle == null)
             throw new Exception("[AUTOTEST] warrior idle sprite should be loaded");
 
-        if (rangerWalk == null || rangerWalk.Count != 8)
-            throw new Exception($"[AUTOTEST] ranger walk should load 8 frames, got {rangerWalk?.Count ?? -1}");
+        if (rangerWalk == null || rangerWalk.Count < 5)
+            throw new Exception($"[AUTOTEST] ranger walk should load >= 5 frames, got {rangerWalk?.Count ?? -1}");
 
-        if (mageWalk == null || mageWalk.Count != 8)
-            throw new Exception($"[AUTOTEST] mage walk should load 8 frames, got {mageWalk?.Count ?? -1}");
+        if (mageWalk == null || mageWalk.Count < 5)
+            throw new Exception($"[AUTOTEST] mage walk should load >= 5 frames, got {mageWalk?.Count ?? -1}");
 
         LogUtils.Print("[AUTOTEST] sprite regression checks passed");
     }

@@ -55,20 +55,8 @@ public partial class FusionOfferPanel : Control
         center.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
         AddChild(center);
 
-        var panel = new Panel { CustomMinimumSize = new Vector2(480, 260) };
-        panel.AddThemeStyleboxOverride("panel", MakeDarkPanel(0.92f));
-        center.AddChild(panel);
-
-        var vbox = new VBoxContainer
-        {
-            OffsetLeft = ResponsiveUi.Px(20, viewport, 12),
-            OffsetRight = -ResponsiveUi.Px(20, viewport, 12),
-            OffsetTop = ResponsiveUi.Px(16, viewport, 10),
-            OffsetBottom = -ResponsiveUi.Px(16, viewport, 10)
-        };
-        vbox.SetAnchorsAndOffsetsPreset(LayoutPreset.FullRect);
+        var vbox = new VBoxContainer { CustomMinimumSize = new Vector2(480, 260) };
         vbox.AddThemeConstantOverride("separation", 10);
-        panel.AddChild(vbox);
 
         var titleLabel = new Label
         {
@@ -76,8 +64,14 @@ public partial class FusionOfferPanel : Control
             HorizontalAlignment = HorizontalAlignment.Center
         };
         titleLabel.AddThemeFontSizeOverride("font_size", 22);
-        titleLabel.AddThemeColorOverride("font_color", new Color(0.7f, 0.3f, 1.0f));
+        titleLabel.AddThemeColorOverride("font_color", HandDrawnTheme.Colors.BattlefieldBright);
         vbox.AddChild(titleLabel);
+
+        // 双线边框 + 四角角标的装饰面板包裹内容
+        var ornate = HandDrawnTheme.MakeOrnatePanel(vbox,
+            new Color(HandDrawnTheme.Colors.BattlefieldBg, 0.94f), HandDrawnTheme.Colors.NoteBorder,
+            margin: 14, radius: 8);
+        center.AddChild(ornate);
 
         _descLabel = new Label
         {

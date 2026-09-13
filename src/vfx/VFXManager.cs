@@ -219,9 +219,11 @@ public partial class VFXManager : Node
     public static void FlashHurt(Node node, Sprite3D sprite)
     {
         if (sprite == null) return;
+        // HDR 白闪后恢复原色调（与僵尸受击 FlashHit 同语言；僵尸棕褐基调、玩家原色各自还原）
+        var baseColor = sprite.Modulate;
         var tw = node.CreateTween();
-        tw.TweenProperty(sprite, ModulatePath, new Color(0.9f, 0.3f, 0.2f), 0.05f);
-        tw.TweenProperty(sprite, ModulatePath, new Color(1, 1, 1, 0.6f), 0.1f);
+        tw.TweenProperty(sprite, ModulatePath, new Color(2.6f, 2.6f, 2.6f, baseColor.A), 0.05f);
+        tw.TweenProperty(sprite, ModulatePath, baseColor, 0.12f);
     }
 
     // ══ Ghost Trail ══

@@ -58,6 +58,10 @@ public partial class PlayerCombat : Node
     private const ulong MouseHintCooldownFrames = 60;
     public bool CanAttack { get; set; } = true;
 
+    // 待机呼吸与攻击挤压（角色表现）
+    private float _breathTime;
+    private float _attackPunchCooldown;
+
     // Combo reward system
     private int _currentCombo = 0;
     private float _comboTimer = 0.0f;
@@ -88,6 +92,17 @@ public partial class PlayerCombat : Node
                 _currentCombo = 0;
                 _damageBonusFromCombo = 0.0f;
             }
+        }
+
+        // 待机呼吸：精灵纵向轻微正弦起伏（攻击挤压动画期间让位）
+        var sprite = Player?.Sprite;
+        if (sprite != null)
+        {
+            _breathTime += (float)delta;
+            if (_attackPunchCooldown > 0)
+                _attackPunchCooldown -= (float)delta;
+            else
+                sprite.Scale = new Vector3(sprite.Scale.X, 1f + Mathf.Sin(_breathTime * 2.6f) * 0.03f, sprite.Scale.Z);
         }
     }
 
@@ -1084,8 +1099,22 @@ public partial class PlayerCombat : Node
         CanAttack = false;
         _attackTimer.Start();
         _PayHealthCost();
+        _PlayAttackPunch();
         if (notifyUi)
             _NotifyUiStatus();
+    }
+
+    /// <summary>攻击挤压拉伸：横向拉长纵向压扁后弹回（squash &amp; stretch）。</summary>
+    private void _PlayAttackPunch()
+    {
+        var sprite = Player?.Sprite;
+        if (sprite == null) return;
+        _attackPunchCooldown = 0.2f;
+        var tw = sprite.CreateTween();
+        tw.TweenProperty(sprite, "scale", new Vector3(1.12f, 0.88f, sprite.Scale.Z), 0.06f)
+            .SetTrans(Tween.TransitionType.Cubic).SetEase(Tween.EaseType.Out);
+        tw.TweenProperty(sprite, "scale", Vector3.One, 0.12f)
+            .SetTrans(Tween.TransitionType.Back).SetEase(Tween.EaseType.Out);
     }
 
     public void RegisterDamageDealt(Zombie zombie, float damage)
