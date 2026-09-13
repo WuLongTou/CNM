@@ -43,6 +43,7 @@ public partial class Background : Node2D
         _CreateEmberParticles();
         _CreateAlchemyLandmarks();
         _CreateGroundDecals();
+        _CreateDoodleDetail();
         _CreateSceneProps();
     }
 
@@ -437,6 +438,100 @@ public partial class Background : Node2D
 
             decal.Texture = ImageTexture.CreateFromImage(img);
             _backgroundRect!.AddChild(decal);
+        }
+    }
+
+    /// <summary>
+    /// 涂鸦风地面细节层：大号手绘色斑（打破大面积均匀底图）+ 草簇/碎石/裂缝散布。
+    /// 布局由地图 seed 驱动——同一 seed 同一细节分布；静态节点，一次性生成。
+    /// </summary>
+    private void _CreateDoodleDetail()
+    {
+        var ws = _WorldSize;
+        var rng = new RandomNumberGenerator { Seed = (uint)(_currentMap?.Seed ?? 20240615) };
+
+        // ── 1. 大号手绘色斑：不规则多边形，明暗区域变化 ──
+        for (int i = 0; i < 26; i++)
+        {
+            float cx = (float)rng.RandfRange(60, ws.X - 60);
+            float cy = (float)rng.RandfRange(60, ws.Y - 60);
+            float radius = (float)rng.RandfRange(90, 260);
+            bool bright = rng.Randf() < 0.4f;
+            int pts = 9;
+            var verts = new Vector2[pts];
+            for (int k = 0; k < pts; k++)
+            {
+                float ang = k / (float)pts * Mathf.Tau;
+                float r = radius * (0.7f + rng.Randf() * 0.5f);
+                verts[k] = new Vector2(Mathf.Cos(ang) * r, Mathf.Sin(ang) * r * 0.7f);
+            }
+            _backgroundRect!.AddChild(new Polygon2D
+            {
+                Polygon = verts,
+                Position = new Vector2(cx, cy),
+                // 亮斑提暖灰、暗斑压向深红黑；极低透明度只做明暗呼吸
+                Color = bright
+                    ? new Color(0.45f, 0.34f, 0.26f, 0.05f)
+                    : new Color(0.02f, 0.01f, 0.01f, 0.10f),
+                ZIndex = -4
+            });
+        }
+
+        // ── 2. 草簇：3-5 根短线散开 ──
+        var grassColor = new Color(0.40f, 0.35f, 0.20f, 0.68f);
+        for (int i = 0; i < 130; i++)
+        {
+            float bx = (float)rng.RandfRange(40, ws.X - 40);
+            float by = (float)rng.RandfRange(40, ws.Y - 40);
+            int blades = rng.RandiRange(3, 5);
+            for (int b = 0; b < blades; b++)
+            {
+                float ang = -Mathf.Pi / 2 + rng.RandfRange(-0.6f, 0.6f);
+                float len = (float)rng.RandfRange(12, 22);
+                var line = new Line2D { Width = 2.2f, DefaultColor = grassColor, ZIndex = -4 };
+                line.AddPoint(new Vector2(bx, by));
+                line.AddPoint(new Vector2(bx + Mathf.Cos(ang) * len, by + Mathf.Sin(ang) * len));
+                _backgroundRect!.AddChild(line);
+            }
+        }
+
+        // ── 3. 碎石：小多边形 ──
+        var rockColor = new Color(0.30f, 0.27f, 0.25f, 0.60f);
+        for (int i = 0; i < 85; i++)
+        {
+            float cx = (float)rng.RandfRange(40, ws.X - 40);
+            float cy = (float)rng.RandfRange(40, ws.Y - 40);
+            float size = (float)rng.RandfRange(5, 13);
+            int pts = rng.RandiRange(4, 6);
+            var verts = new Vector2[pts];
+            for (int k = 0; k < pts; k++)
+            {
+                float ang = k / (float)pts * Mathf.Tau;
+                float r = size * (0.7f + rng.Randf() * 0.6f);
+                verts[k] = new Vector2(cx + Mathf.Cos(ang) * r, cy + Mathf.Sin(ang) * r);
+            }
+            _backgroundRect!.AddChild(new Polygon2D { Polygon = verts, Color = rockColor, ZIndex = -4 });
+        }
+
+        // ── 4. 裂缝：随机游走折线 ──
+        var crackColor = new Color(0.04f, 0.02f, 0.02f, 0.50f);
+        for (int i = 0; i < 30; i++)
+        {
+            float x = (float)rng.RandfRange(60, ws.X - 60);
+            float y = (float)rng.RandfRange(60, ws.Y - 60);
+            float ang = rng.Randf() * Mathf.Tau;
+            var crack = new Line2D { Width = 1.4f, DefaultColor = crackColor, ZIndex = -4 };
+            crack.AddPoint(new Vector2(x, y));
+            int segs = rng.RandiRange(3, 6);
+            for (int s = 0; s < segs; s++)
+            {
+                ang += rng.RandfRange(-0.8f, 0.8f);
+                float len = (float)rng.RandfRange(14, 42);
+                x = Mathf.Clamp(x + Mathf.Cos(ang) * len, 20, ws.X - 20);
+                y = Mathf.Clamp(y + Mathf.Sin(ang) * len, 20, ws.Y - 20);
+                crack.AddPoint(new Vector2(x, y));
+            }
+            _backgroundRect!.AddChild(crack);
         }
     }
 
