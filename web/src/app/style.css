@@ -1,0 +1,38 @@
+/* 血色涂鸦手账风 UI（对齐 HandDrawnTheme：#140A0A 底 / #C0392B 血红 / 纸面板） */
+
+#ui-root { position: absolute; inset: 0; pointer-events: none; font-family: system-ui, sans-serif; }
+#ui-root .overlay, #ui-root #hud { pointer-events: auto; }
+.hidden { display: none !important; }
+
+/* ── HUD ── */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; height: 52px;
+  display: flex; align-items: center; gap: 16px; padding: 0 16px;
+  background: rgba(20, 10, 10, 0.75); border-bottom: 2px solid #5a1f1f;
+  color: #e8d8c8; font-size: 14px; user-select: none;
+}
+.hp-wrap { display: flex; align-items: center; gap: 8px; min-width: 220px; }
+.hp-bar { width: 140px; height: 14px; background: #2a0e0e; border: 1px solid #5a1f1f; border-radius: 3px; overflow: hidden; }
+.hp-fill { height: 100%; width: 100%; background: linear-gradient(#c0392b, #8e2a20); transition: width 0.15s; }
+.hp-text { font-size: 12px; color: #d8b8a8; }
+.stats { display: flex; gap: 18px; color: #c8a888; }
+#round { color: #d97b5a; }
+
+/* ── 欢迎画面 / GameOver ── */
+.overlay {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  background: rgba(10, 5, 5, 0.72);
+}
+.panel {
+  background: #f2e8d8; color: #4a2018; border: 3px solid #7a2a1a; border-radius: 6px;
+  padding: 40px 56px; text-align: center; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+  transform: rotate(-0.6deg);
+}
+.panel h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: 0.18em; color: #8e2a20; }
+.panel .sub { margin: 0 0 22px; color: #7a5a48; font-size: 14px; }
+.panel .hint { margin: 18px 0 0; color: #9a7a68; font-size: 12px; }
+.panel button {
+  font-size: 18px; padding: 10px 42px; cursor: pointer; letter-spacing: 0.1em;
+  background: #c0392b; color: #f2e8d8; border: 2px solid #7a2a1a; border-radius: 4px;
+}
+.panel button:hover { background: #d94a3a; }
