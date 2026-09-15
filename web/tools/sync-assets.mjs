@@ -157,7 +157,7 @@ async function writeAtlas(frames, baseName, outDir) {
   await saveRaw(atlas, path.join(outDir, `${baseName}.png`));
   fs.writeFileSync(path.join(outDir, `${baseName}.json`), JSON.stringify({
     frames: jsonFrames,
-    meta: { app: "zombiewars-web", image: `${baseName}.png`, size: { w: atlas.width, h: atlas.height }, scale: "1" },
+    meta: { app: "zhanyaolu-web", image: `${baseName}.png`, size: { w: atlas.width, h: atlas.height }, scale: "1" },
   }));
   return { name: baseName, frames: n };
 }
@@ -221,14 +221,16 @@ async function main() {
     }
   }
 
-  // 敌人：瘦长全身像强制拉伸切帧
+  // 敌人：瘦长全身像强制拉伸切帧。
+  // 源位置与文件名沿用 Godot 资产（sprites/enemies/sheets/zombie_*），输出统一改中性名 enemy_*。
   const enemyDir = path.join(DST, "sprites", "enemies");
   fs.mkdirSync(enemyDir, { recursive: true });
   const enemySrc = path.join(SRC, "sprites", "enemies", "sheets");
   for (const f of fs.readdirSync(enemySrc)) {
     if (!f.endsWith(".png")) continue;
     const frames = await stretchFrames(path.join(enemySrc, f));
-    atlases.push(await writeAtlas(frames, f.replace(/\.png$/, ""), enemyDir));
+    const outName = f.replace(/\.png$/, "").replace(/^zombie_/, "enemy_");
+    atlases.push(await writeAtlas(frames, outName, enemyDir));
   }
   report.atlases = atlases;
 

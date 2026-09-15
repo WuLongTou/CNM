@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 
 test("页面加载完成，canvas 与 debug API 就绪", async ({ page }) => {
   await page.goto("/");
-  await expect(page).toHaveTitle("僵尸大战");
+  await expect(page).toHaveTitle("斩妖录");
   await page.waitForFunction(() => window.__CNM__?.ready === true);
   // boot 文案已被移除，canvas 已挂载
   await expect(page.locator("#boot")).toHaveCount(0);

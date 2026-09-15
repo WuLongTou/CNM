@@ -1,11 +1,11 @@
 // 游戏主模拟（sim 层核心）：纯逻辑、零 DOM/渲染依赖。
 // 由 app 层以固定 60Hz 步长驱动 tick()；vitest 可直接实例化跑逻辑回归。
-// 规则对齐 Godot 版 GameManager/Player/PlayerCombat/Zombie（M1 切片：基础战斗闭环）。
+// 规则对齐 Godot 版 GameManager/Player/PlayerCombat/Enemy（M1 切片：基础战斗闭环）。
 
 import { Rng } from "./rng";
 import {
-  CFG, ZOMBIE_NAMES, ZOMBIE_SCORE, ZOMBIE_STATS, SPAWN_TABLE,
-  type ZombieType,
+  CFG, ENEMY_NAMES, ENEMY_SCORE, ENEMY_STATS, SPAWN_TABLE,
+  type EnemyType,
 } from "./config";
 import { defaultSave, type SaveData, type SaveStorage } from "./save";
 
@@ -24,9 +24,9 @@ export interface EliteAffix {
   kind: "none" | "swift" | "regen" | "shield" | "explosive" | "frenzy";
 }
 
-export interface Zombie {
+export interface Enemy {
   id: number;
-  type: ZombieType;
+  type: EnemyType;
   x: number; y: number;
   hp: number; maxHp: number;
   damage: number; speed: number;
@@ -85,7 +85,7 @@ export class GameSim {
   readonly seed: number;
   readonly world = { w: CFG.World.Width, h: CFG.World.Height };
   player: Player;
-  zombies: Zombie[] = [];
+  enemies: Enemy[] = [];
   input: InputState = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
 
   private rng: Rng;
@@ -141,17 +141,17 @@ export class GameSim {
       this.advanceRound();
     }
     this.updatePlayer(dt);
-    this.updateZombies(dt);
-    this.maintainZombies(dt);
+    this.updateEnemies(dt);
+    this.maintainEnemies(dt);
   }
 
   private advanceRound(): void {
     this.round++;
     this.emit("threat_tier", { tier: this.round });
     // 每 BossInterval 阶出一只 Boss（对齐 GameConfig.BossInterval）
-    if (this.round % CFG.Zombie.BossInterval === 0 && this.bossSpawnedForRound < this.round) {
+    if (this.round % CFG.Enemy.BossInterval === 0 && this.bossSpawnedForRound < this.round) {
       this.bossSpawnedForRound = this.round;
-      this.spawnZombie({ type: "basic", boss: true, near: "player" });
+      this.spawnEnemy({ type: "basic", boss: true, near: "player" });
     }
   }
 
@@ -200,25 +200,25 @@ export class GameSim {
     if (this.input.attack && p.attackCd <= 0) {
       p.attackCd = c.BaseAttackCooldown;
       const range = c.BaseAttackRange;
-      const target = this.nearestZombie(p.x, p.y, range);
-      if (target) this.attackZombie(target);
+      const target = this.nearestEnemy(p.x, p.y, range);
+      if (target) this.attackEnemy(target);
     }
   }
 
-  private nearestZombie(x: number, y: number, range: number): Zombie | null {
-    let best: Zombie | null = null;
+  private nearestEnemy(x: number, y: number, range: number): Enemy | null {
+    let best: Enemy | null = null;
     let bestD = range * range;
-    for (const z of this.zombies) {
+    for (const z of this.enemies) {
       const d = (z.x - x) ** 2 + (z.y - y) ** 2;
       if (d <= bestD) { bestD = d; best = z; }
     }
     return best;
   }
 
-  private attackZombie(z: Zombie): void {
+  private attackEnemy(z: Enemy): void {
     const p = this.player;
     p.facing = z.x >= p.x ? 1 : -1;
-    // 连击：命中 +1 层，每层 +5% 上限 +50%（对齐 Combo 系统与 AttackZombie）
+    // 连击：命中 +1 层，每层 +5% 上限 +50%（对齐 Combo 系统与 AttackEnemy）
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
     const comboBonus = Math.min((p.combo - 1) * CFG.Combo.DamageBonusPerLevel, CFG.Combo.MaxBonus);
@@ -226,29 +226,29 @@ export class GameSim {
     this.dealDamage(z, damage);
   }
 
-  private dealDamage(z: Zombie, damage: number): void {
+  private dealDamage(z: Enemy, damage: number): void {
     if (z.shieldHp > 0) {
       const absorbed = Math.min(z.shieldHp, damage);
       z.shieldHp -= absorbed;
       damage -= absorbed;
     }
     z.hp -= damage;
-    z.hitFlash = 0.16; // ZombieHitFlashIn 0.04 + Out 0.12
-    if (z.hp <= 0) this.onZombieKilled(z);
+    z.hitFlash = 0.16; // EnemyHitFlashIn 0.04 + Out 0.12
+    if (z.hp <= 0) this.onEnemyKilled(z);
   }
 
-  private onZombieKilled(z: Zombie): void {
-    this.zombies = this.zombies.filter((o) => o.id !== z.id);
+  private onEnemyKilled(z: Enemy): void {
+    this.enemies = this.enemies.filter((o) => o.id !== z.id);
     this.kills++;
-    let pts = ZOMBIE_SCORE[z.type] ?? 10;
-    if (z.elite) pts = Math.floor(pts * CFG.Zombie.EliteScoreMult);
-    if (z.boss) pts = Math.floor(pts * CFG.Zombie.BossScoreMult);
+    let pts = ENEMY_SCORE[z.type] ?? 10;
+    if (z.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
+    if (z.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
     this.score += pts;
   }
 
-  private updateZombies(dt: number): void {
+  private updateEnemies(dt: number): void {
     const p = this.player;
-    for (const z of this.zombies) {
+    for (const z of this.enemies) {
       z.hitFlash = Math.max(0, z.hitFlash - dt);
       z.attackCd = Math.max(0, z.attackCd - dt);
 
@@ -266,13 +266,13 @@ export class GameSim {
         let vy = (dy / dist) * z.speed;
 
         // 分离力：避免堆叠成一点，形成包围圈（对齐 SeparationRange/Force）
-        for (const o of this.zombies) {
+        for (const o of this.enemies) {
           if (o.id === z.id) continue;
           const ox = z.x - o.x, oy = z.y - o.y;
           const od = Math.hypot(ox, oy);
-          if (od > 0.01 && od < CFG.Zombie.SeparationRange) {
-            vx += (ox / od) * CFG.Zombie.SeparationForce;
-            vy += (oy / od) * CFG.Zombie.SeparationForce;
+          if (od > 0.01 && od < CFG.Enemy.SeparationRange) {
+            vx += (ox / od) * CFG.Enemy.SeparationForce;
+            vy += (oy / od) * CFG.Enemy.SeparationForce;
           }
         }
         z.x += vx * dt;
@@ -281,8 +281,8 @@ export class GameSim {
       }
 
       // 攻击：范围 70、冷却 1s；玩家无敌帧 0.5s 内免疫
-      if (!p.dead && dist <= CFG.Zombie.AttackRange && z.attackCd <= 0) {
-        z.attackCd = CFG.Zombie.AttackCooldown;
+      if (!p.dead && dist <= CFG.Enemy.AttackRange && z.attackCd <= 0) {
+        z.attackCd = CFG.Enemy.AttackCooldown;
         if (p.invincible <= 0) {
           p.hp -= z.damage;
           p.invincible = CFG.Player.InvincibleDuration;
@@ -309,36 +309,36 @@ export class GameSim {
     this.emit("game_over", this.snapshot());
   }
 
-  /** 持续探索模式刷怪：世界僵尸数维持 [6,18]，冷却 1.5s（对齐 _MaintainZombies）。 */
-  private maintainZombies(dt: number): void {
+  /** 持续探索模式刷怪：世界妖物数维持 [6,18]，冷却 1.5s（对齐 _MaintainEnemies）。 */
+  private maintainEnemies(dt: number): void {
     this.spawnCd = Math.max(0, this.spawnCd - dt);
-    if (this.zombies.length >= CFG.Spawning.WorldMinZombies) return;
-    if (this.zombies.length >= CFG.Spawning.WorldMaxZombies) return;
+    if (this.enemies.length >= CFG.Spawning.WorldMinEnemies) return;
+    if (this.enemies.length >= CFG.Spawning.WorldMaxEnemies) return;
     if (this.spawnCd > 0) return;
     this.spawnCd = CFG.Spawning.SpawnCooldown;
-    this.spawnZombie({ type: "random", near: "player" });
+    this.spawnEnemy({ type: "random", near: "player" });
   }
 
-  /** 刷怪：距玩家 ≥420px 环形随机（对齐 ZombieSpawnMinDistFromPlayer）。 */
-  spawnZombie(opts: SpawnOpts = {}): number {
+  /** 刷怪：距玩家 ≥420px 环形随机（对齐 EnemySpawnMinDistFromPlayer）。 */
+  spawnEnemy(opts: SpawnOpts = {}): number {
     const count = Math.min(Math.max(opts.count ?? 1, 1), 50);
     let spawned = 0;
     for (let i = 0; i < count; i++) {
-      if (this.zombies.length >= CFG.Spawning.WorldMaxZombies && !opts.boss) break;
+      if (this.enemies.length >= CFG.Spawning.WorldMaxEnemies && !opts.boss) break;
       const type = this.resolveType(opts.type);
       const pos = this.resolveSpawnPos(opts.near ?? "player");
-      this.createZombie(type, pos.x, pos.y, opts);
+      this.createEnemy(type, pos.x, pos.y, opts);
       spawned++;
     }
     return spawned;
   }
 
-  private resolveType(t: SpawnOpts["type"]): ZombieType {
+  private resolveType(t: SpawnOpts["type"]): EnemyType {
     if (t === "basic") return 0;
-    if (typeof t === "number") return t as ZombieType;
+    if (typeof t === "number") return t as EnemyType;
     const entry = SPAWN_TABLE.find((e) => this.round <= e.maxRound) ?? SPAWN_TABLE[SPAWN_TABLE.length - 1];
     const weights = Object.entries(entry.weights).map(([k, w]) => [Number(k), w] as const);
-    return this.rng.weighted(weights) as ZombieType;
+    return this.rng.weighted(weights) as EnemyType;
   }
 
   private resolveSpawnPos(near: SpawnOpts["near"]): { x: number; y: number } {
@@ -360,8 +360,8 @@ export class GameSim {
     return { x: 22, y: 22 };
   }
 
-  private createZombie(type: ZombieType, x: number, y: number, opts: SpawnOpts): Zombie {
-    const stats = ZOMBIE_STATS[type];
+  private createEnemy(type: EnemyType, x: number, y: number, opts: SpawnOpts): Enemy {
+    const stats = ENEMY_STATS[type];
     const mult = this.roundMult(CFG.Difficulty.SpawnScaleFactor);
     let hp = Math.ceil(stats.hp * mult);
     let damage = Math.ceil(stats.dmg * mult);
@@ -371,22 +371,22 @@ export class GameSim {
 
     if (!elite && !boss) {
       elite = this.rng.chance(Math.min(
-        CFG.Zombie.EliteChanceBase + CFG.Zombie.EliteChancePerRound * (this.round - 1),
-        CFG.Zombie.EliteChanceMax,
+        CFG.Enemy.EliteChanceBase + CFG.Enemy.EliteChancePerRound * (this.round - 1),
+        CFG.Enemy.EliteChanceMax,
       ));
     }
     if (elite) {
-      hp = Math.ceil(hp * CFG.Zombie.EliteStatMult);
-      damage = Math.ceil(damage * CFG.Zombie.EliteStatMult);
-      speed *= CFG.Zombie.EliteSpeedMult;
+      hp = Math.ceil(hp * CFG.Enemy.EliteStatMult);
+      damage = Math.ceil(damage * CFG.Enemy.EliteStatMult);
+      speed *= CFG.Enemy.EliteSpeedMult;
     }
     if (boss) {
-      hp = Math.ceil(hp * CFG.Zombie.BossStatMult * 10);
-      damage = Math.ceil(damage * CFG.Zombie.BossStatMult);
-      speed *= CFG.Zombie.BossSpeedMult;
+      hp = Math.ceil(hp * CFG.Enemy.BossStatMult * 10);
+      damage = Math.ceil(damage * CFG.Enemy.BossStatMult);
+      speed *= CFG.Enemy.BossSpeedMult;
     }
 
-    const z: Zombie = {
+    const z: Enemy = {
       id: this.nextId++,
       type,
       x, y,
@@ -401,7 +401,7 @@ export class GameSim {
     };
     if (z.affix === "swift") z.speed = speed * 1.5; // EliteSwiftMult
     if (z.affix === "shield") z.shieldHp = 25;
-    this.zombies.push(z);
+    this.enemies.push(z);
     return z;
   }
 
@@ -439,7 +439,7 @@ export class GameSim {
           type: (args.type as SpawnOpts["type"]) ?? "random",
           near: (args.near as SpawnOpts["near"]) ?? "player",
         };
-        return { spawned: this.spawnZombie(opts) };
+        return { spawned: this.spawnEnemy(opts) };
       }
       case "give": return { given: 0, note: "武器系统未实装（M2）" };
       case "teleport": {
@@ -478,7 +478,7 @@ export class GameSim {
       round: this.round,
       score: this.score,
       kills: this.kills,
-      zombies_alive: this.zombies.length,
+      enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,
       player_max_hp: this.player.maxHp,
@@ -490,7 +490,7 @@ export class GameSim {
   /** 全量观测快照（Dota2 GSI 风格），字段名对齐 _GameState。 */
   snapshot(): Record<string, unknown> {
     const p = this.player;
-    const sorted = [...this.zombies].sort((a, b) =>
+    const sorted = [...this.enemies].sort((a, b) =>
       (a.x - p.x) ** 2 + (a.y - p.y) ** 2 - ((b.x - p.x) ** 2 + (b.y - p.y) ** 2));
     return {
       ...this.status(),
@@ -503,10 +503,10 @@ export class GameSim {
         can_attack: p.attackCd <= 0,
         dead: p.dead,
       },
-      zombies: {
-        total: this.zombies.length,
+      enemies: {
+        total: this.enemies.length,
         list: sorted.slice(0, 30).map((z) => ({
-          id: z.id, type: ZOMBIE_NAMES[z.type] ?? String(z.type), type_id: z.type,
+          id: z.id, type: ENEMY_NAMES[z.type] ?? String(z.type), type_id: z.type,
           hp: Math.ceil(z.hp), max_hp: z.maxHp,
           pos: { x: z.x, y: z.y },
           elite: z.elite, boss: z.boss,

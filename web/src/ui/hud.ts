@@ -50,8 +50,8 @@ export class Hud {
     this.welcome.className = "overlay";
     this.welcome.innerHTML = `
       <div class="panel">
-        <h1>僵尸大战</h1>
-        <p class="sub">血色涂鸦 · 持续探索生存</p>
+        <h1>斩妖录</h1>
+        <p class="sub">血色涂鸦 · 除妖生存</p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
@@ -64,7 +64,7 @@ export class Hud {
     this.gameover.className = "overlay hidden";
     this.gameover.innerHTML = `
       <div class="panel">
-        <h1>你死了</h1>
+        <h1>除妖师陨落</h1>
         <p id="gameover-stats" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
       </div>`;

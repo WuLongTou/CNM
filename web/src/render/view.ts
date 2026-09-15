@@ -2,21 +2,21 @@
 // 地面=ground 大图血色调制平铺；实体=预切 96×96 atlas 帧动画；相机=指数平滑跟随。
 
 import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
-import type { GameSim, Zombie } from "../sim/game";
+import type { GameSim, Enemy } from "../sim/game";
 import { CFG } from "../sim/config";
 
-/** 僵尸类型 → 预切 atlas 名（assets/sprites/enemies/{name}.json）。 */
-const ZOMBIE_ATLAS: Record<number, string> = {
-  0: "zombie_basic_walk", 1: "zombie_fast_walk", 2: "zombie_tank_walk",
-  3: "zombie_exploder_walk", 4: "zombie_invisible_walk", 5: "zombie_spitter_walk",
-  6: "zombie_healer_walk", 7: "zombie_summoner_walk", 8: "zombie_archer_walk",
+/** 妖物类型 → 预切 atlas 名（assets/sprites/enemies/{name}.json）。 */
+const ENEMY_ATLAS: Record<number, string> = {
+  0: "enemy_basic_walk", 1: "enemy_fast_walk", 2: "enemy_tank_walk",
+  3: "enemy_exploder_walk", 4: "enemy_invisible_walk", 5: "enemy_spitter_walk",
+  6: "enemy_healer_walk", 7: "enemy_summoner_walk", 8: "enemy_archer_walk",
   9: "ship_walk", 10: "mech_walk", 11: "knight_walk", 12: "dragon_walk", 13: "swarm_walk",
 };
 
 const CAMERA_SMOOTHING = 6.5; // 对齐 GameConfig.CameraSmoothing
 const WALK_ANIM_STEP = 0.06;  // 对齐 GameConfig.WalkAnimSpeed
 
-interface ZombieView {
+interface EnemyView {
   container: Container;
   body: Sprite;
   hpFill: Sprite;
@@ -32,8 +32,8 @@ export class GameView {
   private playerSprite!: Sprite;
   private playerWalkFrames: Texture[] = [];
   private playerIdle!: Texture;
-  private zombieViews = new Map<number, ZombieView>();
-  private zombieTextures = new Map<string, Texture[]>();
+  private enemyViews = new Map<number, EnemyView>();
+  private enemyTextures = new Map<string, Texture[]>();
   private camX = 0;
   private camY = 0;
   private animTimer = 0;
@@ -60,9 +60,9 @@ export class GameView {
     this.playerSprite.anchor.set(0.5);
     this.worldLayer.addChild(this.playerSprite);
 
-    // 预加载全部僵尸 atlas
-    for (const name of new Set(Object.values(ZOMBIE_ATLAS))) {
-      this.zombieTextures.set(name, await this.loadFrames(`assets/sprites/enemies/${name}.json`));
+    // 预加载全部妖物 atlas
+    for (const name of new Set(Object.values(ENEMY_ATLAS))) {
+      this.enemyTextures.set(name, await this.loadFrames(`assets/sprites/enemies/${name}.json`));
     }
   }
 
@@ -78,9 +78,9 @@ export class GameView {
     return entries.map(([, t]) => t);
   }
 
-  private makeZombieView(z: Zombie): ZombieView {
-    const animName = ZOMBIE_ATLAS[z.type] ?? "zombie_basic_walk";
-    const frames = this.zombieTextures.get(animName) ?? this.zombieTextures.get("zombie_basic_walk")!;
+  private makeEnemyView(z: Enemy): EnemyView {
+    const animName = ENEMY_ATLAS[z.type] ?? "enemy_basic_walk";
+    const frames = this.enemyTextures.get(animName) ?? this.enemyTextures.get("enemy_basic_walk")!;
     const container = new Container();
     const body = new Sprite(frames[0]);
     body.anchor.set(0.5);
@@ -102,7 +102,7 @@ export class GameView {
       ring.x = -(z.boss ? 30 : 20); ring.y = -60;
       container.addChild(ring);
     }
-    if (z.boss) container.scale.set(CFG.Zombie.BossScale);
+    if (z.boss) container.scale.set(CFG.Enemy.BossScale);
     this.worldLayer.addChild(container);
     return { container, body, hpFill: fill, hpBar, animName, frame: 0, animTimer: 0 };
   }
@@ -141,31 +141,31 @@ export class GameView {
       this.playerSprite.alpha = p.invincible > 0 ? 0.55 + 0.45 * Math.sin(p.invincible * 40) : 1;
     }
 
-    // 僵尸：增量同步视图（受击红闪 + HP 条 + 帧动画）
+    // 妖物：增量同步视图（受击红闪 + HP 条 + 帧动画）
     const alive = new Set<number>();
-    for (const z of sim.zombies) {
+    for (const z of sim.enemies) {
       alive.add(z.id);
-      let v = this.zombieViews.get(z.id);
-      if (!v) { v = this.makeZombieView(z); this.zombieViews.set(z.id, v); }
+      let v = this.enemyViews.get(z.id);
+      if (!v) { v = this.makeEnemyView(z); this.enemyViews.set(z.id, v); }
       v.container.x = z.x; v.container.y = z.y;
       v.body.scale.x = z.facing;
       v.body.tint = z.hitFlash > 0 ? 0xff5544 : 0xffffff;
       const ratio = Math.max(0, z.hp / z.maxHp);
       v.hpFill.width = 30 * ratio;
       v.hpBar.visible = z.hp < z.maxHp;
-      if (this.zombieTextures.get(v.animName)!.length > 1) {
+      if (this.enemyTextures.get(v.animName)!.length > 1) {
         v.animTimer += dt;
         if (v.animTimer >= 0.1) {
           v.animTimer -= 0.1;
-          v.frame = (v.frame + 1) % this.zombieTextures.get(v.animName)!.length;
-          v.body.texture = this.zombieTextures.get(v.animName)![v.frame];
+          v.frame = (v.frame + 1) % this.enemyTextures.get(v.animName)!.length;
+          v.body.texture = this.enemyTextures.get(v.animName)![v.frame];
         }
       }
     }
-    for (const [id, v] of this.zombieViews) {
+    for (const [id, v] of this.enemyViews) {
       if (!alive.has(id)) {
         v.container.destroy({ children: true });
-        this.zombieViews.delete(id);
+        this.enemyViews.delete(id);
       }
     }
   }

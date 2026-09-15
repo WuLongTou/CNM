@@ -23,7 +23,7 @@ test("完整对局闭环：移动/战斗/计分/GameOver 事件", async ({ page 
   expect(x1).toBeGreaterThan(x0 + 50);
   await exec({ action: "input", args: { move_x: 0 } });
 
-  // 3. 贴脸刷一只 basic 僵尸，攻击击杀 → 击杀计分
+  // 3. 贴脸刷一只 basic 妖物，攻击击杀 → 击杀计分
   await exec({ action: "teleport", args: { x: 1000, y: 1000 } });
   expect((await exec({ action: "spawn", args: { type: "basic", near: { x: 1030, y: 1000 } } })).data).toEqual({ spawned: 1 });
   await exec({ action: "input", args: { attack: true } });
@@ -39,14 +39,14 @@ test("完整对局闭环：移动/战斗/计分/GameOver 事件", async ({ page 
   const gs = (await exec({ action: "game_state" })).data!;
   expect(gs).toHaveProperty("player.hp");
   expect(gs).toHaveProperty("player.pos");
-  expect(gs).toHaveProperty("zombies.total");
-  expect(Array.isArray((gs.zombies as { list: unknown[] }).list)).toBe(true);
+  expect(gs).toHaveProperty("enemies.total");
+  expect(Array.isArray((gs.enemies as { list: unknown[] }).list)).toBe(true);
 
-  // 5. 围杀：高伤僵尸贴脸 → 玩家死亡 → game_over 事件
+  // 5. 围杀：高伤妖物贴脸 → 玩家死亡 → game_over 事件
   await exec({ action: "spawn", args: { type: "basic", near: { x: 1005, y: 1000 } } });
   await page.evaluate(() => {
     const sim = window.__CNM__.sim;
-    for (const z of sim.zombies) z.damage = 9999;
+    for (const z of sim.enemies) z.damage = 9999;
     sim.player.invincible = 0;
   });
   await page.waitForFunction(() => window.__CNM__.getEvents().some((e) => e.event === "game_over"));

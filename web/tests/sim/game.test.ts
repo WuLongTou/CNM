@@ -30,9 +30,9 @@ describe("GameSim 状态机", () => {
     sim.exec({ action: "start" });
     sim.player.hp = 1;
     sim.player.invincible = 0;
-    // 放一只高伤僵尸贴脸击杀玩家
+    // 放一只高伤妖物贴脸击杀玩家
     sim.exec({ action: "spawn", args: { type: "basic", near: { x: sim.player.x + 10, y: sim.player.y }, count: 1 } });
-    const z = sim.zombies[0];
+    const z = sim.enemies[0];
     z.damage = 9999;
     for (let i = 0; i < 600 && sim.state !== "GameOver"; i++) sim.tick();
     expect(sim.state).toBe("GameOver");
@@ -41,12 +41,12 @@ describe("GameSim 状态机", () => {
 });
 
 describe("GameSim 刷怪与难度", () => {
-  it("世界僵尸数维持在世界下限以上", () => {
+  it("世界妖物数维持在世界下限以上", () => {
     const { sim } = newSim();
     sim.exec({ action: "start" });
     for (let i = 0; i < 60 * 30; i++) sim.tick(); // 30 秒
-    expect(sim.zombies.length).toBeGreaterThanOrEqual(CFG.Spawning.WorldMinZombies - 1);
-    expect(sim.zombies.length).toBeLessThanOrEqual(CFG.Spawning.WorldMaxZombies);
+    expect(sim.enemies.length).toBeGreaterThanOrEqual(CFG.Spawning.WorldMinEnemies - 1);
+    expect(sim.enemies.length).toBeLessThanOrEqual(CFG.Spawning.WorldMaxEnemies);
   });
 
   it("45 秒推进一威胁阶并推送事件", () => {
@@ -74,7 +74,7 @@ describe("GameSim 刷怪与难度", () => {
     // 推进到 round 5：4 次 45s
     for (let i = 0; i < 60 * 45 * 4 + 10; i++) sim.tick();
     expect(sim.round).toBe(5);
-    expect(sim.zombies.some((z) => z.boss)).toBe(true);
+    expect(sim.enemies.some((z) => z.boss)).toBe(true);
   });
 });
 
@@ -85,8 +85,8 @@ describe("GameSim 战斗闭环", () => {
     sim.exec({ action: "teleport", args: { x: 1000, y: 1000 } });
     const r = sim.exec({ action: "spawn", args: { type: "basic", near: { x: 1010, y: 1000 } } });
     expect(r.data).toEqual({ spawned: 1 });
-    expect(sim.zombies).toHaveLength(1);
-    const z = sim.zombies[0];
+    expect(sim.enemies).toHaveLength(1);
+    const z = sim.enemies[0];
     z.hp = 1;
     sim.player.attackCd = 0;
     sim.input.attack = true;
@@ -113,9 +113,9 @@ describe("GameSim 战斗闭环", () => {
     const { sim, save } = newSim();
     sim.exec({ action: "start" });
     sim.exec({ action: "spawn", args: { type: "basic", near: { x: sim.player.x + 30, y: sim.player.y } } });
-    const z = sim.zombies[0];
+    const z = sim.enemies[0];
     z.damage = 10;
-    z.attackCd = 0; // 新刷僵尸有 0.2-0.8s 初始攻击冷却，清零让首拍即攻击
+    z.attackCd = 0; // 新刷妖物有 0.2-0.8s 初始攻击冷却，清零让首拍即攻击
     // 第一次受击：HP 120→110，进入无敌帧
     sim.tick();
     expect(sim.player.hp).toBe(110);
@@ -159,7 +159,7 @@ describe("GameSim 战斗闭环", () => {
         sim.input.attack = f % 40 < 10;
         sim.tick();
       }
-      return { score: sim.score, kills: sim.kills, hp: sim.player.hp, n: sim.zombies.length };
+      return { score: sim.score, kills: sim.kills, hp: sim.player.hp, n: sim.enemies.length };
     };
     expect(run(2024)).toEqual(run(2024));
     expect(run(2024)).not.toEqual(run(2025));

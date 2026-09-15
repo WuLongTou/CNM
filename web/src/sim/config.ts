@@ -25,7 +25,7 @@ export const CFG = {
     MaxBonus: 0.5,
   },
 
-  Zombie: {
+  Enemy: {
     CollisionSize: 24.0,
     AttackCooldown: 1.0,
     AttackRange: 70.0,
@@ -45,8 +45,8 @@ export const CFG = {
   },
 
   Spawning: {
-    WorldMinZombies: 6,
-    WorldMaxZombies: 18,
+    WorldMinEnemies: 6,
+    WorldMaxEnemies: 18,
     SpawnCooldown: 1.5,
     MinDistFromPlayer: 420.0,
   },
@@ -58,8 +58,8 @@ export const CFG = {
   },
 } as const;
 
-/** 僵尸类型（序号与 C# ZombieType 枚举一致，SpawnTable 用数字索引）。 */
-export const ZombieType = {
+/** 妖物类型（序号与 C# EnemyType 枚举一致，SpawnTable 用数字索引）。 */
+export const EnemyType = {
   Basic: 0,
   Fast: 1,
   Tank: 2,
@@ -75,15 +75,15 @@ export const ZombieType = {
   Dragon: 12,
   Swarm: 13,
 } as const;
-export type ZombieType = (typeof ZombieType)[keyof typeof ZombieType];
+export type EnemyType = (typeof EnemyType)[keyof typeof EnemyType];
 
-export const ZOMBIE_NAMES: Record<number, string> = {
-  0: "基础", 1: "快速", 2: "坦克", 3: "爆炸", 4: "隐身", 5: "喷毒", 6: "治疗",
-  7: "召唤师", 8: "射手", 9: "飞船", 10: "机甲", 11: "骑士", 12: "飞龙", 13: "虫群",
+export const ENEMY_NAMES: Record<number, string> = {
+  0: "游魂", 1: "魅影", 2: "石魅", 3: "爆魈", 4: "隐煞", 5: "瘴妖", 6: "愈妖",
+  7: "唤灵", 8: "弩妖", 9: "浮灯", 10: "铁傀", 11: "甲妖", 12: "蛟", 13: "蚀群",
 };
 
-/** 14 种僵尸三维表（HP/伤害/速度），对齐 Zombie.TypeStats。 */
-export const ZOMBIE_STATS: Record<number, { hp: number; dmg: number; speed: number }> = {
+/** 14 种妖物三维表（HP/伤害/速度），对齐 Enemy.TypeStats。 */
+export const ENEMY_STATS: Record<number, { hp: number; dmg: number; speed: number }> = {
   0: { hp: 25, dmg: 8, speed: 45.0 },
   1: { hp: 15, dmg: 6, speed: 90.0 },
   2: { hp: 100, dmg: 18, speed: 22.0 },
@@ -101,7 +101,7 @@ export const ZOMBIE_STATS: Record<number, { hp: number; dmg: number; speed: numb
 };
 
 /** 击杀分数表，对齐 GameManager.TypeScore。 */
-export const ZOMBIE_SCORE: Record<number, number> = {
+export const ENEMY_SCORE: Record<number, number> = {
   0: 10, 1: 15, 2: 25, 3: 30, 4: 35, 5: 40,
   6: 50, 7: 60, 8: 45, 9: 55, 10: 65, 11: 50, 12: 70, 13: 20,
 };
