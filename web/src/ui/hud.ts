@@ -69,11 +69,31 @@ export class Hud {
       <div class="panel">
         <h1>除妖师陨落</h1>
         <p id="gameover-stats" class="sub"></p>
+        <div class="meta-row">
+          <button id="btn-meta-hp" type="button"></button>
+          <button id="btn-meta-dmg" type="button"></button>
+        </div>
+        <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
       </div>`;
     this.root.appendChild(this.gameover);
     this.gameoverStats = this.gameover.querySelector("#gameover-stats")!;
     this.gameover.querySelector("#btn-restart")!.addEventListener("click", () => this.onRestart());
+    const buy = (kind: "hp" | "dmg") => {
+      this.sim.exec({ action: "buy_meta", args: { kind } });
+      this.refreshMeta();
+    };
+    this.gameover.querySelector("#btn-meta-hp")!.addEventListener("click", () => buy("hp"));
+    this.gameover.querySelector("#btn-meta-dmg")!.addEventListener("click", () => buy("dmg"));
+  }
+
+  private refreshMeta(): void {
+    const m = this.sim.exec({ action: "meta" }).data as { coins: number; metaHp: number; metaDmg: number };
+    (this.gameover.querySelector("#btn-meta-hp") as HTMLElement).textContent =
+      `生命 +20（Lv.${m.metaHp}）`;
+    (this.gameover.querySelector("#btn-meta-dmg") as HTMLElement).textContent =
+      `伤害 +10%（Lv.${m.metaDmg}）`;
+    (this.gameover.querySelector("#meta-coins") as HTMLElement).textContent = `金币 ${m.coins}`;
   }
 
   /** 重开一局时替换绑定的 sim 实例。 */
@@ -99,6 +119,7 @@ export class Hud {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
         `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 金币 +${coins}`;
+      this.refreshMeta();
     }
   }
 }

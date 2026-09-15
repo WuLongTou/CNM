@@ -172,6 +172,7 @@ export class GameView {
     this.renderProjectiles(sim);
     this.renderMines(sim);
     this.renderChests(sim);
+    this.renderTerrain(sim);
   }
 
   /** 弹道：箭=细长条按速度方向旋转；魔法/追踪弹=发光圆点。 */
@@ -232,8 +233,38 @@ export class GameView {
     }
   }
 
-  /** fxLayer 需在 init 里挂到 worldLayer 之上。 */
+  /** fxLayer 需在 init 里挂到 worldLayer 之上；静态障碍/祭坛也在 init 后挂一次。 */
   attachFx(): void {
     this.worldLayer.addChild(this.fxLayer);
+  }
+
+  private terrainGfx = new Graphics();
+  private altarGfx = new Graphics();
+
+  /** 障碍与祭坛：每帧低开销重绘（数量少），采集死亡后消失、祭坛用后变暗。 */
+  renderTerrain(sim: GameSim): void {
+    if (this.terrainGfx.parent !== this.worldLayer) this.worldLayer.addChild(this.terrainGfx);
+    if (this.altarGfx.parent !== this.worldLayer) this.worldLayer.addChild(this.altarGfx);
+    const g = this.terrainGfx;
+    g.clear();
+    const COLORS: Record<string, number> = {
+      tree: 0x3d6b35, rock: 0x7a6a5a, bush: 0x5a7a3a, stone_block: 0x55483e,
+    };
+    for (const o of sim.terrain.obstacles) {
+      if (o.dead) continue;
+      g.circle(o.x, o.y + o.r * 0.4, o.r * 0.9).fill({ color: 0x000000, alpha: 0.25 });
+      g.circle(o.x, o.y, o.r).fill(COLORS[o.kind] ?? 0x666666);
+      if (o.hp > 0) g.circle(o.x, o.y, o.r * 0.55).fill({ color: 0xffffff, alpha: 0.12 });
+    }
+    const a = this.altarGfx;
+    a.clear();
+    for (const alt of sim.terrain.altars) {
+      const alpha = alt.used ? 0.25 : 0.8;
+      a.circle(alt.x, alt.y, 22).fill({ color: 0x8e44ad, alpha });
+      a.circle(alt.x, alt.y, 30).stroke({ width: 3, color: 0xffd28a, alpha: alpha * 0.8 });
+      if (!alt.used) {
+        a.circle(alt.x, alt.y, 38).stroke({ width: 1, color: 0xffd28a, alpha: 0.35 });
+      }
+    }
   }
 }

@@ -1,0 +1,55 @@
+// 天气系统（简化复刻）：4 种天气 × 数值修正。每 60s 概率切换，种子化随机。
+// 数值语义对齐 WeatherSystem：雨减速、血月增妖速与精英率、雾降能见度（表现层处理）。
+
+export type WeatherType = "Clear" | "Rain" | "Fog" | "BloodMoon";
+export type WeatherIntensity = "Light" | "Moderate";
+
+export interface WeatherState {
+  type: WeatherType;
+  intensity: WeatherIntensity;
+  /** 妖物速度乘数。 */
+  enemySpeedMult: number;
+  /** 玩家速度乘数。 */
+  playerSpeedMult: number;
+  /** 精英概率加成。 */
+  eliteBonus: number;
+}
+
+import type { Rng } from "./rng";
+
+const WEATHER_TABLE: Record<WeatherType, Omit<WeatherState, "intensity">> = {
+  Clear: { type: "Clear", enemySpeedMult: 1, playerSpeedMult: 1, eliteBonus: 0 },
+  Rain: { type: "Rain", enemySpeedMult: 0.85, playerSpeedMult: 0.92, eliteBonus: 0 },
+  Fog: { type: "Fog", enemySpeedMult: 0.95, playerSpeedMult: 0.95, eliteBonus: 0.02 },
+  BloodMoon: { type: "BloodMoon", enemySpeedMult: 1.15, playerSpeedMult: 1, eliteBonus: 0.1 },
+};
+
+export class WeatherSystem {
+  state: WeatherState = { ...WEATHER_TABLE.Clear, intensity: "Light" };
+  private timer = 0;
+  private static SWITCH_INTERVAL = 60;
+
+  constructor(private rng: Rng) {}
+
+  update(dt: number): void {
+    this.timer += dt;
+    if (this.timer >= WeatherSystem.SWITCH_INTERVAL) {
+      this.timer -= WeatherSystem.SWITCH_INTERVAL;
+      if (this.rng.chance(0.6)) this.reroll();
+    }
+  }
+
+  private reroll(): void {
+    const type = this.rng.pick(["Clear", "Rain", "Fog", "BloodMoon"] as const);
+    const intensity = this.rng.chance(0.7) ? "Light" : "Moderate";
+    const base = WEATHER_TABLE[type];
+    const scale = intensity === "Moderate" ? 1.5 : 1;
+    this.state = {
+      type,
+      intensity,
+      enemySpeedMult: 1 + (base.enemySpeedMult - 1) * scale,
+      playerSpeedMult: 1 + (base.playerSpeedMult - 1) * scale,
+      eliteBonus: base.eliteBonus * scale,
+    };
+  }
+}

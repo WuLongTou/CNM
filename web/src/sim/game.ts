@@ -10,8 +10,14 @@ import {
 import { defaultSave, type SaveData, type SaveStorage } from "./save";
 import {
   WEAPON_DATA, stageMult, stageTag, UPGRADE_POOL, UPGRADE_STEP,
+  FUSION_RECIPES,
   type AttackType, type UpgradeStat, type WeaponInstance,
 } from "./weapons";
+import { Inventory, type Material } from "./inventory";
+import { RECIPES } from "./recipes";
+import { WeatherSystem } from "./weather";
+import { AchievementSystem } from "./achievements";
+import { World } from "./world";
 
 export type GameState = "WeaponSelection" | "Combat" | "GameOver";
 
@@ -32,6 +38,8 @@ export interface Enemy {
   damage: number; speed: number;
   elite: boolean; boss: boolean;
   affix: string;
+  /** Boss 阶段（0-2，血量 66%/33% 切换）。 */
+  bossPhase: number;
   shieldHp: number;
   attackCd: number;
   hitFlash: number;
@@ -146,6 +154,13 @@ export class GameSim {
   projectiles: Projectile[] = [];
   mines: Mine[] = [];
   chests: Chest[] = [];
+  inventory = new Inventory();
+  terrain: World;
+  weather: WeatherSystem;
+  achievements: AchievementSystem;
+  bossKills = 0;
+  /** 祭坛融合报价（打开时模态暂停，choose 指令应答）。 */
+  fusionOffer: { a: string; b: string; resultName: string } | null = null;
   input: InputState = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
   /** 聚合战斗属性（武器变化时重算）。 */
   stats: PlayerStats;
@@ -164,16 +179,32 @@ export class GameSim {
     this.rng = new Rng(seed);
     this.save = save;
     const c = CFG.Player;
+    const prev = save.load();
+    // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）
+    const maxHp = c.MaxHealth + (prev?.metaHp ?? 0) * 20;
+    const baseDamage = c.BaseDamage * (1 + (prev?.metaDmg ?? 0) * 0.1);
     this.player = {
       x: this.world.w / 2, y: this.world.h / 2,
-      hp: c.MaxHealth, maxHp: c.MaxHealth,
-      speed: c.BaseSpeed, baseDamage: c.BaseDamage,
+      hp: maxHp, maxHp,
+      speed: c.BaseSpeed, baseDamage,
       attackCd: 0, dashTimer: 0, dashCd: 0, invincible: 0,
       combo: 0, comboTimer: 0, facing: 1, moving: false, dead: false,
       weapons: [],
     };
+    this.terrain = new World(this.rng, this.world, () => this.nextId++);
+    this.weather = new WeatherSystem(this.rng);
+    this.achievements = new AchievementSystem(prev?.achievements ?? []);
+    this.achievements.onUnlock.push((a) => {
+      this.emit("achievement", { id: a.id, name: a.name, desc: a.desc });
+      this.persistAchievements();
+    });
     this.stats = this.recalc();
     this.scatterChests(3);
+  }
+
+  private persistAchievements(): void {
+    const prev = this.save.load() ?? defaultSave();
+    this.save.save({ ...prev, achievements: [...this.achievements.unlocked] });
   }
 
   onEvent(cb: (e: SimEvent) => void): void {
@@ -323,7 +354,100 @@ export class GameSim {
     this.updateMines(dt);
     this.updateEnemies(dt);
     this.updateChests();
+    this.updateAltars();
     this.maintainEnemies(dt);
+    this.weather.update(dt);
+    this.achievements.update({ kills: this.kills, survivalTime: this.survivalTime, bossKills: this.bossKills });
+  }
+
+  /** 靠近祭坛触发融合报价（每座一次性；模态打开即暂停）。 */
+  private updateAltars(): void {
+    const p = this.player;
+    if (p.dead || this.fusionOffer || p.weapons.length < 1) return;
+    for (const altar of this.terrain.altars) {
+      if (altar.used) continue;
+      if ((altar.x - p.x) ** 2 + (altar.y - p.y) ** 2 <= 60 ** 2) {
+        const offer = this.makeFusionOffer();
+        if (!offer) { altar.used = true; continue; }
+        altar.used = true;
+        this.fusionOffer = offer;
+        this.paused = true;
+        this.emit("fusion_offer", offer);
+        return;
+      }
+    }
+  }
+
+  /** 两件持有武器可组成的融合报价（匹配 FUSION_RECIPES；否则任取两件合成占位）。 */
+  private makeFusionOffer(): { a: string; b: string; resultName: string } | null {
+    const ws = this.player.weapons;
+    if (ws.length < 2) return null;
+    for (const r of FUSION_RECIPES) {
+      const hasA = ws.some((w) => w.name === r.a);
+      const hasB = ws.some((w) => w.name === r.b);
+      if (hasA && hasB) {
+        return { a: r.a, b: r.b, resultName: WEAPON_DATA[r.result].name };
+      }
+    }
+    const a = ws[ws.length - 2].name, b = ws[ws.length - 1].name;
+    return { a, b, resultName: WEAPON_DATA[this.rollWeaponDef()].name };
+  }
+
+  /** 应答融合：accept 消耗两件换新武器；reject 丢弃报价。 */
+  resolveFusion(accept: boolean): Record<string, unknown> {
+    if (!this.fusionOffer) return { handled: false };
+    const offer = this.fusionOffer;
+    this.fusionOffer = null;
+    this.paused = false;
+    if (!accept) return { handled: true, accepted: false };
+    // 消耗 a/b 各一件（从后往前删避免索引位移）
+    for (const name of [offer.a, offer.b]) {
+      const ws = this.player.weapons;
+      for (let i = ws.length - 1; i >= 0; i--) {
+        if (ws[i].name === name) { ws.splice(i, 1); break; }
+      }
+    }
+    const w = this.giveWeapon();
+    this.emit("fusion_done", { result: w.name });
+    return { handled: true, accepted: true, result: w.name };
+  }
+
+  /** 合成：材料 → 武器/属性效果（对齐 Recipes）。 */
+  craft(recipeId: string): Record<string, unknown> {
+    const r = RECIPES.find((x) => x.id === recipeId);
+    if (!r) throw new Error("未知配方: " + recipeId);
+    for (const [m, n] of Object.entries(r.cost) as Array<[Material, number]>) {
+      if (this.inventory.counts[m] < n) return { crafted: false, reason: `材料不足：${m}` };
+    }
+    for (const [m, n] of Object.entries(r.cost) as Array<[Material, number]>) {
+      this.inventory.take(m, n);
+    }
+    if (r.weapon) {
+      this.giveWeapon(r.weapon);
+    } else if (r.effect === "maxhp") {
+      this.player.maxHp += r.amount ?? 0;
+      this.player.hp += r.amount ?? 0;
+    } else if (r.effect === "heal") {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + (r.amount ?? 0));
+    }
+    this.emit("crafted", { name: r.name });
+    return { crafted: true, name: r.name };
+  }
+
+  /** 购买永久升级（GameOver 结算界面）：血/伤各一级，价格 50 金币 × 现等级。 */
+  buyMeta(kind: "hp" | "dmg"): Record<string, unknown> {
+    const prev = this.save.load() ?? defaultSave();
+    const level = kind === "hp" ? prev.metaHp : prev.metaDmg;
+    const price = 50 * (level + 1);
+    if (prev.coins < price) return { bought: false, reason: "金币不足" };
+    const next: SaveData = {
+      ...prev,
+      coins: prev.coins - price,
+      metaHp: prev.metaHp + (kind === "hp" ? 1 : 0),
+      metaDmg: prev.metaDmg + (kind === "dmg" ? 1 : 0),
+    };
+    this.save.save(next);
+    return { bought: true, kind, level: level + 1, coins: next.coins };
   }
 
   private advanceRound(): void {
@@ -358,10 +482,12 @@ export class GameSim {
     const len = Math.hypot(vx, vy);
     if (len > 1) { vx /= len; vy /= len; }
     const mult = p.dashTimer > 0 ? c.DashSpeedMult : 1;
-    p.x += vx * p.speed * mult * dt;
-    p.y += vy * p.speed * mult * dt;
-    p.x = Math.min(this.world.w - 22, Math.max(22, p.x));
-    p.y = Math.min(this.world.h - 22, Math.max(22, p.y));
+    const w = this.weather.state.playerSpeedMult;
+    p.x += vx * p.speed * mult * w * dt;
+    p.y += vy * p.speed * mult * w * dt;
+    const sep = this.terrain.separate(p.x, p.y, c.CollisionSize / 2);
+    p.x = Math.min(this.world.w - 22, Math.max(22, sep.x));
+    p.y = Math.min(this.world.h - 22, Math.max(22, sep.y));
     p.moving = len > 0.01;
     if (vx !== 0) p.facing = vx > 0 ? 1 : -1;
 
@@ -393,6 +519,7 @@ export class GameSim {
       for (const e of this.nearestEnemies(p.x, p.y, range, this.stats.multi)) {
         this.hitEnemy(e, this.rollDamage());
       }
+      this.harvestInRange(range);
     } else if (type === "Ranged") {
       const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
       const baseAng = target ? Math.atan2(target.y - p.y, target.x - p.x) : (p.facing > 0 ? 0 : Math.PI);
@@ -415,6 +542,27 @@ export class GameSim {
       });
     }
     if (this.stats.hpCost > 0) p.hp = Math.max(1, p.hp - this.stats.hpCost);
+  }
+
+  /** 近战顺带采集范围内的资源节点（对齐 _HarvestNearbyResources）。 */
+  private harvestInRange(range: number): void {
+    const p = this.player;
+    for (const o of this.terrain.obstacles) {
+      if (o.dead || o.hp <= 0) continue;
+      if ((o.x - p.x) ** 2 + (o.y - p.y) ** 2 > range * range) continue;
+      o.hp--;
+      if (o.hp <= 0) {
+        o.dead = true;
+        const drops: Partial<Record<Material, number>> =
+          o.kind === "tree" ? { wood: 2 }
+          : o.kind === "rock" ? { stone: 2 }
+          : { fiber: 1, berry: 2 };
+        for (const [m, n] of Object.entries(drops) as Array<[Material, number]>) {
+          this.inventory.add(m, n);
+        }
+        this.emit("harvested", { kind: o.kind });
+      }
+    }
   }
 
   private rollDamage(): number {
@@ -553,6 +701,7 @@ export class GameSim {
   private onEnemyKilled(e: Enemy): void {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     this.kills++;
+    if (e.boss) this.bossKills++;
     let pts = ENEMY_SCORE[e.type] ?? 10;
     if (e.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
     if (e.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
@@ -576,10 +725,21 @@ export class GameSim {
         }
       }
       e.frzT = Math.max(0, e.frzT - dt);
-      const speedMult = e.frzT > 0 ? 0.4 : 1; // FreezeSlowMult
+      const weatherMult = this.weather.state.enemySpeedMult;
+      const speedMult = (e.frzT > 0 ? 0.4 : 1) * weatherMult; // FreezeSlowMult × 天气
 
       if (e.affix === "regen" && e.hp < e.maxHp) {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.02 * dt);
+      }
+
+      // Boss 三阶段：66%/33% 血量切换加速并召唤蚀群（对齐 _HandleBossPhases）
+      if (e.boss && e.bossPhase < 2 && e.hp <= e.maxHp * (0.66 - 0.33 * e.bossPhase)) {
+        e.bossPhase++;
+        e.speed *= 1.2;
+        for (let i = 0; i < 2; i++) {
+          this.spawnEnemy({ type: 13, near: { x: e.x + this.rng.range(-60, 60), y: e.y + this.rng.range(-60, 60) } });
+        }
+        this.emit("boss_phase", { phase: e.bossPhase + 1 });
       }
 
       if (p.dead) continue;
@@ -599,6 +759,8 @@ export class GameSim {
       }
       e.x += vx * dt;
       e.y += vy * dt;
+      const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
+      e.x = sep.x; e.y = sep.y;
       e.facing = dx >= 0 ? 1 : -1;
 
       if (dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
@@ -623,6 +785,9 @@ export class GameSim {
       totalKills: prev.totalKills + this.kills,
       games: prev.games + 1,
       coins: prev.coins + Math.floor(this.score / 50) + this.kills,
+      metaHp: prev.metaHp,
+      metaDmg: prev.metaDmg,
+      achievements: [...this.achievements.unlocked],
     };
     this.save.save(next);
     this.emit("game_over", this.snapshot());
@@ -692,7 +857,8 @@ export class GameSim {
 
     if (!elite && !boss) {
       elite = this.rng.chance(Math.min(
-        CFG.Enemy.EliteChanceBase + CFG.Enemy.EliteChancePerRound * (this.round - 1),
+        CFG.Enemy.EliteChanceBase + CFG.Enemy.EliteChancePerRound * (this.round - 1)
+          + this.weather.state.eliteBonus,
         CFG.Enemy.EliteChanceMax,
       ));
     }
@@ -715,6 +881,7 @@ export class GameSim {
       damage, speed,
       elite, boss,
       affix: elite ? this.pickAffix() : "none",
+      bossPhase: 0,
       shieldHp: 0,
       attackCd: this.rng.range(0.2, 0.8),
       hitFlash: 0,
@@ -749,7 +916,13 @@ export class GameSim {
       case "game_state": return this.snapshot();
       case "start": return this.start();
       case "input": return this.applyInput(args);
-      case "choose": return { handled: false, note: "融合面板未打开" };
+      case "choose": {
+        // target:"fusion"：accept=Enter / reject=Delete|Esc（对齐 FusionOfferPanel 快捷键语义）
+        if (args.target === "fusion") {
+          return this.resolveFusion(args.choice === "accept");
+        }
+        return { handled: false, note: "未知 target" };
+      }
       case "force_combat": {
         if (this.state === "GameOver") return { combat: false };
         this.state = "Combat";
@@ -772,6 +945,22 @@ export class GameSim {
         const stat = typeof args.stat === "string" ? (args.stat as UpgradeStat) : undefined;
         return this.applyUpgrade(idx, stat);
       }
+      case "craft": return this.craft(typeof args.recipe === "string" ? args.recipe : "");
+      case "offer_fusion": {
+        // 调试用：强制触发一次融合报价（正常流程由祭坛靠近触发）
+        const offer = this.makeFusionOffer();
+        if (!offer) return { offered: false, note: "武器不足两件" };
+        this.fusionOffer = offer;
+        this.paused = true;
+        this.emit("fusion_offer", offer);
+        return { offered: true, ...offer };
+      }
+      case "buy_meta": return this.buyMeta(args.kind === "dmg" ? "dmg" : "hp");
+      case "meta": {
+        const d = this.save.load() ?? defaultSave();
+        return { coins: d.coins, metaHp: d.metaHp, metaDmg: d.metaDmg };
+      }
+      case "inventory": return { counts: { ...this.inventory.counts } };
       case "weapons": return {
         active: this.attackType,
         list: this.player.weapons.map((w, i) => ({ index: i, ...w, stage: stageTag(w) })),
@@ -848,6 +1037,13 @@ export class GameSim {
         })),
       },
       chests: this.chests.filter((c) => !c.opened).map((c) => ({ x: c.x, y: c.y })),
+      weather: {
+        type: this.weather.state.type,
+        intensity: this.weather.state.intensity,
+      },
+      inventory: { ...this.inventory.counts },
+      altars: this.terrain.altars.filter((a) => !a.used).map((a) => ({ x: a.x, y: a.y })),
+      boss_phase: this.enemies.find((e) => e.boss)?.bossPhase ?? null,
     };
   }
 }

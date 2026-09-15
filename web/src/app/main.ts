@@ -7,6 +7,9 @@ import { GameView } from "../render/view";
 import { InputManager } from "./input";
 import { Hud } from "../ui/hud";
 import { EquipmentPanel } from "../ui/equipment";
+import { CraftingPanel } from "../ui/crafting";
+import { FusionPanel } from "../ui/fusion";
+import { Notify } from "../ui/notify";
 import "./style.css";
 
 const FIXED_DT = 1 / 60;
@@ -37,27 +40,52 @@ async function boot(): Promise<void> {
   view.attachFx();
   const hud = new Hud(sim, () => sim.start(), () => restart());
   const equipment = new EquipmentPanel(sim);
+  const crafting = new CraftingPanel(sim);
+  const fusion = new FusionPanel(sim);
+  const notify = new Notify();
+  const eventBuffer: SimEvent[] = [];
 
-  // C 键：装备面板（toggle_equipment）；模态打开即暂停（EquipmentPanel 内部处理）
+  // sim 事件 → 通知条（事件本身仍进 eventBuffer 供 Playwright 断言）
+  const handleEvent = (e: SimEvent) => {
+    eventBuffer.push(e);
+    const d = e.data as Record<string, string>;
+    if (e.event === "weapon_gained") notify.push(`获得武器：${d.name}`);
+    else if (e.event === "chest_opened") notify.push(`宝箱开启：${d.weapon}`);
+    else if (e.event === "achievement") notify.push(`成就达成：${d.name}`);
+    else if (e.event === "weapon_ascended") notify.push(`武器进阶：${d.name}`);
+    else if (e.event === "weapon_ultimate") notify.push(`武器终极：${d.name}`);
+    else if (e.event === "crafted") notify.push(`合成：${d.name}`);
+    else if (e.event === "fusion_offer") fusion.show();
+    else if (e.event === "boss_phase") notify.push(`妖王狂暴！阶段 ${d.phase}`);
+  };
+
+  // 键位路由：融合面板（Enter/Delete/Esc）优先消费，其次 C=装备、I=合成（模态互斥由面板内部处理）
   const onKey = (e: KeyboardEvent) => {
-    if (e.code === "KeyC" && sim.state === "Combat") equipment.toggle();
+    if (fusion.onKey(e)) return;
+    if (e.code === "KeyC" && sim.state === "Combat") {
+      crafting.toggle(false);
+      equipment.toggle();
+    } else if (e.code === "KeyI" && sim.state === "Combat") {
+      equipment.toggle(false);
+      crafting.toggle();
+    }
   };
   window.addEventListener("keydown", onKey);
 
   function restart(): void {
     sim = new GameSim(Date.now() % 100000, localStorageStorage());
-    sim.onEvent((e) => eventBuffer.push(e));
+    sim.onEvent(handleEvent);
     input.forceSim(sim);
     hud.resimulate(sim);
     equipment.resimulate(sim);
+    crafting.resimulate(sim);
     input.clearExternal();
   }
 
   // debug API：协议与字段名对齐 Godot 版 ExternalCommandService。
   // input 指令走 InputManager（外部输入与真实键盘叠加、持续有效），
   // 其余指令透传 sim.exec。
-  const eventBuffer: SimEvent[] = [];
-  sim.onEvent((e) => eventBuffer.push(e));
+  sim.onEvent(handleEvent);
   window.__CNM__ = {
     version: "0.1.0-m1",
     exec(cmd) {
