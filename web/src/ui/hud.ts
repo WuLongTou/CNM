@@ -12,6 +12,7 @@ export class Hud {
   private scoreText!: HTMLElement;
   private killsText!: HTMLElement;
   private timeText!: HTMLElement;
+  private weaponText!: HTMLElement;
 
   constructor(private sim: GameSim, private onStart: () => void, private onRestart: () => void) {
     this.root = document.createElement("div");
@@ -31,6 +32,7 @@ export class Hud {
       <div class="stats">
         <span id="round"></span><span id="score"></span>
         <span id="kills"></span><span id="time"></span>
+        <span id="weapon"></span>
       </div>`;
     this.root.appendChild(hud);
     this.hpFill = hud.querySelector("#hp-fill")!;
@@ -39,6 +41,7 @@ export class Hud {
     this.scoreText = hud.querySelector("#score")!;
     this.killsText = hud.querySelector("#kills")!;
     this.timeText = hud.querySelector("#time")!;
+    this.weaponText = hud.querySelector("#weapon")!;
   }
 
   private welcome!: HTMLElement;
@@ -88,6 +91,7 @@ export class Hud {
     this.scoreText.textContent = `分数 ${s.score}`;
     this.killsText.textContent = `击杀 ${s.kills}`;
     this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s`;
+    this.weaponText.textContent = s.activeWeapon ? `武器 ${s.activeWeapon.name}` : "徒手";
     this.welcome.classList.toggle("hidden", s.state !== "WeaponSelection");
     const wasOver = this.gameover.classList.contains("hidden");
     this.gameover.classList.toggle("hidden", s.state !== "GameOver");

@@ -1,7 +1,7 @@
 // PixiJS 渲染层：只读 sim 状态绘制，不修改任何逻辑数据。
 // 地面=ground 大图血色调制平铺；实体=预切 96×96 atlas 帧动画；相机=指数平滑跟随。
 
-import { Application, Assets, Container, Sprite, Texture } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
 import type { GameSim, Enemy } from "../sim/game";
 import { CFG } from "../sim/config";
 
@@ -168,5 +168,72 @@ export class GameView {
         this.enemyViews.delete(id);
       }
     }
+
+    this.renderProjectiles(sim);
+    this.renderMines(sim);
+    this.renderChests(sim);
+  }
+
+  /** 弹道：箭=细长条按速度方向旋转；魔法/追踪弹=发光圆点。 */
+  private fxLayer = new Container();
+  private projGfx = new Graphics();
+  private mineGfx = new Graphics();
+  private chestSprites = new Map<number, Sprite>();
+
+  private renderProjectiles(sim: GameSim): void {
+    const g = this.projGfx;
+    if (this.projGfx.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const pr of sim.projectiles) {
+      if (pr.homing) {
+        g.circle(pr.x, pr.y, 5).fill(0xff9a3d).alpha = 0.9;
+        g.circle(pr.x, pr.y, 8).stroke({ width: 2, color: 0xffcf7a, alpha: 0.5 });
+      } else {
+        const len = 14;
+        const sp = Math.hypot(pr.vx, pr.vy) || 1;
+        const ux = pr.vx / sp, uy = pr.vy / sp;
+        g.moveTo(pr.x - ux * len, pr.y - uy * len)
+          .lineTo(pr.x + ux * len * 0.5, pr.y + uy * len * 0.5)
+          .stroke({ width: 3, color: 0xe8d8b0, alpha: 0.9 });
+      }
+    }
+    g.alpha = 1;
+  }
+
+  private renderMines(sim: GameSim): void {
+    const g = this.mineGfx;
+    if (this.mineGfx.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const m of sim.mines) {
+      g.circle(m.x, m.y, 7).fill(m.arm > 0 ? 0x6b3323 : 0xc0392b).alpha = 0.85;
+      g.circle(m.x, m.y, 10).stroke({ width: 1, color: 0xffd28a, alpha: 0.6 });
+    }
+  }
+
+  private renderChests(sim: GameSim): void {
+    const seen = new Set<number>();
+    for (const c of sim.chests) {
+      if (c.opened) continue;
+      seen.add(c.id);
+      let s = this.chestSprites.get(c.id);
+      if (!s) {
+        s = new Sprite(Texture.WHITE);
+        s.tint = 0xd9a520;
+        s.width = 26; s.height = 20;
+        s.pivot.set(13, 10);
+        this.fxLayer.addChild(s);
+        this.chestSprites.set(c.id, s);
+      }
+      s.position.set(c.x, c.y);
+      s.visible = true;
+    }
+    for (const [id, s] of this.chestSprites) {
+      if (!seen.has(id)) s.visible = false;
+    }
+  }
+
+  /** fxLayer 需在 init 里挂到 worldLayer 之上。 */
+  attachFx(): void {
+    this.worldLayer.addChild(this.fxLayer);
   }
 }

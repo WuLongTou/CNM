@@ -6,6 +6,7 @@ import { localStorageStorage } from "../sim/save";
 import { GameView } from "../render/view";
 import { InputManager } from "./input";
 import { Hud } from "../ui/hud";
+import { EquipmentPanel } from "../ui/equipment";
 import "./style.css";
 
 const FIXED_DT = 1 / 60;
@@ -33,13 +34,22 @@ async function boot(): Promise<void> {
   const view = new GameView();
   const input = new InputManager(sim);
   await view.init(app);
+  view.attachFx();
   const hud = new Hud(sim, () => sim.start(), () => restart());
+  const equipment = new EquipmentPanel(sim);
+
+  // C 键：装备面板（toggle_equipment）；模态打开即暂停（EquipmentPanel 内部处理）
+  const onKey = (e: KeyboardEvent) => {
+    if (e.code === "KeyC" && sim.state === "Combat") equipment.toggle();
+  };
+  window.addEventListener("keydown", onKey);
 
   function restart(): void {
     sim = new GameSim(Date.now() % 100000, localStorageStorage());
     sim.onEvent((e) => eventBuffer.push(e));
     input.forceSim(sim);
     hud.resimulate(sim);
+    equipment.resimulate(sim);
     input.clearExternal();
   }
 
@@ -76,6 +86,7 @@ async function boot(): Promise<void> {
     }
     view.render(sim, app.ticker.deltaMS / 1000);
     hud.update();
+    if (equipment.visible) equipment.refresh();
   });
 
   // 启动完成：移除 boot 文案
