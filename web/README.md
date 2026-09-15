@@ -60,6 +60,11 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 - [x] M5 打击感与音频：hitstop（暴击 45/击杀 70/妖王 220ms）、震屏、伤害数字、
       WebAudio（BGM + 全套音效，音量持久化）
 
+## 性能
+
+渲染帧率上限 60 FPS（`app.ticker.maxFPS`，高刷屏不会跑满刷新率）；sim 逻辑固定 60Hz
+步长，与渲染解耦。`window.__CNM__.fps` 可读取当前帧率（E2E 有上限断言）。
+
 ## 硬约束（沿用项目 AGENTS.md）
 
 模态页面打开时游戏快捷键必须 100% 失效；UI 快捷键绝不复用已绑定的游戏键

@@ -17,7 +17,9 @@ import { MiniMap } from "../ui/minimap";
 import { Notify } from "../ui/notify";
 import "./style.css";
 
-const FIXED_DT = 1 / 60;
+/** 目标帧率：渲染限帧与逻辑步长共用同一来源（sim 固定 60Hz 步长）。 */
+const TARGET_FPS = 60;
+const FIXED_DT = 1 / TARGET_FPS;
 
 declare global {
   interface Window {
@@ -29,6 +31,8 @@ declare global {
       ready: boolean;
       /** 直接访问 sim 实例（Playwright evaluate 深度断言用）。 */
       sim: GameSim;
+      /** 当前渲染帧率（ticker 滚动平均；上限 TARGET_FPS=60）。 */
+      fps: number;
     };
   }
 }
@@ -36,6 +40,8 @@ declare global {
 async function boot(): Promise<void> {
   const app = new Application();
   await app.init({ resizeTo: window, background: 0x140a0a, antialias: true });
+  // 帧率上限 60：高刷屏（120Hz+）上 rAF 默认跑满刷新率白烧 GPU；逻辑步长本就是 60Hz
+  app.ticker.maxFPS = TARGET_FPS;
   document.getElementById("app")!.prepend(app.canvas);
 
   let sim = new GameSim(Date.now() % 100000, localStorageStorage());
@@ -152,6 +158,7 @@ async function boot(): Promise<void> {
     getEvents() { return eventBuffer.splice(0); },
     ready: true,
     get sim() { return sim; },
+    get fps() { return Math.round(app.ticker.FPS); },
   };
 
   // 主循环：固定 60Hz 步长累加器（确定性），命中停顿按墙钟缩放 dt，渲染每帧读最新状态
