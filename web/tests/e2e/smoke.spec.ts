@@ -7,7 +7,8 @@ test("页面加载完成，canvas 与 debug API 就绪", async ({ page }) => {
   await page.waitForFunction(() => window.__CNM__?.ready === true);
   // boot 文案已被移除，canvas 已挂载
   await expect(page.locator("#boot")).toHaveCount(0);
-  await expect(page.locator("canvas")).toHaveCount(1);
+  // 主画布（PixiJS 挂在 #app 直接子级；另有小地图 canvas 在 #ui-root 内）
+  await expect(page.locator("#app > canvas")).toHaveCount(1);
   const status = page.evaluate(() => window.__CNM__.exec({ id: 1, action: "status" }));
   expect(await status).toMatchObject({ id: 1, ok: true, data: { state: "WeaponSelection", round: 1 } });
 });

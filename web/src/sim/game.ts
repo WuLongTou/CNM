@@ -18,6 +18,7 @@ import { RECIPES } from "./recipes";
 import { WeatherSystem } from "./weather";
 import { AchievementSystem } from "./achievements";
 import { World } from "./world";
+import { HitStop, HITSTOP } from "./hitstop";
 
 export type GameState = "WeaponSelection" | "Combat" | "GameOver";
 
@@ -161,6 +162,16 @@ export class GameSim {
   bossKills = 0;
   /** 祭坛融合报价（打开时模态暂停，choose 指令应答）。 */
   fusionOffer: { a: string; b: string; resultName: string } | null = null;
+  /** 命中停顿（打击感）。 */
+  hitStop = new HitStop();
+  /** 伤害数字钩子（表现层订阅；世界坐标 + 是否暴击）。 */
+  onDamage: Array<(x: number, y: number, dmg: number, crit: boolean) => void> = [];
+  /** 攻击钩子（音频层订阅；主动武器类型）。 */
+  onAttack: Array<(type: AttackType) => void> = [];
+  /** 击杀钩子。 */
+  onKill: Array<(type: EnemyType, elite: boolean, boss: boolean) => void> = [];
+  /** 玩家受击钩子。 */
+  onPlayerHurt: Array<(hp: number) => void> = [];
   input: InputState = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
   /** 聚合战斗属性（武器变化时重算）。 */
   stats: PlayerStats;
@@ -514,10 +525,12 @@ export class GameSim {
     p.attackCd = c.BaseAttackCooldown / Math.max(0.1, this.stats.aspdMult);
     const type = this.attackType;
     const range = c.BaseAttackRange * this.stats.rangeMult;
+    for (const cb of this.onAttack) cb(type);
 
     if (type === "Melee") {
       for (const e of this.nearestEnemies(p.x, p.y, range, this.stats.multi)) {
-        this.hitEnemy(e, this.rollDamage());
+        const r = this.rollDamage();
+        this.hitEnemy(e, r);
       }
       this.harvestInRange(range);
     } else if (type === "Ranged") {
@@ -537,7 +550,7 @@ export class GameSim {
       if (this.mines.length >= MAX_MINES) this.mines.shift();
       this.mines.push({
         id: this.nextId++, x: p.x, y: p.y,
-        dmg: this.rollDamage(), splash: Math.max(60, this.stats.splash), psn: this.stats.psn,
+        dmg: this.rollDamage().dmg, splash: Math.max(60, this.stats.splash), psn: this.stats.psn,
         arm: 0.4,
       });
     }
@@ -565,14 +578,15 @@ export class GameSim {
     }
   }
 
-  private rollDamage(): number {
+  private rollDamage(): { dmg: number; crit: boolean } {
     const p = this.player;
     let dmg = p.baseDamage * this.stats.dmgMult;
     // 连击：每层 +5% 上限 +50%
     const comboBonus = Math.min(p.combo * CFG.Combo.DamageBonusPerLevel, CFG.Combo.MaxBonus);
     dmg *= 1 + comboBonus;
-    if (this.rng.chance(this.stats.crit / 100)) dmg *= CFG.Player.CritMultiplier;
-    return dmg;
+    const crit = this.rng.chance(this.stats.crit / 100);
+    if (crit) dmg *= CFG.Player.CritMultiplier;
+    return { dmg, crit };
   }
 
   private fireProjectile(ang: number, speed: number, life: number): void {
@@ -580,18 +594,25 @@ export class GameSim {
       id: this.nextId++,
       x: this.player.x, y: this.player.y,
       vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
-      dmg: this.rollDamage(),
+      dmg: this.rollDamage().dmg,
       life, pierce: this.stats.pierce, hitIds: new Set(),
       homing: this.stats.homing || this.attackType === "Magic",
       splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze, chain: this.stats.chain,
     });
   }
 
-  private hitEnemy(e: Enemy, dmg: number): void {
+  private hitEnemy(e: Enemy, r: { dmg: number; crit: boolean }): void {
     const p = this.player;
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
-    this.applyHit(e.x, e.y, e, dmg, { splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze });
+    this.notifyDamage(e.x, e.y, r.dmg, r.crit);
+    if (r.crit) this.hitStop.trigger(HITSTOP.CritMs);
+    this.applyHit(e.x, e.y, e, r.dmg, { splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze });
+  }
+
+  /** 伤害数字回调（暴击给更大字号）。 */
+  private notifyDamage(x: number, y: number, dmg: number, crit: boolean): void {
+    for (const cb of this.onDamage) cb(x, y, Math.round(dmg), crit);
   }
 
   private updateProjectiles(dt: number): void {
@@ -702,6 +723,9 @@ export class GameSim {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     this.kills++;
     if (e.boss) this.bossKills++;
+    // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
+    this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
+    for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
     let pts = ENEMY_SCORE[e.type] ?? 10;
     if (e.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
     if (e.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
@@ -768,6 +792,7 @@ export class GameSim {
         if (p.invincible <= 0) {
           p.hp -= e.damage;
           p.invincible = CFG.Player.InvincibleDuration;
+          for (const cb of this.onPlayerHurt) cb(p.hp);
           if (p.hp <= 0) this.onPlayerDied();
         }
       }

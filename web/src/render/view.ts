@@ -1,7 +1,7 @@
 // PixiJS 渲染层：只读 sim 状态绘制，不修改任何逻辑数据。
 // 地面=ground 大图血色调制平铺；实体=预切 96×96 atlas 帧动画；相机=指数平滑跟随。
 
-import { Application, Assets, Container, Graphics, Sprite, Texture } from "pixi.js";
+import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { GameSim, Enemy } from "../sim/game";
 import { CFG } from "../sim/config";
 
@@ -117,8 +117,13 @@ export class GameView {
     this.camY += (sim.player.y - screenH / 2 - this.camY) * k;
     this.camX = Math.min(sim.world.w - screenW, Math.max(0, this.camX));
     this.camY = Math.min(sim.world.h - screenH, Math.max(0, this.camY));
-    this.worldLayer.x = -this.camX;
-    this.worldLayer.y = -this.camY;
+    // 震屏：随机偏移 × 衰减强度
+    this.shakePower = Math.max(0, this.shakePower - 16 * this.shakePower * dt);
+    const sx = this.shakePower > 0.1 ? (Math.random() * 2 - 1) * this.shakePower : 0;
+    const sy = this.shakePower > 0.1 ? (Math.random() * 2 - 1) * this.shakePower : 0;
+    this.worldLayer.x = -this.camX + sx;
+    this.worldLayer.y = -this.camY + sy;
+    this.updateDamageTexts(dt);
 
     // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏；无敌帧闪烁
     const p = sim.player;
@@ -238,8 +243,51 @@ export class GameView {
     this.worldLayer.addChild(this.fxLayer);
   }
 
+  /** 触发震屏（强度≈像素幅度）。 */
+  shake(power: number): void {
+    this.shakePower = Math.max(this.shakePower, power);
+  }
+
+  /** 伤害数字：世界上浮淡出（暴击更大更红）。 */
+  spawnDamageNumber(x: number, y: number, dmg: number, crit: boolean): void {
+    if (this.damageTexts.length > 24) return; // 上限节流
+    const t = new Text({ text: String(dmg), style: {
+      fontFamily: "system-ui", fontSize: crit ? 26 : 17, fontWeight: "700",
+      fill: crit ? 0xffd24a : 0xff6b52, stroke: { color: 0x140a0a, width: 3 },
+    } });
+    t.anchor.set(0.5);
+    t.position.set(x + (Math.random() * 16 - 8), y - 40);
+    this.worldLayer.addChild(t);
+    this.damageTexts.push({ t, life: 0.8 });
+  }
+
+  private updateDamageTexts(dt: number): void {
+    const alive: Array<{ t: Text; life: number }> = [];
+    for (const d of this.damageTexts) {
+      d.life -= dt;
+      if (d.life <= 0) { d.t.destroy(); continue; }
+      d.t.y -= 45 * dt;
+      d.t.alpha = Math.min(1, d.life / 0.4);
+      alive.push(d);
+    }
+    this.damageTexts = alive;
+  }
+
+  /** 当前相机左上角与视口尺寸（小地图用）。 */
+  getCamera(): { x: number; y: number; w: number; h: number } {
+    return { x: this.camX, y: this.camY, w: this.app.screen.width, h: this.app.screen.height };
+  }
+
+  /** 世界坐标 → 屏幕坐标（小地图/外部标注用）。 */
+  worldToScreen(x: number, y: number): { x: number; y: number } {
+    return { x: x - this.camX, y: y - this.camY };
+  }
+
   private terrainGfx = new Graphics();
   private altarGfx = new Graphics();
+  /** 震屏强度（指数衰减，对齐 CameraShakeDecay 16）。 */
+  private shakePower = 0;
+  private damageTexts: Array<{ t: Text; life: number }> = [];
 
   /** 障碍与祭坛：每帧低开销重绘（数量少），采集死亡后消失、祭坛用后变暗。 */
   renderTerrain(sim: GameSim): void {

@@ -34,6 +34,14 @@ export class FusionPanel {
     this.el.classList.remove("hidden");
   }
 
+  /** 每帧同步：协议侧（choose 指令）应答后隐藏面板。 */
+  update(): void {
+    if (this.visible && !this.sim.fusionOffer) {
+      this.visible = false;
+      this.el.classList.add("hidden");
+    }
+  }
+
   private answer(accept: boolean): void {
     this.sim.exec({ action: "choose", args: { target: "fusion", choice: accept ? "accept" : "reject" } });
     this.visible = false;

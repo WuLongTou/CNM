@@ -1,0 +1,75 @@
+// 小地图：世界俯视缩略（左上角），妖物红点/宝箱金点/祭坛紫点/障碍灰点/玩家白点。
+
+import type { GameSim } from "../sim/game";
+
+const W = 148;
+const H = W * (2160 / 3840);
+
+export class MiniMap {
+  private canvas: HTMLCanvasElement;
+  private ctx: CanvasRenderingContext2D;
+  private frame = 0;
+
+  constructor(private sim: () => GameSim) {
+    this.canvas = document.createElement("canvas");
+    this.canvas.width = W;
+    this.canvas.height = H;
+    this.canvas.id = "minimap";
+    document.getElementById("ui-root")!.appendChild(this.canvas);
+    this.ctx = this.canvas.getContext("2d")!;
+  }
+
+  update(): void {
+    // 15fps 节流即可
+    if (++this.frame % 4 !== 0) return;
+    const sim = this.sim();
+    const g = this.ctx;
+    const sx = W / sim.world.w;
+    const sy = H / sim.world.h;
+    g.clearRect(0, 0, W, H);
+    g.fillStyle = "rgba(20,10,10,0.8)";
+    g.fillRect(0, 0, W, H);
+    g.strokeStyle = "#5a1f1f";
+    g.strokeRect(0.5, 0.5, W - 1, H - 1);
+    // 视口框
+    g.strokeStyle = "rgba(232,200,180,0.4)";
+    g.strokeRect(this.camX * sx, this.camY * sy, this.vw * sx, this.vh * sy);
+    // 点位
+    for (const o of sim.terrain.obstacles) {
+      if (o.dead) continue;
+      g.fillStyle = "rgba(140,130,120,0.5)";
+      g.fillRect(o.x * sx - 1, o.y * sy - 1, 2, 2);
+    }
+    for (const a of sim.terrain.altars) {
+      if (a.used) continue;
+      g.fillStyle = "#8e44ad";
+      g.fillRect(a.x * sx - 2, a.y * sy - 2, 4, 4);
+    }
+    for (const c of sim.chests) {
+      if (c.opened) continue;
+      g.fillStyle = "#d9a520";
+      g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
+    }
+    for (const e of sim.enemies) {
+      g.fillStyle = e.boss ? "#ffd700" : e.elite ? "#ff8c42" : "#c0392b";
+      const s = e.boss ? 4 : 2.5;
+      g.fillRect(e.x * sx - s / 2, e.y * sy - s / 2, s, s);
+    }
+    if (!sim.player.dead) {
+      g.fillStyle = "#f2e8d8";
+      g.fillRect(sim.player.x * sx - 2, sim.player.y * sy - 2, 4, 4);
+    }
+  }
+
+  private camX = 0;
+  private camY = 0;
+  private vw = 0;
+  private vh = 0;
+  /** main 每帧同步相机位置与视口尺寸（供视口框绘制）。 */
+  setCamera(x: number, y: number, viewW: number, viewH: number): void {
+    this.camX = x;
+    this.camY = y;
+    this.vw = viewW;
+    this.vh = viewH;
+  }
+}
