@@ -64,7 +64,7 @@ async function boot(): Promise<void> {
   sim.onAttack.push((type) => {
     audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
   });
-  sim.onKill.push(() => audio.play("zombie_die"));
+  sim.onKill.push(() => audio.play("enemy_die"));
   sim.onPlayerHurt.push(() => audio.play("player_hurt"));
 
   // sim 事件 → 通知条/音效（事件本身仍进 eventBuffer 供 Playwright 断言）
@@ -131,7 +131,7 @@ async function boot(): Promise<void> {
     sim.onAttack.push((type) => {
       audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
     });
-    sim.onKill.push(() => audio.play("zombie_die"));
+    sim.onKill.push(() => audio.play("enemy_die"));
     sim.onPlayerHurt.push(() => audio.play("player_hurt"));
     sim.onEvent(handleEvent);
   }

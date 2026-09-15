@@ -738,7 +738,7 @@ export class GameSim {
       e.hitFlash = Math.max(0, e.hitFlash - dt);
       e.attackCd = Math.max(0, e.attackCd - dt);
 
-      // 毒：1s 一跳（对齐 ZombiePoisonTick）
+      // 毒：1s 一跳
       if (e.psnT > 0) {
         e.psnT -= dt;
         e.psnTick += dt;
@@ -818,7 +818,7 @@ export class GameSim {
     this.emit("game_over", this.snapshot());
   }
 
-  /** 持续探索刷怪：世界妖物数维持 [6,18]，冷却 1.5s（对齐 _MaintainZombies）。 */
+  /** 持续探索刷怪：世界妖物数维持 [6,18]，冷却 1.5s。 */
   private maintainEnemies(dt: number): void {
     this.spawnCd = Math.max(0, this.spawnCd - dt);
     if (this.enemies.length >= CFG.Spawning.WorldMinEnemies) return;

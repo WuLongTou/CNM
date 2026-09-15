@@ -11,7 +11,7 @@ export class AudioManager {
   volume = 0.7;
 
   constructor() {
-    const saved = localStorage.getItem("zvs_volume");
+    const saved = localStorage.getItem("zhanyaolu_volume");
     if (saved !== null) this.volume = Math.min(1, Math.max(0, Number(saved)));
   }
 
@@ -24,15 +24,14 @@ export class AudioManager {
       this.bgmGain = this.ctx.createGain();
       this.bgmGain.gain.value = this.volume * 0.4;
       this.bgmGain.connect(this.ctx.destination);
-      const files = ["melee_attack", "ranged_attack", "magic_attack", "zombie_hit", "zombie_die",
+      const files = ["melee_attack", "ranged_attack", "magic_attack", "enemy_hit", "enemy_die",
         "player_hurt", "player_die", "game_over", "dash", "upgrade", "weapon_select", "combo_3", "combo_5"];
       await Promise.all(files.map(async (f) => {
         const res = await fetch(`assets/audio/${f}.wav`);
         if (!res.ok) return;
         this.buffers.set(f, await this.ctx!.decodeAudioData(await res.arrayBuffer()));
       }));
-      // 旧资产文件名沿用（zombie_hit/zombie_die 为命中/击杀音效）
-      const bgm = await fetch("assets/audio/bg_music.wav");
+            const bgm = await fetch("assets/audio/bg_music.wav");
       if (bgm.ok) {
         this.buffers.set("bg_music", await this.ctx.decodeAudioData(await bgm.arrayBuffer()));
       }
@@ -68,6 +67,6 @@ export class AudioManager {
     this.volume = Math.min(1, Math.max(0, v));
     if (this.sfxGain) this.sfxGain.gain.value = this.volume;
     if (this.bgmGain) this.bgmGain.gain.value = this.volume * 0.4;
-    localStorage.setItem("zvs_volume", String(this.volume));
+    localStorage.setItem("zhanyaolu_volume", String(this.volume));
   }
 }

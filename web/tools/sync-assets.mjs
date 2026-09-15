@@ -2,7 +2,7 @@
 // - 直拷：ground 大图、背景 JPG、音频 WAV、小图标 PNG
 // - 剥底：weapons/effects 等白底 JPG → RGBA PNG（规则直译 TextureUtils._StripWhiteBackground）
 // - 切帧：玩家 9 张 + 敌人 14 张 spritesheet → 预切 96×96 帧 + PixiJS TexturePacker atlas JSON
-// 用法：npm run assets:sync（cwd 任意，路径基于本文件定位）
+// 用法：npm run assets:sync（源：web/assets-src，生成：web/public/assets）
 import { createRequire } from "node:module";
 import path from "node:path";
 import fs from "node:fs";
@@ -16,8 +16,8 @@ const require = createRequire(import.meta.url);
 const sharp = require("sharp");
 
 const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const REPO_ROOT = path.resolve(WEB_ROOT, "..");
-const SRC = path.join(REPO_ROOT, "assets");
+const ASSETS_SRC = path.join(WEB_ROOT, "assets-src"); // 资产已迁入 web 内（源文件名全部中性）
+const SRC = ASSETS_SRC;
 const DST = path.join(WEB_ROOT, "public", "assets");
 
 /** @returns {Promise<{data: Uint8ClampedArray, width: number, height: number}>} */
@@ -221,16 +221,14 @@ async function main() {
     }
   }
 
-  // 敌人：瘦长全身像强制拉伸切帧。
-  // 源位置与文件名沿用 Godot 资产（sprites/enemies/sheets/zombie_*），输出统一改中性名 enemy_*。
+  // 敌人：瘦长全身像强制拉伸切帧（源文件名已中性化 enemy_*）
   const enemyDir = path.join(DST, "sprites", "enemies");
   fs.mkdirSync(enemyDir, { recursive: true });
   const enemySrc = path.join(SRC, "sprites", "enemies", "sheets");
   for (const f of fs.readdirSync(enemySrc)) {
     if (!f.endsWith(".png")) continue;
     const frames = await stretchFrames(path.join(enemySrc, f));
-    const outName = f.replace(/\.png$/, "").replace(/^zombie_/, "enemy_");
-    atlases.push(await writeAtlas(frames, outName, enemyDir));
+    atlases.push(await writeAtlas(frames, f.replace(/\.png$/, ""), enemyDir));
   }
   report.atlases = atlases;
 

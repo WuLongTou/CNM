@@ -1,6 +1,0 @@
-[gd_scene format=3 uid="uid://bqak2n5x7q3wy"]
-
-[ext_resource type="Script" uid="uid://b678xahnq5m3x" path="res://src/ui/HelpPanel.cs" id="1_hp"]
-
-[node name="HelpPanel" type="Panel"]
-script = ExtResource("1_hp")

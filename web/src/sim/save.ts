@@ -1,5 +1,5 @@
 // 存档接口与默认实现。sim 层只依赖 SaveStorage 接口（可注入内存版做测试），
-// localStorage 适配在 app 层。结构对齐 Godot 版 SaveManager 的 JSON 字典，
+// localStorage 适配在 app 层。
 // 并扩展永久升级（metaHp/metaDmg）与成就持久化（achievements）。
 
 export interface SaveData {
@@ -35,7 +35,7 @@ export function memoryStorage(): SaveStorage & { data: SaveData } {
 }
 
 /** 浏览器 localStorage 版。 */
-export function localStorageStorage(key = "zvs_web_save"): SaveStorage {
+export function localStorageStorage(key = "zhanyaolu_save"): SaveStorage {
   return {
     load() {
       try {

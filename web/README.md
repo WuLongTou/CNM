@@ -1,9 +1,8 @@
 # 斩妖录（Web 版）
 
 血色涂鸦风除妖生存 roguelike：扮演除妖师，在持续逼近的妖潮中存活。
-TypeScript + PixiJS v8 实现，由 Godot 4.7 + C# 版《僵尸大战》重构而来（玩法数值逐项对齐，
-**主题已全面替换为「斩妖」设定**：敌人统称妖物，代码/协议/资产名均无僵尸字样）。
-Godot 旧版保留在仓库根目录仅作数值参照，不属于本交付物。
+TypeScript + PixiJS v8 实现的完整重写版。玩法数值对齐 C# 旧版数据表，
+**主题为「斩妖」设定**：玩家是除妖师，敌人统称妖物。仓库内不含任何旧引擎工程文件。
 
 ## 架构
 
@@ -19,9 +18,8 @@ src/
 tests/
   sim/      vitest 逻辑回归。
   e2e/      Playwright E2E（完整对局闭环）。
-tools/      资产预处理：从 ../assets 生成 public/assets（剥底/切帧/atlas）。
-            敌人源资产沿用旧命名（sprites/enemies/sheets/zombie_*），
-            输出统一改中性名 enemy_*。
+tools/      资产预处理：从 web/assets-src 生成 public/assets（剥底/切帧/atlas），
+            源文件名全部中性（enemy_*）。
 ```
 
 ## 调试 / AI 测试 API
@@ -39,7 +37,7 @@ __CNM__.sim                                  // GameSim 实例（深度断言用
 ## 命令
 
 ```bash
-npm run assets:sync   # 从 ../assets 生成 public/assets（加资产后需重跑）
+npm run assets:sync   # 从 assets-src 生成 public/assets（加资产后需重跑）
 npm run dev           # Vite dev server @ 127.0.0.1:5173
 npm run build         # tsc 类型检查 + vite build
 npm test              # vitest 逻辑回归
@@ -51,7 +49,7 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 - [x] M0 骨架与测试闭环
 - [x] M1 核心战斗垂直切片：移动/攻击/连击、妖物追击+分离力、精英词缀、Boss（每 5 阶）、
       世界刷怪维持 [6,18]、45s 威胁阶、GameOver 结算存档（localStorage）
-- [x] M1.5 主题重构：《僵尸大战》→《斩妖录》，全部去僵尸化
+- [x] M1.5 主题重构：定名《斩妖录》，敌人统一妖物设定
 - [x] M2 武器系统：24 件武器（近战/远程/魔法/地雷）× 全机制（散射/穿透/追踪/链式/
       毒/冰缓/暴击/溅射/血代价）、升级卡 3 次进阶 6 次终极、宝箱、装备面板（C）
 - [x] M3 世界：障碍碰撞与采集（木/石/纤维/浆果）、合成 6 配方（I）、天气 4 型
@@ -69,5 +67,5 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 
 ## 待办（美术）
 
-现有妖物贴图沿用旧 spritesheet（视觉为旧怪物形象），后续按斩妖主题重绘
-（可重跑 assets/blender 烘焙管线或重绘 sheet，文件名沿用 enemy_* 即可）。
+现有妖物贴图为占位素材（视觉与斩妖主题的最终形象有差距），后续按主题重绘
+spritesheet，文件名沿用 enemy_* 放入 web/assets-src/sprites/enemies/sheets/ 即可。
