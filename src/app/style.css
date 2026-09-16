@@ -76,3 +76,45 @@
 /* ── 暂停面板 ── */
 .vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #7a5a48; font-size: 14px; }
 .panel button { display: inline-block; margin: 4px 6px; }
+
+/* ── 触屏控件（仅触屏设备/或 ?touch=1 时由 JS 挂载）── */
+/* touch-action:none 阻断浏览器手势（滚动/双击缩放），保证摇杆跟手 */
+#touch-root { position: absolute; inset: 0; pointer-events: none;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#joy-base {
+  position: absolute; left: 22px; bottom: 26px; width: 124px; height: 124px;
+  border-radius: 50%; pointer-events: auto; touch-action: none;
+  background: rgba(20, 10, 10, 0.45); border: 2px solid #5a1f1f;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
+}
+#joy-base.active { border-color: #c0392b; }
+#joy-knob {
+  position: absolute; left: 50%; top: 50%; width: 52px; height: 52px;
+  margin: -26px 0 0 -26px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 30%, #d94a3a, #8e2a20);
+  border: 2px solid #7a2a1a; opacity: 0.85;
+}
+#touch-btns { position: absolute; right: 22px; bottom: 26px; display: flex; align-items: flex-end; gap: 14px; }
+#touch-btns button, #touch-ui button {
+  pointer-events: auto; touch-action: none; cursor: pointer;
+  border-radius: 50%; color: #e8d8c8; font-weight: 700;
+  background: rgba(20, 10, 10, 0.45); border: 2px solid #5a1f1f;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+#touch-btns button.pressed, #touch-ui button.pressed { background: rgba(192, 57, 43, 0.7); border-color: #d94a3a; }
+#tbtn-attack { width: 84px; height: 84px; font-size: 26px; background: rgba(142, 42, 32, 0.55); }
+#tbtn-dash { width: 62px; height: 62px; font-size: 19px; }
+#touch-ui { position: absolute; left: 12px; top: 60px; display: flex; gap: 10px; }
+#touch-ui button { width: 42px; height: 42px; font-size: 15px; }
+
+/* ── 小屏（手机竖屏）：HUD 收纳 + 面板自适应 ── */
+@media (max-width: 640px) {
+  #hud { gap: 10px; padding: 0 10px; font-size: 12px; height: 46px; }
+  .hp-wrap { min-width: 0; }
+  .hp-bar { width: 96px; }
+  .stats { gap: 10px; }
+  .panel { padding: 26px 22px; max-width: calc(100vw - 32px); }
+  .panel h1 { font-size: 26px; }
+  .panel-wide, .help-panel { min-width: 0; width: calc(100vw - 32px); }
+  #minimap { width: 96px !important; height: auto !important; }
+}

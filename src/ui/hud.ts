@@ -101,6 +101,12 @@ export class Hud {
     this.sim = sim;
   }
 
+  /** 触屏设备上替换欢迎页操作提示（默认文案为键盘键位）。 */
+  setHint(text: string): void {
+    const el = this.welcome.querySelector<HTMLElement>(".hint");
+    if (el) el.textContent = text;
+  }
+
   /** 每帧同步 sim → DOM。 */
   update(): void {
     const s = this.sim;

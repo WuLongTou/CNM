@@ -15,6 +15,7 @@ import { HelpPanel } from "../ui/help";
 import { PauseMenu } from "../ui/pausemenu";
 import { MiniMap } from "../ui/minimap";
 import { Notify } from "../ui/notify";
+import { TouchControls, shouldUseTouch } from "../ui/touch";
 import "./style.css";
 
 /** 目标帧率：渲染限帧与逻辑步长共用同一来源（sim 固定 60Hz 步长）。 */
@@ -90,33 +91,47 @@ async function boot(): Promise<void> {
 
   // 键位路由优先级：融合面板（Enter/Delete/Esc）> 帮助切页 > 模态开关。
   // H=帮助、Esc=暂停（pause action）、C=装备、I=合成；模态互斥由各面板内部暂停处理。
+  // UI 动作提取为 uiActions 供键盘与触屏按钮排共用（触屏无键盘，同一套互斥语义）。
   const anyModalOpen = () => equipment.visible || crafting.visible || fusion.visible || help.visible || pauseMenu.visible;
   const closeAllModals = () => {
     equipment.toggle(false); crafting.toggle(false); help.toggle(false); pauseMenu.toggle(false);
   };
+  const uiActions = {
+    toggleHelp(): void {
+      if (sim.state === "GameOver") return;
+      closeAllModals();
+      help.toggle();
+    },
+    togglePause(): void {
+      if (anyModalOpen()) { closeAllModals(); return; }
+      if (sim.state === "Combat") pauseMenu.toggle();
+    },
+    openEquipment(): void {
+      if (sim.state !== "Combat") return;
+      crafting.toggle(false);
+      equipment.toggle();
+    },
+    openCrafting(): void {
+      if (sim.state !== "Combat") return;
+      equipment.toggle(false);
+      crafting.toggle();
+    },
+  };
   const onKey = (e: KeyboardEvent) => {
     if (fusion.onKey(e)) return;
     if (help.onKey(e)) return;
-    if (e.code === "KeyH" && sim.state !== "GameOver") {
-      closeAllModals();
-      help.toggle();
-      return;
-    }
-    if (e.code === "Escape") {
-      if (anyModalOpen()) { closeAllModals(); return; }
-      if (sim.state === "Combat") pauseMenu.toggle();
-      return;
-    }
-    if (sim.state !== "Combat") return;
-    if (e.code === "KeyC") {
-      crafting.toggle(false);
-      equipment.toggle();
-    } else if (e.code === "KeyI") {
-      equipment.toggle(false);
-      crafting.toggle();
-    }
+    if (e.code === "KeyH") uiActions.toggleHelp();
+    else if (e.code === "Escape") uiActions.togglePause();
+    else if (e.code === "KeyC") uiActions.openEquipment();
+    else if (e.code === "KeyI") uiActions.openCrafting();
   };
   window.addEventListener("keydown", onKey);
+
+  // 触屏适配：触屏设备（或 ?touch=1）挂载虚拟摇杆/攻击冲刺/UI 按钮排
+  if (shouldUseTouch()) {
+    input.setTouchSource(new TouchControls(uiActions));
+    hud.setHint("左侧摇杆移动 · 击钮攻击 · 冲钮冲刺");
+  }
 
   function restart(): void {
     sim = new GameSim(Date.now() % 100000, localStorageStorage());

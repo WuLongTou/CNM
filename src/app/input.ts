@@ -1,9 +1,18 @@
 // 键盘输入采样：维护物理按键状态，每帧合成为 sim 的 InputState。
 // 键位对齐 project.godot：WASD/方向键移动、Space 攻击、Shift 冲刺、Tab 切目标。
-// 外部调试输入（debug input 指令）与键盘叠加，脉冲类（dash/cycle）读后即清。
+// 外部调试输入（debug input 指令）与触屏控件状态（虚拟摇杆/按钮）与键盘三者叠加，
+// 脉冲类（dash/cycle）读后即清。
 // 硬约束：非战斗态输入由 sim.tick 门控清零，键盘层无需重复判断。
 
 import type { GameSim, InputState } from "../sim/game";
+
+/** 触屏控件状态源（TouchControls 满足此结构，解耦 ui 层类型）。 */
+export interface TouchInputSource {
+  readonly moveX: number;
+  readonly moveY: number;
+  readonly attack: boolean;
+  consumeDash(): boolean;
+}
 
 export class InputManager {
   private keys = new Set<string>();
@@ -13,7 +22,7 @@ export class InputManager {
   private pulseCycle = false;
   private disposers: Array<() => void> = [];
 
-  constructor(private sim: GameSim) {
+  constructor(private sim: GameSim, private touch: TouchInputSource | null = null) {
     const onDown = (e: KeyboardEvent) => {
       // 阻止方向键/空格/Tab 的页面滚动与焦点切换
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Tab"].includes(e.key)) e.preventDefault();
@@ -42,6 +51,11 @@ export class InputManager {
     if (args.cycle_target === true) this.pulseCycle = true;
   }
 
+  /** 注入触屏状态源（装配层在 UI 面板创建后挂载）。 */
+  setTouchSource(touch: TouchInputSource): void {
+    this.touch = touch;
+  }
+
   /** 重开一局时替换绑定的 sim 实例。 */
   forceSim(sim: GameSim): void {
     this.sim = sim;
@@ -51,7 +65,7 @@ export class InputManager {
     this.external = {};
   }
 
-  /** 每帧合成：键盘 + 外部叠加，写入 sim.input。 */
+  /** 每帧合成：键盘 + 触屏 + 外部叠加，写入 sim.input。 */
   sample(): void {
     const k = this.keys;
     let x = 0, y = 0;
@@ -59,11 +73,15 @@ export class InputManager {
     if (k.has("KeyD") || k.has("ArrowRight")) x += 1;
     if (k.has("KeyW") || k.has("ArrowUp")) y -= 1;
     if (k.has("KeyS") || k.has("ArrowDown")) y += 1;
-    const attack = k.has("Space");
+    const touch = this.touch;
+    const attack = k.has("Space")
+      || (touch?.attack ?? false)
+      || (this.external.attack ?? false);
+    if (touch?.consumeDash()) this.pulseDash = true;
     this.sim.input = {
-      moveX: Math.min(1, Math.max(-1, x + (this.external.moveX ?? 0))),
-      moveY: Math.min(1, Math.max(-1, y + (this.external.moveY ?? 0))),
-      attack: attack || (this.external.attack ?? false),
+      moveX: Math.min(1, Math.max(-1, x + (touch?.moveX ?? 0) + (this.external.moveX ?? 0))),
+      moveY: Math.min(1, Math.max(-1, y + (touch?.moveY ?? 0) + (this.external.moveY ?? 0))),
+      attack,
       dash: this.pulseDash,
       cycleTarget: this.pulseCycle,
     };

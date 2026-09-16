@@ -3,6 +3,7 @@
 
 import type { GameSim } from "../sim/game";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
+import { shouldUseTouch } from "./touch";
 
 export class HelpPanel {
   private el: HTMLElement;
@@ -24,6 +25,10 @@ export class HelpPanel {
       </div>`;
     document.getElementById("ui-root")!.appendChild(this.el);
     this.bodyEl = this.el.querySelector("#help-body")!;
+    if (shouldUseTouch()) {
+      const hint = this.el.querySelector<HTMLElement>(".hint");
+      if (hint) hint.textContent = "点击空白处关闭 · 点上方页签切换";
+    }
     this.el.addEventListener("click", (e) => { if (e.target === this.el) this.toggle(false); });
     this.el.querySelectorAll("button[data-page]").forEach((b) =>
       b.addEventListener("click", () => { this.page = Number((b as HTMLElement).dataset.page); this.refresh(); }));
@@ -55,13 +60,24 @@ export class HelpPanel {
     this.el.querySelectorAll(".help-tabs button").forEach((b, i) =>
       b.classList.toggle("active", i === this.page));
     if (this.page === 0) {
+      // 触屏设备展示触屏操作；桌面展示键位
+      const rows = shouldUseTouch()
+        ? [
+          ["移动", "左侧摇杆拖动"],
+          ["攻击", "击钮（按住连击）"],
+          ["冲刺", "冲钮"],
+          ["装备 / 合成 / 手账 / 暂停", "左上按钮排"],
+        ]
+        : [
+          ["移动", "WASD / 方向键"],
+          ["攻击", "空格（按住连击）"],
+          ["冲刺", "Shift"],
+          ["装备 / 合成", "C / I"],
+          ["帮助 / 暂停", "H / Esc"],
+        ];
       this.bodyEl.innerHTML = `
         <table class="help-table">
-          <tr><td>移动</td><td>WASD / 方向键</td></tr>
-          <tr><td>攻击</td><td>空格（按住连击）</td></tr>
-          <tr><td>冲刺</td><td>Shift</td></tr>
-          <tr><td>装备 / 合成</td><td>C / I</td></tr>
-          <tr><td>帮助 / 暂停</td><td>H / Esc</td></tr>
+          ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}
           <tr><td>采集</td><td>近战攻击范围内的树、岩、灌木</td></tr>
         </table>`;
     } else if (this.page === 1) {
