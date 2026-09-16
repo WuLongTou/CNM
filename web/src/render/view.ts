@@ -10,7 +10,7 @@ const ENEMY_ATLAS: Record<number, string> = {
   0: "enemy_basic_walk", 1: "enemy_fast_walk", 2: "enemy_tank_walk",
   3: "enemy_exploder_walk", 4: "enemy_invisible_walk", 5: "enemy_spitter_walk",
   6: "enemy_healer_walk", 7: "enemy_summoner_walk", 8: "enemy_archer_walk",
-  9: "ship_walk", 10: "mech_walk", 11: "knight_walk", 12: "dragon_walk", 13: "swarm_walk",
+  9: "enemy_ship_walk", 10: "enemy_mech_walk", 11: "enemy_knight_walk", 12: "enemy_dragon_walk", 13: "enemy_swarm_walk",
 };
 
 const CAMERA_SMOOTHING = 6.5; // 对齐 GameConfig.CameraSmoothing
