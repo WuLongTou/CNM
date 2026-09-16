@@ -53,3 +53,12 @@ browser-data/
 
 # Project-level scratch / audit / screenshot directory (see AGENTS.md)
 .local/
+
+# Web / Node build artifacts & cache
+node_modules
+node_modules/
+dist/
+test-results/
+playwright-report/
+public/assets/
+tools/sync-report.json

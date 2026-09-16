@@ -18,7 +18,7 @@ src/
 tests/
   sim/      vitest 逻辑回归。
   e2e/      Playwright E2E（完整对局闭环）。
-tools/      资产预处理：从 web/assets-src 生成 public/assets（剥底/切帧/atlas），
+tools/      资产预处理：从 assets-src 生成 public/assets（剥底/切帧/atlas），
             源文件名全部中性（enemy_*）。
 ```
 
@@ -73,4 +73,4 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 ## 待办（美术）
 
 现有妖物贴图为占位素材（视觉与斩妖主题的最终形象有差距），后续按主题重绘
-spritesheet，文件名沿用 enemy_* 放入 web/assets-src/sprites/enemies/sheets/ 即可。
+spritesheet，文件名沿用 enemy_* 放入 assets-src/sprites/enemies/sheets/ 即可。

@@ -18,13 +18,13 @@
 - 主题约束：项目为《斩妖录》妖物设定，已全面清除旧主题字样。新增代码、文案、
   资产名不得引入旧主题相关命名（旧怪名称等）；敌人资产源文件统一中性命名（enemy_*）。
 
-## 构建 & 测试（web/ 目录内执行）
+## 构建 & 测试（项目根目录执行）
 
 - `npm run dev` — Vite dev server @ 127.0.0.1:5173
 - `npm run build` — tsc 类型检查 + vite build
 - `npm test` — vitest 逻辑回归（sim 层，秒级）
 - `npm run e2e` — Playwright E2E（自动起 dev server）
-- `npm run assets:sync` — 从 web/assets-src 生成 public/assets（剥底/切帧/atlas）
+- `npm run assets:sync` — 从 assets-src 生成 public/assets（剥底/切帧/atlas）
 
 ## AI 自动测试入口
 
@@ -35,4 +35,4 @@ spawn/give/upgrade/weapons/craft/offer_fusion/buy_meta/meta/inventory/teleport/q
 
 ## 协作入口
 - 默认先理解上下文，再做最小必要改动；低风险任务直接实现，高风险任务再升级流程。
-- 游戏数值改动需与 `web/src/sim/config.ts`、`web/src/sim/weapons.ts` 数据表对照。
+- 游戏数值改动需与 `src/sim/config.ts`、`src/sim/weapons.ts` 数据表对照。

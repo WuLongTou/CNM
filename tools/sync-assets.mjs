@@ -1,8 +1,8 @@
-// 资产同步与预处理：从仓库根 assets/ 生成 web/public/assets/。
+// 资产同步与预处理：从 assets-src/ 生成 public/assets/。
 // - 直拷：ground 大图、背景 JPG、音频 WAV、小图标 PNG
 // - 剥底：weapons/effects 等白底 JPG → RGBA PNG（规则直译 TextureUtils._StripWhiteBackground）
 // - 切帧：玩家 9 张 + 敌人 14 张 spritesheet → 预切 96×96 帧 + PixiJS TexturePacker atlas JSON
-// 用法：npm run assets:sync（源：web/assets-src，生成：web/public/assets）
+// 用法：npm run assets:sync（源：assets-src，生成：public/assets）
 import { createRequire } from "node:module";
 import path from "node:path";
 import fs from "node:fs";
@@ -15,10 +15,10 @@ import {
 const require = createRequire(import.meta.url);
 const sharp = require("sharp");
 
-const WEB_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ASSETS_SRC = path.join(WEB_ROOT, "assets-src"); // 资产已迁入 web 内（源文件名全部中性）
+const PROJECT_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const ASSETS_SRC = path.join(PROJECT_ROOT, "assets-src");
 const SRC = ASSETS_SRC;
-const DST = path.join(WEB_ROOT, "public", "assets");
+const DST = path.join(PROJECT_ROOT, "public", "assets");
 
 /** @returns {Promise<{data: Uint8ClampedArray, width: number, height: number}>} */
 async function loadRaw(file) {
@@ -232,7 +232,7 @@ async function main() {
   }
   report.atlases = atlases;
 
-  fs.writeFileSync(path.join(WEB_ROOT, "tools", "sync-report.json"), JSON.stringify(report, null, 2));
+  fs.writeFileSync(path.join(PROJECT_ROOT, "tools", "sync-report.json"), JSON.stringify(report, null, 2));
   console.log("[assets] 同步完成:", JSON.stringify(report, null, 2));
 }
 
