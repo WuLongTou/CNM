@@ -47,3 +47,14 @@ test("天气变化反映到 HUD 标签", async ({ page }) => {
   // tick 推进后（帧循环持续运行）HUD 刷新为血月
   await page.waitForFunction(() => document.querySelector("#weather")?.textContent?.includes("血月"));
 });
+
+test("欢迎页展示历史战绩（来自存档）", async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem("zhanyaolu_save", JSON.stringify({
+      highScore: 4321, totalKills: 87, games: 5, coins: 120, metaHp: 2, metaDmg: 1, achievements: [],
+    }));
+  });
+  await page.goto("/");
+  await page.waitForFunction(() => window.__CNM__?.ready === true);
+  await expect(page.locator("#save-stats")).toHaveText(/最高分 4321 · 总击杀 87 · 已历 5 局/);
+});

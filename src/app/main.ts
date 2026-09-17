@@ -103,7 +103,9 @@ async function boot(): Promise<void> {
       if (d.phase === "windup") { view.spawnBurst(Number(d.x), Number(d.y), 0xd93a2b); audio.play("enemy_hit"); }
       else view.shake(5);
     }
-    else if (e.event === "game_over") { audio.play("game_over"); view.shake(18); }
+    else if (e.event === "player_dash") audio.play("dash");
+    else if (e.event === "combo_milestone") audio.play("combo_3");
+    else if (e.event === "game_over") { audio.play("player_die"); audio.stopBgm(); view.shake(18); }
   };
 
   // 键位路由优先级：升级三选一（1/2/3，吞掉其余键）> 融合面板（Enter/Delete/Esc）

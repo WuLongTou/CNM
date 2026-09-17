@@ -57,11 +57,23 @@ export class Hud {
       <div class="panel">
         <h1>斩妖录</h1>
         <p class="sub">血色涂鸦 · 除妖生存</p>
+        <p id="save-stats" class="sub"></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
     this.root.appendChild(this.welcome);
     this.welcome.querySelector("#btn-start")!.addEventListener("click", () => this.onStart());
+    this.refreshSaveStats();
+  }
+
+  /** 欢迎页历史战绩（最高分/总击杀/局数），零局时显示引言。 */
+  private refreshSaveStats(): void {
+    const el = this.welcome.querySelector<HTMLElement>("#save-stats");
+    if (!el) return;
+    const d = this.sim.exec({ action: "meta" }).data as { highScore: number; totalKills: number; games: number };
+    el.textContent = d.games > 0
+      ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局`
+      : "初入山林 · 祝武运昌隆";
   }
 
   private buildGameOver(): void {
@@ -98,9 +110,10 @@ export class Hud {
     (this.gameover.querySelector("#meta-coins") as HTMLElement).textContent = `金币 ${m.coins}`;
   }
 
-  /** 重开一局时替换绑定的 sim 实例。 */
+  /** 重开一局时替换绑定的 sim 实例（新局存档可能已更新战绩）。 */
   resimulate(sim: GameSim): void {
     this.sim = sim;
+    this.refreshSaveStats();
   }
 
   /** 触屏设备上替换欢迎页操作提示（默认文案为键盘键位）。 */

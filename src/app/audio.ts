@@ -63,6 +63,14 @@ export class AudioManager {
     this.bgmSource = src;
   }
 
+  /** 停止 BGM（GameOver 结算等场景）。 */
+  stopBgm(): void {
+    if (this.bgmSource) {
+      try { this.bgmSource.stop(); } catch { /* 已停止则忽略 */ }
+      this.bgmSource = null;
+    }
+  }
+
   setVolume(v: number): void {
     this.volume = Math.min(1, Math.max(0, v));
     if (this.sfxGain) this.sfxGain.gain.value = this.volume;

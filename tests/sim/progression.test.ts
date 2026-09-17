@@ -234,3 +234,36 @@ describe("高阶妖物机制", () => {
     expect(Math.abs(ship.x - x0)).toBeGreaterThan(4);
   });
 });
+
+describe("音频事件与累计成就", () => {
+  it("冲刺触发 player_dash 事件，连击 3 触发 combo_milestone", () => {
+    const sim = newSim();
+    const events: string[] = [];
+    sim.onEvent((e) => events.push(e.event));
+    // 冲刺
+    sim.input = { moveX: 0, moveY: 0, attack: false, dash: true, cycleTarget: false };
+    sim.tick();
+    expect(events).toContain("player_dash");
+    // 连击 3：命中三次（spawn 靶子贴脸 + 按住攻击）
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 10, y: sim.player.y } } });
+    const z = sim.enemies[0];
+    z.hp = 1e9; // 不死靶子
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    for (let i = 0; i < 90 && !events.includes("combo_milestone"); i++) sim.tick();
+    expect(events).toContain("combo_milestone");
+  });
+
+  it("成就累计击杀按跨局 totalKills 判定", () => {
+    const sim = newSim();
+    // 存档已有 49 累计击杀：本局首杀即应达成 slayer_50
+    const prev = sim.exec({ action: "meta" });
+    void prev;
+    (sim as unknown as { baseTotalKills: number }).baseTotalKills = 49;
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 10, y: sim.player.y } } });
+    (sim as unknown as { onEnemyKilled: (e: (typeof sim.enemies)[0]) => void }).onEnemyKilled(sim.enemies[0]);
+    sim.tick(); // 成就仅在 tick 中刷新
+    expect(sim.achievements.unlocked.has("first_blood")).toBe(true);
+    expect(sim.achievements.unlocked.has("slayer_50")).toBe(true);
+    expect(sim.achievements.unlocked.has("slayer_200")).toBe(false);
+  });
+});

@@ -254,6 +254,8 @@ export class GameSim {
   private bossSpawnedForRound = 0;
   private events: SimEvent[] = [];
   private listeners: Array<(e: SimEvent) => void> = [];
+  /** 存档中的跨局累计击杀基线（本局 kills 之外的存量）。 */
+  private baseTotalKills = 0;
 
   constructor(seed = 1, save: SaveStorage = { load: () => null, save: () => {} }) {
     this.seed = seed;
@@ -264,6 +266,8 @@ export class GameSim {
     // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）
     const maxHp = c.MaxHealth + (prev?.metaHp ?? 0) * 20;
     const baseDamage = c.BaseDamage * (1 + (prev?.metaDmg ?? 0) * 0.1);
+    // 跨局累计击杀基线（成就「累计击杀」用；死亡结算时存档累加）
+    this.baseTotalKills = prev?.totalKills ?? 0;
     this.player = {
       x: this.world.w / 2, y: this.world.h / 2,
       hp: maxHp, maxHp,
@@ -496,7 +500,10 @@ export class GameSim {
       this.lastWeatherType = this.weather.state.type;
       this.emit("weather_changed", { type: this.weather.state.type, intensity: this.weather.state.intensity });
     }
-    this.achievements.update({ kills: this.kills, survivalTime: this.survivalTime, bossKills: this.bossKills });
+    this.achievements.update({
+      kills: this.kills, survivalTime: this.survivalTime,
+      bossKills: this.bossKills, totalKills: this.baseTotalKills + this.kills,
+    });
   }
 
   /** 靠近祭坛触发融合报价（每座一次性；模态打开即暂停）。 */
@@ -612,6 +619,7 @@ export class GameSim {
     if (this.input.dash && p.dashCd <= 0) {
       p.dashTimer = c.DashDuration;
       p.dashCd = c.DashCooldown;
+      this.emit("player_dash", { x: p.x, y: p.y });
     }
     this.input.dash = false;
     this.input.cycleTarget = false;
@@ -733,6 +741,8 @@ export class GameSim {
     const p = this.player;
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
+    // 连击里程碑音效节点（表现层订阅；3 连提示音，避免每层都响）
+    if (p.combo === 3) this.emit("combo_milestone", { count: 3 });
     this.notifyDamage(e.x, e.y, r.dmg, r.crit);
     if (r.crit) this.hitStop.trigger(HITSTOP.CritMs);
     this.applyHit(e.x, e.y, e, r.dmg, { splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze });
@@ -1341,7 +1351,10 @@ export class GameSim {
       case "buy_meta": return this.buyMeta(args.kind === "dmg" ? "dmg" : "hp");
       case "meta": {
         const d = this.save.load() ?? defaultSave();
-        return { coins: d.coins, metaHp: d.metaHp, metaDmg: d.metaDmg };
+        return {
+          coins: d.coins, metaHp: d.metaHp, metaDmg: d.metaDmg,
+          highScore: d.highScore, totalKills: d.totalKills, games: d.games,
+        };
       }
       case "inventory": return { counts: { ...this.inventory.counts } };
       case "weapons": return {
