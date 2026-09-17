@@ -2,7 +2,7 @@
 // EffectCatalog（dmg 伤害乘数、asp 攻速乘数、rng 范围乘数、hp 每击血代价、
 // psn 中毒概率%、crit 暴击率加成%、multi 近战/弹道目标数、splash 溅射半径、
 // chain 链式弹射次数、freeze 冰缓概率%、homing 追踪）。
-// 24 件代表性武器覆盖全部机制，表驱动可按同结构扩至 C# 版全量 63 件。
+// 23 件代表性武器覆盖全部机制，表驱动可按同结构扩至 C# 版全量 63 件。
 
 export type AttackType = "Melee" | "Ranged" | "Magic" | "Mine";
 

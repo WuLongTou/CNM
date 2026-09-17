@@ -88,6 +88,10 @@
 .help-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .help-table td { padding: 4px 10px; border-bottom: 1px solid #e0d0b8; color: #5a3a2a; }
 .help-table td:first-child { color: #8e2a20; font-weight: 700; width: 90px; }
+.help-table tr.ach-done td { color: #b8860b; }
+.help-table .w-star { color: #d9a520; font-style: normal; font-size: 11px; margin-left: 4px; letter-spacing: -1px; }
+.help-table .w-tags { color: #9a7a68; font-size: 11px; }
+.help-table .w-fuse { color: #8e44ad; font-size: 11px; }
 
 /* ── 暂停面板 ── */
 .vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #7a5a48; font-size: 14px; }

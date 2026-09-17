@@ -1,8 +1,11 @@
-// 帮助面板（H 键）：操作说明 / 妖物图鉴 / 机制。模态暂停。
+// 帮助面板（H 键）：操作说明 / 妖物图鉴 / 武器图鉴 / 成就 / 机制。模态暂停。
 // H 为 toggle_help 已绑定游戏键——打开期间游戏输入由 sim 门控 100% 失效（项目硬约束）。
 
 import type { GameSim } from "../sim/game";
+import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
+import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
+import { ACHIEVEMENTS } from "../sim/achievements";
 import { shouldUseTouch } from "./touch";
 
 export class HelpPanel {
@@ -11,7 +14,7 @@ export class HelpPanel {
   private bodyEl!: HTMLElement;
   visible = false;
 
-  private pages = ["操作", "妖物图鉴", "机制"];
+  private pages = ["操作", "妖物图鉴", "武器图鉴", "成就", "机制"];
 
   constructor(private sim: GameSim) {
     this.el = document.createElement("div");
@@ -59,45 +62,103 @@ export class HelpPanel {
   refresh(): void {
     this.el.querySelectorAll(".help-tabs button").forEach((b, i) =>
       b.classList.toggle("active", i === this.page));
-    if (this.page === 0) {
-      // 触屏设备展示触屏操作；桌面展示键位
-      const rows = shouldUseTouch()
-        ? [
-          ["移动", "左侧摇杆拖动"],
-          ["攻击", "击钮（按住连击）"],
-          ["冲刺", "冲钮"],
-          ["装备 / 合成 / 手账 / 暂停", "左上按钮排"],
-        ]
-        : [
-          ["移动", "WASD / 方向键"],
-          ["攻击", "空格（按住连击）"],
-          ["冲刺", "Shift"],
-          ["装备 / 合成", "C / I"],
-          ["帮助 / 暂停", "H / Esc"],
-        ];
-      this.bodyEl.innerHTML = `
-        <table class="help-table">
-          ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}
-          <tr><td>采集</td><td>近战攻击范围内的树、岩、灌木</td></tr>
-        </table>`;
-    } else if (this.page === 1) {
-      this.bodyEl.innerHTML = `<table class="help-table">
-        ${Object.keys(ENEMY_NAMES).map((k) => {
-          const s = ENEMY_STATS[Number(k)];
-          return `<tr><td>${ENEMY_NAMES[Number(k)]}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td></tr>`;
-        }).join("")}
-      </table>`;
-    } else {
-      this.bodyEl.innerHTML = `
-        <table class="help-table">
-          <tr><td>威胁阶</td><td>每 45 秒推进一阶，妖物变强；每 5 阶出妖王</td></tr>
-          <tr><td>精英词缀</td><td>迅捷 / 再生 / 护盾 / 爆裂 / 狂乱</td></tr>
-          <tr><td>武器进阶</td><td>拾取符箓三选一升级；同武器 3 次进阶、6 次终极</td></tr>
-          <tr><td>妖物机制</td><td>爆魈自爆 · 隐煞潜行 · 瘴妖毒弹 · 愈妖疗伤 · 唤灵召唤 · 弩妖远程</td></tr>
-          <tr><td>祭坛融合</td><td>携带两件武器靠近祭坛，可祭炼为新武器</td></tr>
-          <tr><td>天气</td><td>雨减速、雾降能见、血月妖潮狂暴且精英频出</td></tr>
-          <tr><td>连击</td><td>连续命中叠伤害（每层 +5%，上限 +50%）</td></tr>
-        </table>`;
+    switch (this.pages[this.page]) {
+      case "操作": this.renderControls(); break;
+      case "妖物图鉴": this.renderEnemyCodex(); break;
+      case "武器图鉴": this.renderWeaponCodex(); break;
+      case "成就": this.renderAchievements(); break;
+      case "机制": this.renderMechanics(); break;
     }
+  }
+
+  private renderControls(): void {
+    // 触屏设备展示触屏操作；桌面展示键位
+    const rows = shouldUseTouch()
+      ? [
+        ["移动", "左侧摇杆拖动"],
+        ["攻击", "击钮（按住连击）"],
+        ["冲刺", "冲钮"],
+        ["装备 / 合成 / 手账 / 暂停", "左上按钮排"],
+      ]
+      : [
+        ["移动", "WASD / 方向键"],
+        ["攻击", "空格（按住连击）"],
+        ["冲刺", "Shift"],
+        ["装备 / 合成", "C / I"],
+        ["帮助 / 暂停", "H / Esc"],
+      ];
+    this.bodyEl.innerHTML = `
+      <table class="help-table">
+        ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}
+        <tr><td>采集</td><td>近战攻击范围内的树、岩、灌木</td></tr>
+      </table>`;
+  }
+
+  private renderEnemyCodex(): void {
+    this.bodyEl.innerHTML = `<table class="help-table">
+      ${Object.keys(ENEMY_NAMES).map((k) => {
+        const s = ENEMY_STATS[Number(k)];
+        return `<tr><td>${ENEMY_NAMES[Number(k)]}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td></tr>`;
+      }).join("")}
+    </table>`;
+  }
+
+  /** 武器机制字段 → 中文标签（图鉴可查阅性）。 */
+  private weaponTags(d: WeaponDef): string {
+    const t: string[] = [];
+    if (d.dmg) t.push(`伤×${d.dmg}`);
+    if (d.asp) t.push(`速×${d.asp}`);
+    if (d.rng) t.push(`程×${d.rng}`);
+    if (d.spread) t.push(`散射×${d.spread}`);
+    if (d.pierce) t.push(`穿透×${d.pierce}`);
+    if (d.homing) t.push("追踪");
+    if (d.chain) t.push(`链式×${d.chain}`);
+    if (d.splash) t.push(`溅射${d.splash}`);
+    if (d.psn) t.push(`中毒${d.psn}%`);
+    if (d.freeze) t.push(`冰缓${d.freeze}%`);
+    if (d.crit) t.push(`暴击+${d.crit}%`);
+    if (d.multi && d.multi > 1) t.push(`多目标×${d.multi}`);
+    return t.join(" · ");
+  }
+
+  private renderWeaponCodex(): void {
+    const TYPE_NAMES: Record<WeaponDef["type"], string> = { Melee: "近战", Ranged: "远程", Magic: "魔法", Mine: "地雷" };
+    const order: Array<WeaponDef["type"]> = ["Melee", "Ranged", "Magic", "Mine"];
+    const fusionable = new Set(FUSION_RECIPES.flatMap((r) => [r.a, r.b]));
+    const rows = order.flatMap((type) =>
+      Object.values(WEAPON_DATA)
+        .filter((d) => d.type === type)
+        .sort((a, b) => a.tier - b.tier)
+        .map((d) => {
+          const stars = "★".repeat(d.rarity);
+          const fuse = fusionable.has(d.name) ? " · 可祭炼" : "";
+          const tags = this.weaponTags(d);
+          return `<tr><td>${d.name}<i class="w-star">${stars}</i></td>` +
+            `<td>[${TYPE_NAMES[d.type]}] ${d.desc}${tags ? `<br><span class="w-tags">${tags}</span>` : ""}${fuse ? `<span class="w-fuse">${fuse}</span>` : ""}</td></tr>`;
+        }));
+    this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;
+  }
+
+  private renderAchievements(): void {
+    const unlocked = this.sim.achievements.unlocked;
+    const rows = ACHIEVEMENTS.map((a) => {
+      const done = unlocked.has(a.id);
+      return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
+        `<td>${a.desc} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
+    });
+    this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;
+  }
+
+  private renderMechanics(): void {
+    this.bodyEl.innerHTML = `
+      <table class="help-table">
+        <tr><td>威胁阶</td><td>每 45 秒推进一阶，妖物变强；每 5 阶出妖王</td></tr>
+        <tr><td>精英词缀</td><td>迅捷 / 再生 / 护盾 / 爆裂 / 狂乱</td></tr>
+        <tr><td>武器进阶</td><td>拾取符箓三选一升级；同武器 3 次进阶、6 次终极</td></tr>
+        <tr><td>妖物机制</td><td>爆魈自爆 · 隐煞潜行 · 瘴妖毒弹 · 愈妖疗伤 · 唤灵召唤 · 弩妖远程</td></tr>
+        <tr><td>祭坛融合</td><td>携带两件武器靠近祭坛，可祭炼为新武器</td></tr>
+        <tr><td>天气</td><td>雨减速、雾降能见、血月妖潮狂暴且精英频出</td></tr>
+        <tr><td>连击</td><td>连续命中叠伤害（每层 +5%，上限 +50%）</td></tr>
+      </table>`;
   }
 }

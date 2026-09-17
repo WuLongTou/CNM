@@ -130,7 +130,7 @@ export class Hud {
     if (!wasOver && s.state === "GameOver") {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
-        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 金币 +${coins}`;
+        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · 金币 +${coins}`;
       this.refreshMeta();
     }
   }

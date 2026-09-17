@@ -50,6 +50,16 @@ export class MiniMap {
       g.fillStyle = "#d9a520";
       g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
     }
+    // 升级符箓：亮白菱形（区别于宝箱金方块），屏幕外掉落也可寻
+    g.fillStyle = "#ffffff";
+    for (const u of sim.pickups) {
+      g.beginPath();
+      g.moveTo(u.x * sx, u.y * sy - 3);
+      g.lineTo(u.x * sx + 3, u.y * sy);
+      g.lineTo(u.x * sx, u.y * sy + 3);
+      g.lineTo(u.x * sx - 3, u.y * sy);
+      g.fill();
+    }
     for (const e of sim.enemies) {
       g.fillStyle = e.boss ? "#ffd700" : e.elite ? "#ff8c42" : "#c0392b";
       const s = e.boss ? 4 : 2.5;

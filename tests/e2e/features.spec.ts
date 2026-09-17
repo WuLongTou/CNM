@@ -66,3 +66,29 @@ test("合成与永久升级协议", async ({ page }) => {
   expect(meta).toHaveProperty("coins");
   expect(meta).toHaveProperty("metaHp");
 });
+
+test("帮助手账：武器图鉴收录全部武器，成就页展示达成状态", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.__CNM__?.ready === true);
+  await page.click("#btn-start");
+  await page.keyboard.press("KeyH");
+  await expect(page.locator(".help-panel")).toBeVisible();
+  // 武器图鉴：24 件武器全收录，含稀有度星级与祭炼标注
+  await page.click('.help-tabs button[data-page="2"]');
+  await expect(page.locator(".help-panel h2")).toBeVisible();
+  const rows = await page.locator("#help-body .help-table tr").count();
+  expect(rows).toBe(23); // 武器表实际 23 件（近战8/远程6/魔法6/地雷3）
+  await expect(page.locator("#help-body .w-star").first()).toBeVisible();
+  await expect(page.locator("#help-body .w-fuse").first()).toBeVisible();
+  // 成就页：7 项成就与达成状态
+  await page.click('.help-tabs button[data-page="3"]');
+  const achRows = await page.locator("#help-body .help-table tr").count();
+  expect(achRows).toBe(7);
+  // 左方向键循环切页（成就 → 武器图鉴）
+  await page.keyboard.press("ArrowLeft");
+  await page.waitForFunction(() => {
+    const active = document.querySelector(".help-tabs button.active")?.textContent;
+    return active === "武器图鉴";
+  });
+  await page.keyboard.press("Escape");
+});
