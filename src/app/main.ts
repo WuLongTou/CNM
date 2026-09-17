@@ -92,12 +92,17 @@ async function boot(): Promise<void> {
     else if (e.event === "weather_changed") {
       const WNAMES: Record<string, string> = { Rain: "阴雨", Fog: "浓雾", BloodMoon: "血月升起" };
       notify.push(WNAMES[d.type] ? `天气异变：${WNAMES[d.type]}` : "天色放晴");
-      audio.play("achievement");
+      audio.play(d.type === "BloodMoon" ? "lightning" : "charm");
     }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }
-    else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("enemy_die"); }
+    else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }
     else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);
     else if (e.event === "enemy_summon") view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad);
+    else if (e.event === "enemy_block") view.spawnBurst(Number(d.x), Number(d.y), 0x8ab8d8);
+    else if (e.event === "enemy_charge") {
+      if (d.phase === "windup") { view.spawnBurst(Number(d.x), Number(d.y), 0xd93a2b); audio.play("enemy_hit"); }
+      else view.shake(5);
+    }
     else if (e.event === "game_over") { audio.play("game_over"); view.shake(18); }
   };
 

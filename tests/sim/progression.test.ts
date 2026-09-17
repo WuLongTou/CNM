@@ -179,3 +179,58 @@ describe("妖物特殊 AI", () => {
     expect(sim.enemies.filter((e) => e.type === 13).length).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe("高阶妖物机制", () => {
+  it("铁傀常驻减伤 25%", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 10, near: "random" } });
+    const mech = sim.enemies.find((e) => e.type === 10)!;
+    const hp0 = mech.hp;
+    (sim as unknown as { dealDamage: (e: typeof mech, d: number) => void }).dealDamage(mech, 100);
+    expect(hp0 - mech.hp).toBeCloseTo(75);
+  });
+
+  it("甲妖举盾期间完全免伤，盾歇正常受击", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 11, near: "random" } });
+    const knight = sim.enemies.find((e) => e.type === 11)!;
+    const dd = (e: typeof knight, d: number) =>
+      (sim as unknown as { dealDamage: (e2: typeof knight, d2: number) => void }).dealDamage(e, d);
+    knight.blockT = 1;
+    const hp0 = knight.hp;
+    dd(knight, 100);
+    expect(knight.hp).toBe(hp0); // 举盾免伤
+    knight.blockT = 0;
+    dd(knight, 100);
+    expect(knight.hp).toBe(hp0 - 100); // 盾歇受击
+  });
+
+  it("蛟周期蓄力后锁定方向冲刺，接触玩家造成 1.5× 伤害", () => {
+    const sim = newSim();
+    sim.player.hp = 1e9;
+    sim.exec({ action: "spawn", args: { type: 12, near: { x: sim.player.x + 300, y: sim.player.y } } });
+    const dragon = sim.enemies.find((e) => e.type === 12)!;
+    dragon.chargeCd = 0.001;
+    sim.tick();
+    expect(dragon.chargeWind).toBeGreaterThan(0); // 进入蓄力
+    // 等待蓄力结束进入冲刺（蓄力 0.5s = 30 tick）
+    for (let i = 0; i < 60 && dragon.chargeDash <= 0; i++) sim.tick();
+    expect(dragon.chargeDash).toBeGreaterThan(0);
+    // 玩家站到冲刺方向前方 80px 的固定点（冲刺全程约 175px 必然穿过）
+    const sp = Math.hypot(dragon.chargeVx, dragon.chargeVy) || 1;
+    sim.player.x = dragon.x + (dragon.chargeVx / sp) * 80;
+    sim.player.y = dragon.y + (dragon.chargeVy / sp) * 80;
+    for (let i = 0; i < 40 && sim.player.hp >= 1e9; i++) sim.tick();
+    expect(sim.player.hp).toBeLessThan(1e9); // 冲撞命中
+  });
+
+  it("浮灯蛇形漂浮：追击轨迹含垂直摆动分量", () => {
+    const sim = newSim();
+    // 玩家在正下方：常规追击只在 y 轴移动，摆动应产生 x 偏移
+    sim.exec({ action: "spawn", args: { type: 9, near: { x: sim.player.x, y: sim.player.y - 400 } } });
+    const ship = sim.enemies.find((e) => e.type === 9)!;
+    const x0 = ship.x;
+    for (let i = 0; i < 40; i++) sim.tick();
+    expect(Math.abs(ship.x - x0)).toBeGreaterThan(4);
+  });
+});

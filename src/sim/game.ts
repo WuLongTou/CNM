@@ -54,6 +54,13 @@ export interface Enemy {
   healCd: number;
   /** 唤灵召唤冷却秒。 */
   summonCd: number;
+  /** 浮灯：横向漂浮摆动相位。 */
+  floatPhase: number;
+  /** 甲妖：举盾剩余秒 / 举盾冷却秒。 */
+  blockT: number; blockCd: number;
+  /** 蛟：冲撞冷却 / 蓄力剩余 / 冲刺剩余 / 锁定方向 / 本次冲刺是否已命中。 */
+  chargeCd: number; chargeWind: number; chargeDash: number;
+  chargeVx: number; chargeVy: number; chargeHit: boolean;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -183,6 +190,14 @@ const INVISIBLE = { stealthSec: 2.4, visibleSec: 3.0, revealDist: 110 };
 const HEALER = { range: 160, ratio: 0.03, cd: 2.5 };
 /** 唤灵召唤：冷却 / 每次 2 只 / 全场蚀群上限。 */
 const SUMMONER = { cd: 6, count: 2, swarmCap: 12 };
+/** 铁傀装甲：常驻受伤减免。 */
+const MECH_ARMOR = 0.75;
+/** 甲妖举盾：持续 / 冷却（举盾期间完全免伤）。 */
+const KNIGHT = { blockSec: 1.2, cd: 5 };
+/** 蛟冲撞：冷却 / 蓄力 / 冲刺时长 / 冲刺速度倍数 / 接触伤害倍数。 */
+const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
+/** 浮灯漂浮：摆动频率（rad/s）/ 垂直于追击方向的摆动速度幅值。 */
+const SHIP_FLOAT = { rate: 2.2, sway: 90 };
 const MAX_MINES = 6;
 const CHAIN_RANGE = 150;        // ChainSearchRange
 const POISON_DURATION = 3;      // PoisonDurationDefault
@@ -807,6 +822,8 @@ export class GameSim {
   }
 
   private applyHit(x: number, y: number, e: Enemy, dmg: number, fx: { splash: number; psn: number; freeze: number }): void {
+    // 甲妖举盾：完全免疫伤害与异常状态
+    if (e.type === EnemyType.Knight && e.blockT > 0) return;
     this.dealDamage(e, dmg);
     if (fx.psn > 0 && this.rng.chance(fx.psn / 100)) {
       e.psnDps = 3 + dmg * 0.1;
@@ -824,6 +841,10 @@ export class GameSim {
   }
 
   private dealDamage(e: Enemy, damage: number): void {
+    // 甲妖举盾：完全免伤（applyHit 侧还负责免异常状态）
+    if (e.type === EnemyType.Knight && e.blockT > 0) return;
+    // 铁傀装甲：常驻受伤减免（不吃暴击例外，所有来源一致）
+    if (e.type === EnemyType.Mech) damage *= MECH_ARMOR;
     if (e.shieldHp > 0) {
       const absorbed = Math.min(e.shieldHp, damage);
       e.shieldHp -= absorbed;
@@ -918,12 +939,25 @@ export class GameSim {
         continue;
       }
 
+      // 蛟：周期蓄力→锁定方向高速冲撞（蓄力/冲刺期间跳过常规移动与攻击）
+      if (e.type === EnemyType.Dragon && this.updateDragonCharge(e, dt, dist)) continue;
+
+      // 甲妖：周期举盾（免伤状态机，不阻断移动）
+      if (e.type === EnemyType.Knight) this.updateKnightBlock(e, dt);
+
       // 远程妖物（瘴妖/弩妖）：射程内站桩射击，超出射程继续追击
       const ranged = ENEMY_RANGED[e.type];
       let vx = 0, vy = 0;
       if (!ranged || dist > ranged.range) {
         vx = (dx / dist) * e.speed * speedMult;
         vy = (dy / dist) * e.speed * speedMult;
+      }
+      // 浮灯：叠加垂直于追击方向的蛇形摆动（飘忽轨迹）
+      if (e.type === EnemyType.Ship) {
+        e.floatPhase += dt * SHIP_FLOAT.rate;
+        const sway = Math.sin(e.floatPhase) * SHIP_FLOAT.sway;
+        vx += (-dy / dist) * sway;
+        vy += (dx / dist) * sway;
       }
       for (const o of this.enemies) {
         if (o.id === e.id) continue;
@@ -936,8 +970,11 @@ export class GameSim {
       }
       e.x += vx * dt;
       e.y += vy * dt;
-      const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
-      e.x = sep.x; e.y = sep.y;
+      // 浮灯漂浮于障碍之上，不受地形挤压
+      if (e.type !== EnemyType.Ship) {
+        const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
+        e.x = sep.x; e.y = sep.y;
+      }
       e.facing = dx >= 0 ? 1 : -1;
 
       if (ranged && dist <= ranged.range && e.attackCd <= 0) {
@@ -1045,6 +1082,62 @@ export class GameSim {
       });
     }
     this.emit("enemy_summon", { x: e.x, y: e.y });
+  }
+
+  /**
+   * 蛟冲撞状态机：中远距离周期蓄力（原地红光提示）→ 锁定玩家方向高速冲刺 →
+   * 冲刺中接触玩家造成 1.5× 伤害（每次冲刺至多一次）。返回 true 表示本帧已处理。
+   */
+  private updateDragonCharge(e: Enemy, dt: number, dist: number): boolean {
+    const p = this.player;
+    if (e.chargeDash > 0) {
+      e.x += e.chargeVx * dt;
+      e.y += e.chargeVy * dt;
+      e.chargeDash -= dt;
+      e.facing = e.chargeVx >= 0 ? 1 : -1;
+      if (!e.chargeHit && !p.dead && p.invincible <= 0 &&
+          Math.hypot(p.x - e.x, p.y - e.y) <= CFG.Enemy.CollisionSize / 2 + CFG.Player.CollisionSize / 2) {
+        e.chargeHit = true;
+        p.hp -= Math.ceil(e.damage * DRAGON.dmgMult);
+        p.invincible = CFG.Player.InvincibleDuration;
+        for (const cb of this.onPlayerHurt) cb(p.hp);
+        if (p.hp <= 0) this.onPlayerDied();
+      }
+      if (e.chargeDash <= 0) e.chargeHit = false;
+      return true;
+    }
+    if (e.chargeWind > 0) {
+      e.chargeWind -= dt;
+      if (e.chargeWind <= 0) {
+        const speed = e.speed * DRAGON.speedMult;
+        e.chargeVx = ((p.x - e.x) / dist) * speed;
+        e.chargeVy = ((p.y - e.y) / dist) * speed;
+        e.chargeDash = DRAGON.dash;
+        this.emit("enemy_charge", { x: e.x, y: e.y, phase: "dash" });
+      }
+      return true;
+    }
+    e.chargeCd -= dt;
+    if (e.chargeCd <= 0 && dist > 140 && dist < 640) {
+      e.chargeWind = DRAGON.windup;
+      e.chargeCd = DRAGON.cd;
+      this.emit("enemy_charge", { x: e.x, y: e.y, phase: "windup" });
+    }
+    return false;
+  }
+
+  /** 甲妖举盾：周期进入免伤格挡（dealDamage 侧免疫），举盾期间照常移动。 */
+  private updateKnightBlock(e: Enemy, dt: number): void {
+    if (e.blockT > 0) {
+      e.blockT -= dt;
+      return;
+    }
+    e.blockCd -= dt;
+    if (e.blockCd <= 0) {
+      e.blockT = KNIGHT.blockSec;
+      e.blockCd = KNIGHT.cd;
+      this.emit("enemy_block", { x: e.x, y: e.y });
+    }
   }
 
   private onPlayerDied(): void {
@@ -1165,6 +1258,12 @@ export class GameSim {
       stealthT: type === EnemyType.Invisible ? INVISIBLE.stealthSec : 0,
       healCd: HEALER.cd * 0.5,
       summonCd: SUMMONER.cd * 0.5,
+      floatPhase: this.rng.range(0, Math.PI * 2),
+      blockT: 0,
+      blockCd: KNIGHT.cd * 0.6,
+      chargeCd: DRAGON.cd * 0.6,
+      chargeWind: 0, chargeDash: 0,
+      chargeVx: 0, chargeVy: 0, chargeHit: false,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;

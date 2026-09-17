@@ -3,7 +3,7 @@
 
 import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { GameSim, Enemy } from "../sim/game";
-import { CFG } from "../sim/config";
+import { CFG, EnemyType } from "../sim/config";
 
 /** 妖物类型 → 预切 atlas 名（assets/sprites/enemies/{name}.json）。 */
 const ENEMY_ATLAS: Record<number, string> = {
@@ -179,11 +179,29 @@ export class GameView {
 
     this.renderProjectiles(sim);
     this.renderEnemyProjectiles(sim);
+    this.renderEnemyStates(sim);
     this.renderMines(sim);
     this.renderPickups(sim);
     this.renderChests(sim);
     this.renderTerrain(sim);
     this.renderWeather(sim);
+  }
+
+  /** 高阶妖状态提示：甲妖举盾蓝白圈 / 蛟蓄力红光闪烁。 */
+  private enemyStateGfx = new Graphics();
+  private renderEnemyStates(sim: GameSim): void {
+    const g = this.enemyStateGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const z of sim.enemies) {
+      if (z.type === EnemyType.Knight && z.blockT > 0) {
+        g.circle(z.x, z.y, 26).stroke({ width: 3, color: 0x8ab8d8, alpha: 0.85 });
+        g.circle(z.x, z.y, 30).stroke({ width: 1, color: 0xc8e0f0, alpha: 0.4 });
+      } else if (z.type === EnemyType.Dragon && z.chargeWind > 0) {
+        const flash = 0.35 + 0.3 * Math.sin(performance.now() / 60);
+        g.circle(z.x, z.y, 30).fill({ color: 0xd93a2b, alpha: flash });
+      }
+    }
   }
 
   /** 弹道：箭=细长条按速度方向旋转；魔法/追踪弹=发光圆点。 */
