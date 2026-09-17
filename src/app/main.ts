@@ -13,6 +13,7 @@ import { CraftingPanel } from "../ui/crafting";
 import { FusionPanel } from "../ui/fusion";
 import { HelpPanel } from "../ui/help";
 import { PauseMenu } from "../ui/pausemenu";
+import { UpgradePanel } from "../ui/upgrade";
 import { MiniMap } from "../ui/minimap";
 import { Notify } from "../ui/notify";
 import { TouchControls, shouldUseTouch } from "../ui/touch";
@@ -57,6 +58,7 @@ async function boot(): Promise<void> {
   const equipment = new EquipmentPanel(sim);
   const crafting = new CraftingPanel(sim);
   const fusion = new FusionPanel(sim);
+  const upgrade = new UpgradePanel(sim);
   const help = new HelpPanel(sim);
   const pauseMenu = new PauseMenu(sim, audio);
   const minimap = new MiniMap(() => sim);
@@ -84,17 +86,33 @@ async function boot(): Promise<void> {
     else if (e.event === "weapon_ascended") { notify.push(`武器进阶：${d.name}`); audio.play("upgrade"); }
     else if (e.event === "weapon_ultimate") { notify.push(`武器终极：${d.name}`); audio.play("combo_5"); }
     else if (e.event === "crafted") { notify.push(`合成：${d.name}`); audio.play("upgrade"); }
+    else if (e.event === "upgrade_offer") upgrade.show();
+    else if (e.event === "upgrade_applied") { notify.push(`符箓铭刻：${d.name}（${d.stat === "dmg" ? "伤害" : d.stat === "asp" ? "攻速" : "范围"}）`); audio.play("upgrade"); }
     else if (e.event === "fusion_offer") fusion.show();
+    else if (e.event === "weather_changed") {
+      const WNAMES: Record<string, string> = { Rain: "阴雨", Fog: "浓雾", BloodMoon: "血月升起" };
+      notify.push(WNAMES[d.type] ? `天气异变：${WNAMES[d.type]}` : "天色放晴");
+      audio.play("achievement");
+    }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }
+    else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("enemy_die"); }
+    else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);
+    else if (e.event === "enemy_summon") view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad);
     else if (e.event === "game_over") { audio.play("game_over"); view.shake(18); }
   };
 
-  // 键位路由优先级：融合面板（Enter/Delete/Esc）> 帮助切页 > 模态开关。
-  // H=帮助、Esc=暂停（pause action）、C=装备、I=合成；模态互斥由各面板内部暂停处理。
+  // 键位路由优先级：升级三选一（1/2/3，吞掉其余键）> 融合面板（Enter/Delete/Esc）
+  // > 帮助切页 > 模态开关。H=帮助、Esc=暂停（pause action）、C=装备、I=合成；
+  // 模态互斥由各面板内部暂停处理。
   // UI 动作提取为 uiActions 供键盘与触屏按钮排共用（触屏无键盘，同一套互斥语义）。
-  const anyModalOpen = () => equipment.visible || crafting.visible || fusion.visible || help.visible || pauseMenu.visible;
+  const anyModalOpen = () =>
+    upgrade.visible || equipment.visible || crafting.visible || fusion.visible || help.visible || pauseMenu.visible;
+  // 仅关闭可见面板：不可见面板 toggle(false) 也会改 sim.paused，会破坏升级报价的暂停态
   const closeAllModals = () => {
-    equipment.toggle(false); crafting.toggle(false); help.toggle(false); pauseMenu.toggle(false);
+    if (equipment.visible) equipment.toggle(false);
+    if (crafting.visible) crafting.toggle(false);
+    if (help.visible) help.toggle(false);
+    if (pauseMenu.visible) pauseMenu.toggle(false);
   };
   const uiActions = {
     toggleHelp(): void {
@@ -118,6 +136,7 @@ async function boot(): Promise<void> {
     },
   };
   const onKey = (e: KeyboardEvent) => {
+    if (upgrade.onKey(e)) return;
     if (fusion.onKey(e)) return;
     if (help.onKey(e)) return;
     if (e.code === "KeyH") uiActions.toggleHelp();
@@ -140,6 +159,7 @@ async function boot(): Promise<void> {
     hud.resimulate(sim);
     equipment.resimulate(sim);
     crafting.resimulate(sim);
+    upgrade.resimulate(sim);
     help.resimulate(sim);
     input.clearExternal();
   }
@@ -198,6 +218,7 @@ async function boot(): Promise<void> {
     if (equipment.visible) equipment.refresh();
     if (crafting.visible) crafting.refresh();
     fusion.update();
+    upgrade.update();
   });
 
   // 启动完成：移除 boot 文案

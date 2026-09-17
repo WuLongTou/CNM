@@ -124,6 +124,7 @@ export class GameView {
     this.worldLayer.x = -this.camX + sx;
     this.worldLayer.y = -this.camY + sy;
     this.updateDamageTexts(dt);
+    this.updateBursts(dt);
 
     // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏；无敌帧闪烁
     const p = sim.player;
@@ -155,6 +156,8 @@ export class GameView {
       v.container.x = z.x; v.container.y = z.y;
       v.body.scale.x = z.facing;
       v.body.tint = z.hitFlash > 0 ? 0xff5544 : 0xffffff;
+      // 隐煞隐身：近乎透明（保留一点轮廓提示玩家位置威胁）
+      v.container.alpha = z.stealth ? 0.12 : 1;
       const ratio = Math.max(0, z.hp / z.maxHp);
       v.hpFill.width = 30 * ratio;
       v.hpBar.visible = z.hp < z.maxHp;
@@ -175,9 +178,12 @@ export class GameView {
     }
 
     this.renderProjectiles(sim);
+    this.renderEnemyProjectiles(sim);
     this.renderMines(sim);
+    this.renderPickups(sim);
     this.renderChests(sim);
     this.renderTerrain(sim);
+    this.renderWeather(sim);
   }
 
   /** 弹道：箭=细长条按速度方向旋转；魔法/追踪弹=发光圆点。 */
@@ -216,6 +222,49 @@ export class GameView {
     }
   }
 
+  /** 敌方弹道：毒弹=绿点 / 箭矢=红色细条（与玩家浅色弹道区分）。 */
+  private enemyProjGfx = new Graphics();
+  private renderEnemyProjectiles(sim: GameSim): void {
+    const g = this.enemyProjGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const pr of sim.enemyProjectiles) {
+      if (pr.psn) {
+        g.circle(pr.x, pr.y, 5).fill({ color: 0x6ab04c, alpha: 0.9 });
+        g.circle(pr.x, pr.y, 8).stroke({ width: 1.5, color: 0x9be07a, alpha: 0.4 });
+      } else {
+        const sp = Math.hypot(pr.vx, pr.vy) || 1;
+        const ux = pr.vx / sp, uy = pr.vy / sp;
+        g.moveTo(pr.x - ux * 13, pr.y - uy * 13)
+          .lineTo(pr.x + ux * 6, pr.y + uy * 6)
+          .stroke({ width: 2.5, color: 0xd9644a, alpha: 0.9 });
+      }
+    }
+  }
+
+  /** 事件扩散圈特效（自爆/治疗/召唤）：一圈快速扩张淡出。 */
+  spawnBurst(x: number, y: number, color: number): void {
+    if (this.bursts.length > 12) return; // 上限节流
+    this.bursts.push({ gfx: new Graphics(), x, y, color, life: 0.45 });
+    const b = this.bursts[this.bursts.length - 1];
+    this.fxLayer.addChild(b.gfx);
+  }
+
+  private bursts: Array<{ gfx: Graphics; x: number; y: number; color: number; life: number }> = [];
+
+  private updateBursts(dt: number): void {
+    const alive: typeof this.bursts = [];
+    for (const b of this.bursts) {
+      b.life -= dt;
+      if (b.life <= 0) { b.gfx.destroy(); continue; }
+      const t = 1 - b.life / 0.45;
+      b.gfx.clear();
+      b.gfx.circle(b.x, b.y, 10 + t * 46).stroke({ width: 3, color: b.color, alpha: (1 - t) * 0.8 });
+      alive.push(b);
+    }
+    this.bursts = alive;
+  }
+
   private renderChests(sim: GameSim): void {
     const seen = new Set<number>();
     for (const c of sim.chests) {
@@ -235,6 +284,52 @@ export class GameView {
     }
     for (const [id, s] of this.chestSprites) {
       if (!seen.has(id)) s.visible = false;
+    }
+  }
+
+  /** 升级符箓：竖长符纸 + 血红符文 + 光圈，整体轻微上下浮动。 */
+  private pickupGfx = new Graphics();
+  private renderPickups(sim: GameSim): void {
+    const g = this.pickupGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    const bob = Math.sin(performance.now() / 220) * 3;
+    for (const u of sim.pickups) {
+      g.circle(u.x, u.y + 4, 15).stroke({ width: 1, color: 0xffd28a, alpha: 0.35 });
+      g.rect(u.x - 6, u.y - 9 + bob, 12, 18)
+        .fill({ color: 0xf2e8d8, alpha: 0.95 })
+        .stroke({ width: 1.5, color: 0xc0392b });
+      g.circle(u.x, u.y - 3 + bob, 2.5).fill(0xc0392b);
+      g.rect(u.x - 3, u.y + 1 + bob, 6, 1.5).fill(0xc0392b);
+    }
+  }
+
+  /** 天气表现：屏幕空间色调覆盖（雨=冷蓝+雨线 / 雾=灰白蒙尘 / 血月=暗红呼吸脉冲）。 */
+  private weatherGfx = new Graphics();
+  private renderWeather(sim: GameSim): void {
+    const g = this.weatherGfx;
+    if (g.parent !== this.app.stage) this.app.stage.addChild(g);
+    g.clear();
+    const w = sim.weather.state;
+    if (w.type === "Clear") return;
+    const sw = this.app.screen.width;
+    const sh = this.app.screen.height;
+    const k = w.intensity === "Moderate" ? 1.5 : 1;
+    if (w.type === "Rain") {
+      g.rect(0, 0, sw, sh).fill({ color: 0x2a3a55, alpha: 0.16 * k });
+      // 雨线：相位随时间下落（i 播撒位置，t 驱动下落循环）
+      const t = performance.now() / 1000;
+      g.stroke({ width: 1.5, color: 0x9ab0d0, alpha: 0.4 });
+      for (let i = 0; i < 34; i++) {
+        const bx = ((i * 757) % sw + ((i * 331) % 60)) % sw;
+        const y0 = ((t * (520 + (i % 5) * 70) + (i * 137)) % (sh + 120)) - 60;
+        g.moveTo(bx, y0).lineTo(bx - 7, y0 + 22);
+      }
+    } else if (w.type === "Fog") {
+      g.rect(0, 0, sw, sh).fill({ color: 0xc8c4bc, alpha: 0.3 * k });
+    } else if (w.type === "BloodMoon") {
+      const pulse = 0.16 + 0.05 * Math.sin(performance.now() / 450);
+      g.rect(0, 0, sw, sh).fill({ color: 0x8e1010, alpha: pulse * k });
     }
   }
 

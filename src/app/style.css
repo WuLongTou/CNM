@@ -60,6 +60,22 @@
 .meta-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
 .meta-row button { font-size: 13px; padding: 6px 14px; background: #7a5a20; border-color: #5a3a10; }
 
+/* ── 升级三选一 ── */
+.upgrade-cards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+.upgrade-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 128px; padding: 18px 20px; cursor: pointer;
+  background: #faf3e6; color: #4a2018; border: 2px solid #a88058; border-radius: 6px;
+  font-size: 15px;
+}
+.upgrade-card:hover { border-color: #c0392b; background: #f8e3d8; transform: translateY(-2px); }
+.upgrade-card .uc-key {
+  width: 22px; height: 22px; line-height: 22px; border-radius: 50%;
+  background: #c0392b; color: #f2e8d8; font-size: 12px;
+}
+.upgrade-card b { color: #6a1a12; letter-spacing: 0.08em; }
+.upgrade-card .uc-stat { color: #8e2a20; font-weight: 700; }
+
 /* ── 小地图 ── */
 #minimap { position: absolute; right: 12px; top: 64px; border-radius: 4px; image-rendering: pixelated; }
 

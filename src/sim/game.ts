@@ -4,8 +4,7 @@
 
 import { Rng } from "./rng";
 import {
-  CFG, ENEMY_NAMES, ENEMY_SCORE, ENEMY_STATS, SPAWN_TABLE,
-  type EnemyType,
+  CFG, ENEMY_NAMES, ENEMY_SCORE, ENEMY_STATS, SPAWN_TABLE, EnemyType,
 } from "./config";
 import { defaultSave, type SaveData, type SaveStorage } from "./save";
 import {
@@ -15,7 +14,7 @@ import {
 } from "./weapons";
 import { Inventory, type Material } from "./inventory";
 import { RECIPES } from "./recipes";
-import { WeatherSystem } from "./weather";
+import { WeatherSystem, type WeatherType } from "./weather";
 import { AchievementSystem } from "./achievements";
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
@@ -49,6 +48,23 @@ export interface Enemy {
   psnDps: number; psnT: number; psnTick: number;
   /** 冰缓剩余秒（速度 ×0.4）。 */
   frzT: number;
+  /** 隐煞：当前隐身中 / 隐身-显形周期计时秒。 */
+  stealth: boolean; stealthT: number;
+  /** 愈妖治疗冷却秒。 */
+  healCd: number;
+  /** 唤灵召唤冷却秒。 */
+  summonCd: number;
+}
+
+/** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
+export interface EnemyProjectile {
+  id: number;
+  x: number; y: number;
+  vx: number; vy: number;
+  dmg: number;
+  life: number;
+  /** 毒弹标记（表现层着色）。 */
+  psn: boolean;
 }
 
 export interface Player {
@@ -111,6 +127,20 @@ export interface Chest {
   opened: boolean;
 }
 
+/** 升级符箓拾取物：击杀掉落，走近触发升级三选一。 */
+export interface UpgradePickup {
+  id: number;
+  x: number; y: number;
+}
+
+/** 升级三选一报价项（对 WeaponInstance 应用一次升级）。 */
+export interface UpgradeOffer {
+  weaponIdx: number;
+  weaponName: string;
+  stat: UpgradeStat;
+  statName: string;
+}
+
 export interface SimEvent {
   event: string;
   data: Record<string, unknown>;
@@ -134,7 +164,25 @@ export interface SpawnOpts {
 const FIXED_DT = 1 / 60;
 const MINE_TRIGGER_RANGE = 40;
 const CHEST_OPEN_RANGE = 50;
+const PICKUP_RANGE = 42;
 const MAX_WEAPONS = 6;
+/** 升级符箓掉落概率（普通/精英/妖王；妖王固定掉 3 枚）。 */
+const UPGRADE_DROP = { normal: 0.035, elite: 0.3, boss: 1 } as const;
+/** 升级词条中文名（报价卡展示用）。 */
+export const UPGRADE_STAT_NAMES: Record<UpgradeStat, string> = { dmg: "伤害", asp: "攻速", rng: "范围" };
+/** 远程妖物（射程内站桩射击，超出继续追击）。 */
+const ENEMY_RANGED: Partial<Record<EnemyType, { range: number; cd: number; dmgMult: number; psn?: boolean }>> = {
+  [EnemyType.Spitter]: { range: 300, cd: 2.2, dmgMult: 0.8, psn: true },
+  [EnemyType.Archer]: { range: 340, cd: 2.0, dmgMult: 0.9 },
+};
+/** 爆魈自爆触发距离 / 波及半径 / 伤害倍数。 */
+const EXPLODER = { trigger: 58, blast: 90, dmgMult: 1.5 };
+/** 隐煞隐身/显形周期与强制显形距离。 */
+const INVISIBLE = { stealthSec: 2.4, visibleSec: 3.0, revealDist: 110 };
+/** 愈妖治疗：半径 / 单次回复比例 / 冷却。 */
+const HEALER = { range: 160, ratio: 0.03, cd: 2.5 };
+/** 唤灵召唤：冷却 / 每次 2 只 / 全场蚀群上限。 */
+const SUMMONER = { cd: 6, count: 2, swarmCap: 12 };
 const MAX_MINES = 6;
 const CHAIN_RANGE = 150;        // ChainSearchRange
 const POISON_DURATION = 3;      // PoisonDurationDefault
@@ -153,6 +201,7 @@ export class GameSim {
   player: Player;
   enemies: Enemy[] = [];
   projectiles: Projectile[] = [];
+  enemyProjectiles: EnemyProjectile[] = [];
   mines: Mine[] = [];
   chests: Chest[] = [];
   inventory = new Inventory();
@@ -162,6 +211,12 @@ export class GameSim {
   bossKills = 0;
   /** 祭坛融合报价（打开时模态暂停，choose 指令应答）。 */
   fusionOffer: { a: string; b: string; resultName: string } | null = null;
+  /** 场上升级符箓拾取物（走近拾取）。 */
+  pickups: UpgradePickup[] = [];
+  /** 升级三选一报价（打开时模态暂停，choose/resolveUpgrade 应答）。 */
+  upgradeOffers: UpgradeOffer[] | null = null;
+  /** 上一次天气类型（切换检测，初始 Clear 与 WeatherSystem 一致）。 */
+  private lastWeatherType: WeatherType = "Clear";
   /** 命中停顿（打击感）。 */
   hitStop = new HitStop();
   /** 伤害数字钩子（表现层订阅；世界坐标 + 是否暴击）。 */
@@ -323,6 +378,57 @@ export class GameSim {
     return { name: w.name, ups: w.ups, stat: st, stage: after };
   }
 
+  // ── 升级符箓（击杀掉落 → 走近拾取 → 三选一） ─────────────
+
+  private updatePickups(): void {
+    // 报价/融合模态期间不拾取，站在符箓上等待自然排队；
+    // 徒手时不拾取（无武器可升级，符箓留在地上不浪费）
+    if (this.upgradeOffers || this.fusionOffer || this.player.weapons.length === 0) return;
+    const p = this.player;
+    if (p.dead) return;
+    for (let i = this.pickups.length - 1; i >= 0; i--) {
+      const u = this.pickups[i];
+      if ((u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= PICKUP_RANGE ** 2) {
+        this.pickups.splice(i, 1);
+        this.openUpgradeOffers();
+        return;
+      }
+    }
+  }
+
+  /** 生成三选一报价（武器×词条去重；模态暂停，choose target:"upgrade" 应答）。 */
+  private openUpgradeOffers(): void {
+    const ws = this.player.weapons;
+    if (ws.length === 0) return;
+    const pool: UpgradeOffer[] = [];
+    const seen = new Set<string>();
+    let guard = 0;
+    while (pool.length < Math.min(3, ws.length * UPGRADE_POOL.length) && guard++ < 60) {
+      const weaponIdx = this.rng.int(0, ws.length - 1);
+      const stat = this.rng.pick(UPGRADE_POOL);
+      const key = `${weaponIdx}:${stat}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      pool.push({ weaponIdx, weaponName: ws[weaponIdx].name, stat, statName: UPGRADE_STAT_NAMES[stat] });
+    }
+    if (pool.length === 0) return;
+    this.upgradeOffers = pool;
+    this.paused = true;
+    this.emit("upgrade_offer", { offers: pool });
+  }
+
+  /** 应答升级报价：应用所选词条并解除暂停；index 无效时保持报价打开。 */
+  resolveUpgrade(index: number): Record<string, unknown> {
+    if (!this.upgradeOffers) return { handled: false };
+    const offer = this.upgradeOffers[index];
+    if (!offer) return { handled: false, note: "无效选项", offers: this.upgradeOffers };
+    this.upgradeOffers = null;
+    this.paused = false;
+    const r = this.applyUpgrade(offer.weaponIdx, offer.stat);
+    this.emit("upgrade_applied", { name: r.name, stat: offer.stat, stage: r.stage });
+    return { handled: true, ...r };
+  }
+
   // ── 宝箱 ────────────────────────────────────────────────
 
   private scatterChests(n: number): void {
@@ -362,12 +468,19 @@ export class GameSim {
     }
     this.updatePlayer(dt);
     this.updateProjectiles(dt);
+    this.updateEnemyProjectiles(dt);
     this.updateMines(dt);
     this.updateEnemies(dt);
     this.updateChests();
+    this.updatePickups();
     this.updateAltars();
     this.maintainEnemies(dt);
     this.weather.update(dt);
+    // 天气切换事件（HUD 标签/通知/表现层共用）
+    if (this.weather.state.type !== this.lastWeatherType) {
+      this.lastWeatherType = this.weather.state.type;
+      this.emit("weather_changed", { type: this.weather.state.type, intensity: this.weather.state.intensity });
+    }
     this.achievements.update({ kills: this.kills, survivalTime: this.survivalTime, bossKills: this.bossKills });
   }
 
@@ -639,6 +752,7 @@ export class GameSim {
       pr.y += pr.vy * dt;
 
       for (const e of this.enemies) {
+        if (e.stealth) continue; // 隐身中不可被弹道命中
         if (pr.hitIds.has(e.id)) continue;
         if ((e.x - pr.x) ** 2 + (e.y - pr.y) ** 2 <= 24 ** 2) {
           pr.hitIds.add(e.id);
@@ -686,7 +800,8 @@ export class GameSim {
   private nearestEnemies(x: number, y: number, range: number, n: number, exclude?: Set<number>): Enemy[] {
     const r2 = range * range;
     return this.enemies
-      .filter((e) => !exclude?.has(e.id) && (e.x - x) ** 2 + (e.y - y) ** 2 <= r2)
+      // 隐身中的隐煞不可被玩家武器索敌（近身显形后恢复）
+      .filter((e) => !e.stealth && !exclude?.has(e.id) && (e.x - x) ** 2 + (e.y - y) ** 2 <= r2)
       .sort((a, b) => (a.x - x) ** 2 + (a.y - y) ** 2 - ((b.x - x) ** 2 + (b.y - y) ** 2))
       .slice(0, Math.max(1, n));
   }
@@ -730,6 +845,18 @@ export class GameSim {
     if (e.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
     if (e.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
     this.score += pts;
+    // 升级符箓掉落：普通低概率 / 精英高概率 / 妖王必掉 3 枚
+    const rate = e.boss ? UPGRADE_DROP.boss : e.elite ? UPGRADE_DROP.elite : UPGRADE_DROP.normal;
+    if (this.rng.chance(rate)) {
+      const n = e.boss ? 3 : 1;
+      for (let i = 0; i < n; i++) {
+        this.pickups.push({
+          id: this.nextId++,
+          x: e.x + this.rng.range(-30, 30),
+          y: e.y + this.rng.range(-30, 30),
+        });
+      }
+    }
   }
 
   private updateEnemies(dt: number): void {
@@ -770,8 +897,34 @@ export class GameSim {
       const dx = p.x - e.x;
       const dy = p.y - e.y;
       const dist = Math.hypot(dx, dy) || 1;
-      let vx = (dx / dist) * e.speed * speedMult;
-      let vy = (dy / dist) * e.speed * speedMult;
+
+      // 隐煞：隐身/显形周期循环，玩家近身强制显形
+      if (e.type === EnemyType.Invisible) {
+        e.stealthT -= dt;
+        if (e.stealth) {
+          if (e.stealthT <= 0 || dist <= INVISIBLE.revealDist) {
+            e.stealth = false;
+            e.stealthT = INVISIBLE.visibleSec;
+          }
+        } else if (e.stealthT <= 0 && dist > INVISIBLE.revealDist) {
+          e.stealth = true;
+          e.stealthT = INVISIBLE.stealthSec;
+        }
+      }
+
+      // 爆魈：贴近即自爆（自灭不计击杀分、不掉落）
+      if (e.type === EnemyType.Exploder && dist <= EXPLODER.trigger) {
+        this.explodeEnemy(e);
+        continue;
+      }
+
+      // 远程妖物（瘴妖/弩妖）：射程内站桩射击，超出射程继续追击
+      const ranged = ENEMY_RANGED[e.type];
+      let vx = 0, vy = 0;
+      if (!ranged || dist > ranged.range) {
+        vx = (dx / dist) * e.speed * speedMult;
+        vy = (dy / dist) * e.speed * speedMult;
+      }
       for (const o of this.enemies) {
         if (o.id === e.id) continue;
         const ox = e.x - o.x, oy = e.y - o.y;
@@ -787,7 +940,17 @@ export class GameSim {
       e.x = sep.x; e.y = sep.y;
       e.facing = dx >= 0 ? 1 : -1;
 
-      if (dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
+      if (ranged && dist <= ranged.range && e.attackCd <= 0) {
+        e.attackCd = ranged.cd;
+        this.fireEnemyShot(e, ranged.dmgMult, ranged.psn ?? false);
+        continue;
+      }
+
+      if (e.type === EnemyType.Healer) this.updateHealer(e, dt);
+      if (e.type === EnemyType.Summoner) this.updateSummoner(e, dt);
+
+      // 通用近战：隐身中的隐煞不攻击（近身时必已显形，此处兜底）
+      if (!e.stealth && dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
         e.attackCd = CFG.Enemy.AttackCooldown;
         if (p.invincible <= 0) {
           p.hp -= e.damage;
@@ -797,6 +960,91 @@ export class GameSim {
         }
       }
     }
+  }
+
+  /** 爆魈自爆：波及半径内玩家受 1.5× 伤害，自身消亡（无击杀分/掉落）。 */
+  private explodeEnemy(e: Enemy): void {
+    this.enemies = this.enemies.filter((o) => o.id !== e.id);
+    const p = this.player;
+    if (!p.dead && p.invincible <= 0 &&
+        Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast) {
+      p.hp -= Math.ceil(e.damage * EXPLODER.dmgMult);
+      p.invincible = CFG.Player.InvincibleDuration;
+      for (const cb of this.onPlayerHurt) cb(p.hp);
+      if (p.hp <= 0) this.onPlayerDied();
+    }
+    this.emit("enemy_explode", { x: e.x, y: e.y });
+  }
+
+  /** 敌方弹道：直线飞向玩家当前位置（不追踪）。 */
+  private fireEnemyShot(e: Enemy, dmgMult: number, psn: boolean): void {
+    const p = this.player;
+    const dx = p.x - e.x;
+    const dy = p.y - e.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const speed = 340;
+    this.enemyProjectiles.push({
+      id: this.nextId++,
+      x: e.x, y: e.y,
+      vx: (dx / d) * speed, vy: (dy / d) * speed,
+      dmg: Math.max(1, Math.ceil(e.damage * dmgMult)),
+      life: 3,
+      psn,
+    });
+    this.emit("enemy_shot", { x: e.x, y: e.y });
+  }
+
+  private updateEnemyProjectiles(dt: number): void {
+    const p = this.player;
+    const keep: EnemyProjectile[] = [];
+    for (const pr of this.enemyProjectiles) {
+      pr.x += pr.vx * dt;
+      pr.y += pr.vy * dt;
+      pr.life -= dt;
+      if (pr.life <= 0) continue;
+      if (pr.x < 0 || pr.x > this.world.w || pr.y < 0 || pr.y > this.world.h) continue;
+      if (!p.dead && p.invincible <= 0 &&
+          Math.hypot(pr.x - p.x, pr.y - p.y) <= CFG.Player.CollisionSize / 2 + 6) {
+        p.hp -= pr.dmg;
+        p.invincible = CFG.Player.InvincibleDuration;
+        for (const cb of this.onPlayerHurt) cb(p.hp);
+        if (p.hp <= 0) this.onPlayerDied();
+        continue;
+      }
+      keep.push(pr);
+    }
+    this.enemyProjectiles = keep;
+  }
+
+  /** 愈妖：周期治疗半径内受伤同伴（含 Boss），无目标时短重试。 */
+  private updateHealer(e: Enemy, dt: number): void {
+    e.healCd -= dt;
+    if (e.healCd > 0) return;
+    let healed = false;
+    for (const o of this.enemies) {
+      if (o.id === e.id || o.hp >= o.maxHp) continue;
+      if (Math.hypot(o.x - e.x, o.y - e.y) <= HEALER.range) {
+        o.hp = Math.min(o.maxHp, o.hp + o.maxHp * HEALER.ratio);
+        healed = true;
+      }
+    }
+    e.healCd = healed ? HEALER.cd : 0.5;
+    if (healed) this.emit("enemy_heal", { x: e.x, y: e.y });
+  }
+
+  /** 唤灵：周期召唤蚀群，全场蚀群达上限则只走冷却。 */
+  private updateSummoner(e: Enemy, dt: number): void {
+    e.summonCd -= dt;
+    if (e.summonCd > 0) return;
+    e.summonCd = SUMMONER.cd;
+    if (this.enemies.filter((o) => o.type === EnemyType.Swarm).length >= SUMMONER.swarmCap) return;
+    for (let i = 0; i < SUMMONER.count; i++) {
+      this.spawnEnemy({
+        type: EnemyType.Swarm,
+        near: { x: e.x + this.rng.range(-60, 60), y: e.y + this.rng.range(-60, 60) },
+      });
+    }
+    this.emit("enemy_summon", { x: e.x, y: e.y });
   }
 
   private onPlayerDied(): void {
@@ -912,6 +1160,11 @@ export class GameSim {
       hitFlash: 0,
       facing: 1,
       psnDps: 0, psnT: 0, psnTick: 0, frzT: 0,
+      // 隐煞开局即隐身潜行，其余类型该字段无语义
+      stealth: type === EnemyType.Invisible,
+      stealthT: type === EnemyType.Invisible ? INVISIBLE.stealthSec : 0,
+      healCd: HEALER.cd * 0.5,
+      summonCd: SUMMONER.cd * 0.5,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;
@@ -946,6 +1199,10 @@ export class GameSim {
         if (args.target === "fusion") {
           return this.resolveFusion(args.choice === "accept");
         }
+        // target:"upgrade"：index=三选一序号（对齐 UpgradePanel 1/2/3 快捷键）
+        if (args.target === "upgrade") {
+          return this.resolveUpgrade(typeof args.index === "number" ? args.index : -1);
+        }
         return { handled: false, note: "未知 target" };
       }
       case "force_combat": {
@@ -958,6 +1215,8 @@ export class GameSim {
           count: typeof args.count === "number" ? args.count : 1,
           type: (args.type as SpawnOpts["type"]) ?? "random",
           near: (args.near as SpawnOpts["near"]) ?? "player",
+          elite: args.elite === true,
+          boss: args.boss === true,
         };
         return { spawned: this.spawnEnemy(opts) };
       }

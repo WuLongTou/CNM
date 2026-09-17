@@ -9,6 +9,7 @@ export class Hud {
   private hpFill!: HTMLElement;
   private hpText!: HTMLElement;
   private roundText!: HTMLElement;
+  private weatherText!: HTMLElement;
   private scoreText!: HTMLElement;
   private killsText!: HTMLElement;
   private timeText!: HTMLElement;
@@ -30,7 +31,7 @@ export class Hud {
       <div class="hp-wrap"><div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
         <span id="hp-text"></span></div>
       <div class="stats">
-        <span id="round"></span><span id="score"></span>
+        <span id="round"></span><span id="weather"></span><span id="score"></span>
         <span id="kills"></span><span id="time"></span>
         <span id="weapon"></span>
       </div>`;
@@ -38,6 +39,7 @@ export class Hud {
     this.hpFill = hud.querySelector("#hp-fill")!;
     this.hpText = hud.querySelector("#hp-text")!;
     this.roundText = hud.querySelector("#round")!;
+    this.weatherText = hud.querySelector("#weather")!;
     this.scoreText = hud.querySelector("#score")!;
     this.killsText = hud.querySelector("#kills")!;
     this.timeText = hud.querySelector("#time")!;
@@ -114,6 +116,10 @@ export class Hud {
     this.hpFill.style.width = `${ratio * 100}%`;
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
     this.roundText.textContent = `威胁阶 ${s.round}`;
+    const w = s.weather.state;
+    const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
+    this.weatherText.textContent =
+      w.type === "Clear" ? "天气 晴" : `天气 ${WNAMES[w.type]}${w.intensity === "Moderate" ? "·烈" : ""}`;
     this.scoreText.textContent = `分数 ${s.score}`;
     this.killsText.textContent = `击杀 ${s.kills}`;
     this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s`;
