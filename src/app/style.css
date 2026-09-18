@@ -1,100 +1,105 @@
-/* 血色涂鸦手账风 UI（对齐 HandDrawnTheme：#140A0A 底 / #C0392B 血红 / 纸面板） */
+/* 简笔画速写本风 UI：米白纸面板 + 炭棕描边 + 血红点缀（与 gen-sketch.mjs 调色一致） */
+/* 中文界面无手写字体可用，手账感靠纸色/炭线/微倾角呈现 */
 
 #ui-root { position: absolute; inset: 0; pointer-events: none; font-family: system-ui, sans-serif; }
 #ui-root .overlay, #ui-root #hud { pointer-events: auto; }
 .hidden { display: none !important; }
 
-/* ── HUD ── */
+/* ── HUD：纸条便签 ── */
 #hud {
   position: absolute; top: 0; left: 0; right: 0; height: 52px;
   display: flex; align-items: center; gap: 16px; padding: 0 16px;
-  background: rgba(20, 10, 10, 0.75); border-bottom: 2px solid #5a1f1f;
-  color: #e8d8c8; font-size: 14px; user-select: none;
+  background: rgba(245, 238, 222, 0.92); border-bottom: 2px solid #332e29;
+  color: #332e29; font-size: 14px; user-select: none;
 }
 .hp-wrap { display: flex; align-items: center; gap: 8px; min-width: 220px; }
-.hp-bar { width: 140px; height: 14px; background: #2a0e0e; border: 1px solid #5a1f1f; border-radius: 3px; overflow: hidden; }
+.hp-bar { width: 140px; height: 14px; background: #e6dcc4; border: 1.5px solid #332e29; border-radius: 2px; overflow: hidden; }
 .hp-fill { height: 100%; width: 100%; background: linear-gradient(#c0392b, #8e2a20); transition: width 0.15s; }
-.hp-text { font-size: 12px; color: #d8b8a8; }
-.stats { display: flex; gap: 18px; color: #c8a888; }
-#round { color: #d97b5a; }
+.hp-text { font-size: 12px; color: #6b6154; }
+.stats { display: flex; gap: 18px; color: #5a5248; }
+#round { color: #8e2a20; font-weight: 700; }
 
-/* ── 欢迎画面 / GameOver ── */
+/* ── 欢迎画面 / GameOver：纸页层叠 ── */
 .overlay {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-  background: rgba(10, 5, 5, 0.72);
+  background: rgba(232, 222, 200, 0.6);
 }
 .panel {
-  background: #f2e8d8; color: #4a2018; border: 3px solid #7a2a1a; border-radius: 6px;
-  padding: 40px 56px; text-align: center; box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+  background: #f5eede; color: #332e29; border: 2.5px solid #332e29;
+  border-radius: 10px 14px 9px 15px;   /* 微不规则圆角 → 手绘纸片感 */
+  box-shadow: 3px 4px 0 rgba(51, 46, 41, 0.35);
+  padding: 40px 56px; text-align: center;
   transform: rotate(-0.6deg);
 }
 .panel h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: 0.18em; color: #8e2a20; }
-.panel .sub { margin: 0 0 22px; color: #7a5a48; font-size: 14px; }
-.panel .hint { margin: 18px 0 0; color: #9a7a68; font-size: 12px; }
+.panel .sub { margin: 0 0 22px; color: #6b6154; font-size: 14px; }
+.panel .hint { margin: 18px 0 0; color: #8a8175; font-size: 12px; }
 .panel button {
   font-size: 18px; padding: 10px 42px; cursor: pointer; letter-spacing: 0.1em;
-  background: #c0392b; color: #f2e8d8; border: 2px solid #7a2a1a; border-radius: 4px;
+  background: #c0392b; color: #f5eede; border: 2px solid #332e29;
+  border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.4);
 }
-.panel button:hover { background: #d94a3a; }
+.panel button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
 
 /* ── 装备面板 ── */
 .panel-wide { min-width: 420px; }
 .panel h2 { margin: 0 0 14px; color: #8e2a20; letter-spacing: 0.12em; }
-.eq-stats { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 13px; color: #7a5a48; margin-bottom: 14px; }
+.eq-stats { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 13px; color: #6b6154; margin-bottom: 14px; }
 .eq-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
-.eq-item { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; border: 1px solid #d8c0a8; border-radius: 4px; background: #faf3e6; }
-.eq-item.active { border-color: #c0392b; background: #f8e3d8; }
+.eq-item { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; border: 1.5px solid #b8ab90; border-radius: 6px 8px 6px 9px; background: #fbf6ea; }
+.eq-item.active { border-color: #c0392b; background: #f6e3da; }
 .eq-item b { color: #6a1a12; }
-.eq-item i { color: #9a7a68; font-style: normal; font-size: 12px; }
-.eq-item em { margin-left: auto; color: #b08968; font-size: 12px; }
+.eq-item i { color: #8a8175; font-style: normal; font-size: 12px; }
+.eq-item em { margin-left: auto; color: #a89a80; font-size: 12px; }
 
-/* ── 通知条 ── */
+/* ── 通知条：纸签 ── */
 #notify-root { position: absolute; top: 64px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
-.notify { background: rgba(20,10,10,0.85); color: #e8c87a; border: 1px solid #7a5a20; border-radius: 4px; padding: 6px 18px; font-size: 13px; opacity: 0; transform: translateY(-8px); transition: all 0.3s; }
+.notify { background: rgba(245, 238, 222, 0.94); color: #8e2a20; border: 1.5px solid #332e29; border-radius: 7px 9px 7px 10px; padding: 6px 18px; font-size: 13px; box-shadow: 2px 2px 0 rgba(51, 46, 41, 0.25); opacity: 0; transform: translateY(-8px); transition: all 0.3s; }
 .notify.show { opacity: 1; transform: translateY(0); }
 
 /* ── 融合面板 ── */
 .fusion-btns { display: flex; gap: 12px; justify-content: center; }
 .fusion-btns button { font-size: 15px; padding: 8px 24px; }
-#btn-reject { background: #6a5a48; border-color: #4a3a2a; }
+#btn-reject { background: #8a8175; }
 .meta-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
-.meta-row button { font-size: 13px; padding: 6px 14px; background: #7a5a20; border-color: #5a3a10; }
+.meta-row button { font-size: 13px; padding: 6px 14px; background: #a8741a; }
 
-/* ── 升级三选一 ── */
+/* ── 升级三选一：符纸卡 ── */
 .upgrade-cards { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 .upgrade-card {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   min-width: 128px; padding: 18px 20px; cursor: pointer;
-  background: #faf3e6; color: #4a2018; border: 2px solid #a88058; border-radius: 6px;
+  background: #fbf6ea; color: #332e29; border: 2px solid #6b6154;
+  border-radius: 8px 12px 8px 13px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.3);
   font-size: 15px;
 }
-.upgrade-card:hover { border-color: #c0392b; background: #f8e3d8; transform: translateY(-2px); }
+.upgrade-card:hover { border-color: #c0392b; background: #f6e3da; transform: translateY(-2px); }
 .upgrade-card .uc-key {
   width: 22px; height: 22px; line-height: 22px; border-radius: 50%;
-  background: #c0392b; color: #f2e8d8; font-size: 12px;
+  background: #c0392b; color: #f5eede; font-size: 12px;
 }
 .upgrade-card b { color: #6a1a12; letter-spacing: 0.08em; }
 .upgrade-card .uc-stat { color: #8e2a20; font-weight: 700; }
 
-/* ── 小地图 ── */
-#minimap { position: absolute; right: 12px; top: 64px; border-radius: 4px; image-rendering: pixelated; }
+/* ── 小地图：纸片地图 ── */
+#minimap { position: absolute; right: 12px; top: 64px; border-radius: 4px; image-rendering: pixelated; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.3); }
 
-/* ── 帮助面板 ── */
+/* ── 帮助面板：手账内页 ── */
 .help-panel { min-width: 480px; }
 .help-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-.help-tabs button { font-size: 13px; padding: 4px 16px; background: #d8c0a8; color: #4a2018; border-color: #a88058; }
-.help-tabs button.active { background: #c0392b; color: #f2e8d8; }
+.help-tabs button { font-size: 13px; padding: 4px 16px; background: #e6dcc4; color: #332e29; border: 1.5px solid #6b6154; }
+.help-tabs button.active { background: #c0392b; color: #f5eede; border-color: #332e29; }
 .help-body { max-height: 320px; overflow-y: auto; text-align: left; }
 .help-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.help-table td { padding: 4px 10px; border-bottom: 1px solid #e0d0b8; color: #5a3a2a; }
+.help-table td { padding: 4px 10px; border-bottom: 1px dashed #c4b598; color: #4a443c; }
 .help-table td:first-child { color: #8e2a20; font-weight: 700; width: 90px; }
-.help-table tr.ach-done td { color: #b8860b; }
-.help-table .w-star { color: #d9a520; font-style: normal; font-size: 11px; margin-left: 4px; letter-spacing: -1px; }
-.help-table .w-tags { color: #9a7a68; font-size: 11px; }
-.help-table .w-fuse { color: #8e44ad; font-size: 11px; }
+.help-table tr.ach-done td { color: #a8741a; }
+.help-table .w-star { color: #a8741a; font-style: normal; font-size: 11px; margin-left: 4px; letter-spacing: -1px; }
+.help-table .w-tags { color: #8a8175; font-size: 11px; }
+.help-table .w-fuse { color: #7a3a8a; font-size: 11px; }
 
 /* ── 暂停面板 ── */
-.vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #7a5a48; font-size: 14px; }
+.vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #6b6154; font-size: 14px; }
 .panel button { display: inline-block; margin: 4px 6px; }
 
 /* ── 触屏控件（仅触屏设备/或 ?touch=1 时由 JS 挂载）── */
@@ -104,25 +109,24 @@
 #joy-base {
   position: absolute; left: 22px; bottom: 26px; width: 124px; height: 124px;
   border-radius: 50%; pointer-events: auto; touch-action: none;
-  background: rgba(20, 10, 10, 0.45); border: 2px solid #5a1f1f;
-  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.6);
+  background: rgba(245, 238, 222, 0.4); border: 2.5px solid rgba(51, 46, 41, 0.75);
 }
 #joy-base.active { border-color: #c0392b; }
 #joy-knob {
   position: absolute; left: 50%; top: 50%; width: 52px; height: 52px;
   margin: -26px 0 0 -26px; border-radius: 50%; pointer-events: none;
   background: radial-gradient(circle at 35% 30%, #d94a3a, #8e2a20);
-  border: 2px solid #7a2a1a; opacity: 0.85;
+  border: 2px solid #332e29; opacity: 0.9;
 }
 #touch-btns { position: absolute; right: 22px; bottom: 26px; display: flex; align-items: flex-end; gap: 14px; }
 #touch-btns button, #touch-ui button {
   pointer-events: auto; touch-action: none; cursor: pointer;
-  border-radius: 50%; color: #e8d8c8; font-weight: 700;
-  background: rgba(20, 10, 10, 0.45); border: 2px solid #5a1f1f;
+  border-radius: 50%; color: #332e29; font-weight: 700;
+  background: rgba(245, 238, 222, 0.6); border: 2.5px solid rgba(51, 46, 41, 0.8);
   -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
 }
-#touch-btns button.pressed, #touch-ui button.pressed { background: rgba(192, 57, 43, 0.7); border-color: #d94a3a; }
-#tbtn-attack { width: 84px; height: 84px; font-size: 26px; background: rgba(142, 42, 32, 0.55); }
+#touch-btns button.pressed, #touch-ui button.pressed { background: rgba(192, 57, 43, 0.8); border-color: #332e29; color: #f5eede; }
+#tbtn-attack { width: 84px; height: 84px; font-size: 26px; background: rgba(192, 57, 43, 0.55); color: #f5eede; }
 #tbtn-dash { width: 62px; height: 62px; font-size: 19px; }
 #touch-ui { position: absolute; left: 12px; top: 60px; display: flex; gap: 10px; }
 #touch-ui button { width: 42px; height: 42px; font-size: 15px; }

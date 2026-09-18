@@ -1,4 +1,5 @@
-// 小地图：世界俯视缩略（左上角），妖物红点/宝箱金点/祭坛紫点/障碍灰点/玩家白点。
+// 小地图：世界俯视缩略（右上角纸片），纸白底 + 炭框；妖物红点/宝箱金点/
+// 祭坛紫点/障碍灰点/玩家炭点/符箓血色菱形。
 
 import type { GameSim } from "../sim/game";
 
@@ -27,17 +28,19 @@ export class MiniMap {
     const sx = W / sim.world.w;
     const sy = H / sim.world.h;
     g.clearRect(0, 0, W, H);
-    g.fillStyle = "rgba(20,10,10,0.8)";
+    g.fillStyle = "rgba(245,238,222,0.92)";
     g.fillRect(0, 0, W, H);
-    g.strokeStyle = "#5a1f1f";
-    g.strokeRect(0.5, 0.5, W - 1, H - 1);
+    g.strokeStyle = "#332e29";
+    g.lineWidth = 1.5;
+    g.strokeRect(0.75, 0.75, W - 1.5, H - 1.5);
     // 视口框
-    g.strokeStyle = "rgba(232,200,180,0.4)";
+    g.lineWidth = 1;
+    g.strokeStyle = "rgba(51,46,41,0.5)";
     g.strokeRect(this.camX * sx, this.camY * sy, this.vw * sx, this.vh * sy);
     // 点位
     for (const o of sim.terrain.obstacles) {
       if (o.dead) continue;
-      g.fillStyle = "rgba(140,130,120,0.5)";
+      g.fillStyle = "rgba(107,97,84,0.55)";
       g.fillRect(o.x * sx - 1, o.y * sy - 1, 2, 2);
     }
     for (const a of sim.terrain.altars) {
@@ -50,8 +53,8 @@ export class MiniMap {
       g.fillStyle = "#d9a520";
       g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
     }
-    // 升级符箓：亮白菱形（区别于宝箱金方块），屏幕外掉落也可寻
-    g.fillStyle = "#ffffff";
+    // 升级符箓：血红菱形（纸底上醒目，区别于宝箱金方块），屏幕外掉落也可寻
+    g.fillStyle = "#c0392b";
     for (const u of sim.pickups) {
       g.beginPath();
       g.moveTo(u.x * sx, u.y * sy - 3);
@@ -61,12 +64,12 @@ export class MiniMap {
       g.fill();
     }
     for (const e of sim.enemies) {
-      g.fillStyle = e.boss ? "#ffd700" : e.elite ? "#ff8c42" : "#c0392b";
+      g.fillStyle = e.boss ? "#a8741a" : e.elite ? "#d97b2a" : "#c0392b";
       const s = e.boss ? 4 : 2.5;
       g.fillRect(e.x * sx - s / 2, e.y * sy - s / 2, s, s);
     }
     if (!sim.player.dead) {
-      g.fillStyle = "#f2e8d8";
+      g.fillStyle = "#332e29";
       g.fillRect(sim.player.x * sx - 2, sim.player.y * sy - 2, 4, 4);
     }
   }

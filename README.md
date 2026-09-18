@@ -1,8 +1,10 @@
 # 斩妖录（Web 版）
 
-血色涂鸦风除妖生存 roguelike：扮演除妖师，在持续逼近的妖潮中存活。
+简笔画速写本风除妖生存 roguelike：扮演除妖师，在持续逼近的妖潮中存活。
 TypeScript + PixiJS v8 实现的完整重写版。玩法数值对齐 C# 旧版数据表，
 **主题为「斩妖」设定**：玩家是除妖师，敌人统称妖物。仓库内不含任何旧引擎工程文件。
+美术为**简笔画（速写本）风格**：米白纸面世界 + 炭棕手绘线条 + 血红点缀，
+全部角色贴图由 `tools/gen-sketch.mjs` 程序化生成（seed 固定可复现）。
 
 ## 架构
 
@@ -19,7 +21,8 @@ src/
 tests/
   sim/      vitest 逻辑回归。
   e2e/      Playwright E2E（完整对局闭环）。
-tools/      资产预处理：从 assets-src 生成 public/assets（剥底/切帧/atlas），
+tools/      资产管线：gen-sketch.mjs 程序化生成简笔画源图（玩家/妖物/地面），
+            sync-assets.mjs 从 assets-src 生成 public/assets（剥底/切帧/atlas），
             源文件名全部中性（enemy_*）。
 ```
 
@@ -38,8 +41,9 @@ __CNM__.sim                                  // GameSim 实例（深度断言用
 ## 命令
 
 ```bash
-npm run assets:sync   # 从 assets-src 生成 public/assets（加资产后需重跑）
-npm run dev           # Vite dev server @ 127.0.0.1:5173
+node tools/gen-sketch.mjs   # 重新生成简笔画源图到 assets-src（调造型后需重跑）
+npm run assets:sync         # 从 assets-src 生成 public/assets（剥底/切帧/atlas）
+npm run dev                 # Vite dev server @ 127.0.0.1:5173
 npm run build         # tsc 类型检查 + vite build
 npm test              # vitest 逻辑回归
 npm run e2e           # Playwright E2E（自动起 dev server）
@@ -76,6 +80,12 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 - [x] M10 音频与存档完善：冲刺/3连击/玩家阵亡音效接线，GameOver 停止 BGM；
       成就「累计击杀 50/200」修正为按跨局 totalKills 判定（原误用单局击杀）；
       欢迎页展示历史战绩（最高分/总击杀/局数），meta 返回扩展存档字段
+- [x] M11 简笔画美术重制：程序化生成器 gen-sketch.mjs（SVG 手绘线条 + 帧动画）
+      替换全部占位贴图——除妖师火柴人（斗笠/袍/剑，walk 8 帧/attack 6 帧/idle 4 帧）
+      ×3 职业、14 种妖物（血红点睛 + 特征件各 6 帧）、速写纸地面（铅笔涂鸦/血渍/
+      晕影）；渲染层适配纸面世界（障碍线稿化/弹道炭黑化/HP 条纸白底/祭坛符阵）；
+      UI 手账化（HUD 纸条/通知纸签/升级符纸卡/小地图纸片）；玩家切帧改等分网格
+      （细线条投影分割会被腰斩，见 sync-assets 注释）
 
 ## 性能
 
@@ -87,7 +97,14 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 模态页面打开时游戏快捷键必须 100% 失效；UI 快捷键绝不复用已绑定的游戏键
 （WASD/Space/Shift/Tab/H/C/反引号）。
 
-## 待办（美术）
+## 美术（简笔画速写本风格）
 
-现有妖物贴图为占位素材（视觉与斩妖主题的最终形象有差距），后续按主题重绘
-spritesheet，文件名沿用 enemy_* 放入 assets-src/sprites/enemies/sheets/ 即可。
+全部角色贴图与地面由 `tools/gen-sketch.mjs` 程序化生成，迭代造型 = 改生成器参数
+后重跑 `node tools/gen-sketch.mjs && npm run assets:sync`（seed 固定，产物可复现）。
+风格规范（新增资产必须沿用）：
+- 调色：纸白 #f5eede / 炭棕线条 #332e29（RGB 须高于剥底阈值 0.12）/ 铅笔灰
+  #8a8175 / 血红点缀 #c0392b（妖物眼/符箓/火），功能色仅瘴毒绿与愈疗金；
+- 线条：圆头线帽 + ≤0.9px 手绘抖动，96px 帧内主线宽 ~3.6；
+- 妖物统一血红点睛（眼），玩家无红眼——敌我一望可辨；
+- 布局约定：玩家 walk/attack = 96×96 cell 紧排网格（8×1/6×1）、idle = 2×2 网格；
+  妖物 = 128×96 cell 水平排列留 28px 间隔（闭合轮廓走投影分割拉伸切帧）。

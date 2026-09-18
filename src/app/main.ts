@@ -41,7 +41,7 @@ declare global {
 
 async function boot(): Promise<void> {
   const app = new Application();
-  await app.init({ resizeTo: window, background: 0x140a0a, antialias: true });
+  await app.init({ resizeTo: window, background: 0xefe7d4, antialias: true });
   // 帧率上限 60：高刷屏（120Hz+）上 rAF 默认跑满刷新率白烧 GPU；逻辑步长本就是 60Hz
   app.ticker.maxFPS = TARGET_FPS;
   document.getElementById("app")!.prepend(app.canvas);

@@ -206,15 +206,16 @@ async function main() {
   report.weapons = await stripDir(path.join("sprites", "weapons"), "sprites/weapons");
   report.effects = await stripDir(path.join("sprites", "effects"), "sprites/effects");
 
-  // 玩家：walk/attack 投影分割取 8/6 帧，idle 2×2 网格取 4 帧；全部翻转归一化朝右
+  // 玩家：walk=8×1 / attack=6×1 网格切帧，idle 2×2 网格取 4 帧；全部翻转归一化朝右。
+  // 细线条简笔画不能用投影分割（行密度低于阈值会把帧腰斩成上下半身），一律等分网格。
   const atlasDir = path.join(DST, "sprites", "player");
   fs.mkdirSync(atlasDir, { recursive: true });
   const playerDir = path.join(SRC, "sprites", "player", "sheets");
   /** @type {any[]} */
   const atlases = [];
   for (const who of ["warrior", "ranger", "mage"]) {
-    const walk = takeFramesEvenly(await splitFrames(path.join(playerDir, `${who}_walk.png`)), 8);
-    const attack = takeFramesEvenly(await splitFrames(path.join(playerDir, `${who}_attack.png`)), 6);
+    const walk = await gridFrames(path.join(playerDir, `${who}_walk.png`), 8, 1);
+    const attack = await gridFrames(path.join(playerDir, `${who}_attack.png`), 6, 1);
     const idle = takeFramesEvenly(await gridFrames(path.join(playerDir, `${who}_idle.png`), 2, 2), 4);
     for (const [anim, frames] of [["walk", walk], ["attack", attack], ["idle", idle]]) {
       atlases.push(await writeAtlas(frames.map(flopRaw), `${who}_${anim}`, atlasDir));
