@@ -39,6 +39,8 @@ interface EnemyView {
   bobPhase: number;
   /** 上一帧位置（差分判断移动）。 */
   lastX: number; lastY: number;
+  /** 扬尘节流。 */
+  dustCd: number;
 }
 
 /** 玩家外观皮肤：对应武器类型（Melee→warrior / Ranged→ranger / Magic→mage）。 */
@@ -65,6 +67,9 @@ export class GameView {
   private enemyTextures = new Map<string, Texture[]>();
   private camX = 0;
   private camY = 0;
+  /** 相机移动前瞻（朝输入方向平滑偏移，行走更带感）。 */
+  private lookX = 0;
+  private lookY = 0;
   private animTimer = 0;
   private frameIndex = 0;
   /** 上一帧玩家死亡标记（边沿触发死亡消散）。 */
@@ -151,7 +156,7 @@ export class GameView {
       frame: Math.floor(Math.random() * frames.length),
       animTimer: Math.random() * 0.1,
       faceCur: z.facing, bobPhase: Math.random() * Math.PI * 2,
-      lastX: z.x, lastY: z.y,
+      lastX: z.x, lastY: z.y, dustCd: Math.random() * 0.16,
     };
   }
 
@@ -161,8 +166,11 @@ export class GameView {
     const screenW = this.app.screen.width;
     const screenH = this.app.screen.height;
     const k = 1 - Math.exp(-CAMERA_SMOOTHING * dt);
-    this.camX += (sim.player.x - screenW / 2 - this.camX) * k;
-    this.camY += (sim.player.y - screenH / 2 - this.camY) * k;
+    // 前瞻：镜头朝移动方向探出一点（横 56 / 纵 40），急停时平滑回中
+    this.lookX += (sim.input.moveX * 56 - this.lookX) * Math.min(1, dt * 3);
+    this.lookY += (sim.input.moveY * 40 - this.lookY) * Math.min(1, dt * 3);
+    this.camX += (sim.player.x + this.lookX - screenW / 2 - this.camX) * k;
+    this.camY += (sim.player.y + this.lookY - screenH / 2 - this.camY) * k;
     this.camX = Math.min(sim.world.w - screenW, Math.max(0, this.camX));
     this.camY = Math.min(sim.world.h - screenH, Math.max(0, this.camY));
     // 震屏：随机偏移 × 衰减强度
@@ -175,6 +183,8 @@ export class GameView {
     this.updateBursts(dt);
     this.updateScribbles(dt);
     this.updateRipples(dt);
+    this.updateDust(dt);
+    this.updateSparks(dt);
 
     // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏+墨迹消散；无敌帧闪烁
     const p = sim.player;
@@ -231,6 +241,12 @@ export class GameView {
         this.playerSprite.texture = skin.idle[this.frameIndex];
       }
       this.playerSprite.alpha = p.invincible > 0 ? 0.55 + 0.45 * Math.sin(p.invincible * 40) : 1;
+      // 移动扬尘：地面行进按节拍在脚下冒灰点
+      this.playerDustCd -= dt;
+      if (p.moving && this.playerDustCd <= 0) {
+        this.playerDustCd = p.dashTimer > 0 ? 0.03 : 0.12;
+        this.spawnDust(p.x, p.y);
+      }
       // 冲刺残影：高速位移期按节拍丢出渐隐拷贝
       this.afterimageCd -= dt;
       if (p.dashTimer > 0 && this.afterimageCd <= 0) {
@@ -257,6 +273,8 @@ export class GameView {
       v.faceCur += (z.facing - v.faceCur) * Math.min(1, dt * 12);
       v.body.scale.x = Math.abs(v.faceCur) < 0.1 ? (v.faceCur < 0 ? -0.1 : 0.1) : v.faceCur;
       v.body.tint = z.hitFlash > 0 ? 0xd9402a : 0xffffff;
+      // 受击抽搐：红闪期身体小幅抖动（container 定位不动，血条稳定）
+      v.body.x = z.hitFlash > 0 ? (Math.random() * 2 - 1) * 3 : 0;
       // 隐煞隐身：近乎透明（保留一点轮廓提示玩家位置威胁）
       v.container.alpha = z.stealth ? 0.12 : 1;
       // 动感：浮空妖物正弦浮动+轻摇摆；地面妖物行走时小弹跳（相位个体错开）
@@ -269,6 +287,11 @@ export class GameView {
         const moved = Math.hypot(z.x - v.lastX, z.y - v.lastY) > 0.4;
         v.body.y = -Math.abs(Math.sin(now * 7 + v.bobPhase)) * (moved ? 2.2 : 0.5);
         v.body.rotation = 0;
+        v.dustCd -= dt;
+        if (moved && v.dustCd <= 0) {
+          v.dustCd = 0.16;
+          this.spawnDust(z.x, z.y);
+        }
       }
       v.lastX = z.x; v.lastY = z.y;
       const ratio = Math.max(0, z.hp / z.maxHp);
@@ -481,6 +504,65 @@ export class GameView {
       alive.push(a);
     }
     this.afterimages = alive;
+  }
+
+  /** 移动扬尘：脚下铅笔灰小点，上飘淡出（浮空型不产）。 */
+  private dustGfx = new Graphics();
+  private dusts: Array<{ x: number; y: number; vx: number; vy: number; r: number; life: number }> = [];
+  private playerDustCd = 0;
+
+  private spawnDust(x: number, y: number): void {
+    if (this.dusts.length > 26) return;
+    this.dusts.push({
+      x: x + (Math.random() * 12 - 6), y: y + 30,
+      vx: Math.random() * 22 - 11, vy: -14 - Math.random() * 14,
+      r: 1.4 + Math.random() * 1.6, life: 0.42,
+    });
+  }
+
+  private updateDust(dt: number): void {
+    const alive: typeof this.dusts = [];
+    const g = this.dustGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const d of this.dusts) {
+      d.life -= dt;
+      if (d.life <= 0) continue;
+      d.x += d.vx * dt; d.y += d.vy * dt; d.vy += 26 * dt;
+      g.circle(d.x, d.y, d.r * (0.5 + d.life / 0.42 * 0.5)).fill({ color: INK_SOFT, alpha: (d.life / 0.42) * 0.4 });
+      alive.push(d);
+    }
+    this.dusts = alive;
+  }
+
+  /** 命中火花：命中点迸 4 条炭线快速淡出（0.16s）。 */
+  private sparkGfx = new Graphics();
+  private sparks: Array<{ x: number; y: number; seed: number; life: number }> = [];
+
+  spawnHitSpark(x: number, y: number): void {
+    if (this.sparks.length > 14) return;
+    this.sparks.push({ x, y, seed: Math.random() * TAU, life: 0.16 });
+  }
+
+  private updateSparks(dt: number): void {
+    const alive: typeof this.sparks = [];
+    const g = this.sparkGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const sp of this.sparks) {
+      sp.life -= dt;
+      if (sp.life <= 0) continue;
+      const t = sp.life / 0.16;
+      for (let i = 0; i < 4; i++) {
+        const a = sp.seed + (i / 4) * TAU;
+        const r0 = 4 + (1 - t) * 10, r1 = r0 + 5 + t * 4;
+        g.moveTo(sp.x + Math.cos(a) * r0, sp.y + Math.sin(a) * r0)
+          .lineTo(sp.x + Math.cos(a) * r1, sp.y + Math.sin(a) * r1)
+          .stroke({ width: 2, color: INK, alpha: t * 0.85 });
+      }
+      alive.push(sp);
+    }
+    this.sparks = alive;
   }
 
   /** 墨迹消散：放射炭线 + 小圈 + 血红点，快速扩张淡出（纸上擦除感）。 */

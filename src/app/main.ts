@@ -70,6 +70,7 @@ async function boot(): Promise<void> {
   // 表现层订阅：伤害数字 + 震屏 + 音效
   sim.onDamage.push((x, y, dmg, crit) => {
     view.spawnDamageNumber(x, y, dmg, crit);
+    view.spawnHitSpark(x, y);
     view.shake(crit ? 8 : 3);
   });
   sim.onAttack.push((type) => {
@@ -86,7 +87,7 @@ async function boot(): Promise<void> {
     const d = e.data as Record<string, string>;
     if (e.event === "weapon_gained") { notify.push(`获得武器：${d.name}`); audio.play("weapon_select"); }
     else if (e.event === "chest_opened") { notify.push(`宝箱开启：${d.weapon}`); audio.play("upgrade"); }
-    else if (e.event === "achievement") notify.push(`成就达成：${d.name}`);
+    else if (e.event === "achievement") { notify.push(`成就达成：${d.name}`); notify.banner("成就达成", d.name); }
     else if (e.event === "weapon_ascended") { notify.push(`武器进阶：${d.name}`); audio.play("upgrade"); }
     else if (e.event === "weapon_ultimate") { notify.push(`武器终极：${d.name}`); audio.play("combo_5"); }
     else if (e.event === "crafted") { notify.push(`合成：${d.name}`); audio.play("upgrade"); }
@@ -186,6 +187,7 @@ async function boot(): Promise<void> {
   function wireSim(): void {
     sim.onDamage.push((x, y, dmg, crit) => {
       view.spawnDamageNumber(x, y, dmg, crit);
+      view.spawnHitSpark(x, y);
       view.shake(crit ? 8 : 3);
     });
     sim.onAttack.push((type) => {

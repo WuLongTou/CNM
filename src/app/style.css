@@ -94,6 +94,21 @@ canvas { position: absolute; z-index: 0; }
 .upgrade-card b { color: #6a1a12; letter-spacing: 0.08em; }
 .upgrade-card .uc-stat { color: #8e2a20; font-weight: 700; }
 
+/* ── 成就纸签：中央弹入的高光卡片（简笔风）── */
+#banner-root { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.sketch-banner {
+  position: absolute; top: 22%;
+  background: #fbf6ea; border: 2.5px solid #332e29; color: #332e29;
+  border-radius: 10px 14px 9px 15px; box-shadow: 3px 4px 0 rgba(51, 46, 41, 0.35);
+  padding: 14px 34px; text-align: center;
+  transform: rotate(-2deg) scale(0.6); opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.2, 1.6, 0.4, 1), opacity 0.3s;
+}
+.sketch-banner.show { transform: rotate(-2deg) scale(1); opacity: 1; }
+.sketch-banner.leave { transform: rotate(-5deg) scale(0.9) translateY(-14px); opacity: 0; transition: all 0.4s ease-in; }
+.sketch-banner .sb-title { font-size: 15px; letter-spacing: 0.3em; color: #a8741a; font-weight: 700; margin-bottom: 4px; }
+.sketch-banner .sb-sub { font-size: 19px; font-weight: 700; color: #8e2a20; letter-spacing: 0.1em; }
+
 /* ── 小地图：纸片地图 ── */
 #minimap { position: absolute; right: 12px; top: 64px; border-radius: 4px; image-rendering: pixelated; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.3); }
 
