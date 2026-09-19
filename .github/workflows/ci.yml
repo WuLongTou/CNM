@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    name: Unit Tests & Build (npm)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: npm ci
+        run: npm ci
+
+      - name: asset sync (public/assets 为生成产物，先同步再测试)
+        run: npm run assets:sync
+
+      - name: unit tests (vitest)
+        run: npm test
+
+      - name: build (tsc + vite)
+        run: npm run build
+
+# e2e（Playwright）不进 CI：断言对帧率计时敏感（playwright.config.ts 注释），
+# 共享 runner 噪声会放大偶发失败，按现状仅本地手跑（npm run e2e）。

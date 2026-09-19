@@ -142,6 +142,16 @@ npm run e2e           # Playwright E2E（自动起 dev server）
       UI 手账化（HUD 纸条/通知纸签/升级符纸卡/小地图纸片）；玩家切帧改等分网格
       （细线条投影分割会被腰斩，见 sync-assets 注释）
 
+## 构建 / 测试 / 部署
+
+- 安装与测试：`npm ci` → `npm test`（vitest，sim 层逻辑回归）→ `npm run build`
+  （tsc 全量类型检查 + vite 产物）。`public/assets/` 为生成产物不入库，
+  本地跑 e2e 或部署前先 `npm run assets:sync`。
+- e2e：`npm run e2e`（Playwright，完整对局闭环）。断言对帧率计时敏感
+  （串行 + 零重试），仅本地手跑，不进 CI。
+- 部署：`dist/` 为纯静态产物（`vite.config.ts` 未设 `base`，必须以**根路径**
+  部署，如 `https://<域名>/`，不支持子路径）；由 nginx 直接托管，无服务端。
+
 ## 操作
 
 - 移动 WASD/方向键，攻击 空格（按住连击），冲刺 Shift（HUD ⚡ 指示就绪）
