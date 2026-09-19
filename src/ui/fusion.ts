@@ -48,6 +48,13 @@ export class FusionPanel {
     this.el.classList.add("hidden");
   }
 
+  /** restart 后换绑新 sim：旧局的融合报价随旧 sim 作废，面板复位为隐藏。 */
+  resimulate(sim: GameSim): void {
+    this.sim = sim;
+    this.visible = false;
+    this.el.classList.add("hidden");
+  }
+
   /** 按键路由（main 层调用）：仅面板可见时消费。 */
   onKey(e: KeyboardEvent): boolean {
     if (!this.visible) return false;

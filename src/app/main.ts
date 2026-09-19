@@ -67,20 +67,6 @@ async function boot(): Promise<void> {
   const notify = new Notify();
   const eventBuffer: SimEvent[] = [];
 
-  // 表现层订阅：伤害数字 + 震屏 + 音效
-  sim.onDamage.push((x, y, dmg, crit) => {
-    view.spawnDamageNumber(x, y, dmg, crit);
-    view.spawnHitSpark(x, y);
-    view.shake(crit ? 8 : 3);
-  });
-  sim.onAttack.push((type) => {
-    audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
-    view.playAttack();
-  });
-  sim.onKill.push(() => audio.play("enemy_die"));
-  sim.onPlayerHurt.push(() => audio.play("player_hurt"));
-  sim.onDashStrike.push(() => view.shake(2));
-
   // sim 事件 → 通知条/音效（事件本身仍进 eventBuffer 供 Playwright 断言）
   const handleEvent = (e: SimEvent) => {
     eventBuffer.push(e);
@@ -181,6 +167,8 @@ async function boot(): Promise<void> {
     crafting.resimulate(sim);
     upgrade.resimulate(sim);
     help.resimulate(sim);
+    fusion.resimulate(sim);
+    pauseMenu.resimulate(sim);
     input.clearExternal();
   }
 

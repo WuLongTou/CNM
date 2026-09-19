@@ -42,4 +42,11 @@ export class PauseMenu {
     this.el.classList.toggle("hidden", !this.visible);
     this.sim.paused = this.visible;
   }
+
+  /** restart 后换绑新 sim：旧局连同其暂停态一起作废（新 sim 未暂停），面板复位隐藏。 */
+  resimulate(sim: GameSim): void {
+    this.sim = sim;
+    this.visible = false;
+    this.el.classList.add("hidden");
+  }
 }
