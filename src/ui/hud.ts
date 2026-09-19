@@ -49,6 +49,8 @@ export class Hud {
   private welcome!: HTMLElement;
   private gameover!: HTMLElement;
   private gameoverStats!: HTMLElement;
+  /** GameOver 面板延迟弹出计时（进 GameOver 起算；让死亡消散先播完）。 */
+  private gameOverAt = 0;
 
   private buildWelcome(): void {
     this.welcome = document.createElement("div");
@@ -139,9 +141,13 @@ export class Hud {
     this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s`;
     this.weaponText.textContent = s.activeWeapon ? `武器 ${s.activeWeapon.name}` : "徒手";
     this.welcome.classList.toggle("hidden", s.state !== "WeaponSelection");
+    // GameOver 面板延迟 0.7s 弹出：先看玩家阵亡消散，再进结算
+    if (s.state === "GameOver" && this.gameOverAt === 0) this.gameOverAt = performance.now();
+    if (s.state !== "GameOver") this.gameOverAt = 0;
+    const overReady = s.state === "GameOver" && performance.now() - this.gameOverAt > 700;
     const wasOver = this.gameover.classList.contains("hidden");
-    this.gameover.classList.toggle("hidden", s.state !== "GameOver");
-    if (!wasOver && s.state === "GameOver") {
+    this.gameover.classList.toggle("hidden", !overReady);
+    if (!wasOver && overReady) {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
         `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · 金币 +${coins}`;

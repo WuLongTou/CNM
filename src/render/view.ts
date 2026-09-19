@@ -35,13 +35,19 @@ interface EnemyView {
   animTimer: number;
 }
 
+/** 玩家外观皮肤：对应武器类型（Melee→warrior / Ranged→ranger / Magic→mage）。 */
+interface PlayerSkin {
+  walk: Texture[];
+  attack: Texture[];
+  idle: Texture;
+}
+
 export class GameView {
   private app!: Application;
   private worldLayer = new Container();
   private playerSprite!: Sprite;
-  private playerWalkFrames: Texture[] = [];
-  private playerAttackFrames: Texture[] = [];
-  private playerIdle!: Texture;
+  private playerSkins: Record<string, PlayerSkin> = {};
+  private curSkin = "warrior";
   /** 攻击动画剩余时长（playAttack 置位，递减归零回落 walk/idle）。 */
   private attackTimer = 0;
   private enemyViews = new Map<number, EnemyView>();
@@ -50,6 +56,8 @@ export class GameView {
   private camY = 0;
   private animTimer = 0;
   private frameIndex = 0;
+  /** 上一帧玩家死亡标记（边沿触发死亡消散）。 */
+  private prevPlayerDead = false;
 
   /** 加载全部资产并搭建场景。 */
   async init(app: Application): Promise<void> {
@@ -62,12 +70,15 @@ export class GameView {
     ground.width = 3840; ground.height = 2160;
     this.worldLayer.addChild(ground);
 
-    // 玩家帧（warrior walk 8 帧 / attack 6 帧 + idle 首帧）
-    this.playerWalkFrames = await this.loadFrames(`assets/sprites/player/warrior_walk.json`);
-    this.playerAttackFrames = await this.loadFrames(`assets/sprites/player/warrior_attack.json`);
-    const idleFrames = await this.loadFrames(`assets/sprites/player/warrior_idle.json`);
-    this.playerIdle = idleFrames[0];
-    this.playerSprite = new Sprite(this.playerIdle);
+    // 玩家三套外观（walk 8 帧 / attack 6 帧 / idle 首帧），按手持武器类型切换
+    for (const who of ["warrior", "ranger", "mage"]) {
+      this.playerSkins[who] = {
+        walk: await this.loadFrames(`assets/sprites/player/${who}_walk.json`),
+        attack: await this.loadFrames(`assets/sprites/player/${who}_attack.json`),
+        idle: (await this.loadFrames(`assets/sprites/player/${who}_idle.json`))[0],
+      };
+    }
+    this.playerSprite = new Sprite(this.playerSkins.warrior.idle);
     this.playerSprite.anchor.set(0.5);
     this.worldLayer.addChild(this.playerSprite);
 
@@ -141,31 +152,50 @@ export class GameView {
     this.updateBursts(dt);
     this.updateScribbles(dt);
 
-    // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏；无敌帧闪烁
+    // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏+墨迹消散；无敌帧闪烁
     const p = sim.player;
     this.playerSprite.visible = !p.dead;
+    if (!p.dead && p.invincible <= 0 && this.prevPlayerDead) {
+      // 重生/新局：复位消散标记
+      this.prevPlayerDead = false;
+    }
+    if (p.dead && !this.prevPlayerDead && sim.state === "GameOver") {
+      // 阵亡瞬间：大号墨迹消散（双份错位，与妖物消散同语）
+      this.spawnDeathScribble(p.x, p.y, 2.4);
+      this.spawnDeathScribble(p.x + 10, p.y - 6, 1.6);
+      this.prevPlayerDead = true;
+    }
     if (!p.dead) {
+      // 皮肤跟随武器类型：近战=除妖师 / 远程=弓手 / 法术=法师
+      const want = sim.activeWeapon?.type === "Ranged" ? "ranger"
+        : sim.activeWeapon?.type === "Magic" ? "mage" : "warrior";
+      if (want !== this.curSkin) {
+        this.curSkin = want;
+        this.animTimer = 0;
+        this.frameIndex = 0;
+      }
+      const skin = this.playerSkins[this.curSkin];
       this.playerSprite.x = p.x; this.playerSprite.y = p.y;
       this.playerSprite.scale.x = p.facing;
       if (this.attackTimer > 0) {
-        // 攻击动画优先：按 6 帧均摊播放完整个挥砍
+        // 攻击动画优先：按帧数均摊播完一轮
         this.attackTimer -= dt;
-        const at = Math.min(this.playerAttackFrames.length - 1,
-          Math.floor((1 - this.attackTimer / ATTACK_ANIM_TIME) * this.playerAttackFrames.length));
-        this.playerSprite.texture = this.playerAttackFrames[at];
+        const at = Math.min(skin.attack.length - 1,
+          Math.floor((1 - this.attackTimer / ATTACK_ANIM_TIME) * skin.attack.length));
+        this.playerSprite.texture = skin.attack[at];
         this.animTimer = 0;
         this.frameIndex = 0;
       } else if (p.moving) {
         this.animTimer += dt;
         if (this.animTimer >= WALK_ANIM_STEP) {
           this.animTimer -= WALK_ANIM_STEP;
-          this.frameIndex = (this.frameIndex + 1) % this.playerWalkFrames.length;
+          this.frameIndex = (this.frameIndex + 1) % skin.walk.length;
         }
-        this.playerSprite.texture = this.playerWalkFrames[this.frameIndex];
+        this.playerSprite.texture = skin.walk[this.frameIndex];
       } else {
         this.animTimer = 0;
         this.frameIndex = 0;
-        this.playerSprite.texture = this.playerIdle;
+        this.playerSprite.texture = skin.idle;
       }
       this.playerSprite.alpha = p.invincible > 0 ? 0.55 + 0.45 * Math.sin(p.invincible * 40) : 1;
     }
@@ -310,11 +340,11 @@ export class GameView {
   }
 
   /** 墨迹消散：放射炭线 + 小圈 + 血红点，快速扩张淡出（纸上擦除感）。 */
-  private scribbles: Array<{ gfx: Graphics; x: number; y: number; seed: number; life: number }> = [];
+  private scribbles: Array<{ gfx: Graphics; x: number; y: number; seed: number; life: number; scale: number }> = [];
 
-  private spawnDeathScribble(x: number, y: number): void {
+  private spawnDeathScribble(x: number, y: number, scale = 1): void {
     if (this.scribbles.length > 10) return; // 上限节流
-    const sc = { gfx: new Graphics(), x, y, seed: Math.random() * TAU, life: 0.4 };
+    const sc = { gfx: new Graphics(), x, y, seed: Math.random() * TAU, life: 0.4, scale };
     this.scribbles.push(sc);
     this.fxLayer.addChild(sc.gfx);
   }
@@ -328,25 +358,26 @@ export class GameView {
       const g = sc.gfx;
       g.clear();
       g.alpha = (1 - t) * 0.9;
+      const k = sc.scale;
       // 5 条放射短线（手绘抖动：长度/角度带随机相位偏移）
       for (let i = 0; i < 5; i++) {
         const a = sc.seed + (i / 5) * TAU;
-        const r0 = 6 + t * 16, r1 = r0 + 9 + Math.sin(sc.seed + i * 2.7) * 3;
+        const r0 = (6 + t * 16) * k, r1 = r0 + (9 + Math.sin(sc.seed + i * 2.7) * 3) * k;
         g.moveTo(sc.x + Math.cos(a) * r0, sc.y + Math.sin(a) * r0 * 0.75)
           .lineTo(sc.x + Math.cos(a) * r1, sc.y + Math.sin(a) * r1 * 0.75)
           .stroke({ width: 2.4, color: INK, alpha: 0.8 });
       }
       // 一个歪斜小圈 + 血红残点
-      this.sketchCircle(g, sc.x, sc.y - 2, 5 + t * 12, { color: INK_SOFT, width: 2, alpha: 0.7 });
-      g.circle(sc.x + Math.sin(sc.seed) * 6, sc.y - 4, 2.2).fill({ color: BLOOD, alpha: 0.85 });
+      this.sketchCircle(g, sc.x, sc.y - 2 * k, (5 + t * 12) * k, { color: INK_SOFT, width: 2, alpha: 0.7 });
+      g.circle(sc.x + Math.sin(sc.seed) * 6 * k, sc.y - 4 * k, 2.2 * Math.max(1, k * 0.7)).fill({ color: BLOOD, alpha: 0.85 });
       alive2.push(sc);
     }
     this.scribbles = alive2;
   }
 
-  /** 手绘抖动圆：N 段折线 + sin 相位扰动（区别于矢量完美圆）。 */
+  /** 手绘抖动圆：N 段折线 + sin 相位扰动（区别于矢量完美圆）；段数随半径自适应。 */
   private sketchCircle(g: Graphics, cx: number, cy: number, r: number, o: { color: number; width: number; alpha: number }): void {
-    const N = 12;
+    const N = Math.max(14, Math.round(r * 0.55));
     const wob = r * 0.08;
     for (let i = 0; i <= N; i++) {
       const a = (i / N) * TAU;
@@ -411,11 +442,45 @@ export class GameView {
         g.moveTo(bx, y0).lineTo(bx - 7, y0 + 22);
       }
     } else if (w.type === "Fog") {
-      g.rect(0, 0, sw, sh).fill({ color: 0x9a948a, alpha: 0.34 * k });
+      g.rect(0, 0, sw, sh).fill({ color: 0x9a948a, alpha: 0.28 * k });
+      // 手绘雾团：三团歪圈组合，随时间缓慢漂移（纸上擦过的灰痕）
+      const t = performance.now() / 1000;
+      for (let i = 0; i < 3; i++) {
+        const cx = ((t * (12 + i * 7) + i * 500) % (sw + 360)) - 180;
+        const cy = sh * (0.22 + 0.3 * ((i * 0.37) % 1)) + Math.sin(t * 0.4 + i * 2.1) * 22;
+        g.circle(cx, cy, 95 + i * 26).fill({ color: 0xe8e3d6, alpha: 0.16 * k });
+        g.circle(cx + 70, cy + 18, 70 + i * 20).fill({ color: 0xe8e3d6, alpha: 0.14 * k });
+        g.circle(cx - 80, cy + 8, 60 + i * 16).fill({ color: 0xe8e3d6, alpha: 0.12 * k });
+        this.sketchCircle(g, cx, cy, 95 + i * 26, { color: 0xd8d2c2, width: 3.5, alpha: 0.35 * k });
+        this.sketchCircle(g, cx + 70, cy + 18, 70 + i * 20, { color: 0xd8d2c2, width: 3, alpha: 0.3 * k });
+      }
     } else if (w.type === "BloodMoon") {
       const pulse = 0.16 + 0.05 * Math.sin(performance.now() / 450);
       g.rect(0, 0, sw, sh).fill({ color: 0x8e1010, alpha: pulse * k });
+      // 手绘血月（右上角）：外轮 + 两笔月海 + 一笔云带，与暗红罩同呼吸
+      const mx = sw - 250, my = 175;
+      const breath = 1 + 0.03 * Math.sin(performance.now() / 450);
+      g.alpha = 0.75 + 0.25 * Math.sin(performance.now() / 450) * 0.3;
+      this.sketchCircle(g, mx, my, 46 * breath, { color: 0xb02a1e, width: 4.5, alpha: 0.95 });
+      this.moonArc(g, mx - 12, my - 8, 16, { color: 0xb02a1e, alpha: 0.5 });
+      this.moonArc(g, mx + 8, my + 10, 12, { color: 0xb02a1e, alpha: 0.4 });
+      g.moveTo(mx - 70, my + 28)
+        .lineTo(mx - 32, my + 20).lineTo(mx + 4, my + 28).lineTo(mx + 46, my + 18)
+        .stroke({ width: 2.4, color: 0xb02a1e, alpha: 0.6 });
+      g.alpha = 1;
     }
+  }
+
+  /** 月面弧（短弧线段，供血月月海）。 */
+  private moonArc(g: Graphics, cx: number, cy: number, r: number, o: { color: number; alpha: number }): void {
+    const pts = [];
+    for (let i = 0; i <= 7; i++) {
+      const a = Math.PI + (i / 7) * Math.PI * 0.72;
+      pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r * 0.6]);
+    }
+    g.moveTo(pts[0][0], pts[0][1]);
+    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.stroke({ width: 2.2, color: o.color, alpha: o.alpha });
   }
 
   /** fxLayer 需在 init 里挂到 worldLayer 之上；静态障碍/祭坛也在 init 后挂一次。 */
