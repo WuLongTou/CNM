@@ -3,12 +3,12 @@
 简笔画速写本风除妖生存 roguelike。TypeScript + PixiJS v8 实现（旧引擎工程已整体
 移除，仅存本 web 版；旧实现可从 git 历史早期提交恢复）。
 
-通用约束（Git 规范、Commit 格式、验证流程、工具链偏好等）以全局 AGENTS.md 为准，
+通用约束（Git 规范、Commit 格式、验证流程、工具链偏好等）以全局 `~/AGENTS.md` 为准，
 本文件只做项目特有补充，不得放宽或违背全局约束。
 
 ## 硬约束
 - Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
-- 临时文件目录：AI agent 工作期间产生的所有中间文件统一写入 `.workwork/`（已 gitignore）。
+- 包管理器：npm（`package-lock.json` 为唯一权威锁文件；pnpm-lock.yaml 与 pnpm-workspace.yaml 已删除，勿再引入——git 历史中仍有，仅作考古）。
 - 模态/选择/UI 页面快捷键必须独占输入（硬约束，自 Godot 版平移）：
   - 装备/合成/帮助/暂停/融合/GameOver 等任何模态页面打开时，游戏操作快捷键
     （WASD/方向键移动、空格攻击、Shift 冲刺、Tab 切目标等）必须 100% 失效。
@@ -38,5 +38,5 @@ spawn/give/upgrade/weapons/craft/offer_fusion/buy_meta/meta/inventory/teleport/q
 `getEvents()` 拉取事件推送；`sim` 直接暴露 GameSim 实例。
 
 ## 协作入口
-- 默认先理解上下文，再做最小必要改动；低风险任务直接实现，高风险任务再升级流程。
+- 任务分级：低风险（trivial）直接实现；高风险（非 trivial）按全局「方案选择」对比 2–3 种方案。
 - 游戏数值改动需与 `src/sim/config.ts`、`src/sim/weapons.ts` 数据表对照。
