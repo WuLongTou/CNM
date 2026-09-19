@@ -67,6 +67,8 @@ export interface Enemy {
   barrageVolley: number;
   /** 近战攻击前摇剩余秒（>0 = 蓄力定身，可读预警）。 */
   attackWind: number;
+  /** 出手动作剩余秒（扑击/后坐/脉冲，表现层驱动）。 */
+  strikeT: number;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -971,6 +973,7 @@ export class GameSim {
     for (const e of this.enemies) {
       e.hitFlash = Math.max(0, e.hitFlash - dt);
       e.attackCd = Math.max(0, e.attackCd - dt);
+      e.strikeT = Math.max(0, e.strikeT - dt);
 
       // 毒：1s 一跳
       if (e.psnT > 0) {
@@ -1006,6 +1009,7 @@ export class GameSim {
         e.barrageCd -= dt;
         if (e.barrageCd <= 0) {
           e.barrageCd = BOSS_BARRAGE.cd;
+          e.strikeT = 0.14; // 弹幕蓄能脉冲
           const n = BOSS_BARRAGE.count[e.bossPhase];
           const off = e.barrageVolley * 2.39996; // 黄金角 ≈ 137.5°
           e.barrageVolley++;
@@ -1089,6 +1093,7 @@ export class GameSim {
 
       if (ranged && dist <= ranged.range && e.attackCd <= 0) {
         e.attackCd = ranged.cd;
+        e.strikeT = 0.12; // 开火后坐
         this.fireEnemyShot(e, ranged.dmgMult, ranged.psn ?? false);
         continue;
       }
@@ -1102,6 +1107,8 @@ export class GameSim {
         e.attackWind -= dt;
         if (e.attackWind <= 0) {
           e.attackCd = CFG.Enemy.AttackCooldown;
+          e.strikeT = 0.16; // 扑击动作（扑空也播——出手必有动作语言）
+
           if (dist <= CFG.Enemy.AttackRange * CFG.Enemy.WindupHitRangeMult) {
             if (!this.tryPerfectDodge() && p.invincible <= 0) {
               p.hp -= e.damage;
@@ -1399,6 +1406,7 @@ export class GameSim {
       barrageCd: boss ? BOSS_BARRAGE.first : 0,
       barrageVolley: 0,
       attackWind: 0,
+      strikeT: 0,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;

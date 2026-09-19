@@ -192,7 +192,7 @@ async function boot(): Promise<void> {
     });
     sim.onAttack.push((type) => {
       audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
-      view.playAttack();
+      view.playAttack(type);
       if (type === "Melee") view.spawnSlash(sim.player.x, sim.player.y, sim.player.facing, sim.player.dashTimer > 0);
     });
     sim.onKill.push(() => audio.play("enemy_die"));

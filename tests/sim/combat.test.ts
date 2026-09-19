@@ -202,3 +202,48 @@ describe("攻击前摇与击退（M20 可读性）", () => {
     expect(king).toBeLessThan(normal / 3);   // 妖王：×0.15 几乎不动
   });
 });
+
+describe("出手动作窗口（M21）", () => {
+  it("近战前摇结束置 strikeT（扑空也播），0.16s 后归零", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 60, y: sim.player.y } } });
+    const e = sim.enemies[sim.enemies.length - 1];
+    e.attackCd = 0;
+    sim.tick();
+    expect(e.attackWind).toBeGreaterThan(0);
+    expect(e.strikeT).toBe(0);
+    // 蓄完 → strikeT 置位（此靶仍在范围会命中，但动作与命中解耦）
+    for (let i = 0; i < 30 && e.strikeT <= 0; i++) sim.tick();
+    expect(e.strikeT).toBeGreaterThan(0);
+    for (let i = 0; i < 20 && e.strikeT > 0; i++) sim.tick();
+    expect(e.strikeT).toBe(0);
+  });
+
+  it("扑空也播：前摇期走出范围，strikeT 照样置位", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 60, y: sim.player.y } } });
+    const e = sim.enemies[sim.enemies.length - 1];
+    e.attackCd = 0;
+    sim.tick(); // 起手
+    sim.exec({ action: "teleport", args: { x: sim.player.x + 500, y: sim.player.y } });
+    for (let i = 0; i < 30 && e.strikeT <= 0; i++) sim.tick();
+    expect(e.strikeT).toBeGreaterThan(0); // 打空仍有出手动作
+  });
+
+  it("远程妖开火与妖王弹幕都置 strikeT", () => {
+    const sim = newSim();
+    // 弩妖射程内站桩射击
+    sim.exec({ action: "spawn", args: { type: 8, near: { x: sim.player.x + 200, y: sim.player.y } } });
+    const a = sim.enemies[sim.enemies.length - 1];
+    a.attackCd = 0;
+    let fired = false;
+    for (let i = 0; i < 10 && !fired; i++) { sim.tick(); fired = a.strikeT > 0; }
+    expect(fired).toBe(true);
+    // 妖王弹幕
+    sim.exec({ action: "spawn", args: { type: 0, boss: true, near: { x: sim.player.x - 300, y: sim.player.y } } });
+    const b = sim.enemies[sim.enemies.length - 1];
+    b.barrageCd = 0.01;
+    sim.tick();
+    expect(b.strikeT).toBeGreaterThan(0);
+  });
+});

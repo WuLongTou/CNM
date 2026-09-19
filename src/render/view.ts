@@ -52,6 +52,8 @@ interface PlayerSkin {
 
 /** 浮空妖物：呼吸浮动 + 轻微摇摆（游魂/魅影/隐煞/浮灯/蚀群）。 */
 const FLOATY_TYPES = new Set<number>([0, 1, 4, 9, 13]);
+/** 远程妖物：出手动作为后坐缩放（瘴妖/弩妖），近战型为前扑位移。 */
+const RANGED_TYPES = new Set<number>([5, 8]);
 const IDLE_ANIM_STEP = 0.28;
 const AFTERIMAGE_LIFE = 0.22;
 
@@ -63,6 +65,8 @@ export class GameView {
   private curSkin = "warrior";
   /** 攻击动画剩余时长（playAttack 置位，递减归零回落 walk/idle）。 */
   private attackTimer = 0;
+  /** 当前攻击动画是否近战（近战带前顶步，远程站桩）。 */
+  private attackIsMelee = true;
   private enemyViews = new Map<number, EnemyView>();
   private enemyTextures = new Map<string, Texture[]>();
   private camX = 0;
@@ -216,11 +220,14 @@ export class GameView {
       this.playerSprite.scale.x = Math.abs(this.playerFace) < 0.08
         ? (this.playerFace < 0 ? -0.08 : 0.08) : this.playerFace;
       if (this.attackTimer > 0) {
-        // 攻击动画优先：按帧数均摊播完一轮
+        // 攻击动画优先：按帧数均摊播完一轮；近战附带迈步前顶（出手重量感）
         this.attackTimer -= dt;
-        const at = Math.min(skin.attack.length - 1,
-          Math.floor((1 - this.attackTimer / ATTACK_ANIM_TIME) * skin.attack.length));
+        const prog = 1 - this.attackTimer / ATTACK_ANIM_TIME;
+        const at = Math.min(skin.attack.length - 1, Math.floor(prog * skin.attack.length));
         this.playerSprite.texture = skin.attack[at];
+        const lunge = this.attackIsMelee ? Math.sin(prog * Math.PI) * 7 : 0;
+        this.playerSprite.x = p.x + p.facing * lunge;
+        this.playerSprite.y = p.y;
         this.animTimer = 0;
         this.frameIndex = 0;
       } else if (p.moving) {
@@ -280,7 +287,24 @@ export class GameView {
       v.container.alpha = z.stealth ? 0.12 : 1;
       // 动感：浮空妖物正弦浮动+轻摇摆；地面妖物行走时小弹跳（相位个体错开）
       const now = performance.now() / 1000;
-      if (z.attackWind > 0) {
+      if (z.strikeT > 0) {
+        // 出手动作：近战型向玩家扑击（位移+前倾），远程/妖王后坐缩放
+        const p2 = z.strikeT / 0.16;
+        const punch = Math.sin(Math.min(1, (1 - p2) * 1.6) * Math.PI); // 起手快收手慢
+        const dx = sim.player.x - z.x, dy = sim.player.y - z.y;
+        const dd = Math.hypot(dx, dy) || 1;
+        if (RANGED_TYPES.has(z.type) || z.boss) {
+          v.body.y = 0;
+          v.body.rotation = 0;
+          const sc = 1 + punch * 0.14;
+          v.body.scale.set(v.faceCur * sc, sc);
+        } else {
+          v.body.y = Math.sin(punch * Math.PI) * -4;
+          v.body.rotation = v.faceCur * 0.3 * punch;
+          v.body.x += (dx / dd) * punch * 12;
+          v.body.y += (dy / dd) * punch * 9;
+        }
+      } else if (z.attackWind > 0) {
         // 攻击前摇（可读预警）：后倾蓄力 + 血红脉冲，出手意图一目了然
         v.body.y = 0;
         v.body.rotation = -v.faceCur * 0.28;
@@ -289,11 +313,13 @@ export class GameView {
       } else if (FLOATY_TYPES.has(z.type)) {
         v.body.y = Math.sin(now * 2.6 + v.bobPhase) * 3.2;
         v.body.rotation = Math.sin(now * 1.7 + v.bobPhase) * 0.055;
+        v.body.scale.y = 1;
       } else {
         // 地面型：移动时步点弹跳，静止时轻微呼吸；位移由上一帧位置差分得出
         const moved = Math.hypot(z.x - v.lastX, z.y - v.lastY) > 0.4;
         v.body.y = -Math.abs(Math.sin(now * 7 + v.bobPhase)) * (moved ? 2.2 : 0.5);
         v.body.rotation = 0;
+        v.body.scale.y = 1;
         v.dustCd -= dt;
         if (moved && v.dustCd <= 0) {
           v.dustCd = 0.16;
@@ -803,8 +829,9 @@ export class GameView {
   }
 
   /** 播放一轮玩家攻击动画（onAttack 事件触发，期间覆盖 walk/idle 帧）。 */
-  playAttack(): void {
+  playAttack(type?: string): void {
     this.attackTimer = ATTACK_ANIM_TIME;
+    this.attackIsMelee = type === undefined || type === "Melee";
   }
 
   /** 伤害数字：世界上浮淡出（暴击更大；白纸上炭红字 + 纸白描边可读）。 */
