@@ -1,5 +1,5 @@
 // DOM UI 层：HUD、欢迎画面、GameOver 结算。
-// 手账/血色涂鸦风（对齐 HandDrawnTheme：纸面板 + 暗红描边 + 深红墨字）。
+// 简笔画速写本风（纸面板 + 炭描边 + 血红点缀，对齐 gen-sketch 风格规范）。
 // UI 快捷键约束：本层只用鼠标按钮，不占用任何游戏按键。
 
 import type { GameSim } from "../sim/game";
@@ -55,8 +55,9 @@ export class Hud {
     this.welcome.className = "overlay";
     this.welcome.innerHTML = `
       <div class="panel">
+        <img class="title-sketch" src="assets/sprites/ui/title_sketch.png" alt="" draggable="false">
         <h1>斩妖录</h1>
-        <p class="sub">血色涂鸦 · 除妖生存</p>
+        <p class="sub">简笔画速写本 · 除妖生存</p>
         <p id="save-stats" class="sub"></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>

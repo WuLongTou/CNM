@@ -203,6 +203,7 @@ async function main() {
   report.equipment = await copyDir(path.join("sprites", "equipment"), "sprites/equipment");
   report.pickups = await copyDir(path.join("sprites", "pickups"), "sprites/pickups");
   report.buildings = await copyDir(path.join("sprites", "buildings"), "sprites/buildings");
+  report.ui = await copyDir(path.join("sprites", "ui"), "sprites/ui");
   report.weapons = await stripDir(path.join("sprites", "weapons"), "sprites/weapons");
   report.effects = await stripDir(path.join("sprites", "effects"), "sprites/effects");
 

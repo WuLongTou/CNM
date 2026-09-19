@@ -534,6 +534,77 @@ async function genEnemies() {
   }
 }
 
+// ════════════════════ 欢迎页主题插画 ════════════════════
+// 800×340 场景：血月 + 远山一笔 + 地面线 + 除妖师（放大 2.4×）对峙三只妖物。
+async function genTitle() {
+  const W = 800, H = 340;
+  const pen = makePen(60601);
+  const parts = [];
+  // 血月（右上，双圈 + 内点）
+  parts.push(`<g>${(() => { const p = makePen(60602);
+    p.circle(660, 84, 44, { color: BLOOD, width: 4 });
+    // 两笔月面横向短弧（月海），替代斑点
+    p.arc(648, 76, 16, 200, 330, { color: BLOOD, width: 2.2, alpha: 0.5, n: 8 });
+    p.arc(668, 94, 12, 200, 330, { color: BLOOD, width: 2, alpha: 0.4, n: 7 });
+    // 一笔云带横穿月轮下缘
+    p.line([[590, 112], [628, 104], [664, 112], [706, 102]], { width: 2.4, alpha: 0.6 });
+    return p.body.join(""); })()}</g>`);
+  // 远山一笔（left → right 起伏）
+  parts.push(`<g>${(() => { const p = makePen(60603);
+    p.line([[30, 210], [130, 168], [220, 196], [330, 152], [430, 190], [540, 160], [660, 192], [770, 172]], { width: 2.6, alpha: 0.55 });
+    return p.body.join(""); })()}</g>`);
+  // 地面线 + 小草
+  parts.push(`<g>${(() => { const p = makePen(60604);
+    p.line([[40, 292], [760, 288]], { width: 3 });
+    const rnd = rng32(60605);
+    for (let i = 0; i < 9; i++) {
+      const x = 70 + rnd() * 660, y = 288 + rnd() * 6, s2 = 7 + rnd() * 6;
+      for (let k = -1; k <= 1; k++) p.line([[x, y], [x + k * s2 * 0.8, y - s2 * (1 - Math.abs(k) * 0.3)]], { width: 2, alpha: 0.5 });
+    }
+    return p.body.join(""); })()}</g>`);
+  // 除妖师：drawPlayer 画在 96 cell，放大 2.4 平移到 (70,86)
+  {
+    const p = makePen(60610);
+    drawPlayer(p, { pose: "attack", t: 0.18, weapon: "warrior" });
+    parts.push(`<g transform="translate(78,92) scale(2.4)">${p.body.join("")}</g>`);
+  }
+  // 三只妖：游魂 / 爆魈 / 蛟（各自 96 cell 原大 1.8×）
+  const foes = [
+    ["enemy_basic_walk", 0.25, 470, 130],
+    ["enemy_exploder_walk", 0.55, 590, 170],
+    ["enemy_fast_walk", 0.8, 636, 150],
+  ];
+  for (const [name, t, tx, ty] of foes) {
+    const p = makePen(61000 + Math.floor(tx));
+    ENEMIES[name](p, t);
+    parts.push(`<g transform="translate(${tx},${ty}) scale(1.8)">${p.body.join("")}</g>`);
+  }
+  // 飘落符纸两枚（血红矩形 + 中竖）
+  {
+    const p = makePen(60700);
+    for (const [x, y, a] of [[380, 60, -14], [560, 110, 10]]) {
+      p.body.push(`<g transform="rotate(${a} ${x} ${y})">`);
+      p.line([[x - 6, y - 9], [x + 6, y - 9], [x + 6, y + 9], [x - 6, y + 9], [x - 6, y - 9]], { color: BLOOD, width: 2, alpha: 0.7 });
+      p.line([[x, y - 9], [x, y + 9]], { color: BLOOD, width: 1.6, alpha: 0.55 });
+      p.body.push("</g>");
+    }
+    parts.push(p.body.join(""));
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+    <rect width="${W}" height="${H}" fill="#f5eede"/>
+    ${parts.join("\n")}
+    <radialGradient id="tv" cx="50%" cy="50%" r="75%">
+      <stop offset="80%" stop-color="rgba(90,66,40,0)"/><stop offset="100%" stop-color="rgba(90,66,40,0.08)"/>
+    </radialGradient>
+    <rect width="${W}" height="${H}" fill="url(#tv)"/>
+  </svg>`;
+  const file = path.join(SRC, "sprites", "ui", "title_sketch.png");
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  await sharp(Buffer.from(svg)).png().toFile(file);
+  console.log(`[gen] ${path.relative(PROJECT_ROOT, file)}  (欢迎页插画 ${W}×${H})`);
+}
+
 // ════════════════════ 地面：速写纸 ════════════════════
 async function genGround() {
   const W = 2560, H = 1440;
@@ -589,6 +660,7 @@ async function genGround() {
 
 async function main() {
   console.log("[gen] 简笔画资产生成开始…");
+  await genTitle();
   await genGround();
   await genPlayers();
   await genEnemies();

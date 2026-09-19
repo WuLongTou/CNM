@@ -1,7 +1,16 @@
 /* 简笔画速写本风 UI：米白纸面板 + 炭棕描边 + 血红点缀（与 gen-sketch.mjs 调色一致） */
 /* 中文界面无手写字体可用，手账感靠纸色/炭线/微倾角呈现 */
 
-#ui-root { position: absolute; inset: 0; pointer-events: none; font-family: system-ui, sans-serif; }
+#ui-root { position: absolute; inset: 0; pointer-events: none; font-family: system-ui, sans-serif; z-index: 10; }
+
+/* ── 速写本纸感叠加：细颗粒噪点 + 边缘晕影（盖在画布上、UI 之下，不拦截点击）── */
+#paper-fx {
+  position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  background:
+    radial-gradient(ellipse at center, rgba(90,66,40,0) 58%, rgba(74,54,32,0.14) 100%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.42 0 0 0 0 0.38 0 0 0 0 0.33 0 0 0 0.05 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+canvas { position: absolute; z-index: 0; }
 #ui-root .overlay, #ui-root #hud { pointer-events: auto; }
 .hidden { display: none !important; }
 
@@ -31,7 +40,10 @@
   padding: 40px 56px; text-align: center;
   transform: rotate(-0.6deg);
 }
-.panel h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: 0.18em; color: #8e2a20; }
+.panel h1 { margin: 0 0 8px; font-size: 34px; letter-spacing: 0.18em; color: #8e2a20;
+  font-family: "STKaiti", "KaiTi", "BiauKai", system-ui, sans-serif; }
+.title-sketch { width: min(360px, 100%); height: auto; display: block; margin: 0 auto 6px;
+  border: 1.5px solid #b8ab90; border-radius: 8px 11px 8px 12px; user-select: none; }
 .panel .sub { margin: 0 0 22px; color: #6b6154; font-size: 14px; }
 .panel .hint { margin: 18px 0 0; color: #8a8175; font-size: 12px; }
 .panel button {
@@ -43,7 +55,8 @@
 
 /* ── 装备面板 ── */
 .panel-wide { min-width: 420px; }
-.panel h2 { margin: 0 0 14px; color: #8e2a20; letter-spacing: 0.12em; }
+.panel h2 { margin: 0 0 14px; color: #8e2a20; letter-spacing: 0.12em;
+  font-family: "STKaiti", "KaiTi", "BiauKai", system-ui, sans-serif; }
 .eq-stats { display: flex; flex-wrap: wrap; gap: 10px 16px; font-size: 13px; color: #6b6154; margin-bottom: 14px; }
 .eq-list { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
 .eq-item { display: flex; gap: 10px; align-items: baseline; padding: 6px 10px; border: 1.5px solid #b8ab90; border-radius: 6px 8px 6px 9px; background: #fbf6ea; }

@@ -20,8 +20,10 @@ const INK_SOFT = 0x6b6154;  // 铅笔灰
 const BLOOD = 0xc0392b;     // 血红
 const PAPER = 0xf5eede;     // 纸白
 
+const TAU = Math.PI * 2;
 const CAMERA_SMOOTHING = 6.5; // 对齐 GameConfig.CameraSmoothing
 const WALK_ANIM_STEP = 0.06;  // 对齐 GameConfig.WalkAnimSpeed
+const ATTACK_ANIM_TIME = 0.3; // 攻击动画总时长（onAttack 触发播一轮）
 
 interface EnemyView {
   container: Container;
@@ -38,7 +40,10 @@ export class GameView {
   private worldLayer = new Container();
   private playerSprite!: Sprite;
   private playerWalkFrames: Texture[] = [];
+  private playerAttackFrames: Texture[] = [];
   private playerIdle!: Texture;
+  /** 攻击动画剩余时长（playAttack 置位，递减归零回落 walk/idle）。 */
+  private attackTimer = 0;
   private enemyViews = new Map<number, EnemyView>();
   private enemyTextures = new Map<string, Texture[]>();
   private camX = 0;
@@ -57,8 +62,9 @@ export class GameView {
     ground.width = 3840; ground.height = 2160;
     this.worldLayer.addChild(ground);
 
-    // 玩家帧（warrior walk 8 帧 + idle 首帧）
+    // 玩家帧（warrior walk 8 帧 / attack 6 帧 + idle 首帧）
     this.playerWalkFrames = await this.loadFrames(`assets/sprites/player/warrior_walk.json`);
+    this.playerAttackFrames = await this.loadFrames(`assets/sprites/player/warrior_attack.json`);
     const idleFrames = await this.loadFrames(`assets/sprites/player/warrior_idle.json`);
     this.playerIdle = idleFrames[0];
     this.playerSprite = new Sprite(this.playerIdle);
@@ -133,6 +139,7 @@ export class GameView {
     this.worldLayer.y = -this.camY + sy;
     this.updateDamageTexts(dt);
     this.updateBursts(dt);
+    this.updateScribbles(dt);
 
     // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏；无敌帧闪烁
     const p = sim.player;
@@ -140,7 +147,15 @@ export class GameView {
     if (!p.dead) {
       this.playerSprite.x = p.x; this.playerSprite.y = p.y;
       this.playerSprite.scale.x = p.facing;
-      if (p.moving) {
+      if (this.attackTimer > 0) {
+        // 攻击动画优先：按 6 帧均摊播放完整个挥砍
+        this.attackTimer -= dt;
+        const at = Math.min(this.playerAttackFrames.length - 1,
+          Math.floor((1 - this.attackTimer / ATTACK_ANIM_TIME) * this.playerAttackFrames.length));
+        this.playerSprite.texture = this.playerAttackFrames[at];
+        this.animTimer = 0;
+        this.frameIndex = 0;
+      } else if (p.moving) {
         this.animTimer += dt;
         if (this.animTimer >= WALK_ANIM_STEP) {
           this.animTimer -= WALK_ANIM_STEP;
@@ -180,6 +195,8 @@ export class GameView {
     }
     for (const [id, v] of this.enemyViews) {
       if (!alive.has(id)) {
+        // 妖物退场：原地画一团手绘"墨迹消散"（纸面擦除感）
+        this.spawnDeathScribble(v.container.x, v.container.y);
         v.container.destroy({ children: true });
         this.enemyViews.delete(id);
       }
@@ -285,10 +302,60 @@ export class GameView {
       if (b.life <= 0) { b.gfx.destroy(); continue; }
       const t = 1 - b.life / 0.45;
       b.gfx.clear();
-      b.gfx.circle(b.x, b.y, 10 + t * 46).stroke({ width: 3.5, color: b.color, alpha: (1 - t) * 0.85 });
+      b.gfx.alpha = (1 - t) * 0.85;
+      this.sketchCircle(b.gfx, b.x, b.y, 10 + t * 46, { color: b.color, width: 3.5, alpha: 1 });
       alive.push(b);
     }
     this.bursts = alive;
+  }
+
+  /** 墨迹消散：放射炭线 + 小圈 + 血红点，快速扩张淡出（纸上擦除感）。 */
+  private scribbles: Array<{ gfx: Graphics; x: number; y: number; seed: number; life: number }> = [];
+
+  private spawnDeathScribble(x: number, y: number): void {
+    if (this.scribbles.length > 10) return; // 上限节流
+    const sc = { gfx: new Graphics(), x, y, seed: Math.random() * TAU, life: 0.4 };
+    this.scribbles.push(sc);
+    this.fxLayer.addChild(sc.gfx);
+  }
+
+  private updateScribbles(dt: number): void {
+    const alive2: typeof this.scribbles = [];
+    for (const sc of this.scribbles) {
+      sc.life -= dt;
+      if (sc.life <= 0) { sc.gfx.destroy(); continue; }
+      const t = 1 - sc.life / 0.4;
+      const g = sc.gfx;
+      g.clear();
+      g.alpha = (1 - t) * 0.9;
+      // 5 条放射短线（手绘抖动：长度/角度带随机相位偏移）
+      for (let i = 0; i < 5; i++) {
+        const a = sc.seed + (i / 5) * TAU;
+        const r0 = 6 + t * 16, r1 = r0 + 9 + Math.sin(sc.seed + i * 2.7) * 3;
+        g.moveTo(sc.x + Math.cos(a) * r0, sc.y + Math.sin(a) * r0 * 0.75)
+          .lineTo(sc.x + Math.cos(a) * r1, sc.y + Math.sin(a) * r1 * 0.75)
+          .stroke({ width: 2.4, color: INK, alpha: 0.8 });
+      }
+      // 一个歪斜小圈 + 血红残点
+      this.sketchCircle(g, sc.x, sc.y - 2, 5 + t * 12, { color: INK_SOFT, width: 2, alpha: 0.7 });
+      g.circle(sc.x + Math.sin(sc.seed) * 6, sc.y - 4, 2.2).fill({ color: BLOOD, alpha: 0.85 });
+      alive2.push(sc);
+    }
+    this.scribbles = alive2;
+  }
+
+  /** 手绘抖动圆：N 段折线 + sin 相位扰动（区别于矢量完美圆）。 */
+  private sketchCircle(g: Graphics, cx: number, cy: number, r: number, o: { color: number; width: number; alpha: number }): void {
+    const N = 12;
+    const wob = r * 0.08;
+    for (let i = 0; i <= N; i++) {
+      const a = (i / N) * TAU;
+      const rr = r + Math.sin(a * 3 + cx * 0.1 + cy * 0.07) * wob;
+      const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+      if (i === 0) g.moveTo(px, py);
+      else g.lineTo(px, py);
+    }
+    g.stroke({ width: o.width, color: o.color, alpha: o.alpha });
   }
 
   /** 宝箱：简笔木箱——炭描边方框 + 箱盖线 + 血红锁扣点。 */
@@ -359,6 +426,11 @@ export class GameView {
   /** 触发震屏（强度≈像素幅度）。 */
   shake(power: number): void {
     this.shakePower = Math.max(this.shakePower, power);
+  }
+
+  /** 播放一轮玩家攻击动画（onAttack 事件触发，期间覆盖 walk/idle 帧）。 */
+  playAttack(): void {
+    this.attackTimer = ATTACK_ANIM_TIME;
   }
 
   /** 伤害数字：世界上浮淡出（暴击更大；白纸上炭红字 + 纸白描边可读）。 */

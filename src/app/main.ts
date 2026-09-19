@@ -31,6 +31,8 @@ declare global {
       exec: (cmd: { id?: number; action: string; args?: Record<string, unknown> }) => ExecResult;
       getEvents: () => SimEvent[];
       ready: boolean;
+      /** 当前画面快照（Pixi extract，JPEG dataURL；scale 为分辨率系数）。 */
+      shot: (scale?: number) => string;
       /** 直接访问 sim 实例（Playwright evaluate 深度断言用）。 */
       sim: GameSim;
       /** 当前渲染帧率（ticker 滚动平均；上限 TARGET_FPS=60）。 */
@@ -72,6 +74,7 @@ async function boot(): Promise<void> {
   });
   sim.onAttack.push((type) => {
     audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
+    view.playAttack();
   });
   sim.onKill.push(() => audio.play("enemy_die"));
   sim.onPlayerHurt.push(() => audio.play("player_hurt"));
@@ -178,6 +181,7 @@ async function boot(): Promise<void> {
     });
     sim.onAttack.push((type) => {
       audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
+      view.playAttack();
     });
     sim.onKill.push(() => audio.play("enemy_die"));
     sim.onPlayerHurt.push(() => audio.play("player_hurt"));
@@ -199,6 +203,11 @@ async function boot(): Promise<void> {
     },
     getEvents() { return eventBuffer.splice(0); },
     ready: true,
+    // 页面内截图（WebGL 画布无法直接 toDataURL，走 Pixi extract 离屏渲染）
+    shot(scale = 0.4) {
+      const canvas = app.renderer.extract.canvas({ target: app.stage, resolution: scale }) as HTMLCanvasElement;
+      return canvas.toDataURL("image/jpeg", 0.7);
+    },
     get sim() { return sim; },
     get fps() { return Math.round(app.ticker.FPS); },
   };
