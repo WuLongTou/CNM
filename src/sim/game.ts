@@ -202,6 +202,11 @@ const KNIGHT = { blockSec: 1.2, cd: 5 };
 const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
 /** 妖王环形弹幕：周期向四周放径向弹，阶段越高弹越密（M15）。 */
 export const BOSS_BARRAGE = { cd: 4.5, first: 3, dmgMult: 0.7, speed: 280, count: [9, 11, 13] };
+/** 妖王种族轮换（M19）：按出场次序循环，各带原生机制与外观——
+ *  游魂王(基础) → 石魅王(厚重) → 铁傀王(护甲-25%) → 甲妖王(周期举盾) → 蛟王(蓄力冲撞)。 */
+export const BOSS_ROSTER: EnemyType[] = [
+  EnemyType.Basic, EnemyType.Tank, EnemyType.Mech, EnemyType.Knight, EnemyType.Dragon,
+];
 /** 浮灯漂浮：摆动频率（rad/s）/ 垂直于追击方向的摆动速度幅值。 */
 const SHIP_FLOAT = { rate: 2.2, sway: 90 };
 const MAX_MINES = 6;
@@ -264,8 +269,10 @@ export class GameSim {
   private save: SaveStorage;
   private nextId = 1;
   private spawnCd = 0;
-  private roundTimer = 0;
+  roundTimer = 0;
   private bossSpawnedForRound = 0;
+  /** 已出场的妖王总数（BOSS_ROSTER 轮换索引）。 */
+  private bossSpawnCount = 0;
   private events: SimEvent[] = [];
   private listeners: Array<(e: SimEvent) => void> = [];
   /** 存档中的跨局累计击杀基线（本局 kills 之外的存量）。 */
@@ -623,7 +630,8 @@ export class GameSim {
     this.emit("threat_tier", { tier: this.round });
     if (this.round % CFG.Enemy.BossInterval === 0 && this.bossSpawnedForRound < this.round) {
       this.bossSpawnedForRound = this.round;
-      this.spawnEnemy({ type: "basic", boss: true, near: "player" });
+      this.spawnEnemy({ type: BOSS_ROSTER[this.bossSpawnCount % BOSS_ROSTER.length], boss: true, near: "player" });
+      this.bossSpawnCount++;
     }
     this.scatterChests(1);
   }
