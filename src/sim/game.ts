@@ -61,6 +61,8 @@ export interface Enemy {
   /** 蛟：冲撞冷却 / 蓄力剩余 / 冲刺剩余 / 锁定方向 / 本次冲刺是否已命中。 */
   chargeCd: number; chargeWind: number; chargeDash: number;
   chargeVx: number; chargeVy: number; chargeHit: boolean;
+  /** 妖王：环形弹幕冷却秒。 */
+  barrageCd: number;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -196,6 +198,8 @@ const MECH_ARMOR = 0.75;
 const KNIGHT = { blockSec: 1.2, cd: 5 };
 /** 蛟冲撞：冷却 / 蓄力 / 冲刺时长 / 冲刺速度倍数 / 接触伤害倍数。 */
 const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
+/** 妖王环形弹幕：周期向四周放径向弹，阶段越高弹越密（M15）。 */
+export const BOSS_BARRAGE = { cd: 4.5, first: 3, dmgMult: 0.7, speed: 280, count: [9, 11, 13] };
 /** 浮灯漂浮：摆动频率（rad/s）/ 垂直于追击方向的摆动速度幅值。 */
 const SHIP_FLOAT = { rate: 2.2, sway: 90 };
 const MAX_MINES = 6;
@@ -964,6 +968,20 @@ export class GameSim {
         this.emit("boss_phase", { phase: e.bossPhase + 1 });
       }
 
+      // 妖王环形弹幕：周期向四周放径向弹，压制走位（完美闪避的考题）
+      if (e.boss && !e.stealth) {
+        e.barrageCd -= dt;
+        if (e.barrageCd <= 0) {
+          e.barrageCd = BOSS_BARRAGE.cd;
+          const n = BOSS_BARRAGE.count[e.bossPhase];
+          const off = this.rng.range(0, Math.PI * 2);
+          for (let i = 0; i < n; i++) {
+            this.fireEnemyShot(e, BOSS_BARRAGE.dmgMult, false, off + (i / n) * Math.PI * 2, BOSS_BARRAGE.speed);
+          }
+          this.emit("boss_barrage", { x: e.x, y: e.y, count: n });
+        }
+      }
+
       if (p.dead) continue;
       const dx = p.x - e.x;
       const dy = p.y - e.y;
@@ -1068,16 +1086,20 @@ export class GameSim {
   }
 
   /** 敌方弹道：直线飞向玩家当前位置（不追踪）。 */
-  private fireEnemyShot(e: Enemy, dmgMult: number, psn: boolean): void {
+  private fireEnemyShot(e: Enemy, dmgMult: number, psn: boolean, ang?: number, speed = 340): void {
     const p = this.player;
-    const dx = p.x - e.x;
-    const dy = p.y - e.y;
-    const d = Math.hypot(dx, dy) || 1;
-    const speed = 340;
+    let vx: number, vy: number;
+    if (ang !== undefined) {
+      vx = Math.cos(ang) * speed; vy = Math.sin(ang) * speed;
+    } else {
+      const dx = p.x - e.x, dy = p.y - e.y;
+      const d = Math.hypot(dx, dy) || 1;
+      vx = (dx / d) * speed; vy = (dy / d) * speed;
+    }
     this.enemyProjectiles.push({
       id: this.nextId++,
       x: e.x, y: e.y,
-      vx: (dx / d) * speed, vy: (dy / d) * speed,
+      vx, vy,
       dmg: Math.max(1, Math.ceil(e.damage * dmgMult)),
       life: 3,
       psn,
@@ -1297,6 +1319,7 @@ export class GameSim {
       hp = Math.ceil(hp * CFG.Enemy.BossStatMult * 10);
       damage = Math.ceil(damage * CFG.Enemy.BossStatMult);
       speed *= CFG.Enemy.BossSpeedMult;
+      this.emit("boss_spawn", {});
     }
 
     const e: Enemy = {
@@ -1324,6 +1347,7 @@ export class GameSim {
       chargeCd: DRAGON.cd * 0.6,
       chargeWind: 0, chargeDash: 0,
       chargeVx: 0, chargeVy: 0, chargeHit: false,
+      barrageCd: boss ? BOSS_BARRAGE.first : 0,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;

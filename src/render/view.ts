@@ -4,7 +4,7 @@
 
 import { Application, Assets, Container, Graphics, Sprite, Text, Texture } from "pixi.js";
 import type { GameSim, Enemy } from "../sim/game";
-import { CFG, EnemyType } from "../sim/config";
+import { CFG, EnemyType, ENEMY_NAMES } from "../sim/config";
 
 /** 妖物类型 → 预切 atlas 名（assets/sprites/enemies/{name}.json）。 */
 const ENEMY_ATLAS: Record<number, string> = {
@@ -151,6 +151,7 @@ export class GameView {
     this.updateDamageTexts(dt);
     this.updateBursts(dt);
     this.updateScribbles(dt);
+    this.updateRipples(dt);
 
     // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏+墨迹消散；无敌帧闪烁
     const p = sim.player;
@@ -213,7 +214,8 @@ export class GameView {
       v.container.alpha = z.stealth ? 0.12 : 1;
       const ratio = Math.max(0, z.hp / z.maxHp);
       v.hpFill.width = 30 * ratio;
-      v.hpBar.visible = z.hp < z.maxHp;
+      // 妖王走顶部大血条，头顶小条隐藏
+      v.hpBar.visible = !z.boss && z.hp < z.maxHp;
       if (this.enemyTextures.get(v.animName)!.length > 1) {
         v.animTimer += dt;
         if (v.animTimer >= 0.1) {
@@ -240,10 +242,82 @@ export class GameView {
     this.renderChests(sim);
     this.renderTerrain(sim);
     this.renderWeather(sim);
+    this.renderBossBar(sim);
+  }
+
+  /** 妖王血条：屏幕顶居中，纸白底 + 血红填充 + 炭描边；阶段 2 起带裂纹。 */
+  private renderBossBar(sim: GameSim): void {
+    const g = this.bossBarGfx;
+    if (g.parent !== this.app.stage) this.app.stage.addChild(g);
+    const boss = sim.enemies.find((e) => e.boss);
+    if (!boss) {
+      g.clear();
+      if (this.bossNameText) { this.bossNameText.destroy(); this.bossNameText = null; }
+      return;
+    }
+    const sw = this.app.screen.width;
+    const W = 460, H = 14, x = sw / 2 - W / 2, y = 62;
+    const ratio = Math.max(0, boss.hp / boss.maxHp);
+    g.clear();
+    g.rect(x, y, W, H).fill({ color: PAPER, alpha: 0.92 });
+    g.rect(x + 2, y + 2, (W - 4) * ratio, H - 4).fill(BLOOD);
+    if (boss.bossPhase >= 1) {
+      // 阶段 2+：填充上两道裂纹，宣告狂暴
+      g.moveTo(x + W * 0.38, y).lineTo(x + W * 0.34, y + H)
+        .moveTo(x + W * 0.66, y).lineTo(x + W * 0.70, y + H)
+        .stroke({ width: 2, color: PAPER, alpha: 0.85 });
+    }
+    g.rect(x, y, W, H).stroke({ width: 2.5, color: INK });
+    if (!this.bossNameText) {
+      this.bossNameText = new Text({ text: "", style: {
+        fontFamily: "system-ui", fontSize: 13, fontWeight: "700",
+        fill: 0x8e2a20, stroke: { color: 0xf5eede, width: 3 },
+      } });
+      this.bossNameText.anchor.set(0.5, 0);
+      this.app.stage.addChild(this.bossNameText);
+    }
+    this.bossNameText.text = `妖王 · ${ENEMY_NAMES[boss.type] ?? "???"}${boss.bossPhase > 0 ? ` · 狂暴 ${boss.bossPhase + 1} 阶` : ""}`;
+    this.bossNameText.position.set(sw / 2, y + H + 4);
+  }
+
+  /** 完美闪避纸面波纹：同心双圈 + 放射短线，金色 1.1s 扩散（区别于普通事件圈）。 */
+  private ripples: Array<{ gfx: Graphics; x: number; y: number; seed: number; life: number }> = [];
+
+  spawnRipple(x: number, y: number): void {
+    if (this.ripples.length > 4) return;
+    const rp = { gfx: new Graphics(), x, y, seed: Math.random() * TAU, life: 1.1 };
+    this.ripples.push(rp);
+    this.fxLayer.addChild(rp.gfx);
+  }
+
+  private updateRipples(dt: number): void {
+    const alive: typeof this.ripples = [];
+    for (const rp of this.ripples) {
+      rp.life -= dt;
+      if (rp.life <= 0) { rp.gfx.destroy(); continue; }
+      const t = 1 - rp.life / 1.1;
+      const g = rp.gfx;
+      g.clear();
+      g.alpha = (1 - t) * 0.9;
+      this.sketchCircle(g, rp.x, rp.y, 18 + t * 74, { color: 0xa8741a, width: 3.5, alpha: 0.9 });
+      this.sketchCircle(g, rp.x, rp.y, 10 + t * 46, { color: 0xa8741a, width: 2.5, alpha: 0.6 });
+      for (let i = 0; i < 8; i++) {
+        const a = rp.seed + (i / 8) * TAU;
+        const r0 = (26 + t * 58), r1 = r0 + 11;
+        g.moveTo(rp.x + Math.cos(a) * r0, rp.y + Math.sin(a) * r0 * 0.8)
+          .lineTo(rp.x + Math.cos(a) * r1, rp.y + Math.sin(a) * r1 * 0.8)
+          .stroke({ width: 2.2, color: 0xa8741a, alpha: 0.8 });
+      }
+      alive.push(rp);
+    }
+    this.ripples = alive;
   }
 
   /** 高阶妖状态提示：甲妖举盾蓝灰圈 / 蛟蓄力红光闪烁。 */
   private enemyStateGfx = new Graphics();
+  /** 妖王顶部血条（屏幕空间，随存活妖王重绘）。 */
+  private bossBarGfx = new Graphics();
+  private bossNameText: Text | null = null;
   private renderEnemyStates(sim: GameSim): void {
     const g = this.enemyStateGfx;
     if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);

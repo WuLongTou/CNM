@@ -99,6 +99,8 @@ async function boot(): Promise<void> {
       audio.play(d.type === "BloodMoon" ? "lightning" : "charm");
     }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }
+    else if (e.event === "boss_spawn") { notify.push("妖王现世！"); view.shake(10); audio.play("lightning"); }
+    else if (e.event === "boss_barrage") { audio.play("enemy_hit"); }
     else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }
     else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);
     else if (e.event === "enemy_summon") view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad);
@@ -193,7 +195,7 @@ async function boot(): Promise<void> {
     sim.onKill.push(() => audio.play("enemy_die"));
     sim.onPlayerHurt.push(() => audio.play("player_hurt"));
     sim.onDashStrike.push((x, y) => { view.shake(2); view.spawnBurst(x, y, 0x6b6154); });
-    sim.onPerfectDodge.push((x, y) => view.spawnBurst(x, y, 0xa8741a));
+    sim.onPerfectDodge.push((x, y) => view.spawnRipple(x, y));
     sim.onEvent(handleEvent);
   }
   wireSim();
