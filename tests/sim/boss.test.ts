@@ -29,14 +29,32 @@ describe("妖王环形弹幕", () => {
     expect(boss.barrageCd).toBeGreaterThan(0);
   });
 
-  it("阶段 2 弹幕加密到 count[2]", () => {
+  it("阶段 2 双层环：弹数翻倍至 count[2]×2", () => {
     const { sim, events, boss } = bossSim();
     boss.bossPhase = 2;
     boss.barrageCd = 0.01;
     const before = events.filter((x) => x === "enemy_shot").length;
     sim.tick();
     const fired = events.filter((x) => x === "enemy_shot").length - before;
-    expect(fired).toBe(BOSS_BARRAGE.count[2]);
+    expect(fired).toBe(BOSS_BARRAGE.count[2] * 2);
+  });
+
+  it("弹幕起始角按黄金角逐轮旋转（螺旋漂移，确定性）", () => {
+    const { sim, boss } = bossSim();
+    const angles: number[] = [];
+    // 通过两次弹幕的弹体角度差验证轮转：截获弹道速度方向
+    boss.barrageCd = 0.01;
+    sim.tick();
+    const first = sim.enemyProjectiles.slice(-BOSS_BARRAGE.count[0]);
+    angles.push(...first.map((p) => Math.atan2(p.vy, p.vx)));
+    boss.barrageCd = 0.01;
+    sim.tick();
+    const second = sim.enemyProjectiles.slice(-BOSS_BARRAGE.count[0]);
+    angles.push(...second.map((p) => Math.atan2(p.vy, p.vx)));
+    // 两轮同序号弹的角度差应 ≈ 黄金角（mod 2π）
+    const d = Math.abs(angles[BOSS_BARRAGE.count[0]] - angles[0]) % (Math.PI * 2);
+    const golden = 2.39996 % (Math.PI * 2);
+    expect(Math.min(d, Math.PI * 2 - d)).toBeCloseTo(Math.min(golden, Math.PI * 2 - golden), 1);
   });
 
   it("妖王死亡后不再放弹幕", () => {

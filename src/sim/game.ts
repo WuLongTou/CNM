@@ -63,6 +63,8 @@ export interface Enemy {
   chargeVx: number; chargeVy: number; chargeHit: boolean;
   /** 妖王：环形弹幕冷却秒。 */
   barrageCd: number;
+  /** 妖王：已放出的弹幕轮次（起始角按黄金角轮转 → 连续轮呈螺旋漂移）。 */
+  barrageVolley: number;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -968,17 +970,24 @@ export class GameSim {
         this.emit("boss_phase", { phase: e.bossPhase + 1 });
       }
 
-      // 妖王环形弹幕：周期向四周放径向弹，压制走位（完美闪避的考题）
+      // 妖王环形弹幕：周期向四周放径向弹，压制走位（完美闪避的考题）。
+      // 起始角按黄金角逐轮旋转（连续轮呈螺旋漂移）；狂暴 3 阶追加一圈慢速内环。
       if (e.boss && !e.stealth) {
         e.barrageCd -= dt;
         if (e.barrageCd <= 0) {
           e.barrageCd = BOSS_BARRAGE.cd;
           const n = BOSS_BARRAGE.count[e.bossPhase];
-          const off = this.rng.range(0, Math.PI * 2);
+          const off = e.barrageVolley * 2.39996; // 黄金角 ≈ 137.5°
+          e.barrageVolley++;
           for (let i = 0; i < n; i++) {
             this.fireEnemyShot(e, BOSS_BARRAGE.dmgMult, false, off + (i / n) * Math.PI * 2, BOSS_BARRAGE.speed);
           }
-          this.emit("boss_barrage", { x: e.x, y: e.y, count: n });
+          if (e.bossPhase === 2) {
+            for (let i = 0; i < n; i++) {
+              this.fireEnemyShot(e, BOSS_BARRAGE.dmgMult, false, off + ((i + 0.5) / n) * Math.PI * 2, BOSS_BARRAGE.speed * 0.7);
+            }
+          }
+          this.emit("boss_barrage", { x: e.x, y: e.y, count: e.bossPhase === 2 ? n * 2 : n });
         }
       }
 
@@ -1348,6 +1357,7 @@ export class GameSim {
       chargeWind: 0, chargeDash: 0,
       chargeVx: 0, chargeVy: 0, chargeHit: false,
       barrageCd: boss ? BOSS_BARRAGE.first : 0,
+      barrageVolley: 0,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;

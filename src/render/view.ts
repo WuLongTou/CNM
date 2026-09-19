@@ -185,6 +185,7 @@ export class GameView {
     this.updateRipples(dt);
     this.updateDust(dt);
     this.updateSparks(dt);
+    this.updateSlashes(dt);
 
     // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏+墨迹消散；无敌帧闪烁
     const p = sim.player;
@@ -426,13 +427,17 @@ export class GameView {
     if (this.projGfx.parent !== this.fxLayer) this.fxLayer.addChild(g);
     g.clear();
     for (const pr of sim.projectiles) {
+      const sp = Math.hypot(pr.vx, pr.vy) || 1;
+      const ux = pr.vx / sp, uy = pr.vy / sp;
+      // 拖尾：运动反方向一道渐隐细线（箭/弹通用）
+      g.moveTo(pr.x - ux * (sp / 500) * 30, pr.y - uy * (sp / 500) * 30)
+        .lineTo(pr.x - ux * 8, pr.y - uy * 8)
+        .stroke({ width: 2, color: pr.homing ? 0x9a2a1e : INK_SOFT, alpha: 0.3 });
       if (pr.homing) {
         g.circle(pr.x, pr.y, 5).fill(BLOOD).alpha = 0.95;
         g.circle(pr.x, pr.y, 8).stroke({ width: 2, color: 0x9a2a1e, alpha: 0.55 });
       } else {
         const len = 14;
-        const sp = Math.hypot(pr.vx, pr.vy) || 1;
-        const ux = pr.vx / sp, uy = pr.vy / sp;
         g.moveTo(pr.x - ux * len, pr.y - uy * len)
           .lineTo(pr.x + ux * len * 0.5, pr.y + uy * len * 0.5)
           .stroke({ width: 3, color: INK, alpha: 0.95 });
@@ -563,6 +568,43 @@ export class GameView {
       alive.push(sp);
     }
     this.sparks = alive;
+  }
+
+  /** 近战挥砍弧：朝向前方一道手绘弧快速淡出（冲刺斩更大更红）。 */
+  private slashes: Array<{ gfx: Graphics; x: number; y: number; dir: number; dash: boolean; life: number }> = [];
+
+  spawnSlash(x: number, y: number, facing: number, dash: boolean): void {
+    if (this.slashes.length > 6) return;
+    const sl = { gfx: new Graphics(), x, y, dir: facing > 0 ? 0 : Math.PI, dash, life: 0.18 };
+    this.slashes.push(sl);
+    this.fxLayer.addChild(sl.gfx);
+  }
+
+  private updateSlashes(dt: number): void {
+    const alive: typeof this.slashes = [];
+    for (const sl of this.slashes) {
+      sl.life -= dt;
+      if (sl.life <= 0) { sl.gfx.destroy(); continue; }
+      const t = 1 - sl.life / 0.18;
+      const g = sl.gfx;
+      g.clear();
+      g.alpha = (1 - t) * 0.85;
+      const r = (sl.dash ? 48 : 36) + t * 6;
+      // 朝向前方 -75°..+55° 的手绘弧（中段最亮，两端收细）
+      const N = 12;
+      const a0 = sl.dir - 1.31, a1 = sl.dir + 0.96;
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const a = a0 + (a1 - a0) * (i / N);
+        const wob = 1 + Math.sin(a * 3.1 + sl.x * 0.05) * 0.05; // 手绘颤动
+        pts.push([sl.x + Math.cos(a) * r * wob, sl.y + Math.sin(a) * r * 0.92 * wob]);
+      }
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i <= N; i++) g.lineTo(pts[i][0], pts[i][1]);
+      g.stroke({ width: (sl.dash ? 5.5 : 4) * (1 - t * 0.5), color: sl.dash ? BLOOD : INK, alpha: 1 });
+      alive.push(sl);
+    }
+    this.slashes = alive;
   }
 
   /** 墨迹消散：放射炭线 + 小圈 + 血红点，快速扩张淡出（纸上擦除感）。 */
