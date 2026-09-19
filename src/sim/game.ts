@@ -234,6 +234,10 @@ export class GameSim {
   private lastWeatherType: WeatherType = "Clear";
   /** 命中停顿（打击感）。 */
   hitStop = new HitStop();
+  /** 完美闪避子弹时间剩余时长（>0 时敌人/敌弹按 DodgeSlowFactor 慢放）。 */
+  slowmoTimer = 0;
+  /** 闪避后增伤窗口剩余时长（rollDamage 乘 FocusDmgMult）。 */
+  focusTimer = 0;
   /** 伤害数字钩子（表现层订阅；世界坐标 + 是否暴击）。 */
   onDamage: Array<(x: number, y: number, dmg: number, crit: boolean) => void> = [];
   /** 攻击钩子（音频层订阅；主动武器类型）。 */
@@ -242,6 +246,10 @@ export class GameSim {
   onKill: Array<(type: EnemyType, elite: boolean, boss: boolean) => void> = [];
   /** 玩家受击钩子。 */
   onPlayerHurt: Array<(hp: number) => void> = [];
+  /** 冲刺斩钩子（表现层订阅；触发位置）。 */
+  onDashStrike: Array<(x: number, y: number) => void> = [];
+  /** 完美闪避钩子（表现层订阅；触发位置）。 */
+  onPerfectDodge: Array<(x: number, y: number) => void> = [];
   input: InputState = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
   /** 聚合战斗属性（武器变化时重算）。 */
   stats: PlayerStats;
@@ -487,9 +495,17 @@ export class GameSim {
     }
     this.updatePlayer(dt);
     this.updateProjectiles(dt);
-    this.updateEnemyProjectiles(dt);
+    // 完美闪避子弹时间：敌人与敌弹慢放，玩家保持原速（闪避后反击窗口）
+    if (this.slowmoTimer > 0) {
+      this.slowmoTimer = Math.max(0, this.slowmoTimer - dt);
+      const edt = dt * CFG.Combat.DodgeSlowFactor;
+      this.updateEnemyProjectiles(edt);
+      this.updateEnemies(edt);
+    } else {
+      this.updateEnemyProjectiles(dt);
+      this.updateEnemies(dt);
+    }
     this.updateMines(dt);
-    this.updateEnemies(dt);
     this.updateChests();
     this.updatePickups();
     this.updateAltars();
@@ -642,6 +658,7 @@ export class GameSim {
     p.dashCd = Math.max(0, p.dashCd - dt);
     p.invincible = Math.max(0, p.invincible - dt);
     p.attackCd = Math.max(0, p.attackCd - dt);
+    this.focusTimer = Math.max(0, this.focusTimer - dt);
 
     if (p.comboTimer > 0) {
       p.comboTimer -= dt;
@@ -653,40 +670,61 @@ export class GameSim {
     }
   }
 
-  /** 执行一次攻击：按主动武器类型分流；挥空也进冷却；血代价不足则无法攻击。 */
+  /** 完美闪避：冲刺窗口内被攻击判定命中 → 免伤 + 子弹时间 + 增伤窗口。
+   *  返回 true 表示本次伤害已被闪避（调用方跳过掉血）。 */
+  private tryPerfectDodge(): boolean {
+    const p = this.player;
+    if (p.dead || p.dashTimer <= 0) return false;
+    this.slowmoTimer = CFG.Combat.DodgeSlowTime;
+    this.focusTimer = CFG.Combat.FocusTime;
+    this.emit("perfect_dodge", { x: p.x, y: p.y });
+    for (const cb of this.onPerfectDodge) cb(p.x, p.y);
+    return true;
+  }
+
+  /** 执行一次攻击：按主动武器类型分流；挥空也进冷却；血代价不足则无法攻击。
+   *  冲刺中攻击 = 冲刺斩：伤害 1.5×，按武器类型附加强化（范围/矢数/弹数/溅射）。 */
   private performAttack(): void {
     const p = this.player;
     const c = CFG.Player;
     if (p.hp <= this.stats.hpCost) return; // _CanPayHealthCost：不能一击自杀
     p.attackCd = c.BaseAttackCooldown / Math.max(0.1, this.stats.aspdMult);
     const type = this.attackType;
-    const range = c.BaseAttackRange * this.stats.rangeMult;
+    const dashing = p.dashTimer > 0;
+    const strike = dashing ? CFG.Combat.DashStrikeDmgMult : 1;
+    const range = c.BaseAttackRange * this.stats.rangeMult * (dashing ? CFG.Combat.DashStrikeRangeMult : 1);
     for (const cb of this.onAttack) cb(type);
+    if (dashing) for (const cb of this.onDashStrike) cb(p.x, p.y);
 
     if (type === "Melee") {
-      for (const e of this.nearestEnemies(p.x, p.y, range, this.stats.multi)) {
+      const targets = this.nearestEnemies(p.x, p.y, range, this.stats.multi + (dashing ? 1 : 0));
+      for (const e of targets) {
         const r = this.rollDamage();
+        if (dashing) r.dmg *= strike;
         this.hitEnemy(e, r);
       }
       this.harvestInRange(range);
     } else if (type === "Ranged") {
       const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
       const baseAng = target ? Math.atan2(target.y - p.y, target.x - p.x) : (p.facing > 0 ? 0 : Math.PI);
-      const n = Math.max(1, this.stats.spread);
+      const n = Math.max(1, this.stats.spread) + (dashing ? 1 : 0);
       for (let i = 0; i < n; i++) {
         const ang = baseAng + (i - (n - 1) / 2) * 0.21; // ±12° 散射
-        this.fireProjectile(ang, 500, range * 1.2);
+        this.fireProjectile(ang, 500, range * 1.2, strike);
       }
     } else if (type === "Magic") {
       const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
       const ang = target ? Math.atan2(target.y - p.y, target.x - p.x) : (p.facing > 0 ? 0 : Math.PI);
-      this.fireProjectile(ang, 300, 5);
+      this.fireProjectile(ang, 300, 5, strike);
+      if (dashing) this.fireProjectile(ang + 0.35, 300, 5, strike);
     } else {
-      // Mine：原地布雷（FIFO 上限）
+      // Mine：原地布雷（FIFO 上限）；冲刺斩溅射 1.5×
       if (this.mines.length >= MAX_MINES) this.mines.shift();
       this.mines.push({
         id: this.nextId++, x: p.x, y: p.y,
-        dmg: this.rollDamage().dmg, splash: Math.max(60, this.stats.splash), psn: this.stats.psn,
+        dmg: this.rollDamage().dmg * strike,
+        splash: Math.max(60, this.stats.splash) * (dashing ? strike : 1),
+        psn: this.stats.psn,
         arm: 0.4,
       });
     }
@@ -720,17 +758,19 @@ export class GameSim {
     // 连击：每层 +5% 上限 +50%
     const comboBonus = Math.min(p.combo * CFG.Combo.DamageBonusPerLevel, CFG.Combo.MaxBonus);
     dmg *= 1 + comboBonus;
+    // 完美闪避后的集中窗口：伤害 1.3×
+    if (this.focusTimer > 0) dmg *= CFG.Combat.FocusDmgMult;
     const crit = this.rng.chance(this.stats.crit / 100);
     if (crit) dmg *= CFG.Player.CritMultiplier;
     return { dmg, crit };
   }
 
-  private fireProjectile(ang: number, speed: number, life: number): void {
+  private fireProjectile(ang: number, speed: number, life: number, dmgMult = 1): void {
     this.projectiles.push({
       id: this.nextId++,
       x: this.player.x, y: this.player.y,
       vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
-      dmg: this.rollDamage().dmg,
+      dmg: this.rollDamage().dmg * dmgMult,
       life, pierce: this.stats.pierce, hitIds: new Set(),
       homing: this.stats.homing || this.attackType === "Magic",
       splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze, chain: this.stats.chain,
@@ -999,6 +1039,7 @@ export class GameSim {
       // 通用近战：隐身中的隐煞不攻击（近身时必已显形，此处兜底）
       if (!e.stealth && dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
         e.attackCd = CFG.Enemy.AttackCooldown;
+        if (this.tryPerfectDodge()) continue;
         if (p.invincible <= 0) {
           p.hp -= e.damage;
           p.invincible = CFG.Player.InvincibleDuration;
@@ -1013,12 +1054,15 @@ export class GameSim {
   private explodeEnemy(e: Enemy): void {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     const p = this.player;
-    if (!p.dead && p.invincible <= 0 &&
-        Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast) {
-      p.hp -= Math.ceil(e.damage * EXPLODER.dmgMult);
-      p.invincible = CFG.Player.InvincibleDuration;
-      for (const cb of this.onPlayerHurt) cb(p.hp);
-      if (p.hp <= 0) this.onPlayerDied();
+    if (!p.dead && Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast) {
+      if (!this.tryPerfectDodge()) {
+        if (p.invincible <= 0) {
+          p.hp -= Math.ceil(e.damage * EXPLODER.dmgMult);
+          p.invincible = CFG.Player.InvincibleDuration;
+          for (const cb of this.onPlayerHurt) cb(p.hp);
+          if (p.hp <= 0) this.onPlayerDied();
+        }
+      }
     }
     this.emit("enemy_explode", { x: e.x, y: e.y });
   }
@@ -1050,12 +1094,15 @@ export class GameSim {
       pr.life -= dt;
       if (pr.life <= 0) continue;
       if (pr.x < 0 || pr.x > this.world.w || pr.y < 0 || pr.y > this.world.h) continue;
-      if (!p.dead && p.invincible <= 0 &&
+      if (!p.dead &&
           Math.hypot(pr.x - p.x, pr.y - p.y) <= CFG.Player.CollisionSize / 2 + 6) {
-        p.hp -= pr.dmg;
-        p.invincible = CFG.Player.InvincibleDuration;
-        for (const cb of this.onPlayerHurt) cb(p.hp);
-        if (p.hp <= 0) this.onPlayerDied();
+        if (this.tryPerfectDodge()) continue; // 子弹时间中擦身而过，弹不解体
+        if (p.invincible <= 0) {
+          p.hp -= pr.dmg;
+          p.invincible = CFG.Player.InvincibleDuration;
+          for (const cb of this.onPlayerHurt) cb(p.hp);
+          if (p.hp <= 0) this.onPlayerDied();
+        }
         continue;
       }
       keep.push(pr);
@@ -1105,13 +1152,16 @@ export class GameSim {
       e.y += e.chargeVy * dt;
       e.chargeDash -= dt;
       e.facing = e.chargeVx >= 0 ? 1 : -1;
-      if (!e.chargeHit && !p.dead && p.invincible <= 0 &&
+      if (!e.chargeHit && !p.dead &&
           Math.hypot(p.x - e.x, p.y - e.y) <= CFG.Enemy.CollisionSize / 2 + CFG.Player.CollisionSize / 2) {
         e.chargeHit = true;
-        p.hp -= Math.ceil(e.damage * DRAGON.dmgMult);
-        p.invincible = CFG.Player.InvincibleDuration;
-        for (const cb of this.onPlayerHurt) cb(p.hp);
-        if (p.hp <= 0) this.onPlayerDied();
+        if (this.tryPerfectDodge()) return true; // 闪避冲撞：不受伤，蛟继续冲
+        if (p.invincible <= 0) {
+          p.hp -= Math.ceil(e.damage * DRAGON.dmgMult);
+          p.invincible = CFG.Player.InvincibleDuration;
+          for (const cb of this.onPlayerHurt) cb(p.hp);
+          if (p.hp <= 0) this.onPlayerDied();
+        }
       }
       if (e.chargeDash <= 0) e.chargeHit = false;
       return true;

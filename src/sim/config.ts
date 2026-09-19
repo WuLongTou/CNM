@@ -25,6 +25,16 @@ export const CFG = {
     MaxBonus: 0.5,
   },
 
+  // M14 操作与战斗：冲刺斩 / 完美闪避（妖时）
+  Combat: {
+    DashStrikeDmgMult: 1.5,      // 冲刺中攻击：全武器伤害倍率
+    DashStrikeRangeMult: 1.35,   // 冲刺斩近战范围倍率
+    DodgeSlowTime: 0.9,          // 完美闪避子弹时间时长
+    DodgeSlowFactor: 0.45,       // 子弹时间内敌人/敌弹时间缩放
+    FocusTime: 3.0,              // 闪避后增伤窗口
+    FocusDmgMult: 1.3,           // 增伤倍率
+  },
+
   Enemy: {
     CollisionSize: 24.0,
     AttackCooldown: 1.0,

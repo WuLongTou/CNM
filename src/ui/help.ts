@@ -91,6 +91,8 @@ export class HelpPanel {
       <table class="help-table">
         ${rows.map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`).join("")}
         <tr><td>采集</td><td>近战攻击范围内的树、岩、灌木</td></tr>
+        <tr><td>冲刺斩</td><td>冲刺中攻击：伤害 1.5×，近战范围扩大，弓+1 矢、法术+1 弹</td></tr>
+        <tr><td>完美闪避</td><td>冲刺中受击则闪避：时缓 0.9s + 3s 内伤害 1.3×</td></tr>
       </table>`;
   }
 
@@ -152,6 +154,9 @@ export class HelpPanel {
   private renderMechanics(): void {
     this.bodyEl.innerHTML = `
       <table class="help-table">
+        <tr><td>连击</td><td>命中积累连击，每层伤害 +5%（上限 +50%），停手 2 秒衰减</td></tr>
+        <tr><td>冲刺斩</td><td>冲刺窗口中攻击：全武器伤害 1.5×，近战范围 1.35× 且多打一个目标</td></tr>
+        <tr><td>完美闪避</td><td>冲刺中被妖物攻击/弹道命中则免伤，妖物时缓 0.9 秒，自身 3 秒内伤害 1.3×</td></tr>
         <tr><td>威胁阶</td><td>每 45 秒推进一阶，妖物变强；每 5 阶出妖王</td></tr>
         <tr><td>精英词缀</td><td>迅捷 / 再生 / 护盾 / 爆裂 / 狂乱</td></tr>
         <tr><td>武器进阶</td><td>拾取符箓三选一升级；同武器 3 次进阶、6 次终极</td></tr>

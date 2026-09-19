@@ -78,6 +78,7 @@ async function boot(): Promise<void> {
   });
   sim.onKill.push(() => audio.play("enemy_die"));
   sim.onPlayerHurt.push(() => audio.play("player_hurt"));
+  sim.onDashStrike.push(() => view.shake(2));
 
   // sim 事件 → 通知条/音效（事件本身仍进 eventBuffer 供 Playwright 断言）
   const handleEvent = (e: SimEvent) => {
@@ -107,6 +108,12 @@ async function boot(): Promise<void> {
       else view.shake(5);
     }
     else if (e.event === "player_dash") audio.play("dash");
+    else if (e.event === "perfect_dodge") {
+      view.spawnBurst(Number(d.x), Number(d.y), 0xa8741a);
+      view.shake(4);
+      audio.play("combo_5");
+      notify.push("完美闪避！妖物迟滞 · 妖力凝聚");
+    }
     else if (e.event === "combo_milestone") audio.play("combo_3");
     else if (e.event === "game_over") { audio.play("player_die"); audio.stopBgm(); view.shake(18); }
   };
@@ -185,6 +192,8 @@ async function boot(): Promise<void> {
     });
     sim.onKill.push(() => audio.play("enemy_die"));
     sim.onPlayerHurt.push(() => audio.play("player_hurt"));
+    sim.onDashStrike.push((x, y) => { view.shake(2); view.spawnBurst(x, y, 0x6b6154); });
+    sim.onPerfectDodge.push((x, y) => view.spawnBurst(x, y, 0xa8741a));
     sim.onEvent(handleEvent);
   }
   wireSim();

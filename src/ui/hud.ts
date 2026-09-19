@@ -14,6 +14,7 @@ export class Hud {
   private killsText!: HTMLElement;
   private timeText!: HTMLElement;
   private weaponText!: HTMLElement;
+  private dashDot!: HTMLElement;
 
   constructor(private sim: GameSim, private onStart: () => void, private onRestart: () => void) {
     this.root = document.createElement("div");
@@ -29,7 +30,8 @@ export class Hud {
     hud.id = "hud";
     hud.innerHTML = `
       <div class="hp-wrap"><div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
-        <span id="hp-text"></span></div>
+        <span id="hp-text"></span>
+        <span id="dash-dot" title="冲刺就绪">⚡</span></div>
       <div class="stats">
         <span id="round"></span><span id="weather"></span><span id="score"></span>
         <span id="kills"></span><span id="time"></span>
@@ -44,6 +46,7 @@ export class Hud {
     this.killsText = hud.querySelector("#kills")!;
     this.timeText = hud.querySelector("#time")!;
     this.weaponText = hud.querySelector("#weapon")!;
+    this.dashDot = hud.querySelector("#dash-dot")!;
   }
 
   private welcome!: HTMLElement;
@@ -139,7 +142,14 @@ export class Hud {
     this.scoreText.textContent = `分数 ${s.score}`;
     this.killsText.textContent = `击杀 ${s.kills}`;
     this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s`;
-    this.weaponText.textContent = s.activeWeapon ? `武器 ${s.activeWeapon.name}` : "徒手";
+    this.weaponText.textContent = s.activeWeapon
+      ? `武器 ${s.activeWeapon.name}${s.player.combo >= 3 ? ` · 连击 ${s.player.combo}` : ""}`
+      : "徒手";
+    // 冲刺指示：就绪=血红实心；冷却=铅笔灰并降透明度
+    const ready = s.player.dashCd <= 0;
+    this.dashDot.textContent = ready ? "⚡" : "·";
+    this.dashDot.style.color = ready ? "#c0392b" : "#b0a894";
+    this.dashDot.style.opacity = ready ? "1" : "0.55";
     this.welcome.classList.toggle("hidden", s.state !== "WeaponSelection");
     // GameOver 面板延迟 0.7s 弹出：先看玩家阵亡消散，再进结算
     if (s.state === "GameOver" && this.gameOverAt === 0) this.gameOverAt = performance.now();
