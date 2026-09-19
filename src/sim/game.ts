@@ -309,6 +309,12 @@ export class GameSim {
       this.persistAchievements();
     });
     this.stats = this.recalc();
+    // 开局武器：铁剑（标准 roguelike 起手装备；构造期静默入列，不弹获得通知）
+    this.player.weapons.push({
+      defId: "tiejian", name: WEAPON_DATA.tiejian.name, type: WEAPON_DATA.tiejian.type,
+      ups: 0, bonus: { dmg: 0, asp: 0, rng: 0 },
+    });
+    this.stats = this.recalc();
     this.scatterChests(3);
   }
 
@@ -387,6 +393,14 @@ export class GameSim {
     const id = defId ?? this.rollWeaponDef();
     const def = WEAPON_DATA[id];
     if (!def) throw new Error("未知武器: " + id);
+    // 重复获得：不生成重复件，改为既有武器精炼 +1 级（宝箱不开空，保留获得反馈）
+    const owned = this.player.weapons.find((w) => w.defId === id);
+    if (owned) {
+      owned.ups++;
+      this.stats = this.recalc();
+      this.emit("weapon_gained", { name: def.name, type: def.type });
+      return owned;
+    }
     const w: WeaponInstance = { defId: id, name: def.name, type: def.type, ups: 0, bonus: { dmg: 0, asp: 0, rng: 0 } };
     const ws = this.player.weapons;
     if (ws.length >= MAX_WEAPONS) {

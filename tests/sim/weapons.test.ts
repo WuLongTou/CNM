@@ -25,16 +25,16 @@ describe("武器装备", () => {
     expect(r.data).toEqual({ given: 1, weapon: "弓箭", type: "Ranged" });
     expect(sim.attackType).toBe("Ranged");
     const list = sim.exec({ action: "weapons" }).data!.list as unknown[];
-    expect(list).toHaveLength(1);
+    expect(list).toHaveLength(2); // 开局铁剑 + 给予的弓箭
   });
 
   it("武器栏上限 6 件，满时替换升级最少者，主动武器保留", () => {
-    const sim = newSim();
-    for (const id of ["tiejian", "zhanfu", "shuangdao", "gongjian", "fazhang", "tiejili"]) {
+    const sim = newSim(); // 开局已持铁剑（tiejian），列表不再重复给
+    for (const id of ["zhanfu", "shuangdao", "gongjian", "fazhang", "tiejili"]) {
       sim.giveWeapon(id);
     }
     expect(sim.player.weapons).toHaveLength(6);
-    sim.giveWeapon("yingren"); // 第 7 件：全为 0 级时替换最早的非主动武器（铁剑）
+    sim.giveWeapon("yingren"); // 第 7 件：全为 0 级时替换最早的非主动武器（开局铁剑）
     expect(sim.player.weapons).toHaveLength(6);
     expect(sim.player.weapons.some((w) => w.defId === "tiejian")).toBe(false);
     expect(sim.attackType).toBe("Melee"); // 影刃是近战，主动武器更新

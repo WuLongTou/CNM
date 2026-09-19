@@ -95,12 +95,12 @@ function makePen(seedStart = 1) {
         for (let i = 0; i + 1 < ptsIn.length; i += 2) pts.push([ptsIn[i], ptsIn[i + 1]]);
       }
       const rnd = rng32(seed += 7919);
-      body.push(`<path d="${smoothOpen(pts, o.jitter ?? 0.45, rnd)}" fill="none" stroke="${o.color ?? INK}" stroke-width="${o.width ?? 3}" stroke-linecap="round" stroke-linejoin="round"${o.alpha ? ` opacity="${o.alpha}"` : ""}${o.dash ? ` stroke-dasharray="${o.dash}"` : ""}/>`);
+      body.push(`<path d="${smoothOpen(pts, o.jitter ?? 0.22, rnd)}" fill="none" stroke="${o.color ?? INK}" stroke-width="${o.width ?? 3}" stroke-linecap="round" stroke-linejoin="round"${o.alpha ? ` opacity="${o.alpha}"` : ""}${o.dash ? ` stroke-dasharray="${o.dash}"` : ""}/>`);
     },
     /** 平滑填充色块（马克笔形状）。 */
     blob(pts, o = {}) {
       const rnd = rng32(seed += 7919);
-      body.push(`<path d="${smoothClosed(pts, o.jitter ?? 0.5, rnd)}" fill="${o.fill ?? "none"}" stroke="${o.stroke ?? INK}" stroke-width="${o.w ?? 3}" stroke-linejoin="round"${o.alpha ? ` opacity="${o.alpha}"` : ""}${o.dash ? ` stroke-dasharray="${o.dash}"` : ""}/>`);
+      body.push(`<path d="${smoothClosed(pts, o.jitter ?? 0.28, rnd)}" fill="${o.fill ?? "none"}" stroke="${o.stroke ?? INK}" stroke-width="${o.w ?? 3}" stroke-linejoin="round"${o.alpha ? ` opacity="${o.alpha}"` : ""}${o.dash ? ` stroke-dasharray="${o.dash}"` : ""}/>`);
     },
     /** 手绘椭圆色块。 */
     ellipse(cx, cy, rx, ry, o = {}) {
@@ -119,6 +119,11 @@ function makePen(seedStart = 1) {
         pts.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]);
       }
       pen.line(pts, o);
+    },
+    /** 马克笔高光：主体色块左上的一道白弧（简洁感的工艺细节）。 */
+    shine(cx, cy, rx, ry, o = {}) {
+      pen.arc(cx, cy, Math.max(rx, ry) * 0.66, o.a0 ?? -165, o.a1 ?? -85,
+        { color: "#ffffff", w: o.w ?? 2.6, alpha: o.alpha ?? 0.5, n: 6 });
     },
     /** 眼睛：墨点 + 白高光（有神的关键）。 */
     eye(cx, cy, r = 2, o = {}) {
@@ -200,6 +205,7 @@ function drawPlayer(pen, { pose, t, weapon }) {
   pen.line([[41, 57 + bob], [55, 57 + bob]], { color: BLOOD, w: 3 });  // 腰带
   pen.line([[48, 58 + bob], [48, 64 + bob]], { color: BLOOD, w: 1.6 });// 挂饰
   pen.dot(48, 65.5 + bob, 1.6, { color: BLOOD });
+  pen.shine(48, 24 + bob, 8, 8);
 
   // 后臂
   const backA = -armA * 0.75;
@@ -211,7 +217,8 @@ function drawPlayer(pen, { pose, t, weapon }) {
 
   // 头 + 脸 + 斗笠
   pen.ellipse(headC[0], headC[1], 10.5, 10.5, { fill: SKIN });
-  pen.eye(headC[0] + 4.5, headC[1] + 1, 1.8);
+  pen.eye(headC[0] + 2.5, headC[1] + 1, 1.8);
+  pen.eye(headC[0] + 7, headC[1] + 1, 1.8);
   pen.arc(headC[0] + 2, headC[1] + 5.5, 3, 25, 155, { w: 1.6 });      // 嘴
   pen.line([[headC[0] + 2, headC[1] - 3], [headC[0] + 7.5, headC[1] - 2.5]], { w: 2 }); // 眉
   pen.blob([[36, 17], [43, 6], [53, 6], [60, 17]], { fill: "#ba9c58" });
@@ -291,8 +298,9 @@ const ENEMIES = {
       ...top,
       [67, 70 + bob], [61, 78 + bob], [55, 72 + bob], [48, 80 + bob],
       [41, 72 + bob], [35, 78 + bob], [29, 70 + bob],
-    ], { fill: "#a9bade", jitter: 0.6 });
+    ], { fill: "#a9bade", jitter: 0.3 });
     pen.ellipse(48, 58 + bob, 9.5, 11, { fill: "#e6d8b8", stroke: "none", w: 0 });
+    pen.shine(48, 32 + bob, 12, 12);
     pen.eye(41.5, 44 + bob, 2.4);
     pen.eye(54.5, 44 + bob, 2.4);
     pen.arc(48, 52 + bob, 3.5, 20, 160, { w: 1.8 });
@@ -306,7 +314,8 @@ const ENEMIES = {
     pen.blob([
       [48 + sway * 0.3, 10], [62, 26], [64, 44], [52 + sway * 0.5, 58],
       [56 + sway, 80], [50, 68], [40, 54], [36, 30], [40, 16],
-    ], { fill: "#b0a0e0", jitter: 0.6 });
+    ], { fill: "#b0a0e0", jitter: 0.3 });
+    pen.shine(48 + sway * 0.3, 22, 8, 10);
     pen.eye(45 + sway * 0.3, 22, 2.2, { color: BLOOD });
     pen.eye(54 + sway * 0.3, 26, 2.2, { color: BLOOD });
     for (let i = 0; i < 3; i++) {
@@ -318,7 +327,8 @@ const ENEMIES = {
   enemy_tank_walk(pen, t) {
     const step = Math.sin(t * TAU);
     shadow(pen, 48, 15);
-    pen.blob([[27, 44], [34, 24], [52, 18], [67, 30], [70, 50], [60, 66], [38, 66], [26, 56]], { fill: "#a5977a", jitter: 0.9 });
+    pen.blob([[27, 44], [34, 24], [52, 18], [67, 30], [70, 50], [60, 66], [38, 66], [26, 56]], { fill: "#a5977a", jitter: 0.45 });
+    pen.shine(48, 30, 13, 9);
     pen.line([[36, 34], [44, 30], [50, 36]], { w: 2, alpha: 0.55 });
     pen.line([[56, 56], [62, 52]], { w: 2, alpha: 0.5 });
     pen.line([[36, 40], [43, 44]], { w: 3 });
@@ -337,7 +347,7 @@ const ENEMIES = {
     const r = 18 * pulse, cy = 56;
     shadow(pen, 48, 14 * pulse);
     pen.ellipse(48, cy, r, r, { fill: "#dcab6c" });
-    pen.ellipse(42, cy - 6, 6, 4.5, { fill: "#f6e3c4", stroke: "none", w: 0 });
+    pen.shine(48, cy - 6, r * 0.75, r * 0.75);
     pen.line([[48, cy - r + 1], [53, cy - r - 8]], { w: 3 });
     const sa = t * TAU;
     for (let i = 0; i < 3; i++) {
@@ -361,7 +371,7 @@ const ENEMIES = {
     pen.blob([
       ...top,
       [66, 70 + bob], [55, 76 + bob], [48, 80 + bob], [41, 76 + bob], [30, 70 + bob],
-    ], { fill: "none", dash: "8 7", w: 2.6, jitter: 0.6 });
+    ], { fill: "none", dash: "8 7", w: 2.6, jitter: 0.3 });
     pen.dot(42, 44 + bob, 2.2, { color: BLOOD });
     pen.dot(54, 44 + bob, 2.2, { color: BLOOD });
   },
@@ -373,6 +383,7 @@ const ENEMIES = {
       [48, 24], [60, 42], [64, 56 + bob], [58, 68 + bob], [48, 72 + bob],
       [38, 68 + bob], [32, 56 + bob], [36, 42],
     ], { fill: "#9dbb72" });
+    pen.shine(48, 38, 7, 9);
     pen.line([[42, 46 + bob], [48, 49 + bob]], { w: 2.4 });
     pen.line([[54, 46 + bob], [48, 49 + bob]], { w: 2.4 });
     pen.eye(43, 51 + bob, 2);
@@ -389,6 +400,7 @@ const ENEMIES = {
     const bob = Math.sin(t * TAU) * 2;
     shadow(pen, 48, 13);
     pen.ellipse(48, 58 + bob, 17, 20, { fill: "#e3bd80" });
+    pen.shine(48, 48 + bob, 10, 13);
     pen.ellipse(48, 42 + bob, 7, 3.5, { fill: "none", stroke: GOLD, w: 2.4 });
     pen.arc(42, 52 + bob, 3.6, 195, 345, { w: 2.2 });
     pen.arc(54, 52 + bob, 3.6, 195, 345, { w: 2.2 });
@@ -411,6 +423,7 @@ const ENEMIES = {
     pen.blob([[38, 40], [30, 62], [28 + sway, 82], [40 + sway, 78], [48, 82], [56 + sway, 78], [68 + sway, 82], [66, 62], [58, 40]], { fill: "#ad8fd8" });
     pen.blob([[33, 30], [48, 6], [63, 30]], { fill: "#9f82cc" });
     pen.line([[30, 31], [66, 31]], { w: 2.8 });
+    pen.shine(44, 60, 9, 12);
     pen.eye(43, 38, 2.2, { color: BLOOD });
     pen.eye(53, 38, 2.2, { color: BLOOD });
     pen.line([[60, 46], [68, 24]], { w: 3 });
@@ -425,6 +438,7 @@ const ENEMIES = {
     pen.blob([[38, 44], [32, 58 + bob], [36, 72 + bob], [60, 72 + bob], [64, 58 + bob], [58, 44]], { fill: "#c6a878" });
     pen.blob([[37, 37], [29, 31], [38, 33]], { fill: "#c6a878", w: 2.2 });
     pen.blob([[59, 37], [67, 31], [58, 33]], { fill: "#c6a878", w: 2.2 });
+    pen.shine(46, 50 + bob, 8, 9);
     pen.eye(42, 52 + bob, 2.1);
     pen.eye(52, 52 + bob, 2.1);
     pen.line([[40, 60 + bob], [44, 63 + bob], [48, 61 + bob], [52, 63 + bob], [56, 60 + bob]], { w: 1.8 });
@@ -440,13 +454,14 @@ const ENEMIES = {
     shadow(pen, 48, 10);
     pen.blob([
       [36, 38 + bob], [60, 38 + bob], [64, 54 + bob], [60, 70 + bob], [36, 70 + bob], [32, 54 + bob],
-    ], { fill: "#dbb45e", jitter: 0.6 });
+    ], { fill: "#dbb45e", jitter: 0.3 });
     pen.arc(48, 36 + bob, 7, 180, 360, { w: 2.6, n: 8 });
     pen.line([[40, 38 + bob], [40, 70 + bob]], { w: 1.8, alpha: 0.5 });
     pen.line([[56, 38 + bob], [56, 70 + bob]], { w: 1.8, alpha: 0.5 });
     pen.line([[34, 38 + bob], [62, 38 + bob]], { w: 2.8 });
     pen.line([[34, 70 + bob], [62, 70 + bob]], { w: 2.8 });
     pen.blob([[48, 46 + bob], [53, 56 + bob], [48, 64 + bob], [43, 56 + bob]], { fill: BLOOD, w: 2 });
+    pen.shine(41, 44 + bob, 6, 8);
     pen.eye(42, 50 + bob, 1.9);
     pen.eye(54, 50 + bob, 1.9);
     pen.line([[45, 71 + bob], [44, 79 + bob]], { w: 2.2, alpha: 0.85 });
@@ -457,8 +472,9 @@ const ENEMIES = {
     const bob = Math.abs(Math.sin(t * TAU)) * 2;
     const y = 40 + bob;
     shadow(pen, 48, 15);
-    pen.blob([[28, y], [68, y], [68, y + 34], [28, y + 34]], { fill: "#8fa2bc", jitter: 0.7 });
+    pen.blob([[28, y], [68, y], [68, y + 34], [28, y + 34]], { fill: "#8fa2bc", jitter: 0.35 });
     pen.line([[28, y + 10], [68, y + 10]], { w: 2, alpha: 0.5 });
+    pen.shine(38, y + 6, 8, 6);
     pen.blob([[36, y + 15], [60, y + 15], [60, y + 26], [36, y + 26]], { fill: INK, w: 2.4 });
     pen.dot(48, y + 20.5, 3, { color: BLOOD });
     pen.dot(48, y + 20.5, 1.1, { color: "#ffffff" });
@@ -477,6 +493,7 @@ const ENEMIES = {
     shadow(pen, 48, 12);
     pen.blob([[40, 40], [36, 60 + bob], [42, 76 + bob], [56, 76 + bob], [62, 60 + bob], [58, 40]], { fill: "#9cb2cc" });
     pen.ellipse(48, 32 + bob, 13, 12, { fill: "#9cb2cc" });
+    pen.shine(44, 28 + bob, 8, 7);
     pen.arc(48, 30 + bob, 13, 180, 360, { w: 3, n: 10 });
     pen.line([[48, 20 + bob], [48, 26 + bob]], { w: 2.6, alpha: 0.9 });
     pen.line([[41, 32 + bob], [55, 32 + bob]], { w: 2.4 });
@@ -502,6 +519,7 @@ const ENEMIES = {
     pen.line(pts, { color: "#a8bc86", width: 5, alpha: 0.55 });
     const [hx, hy] = pts[14];
     pen.ellipse(hx + 5, hy - 4, 11, 8, { fill: "#84a862" });
+    pen.shine(hx + 3, hy - 7, 6, 4);
     pen.line([[hx + 2, hy - 9], [hx - 2, hy - 15]], { w: 2.4 });
     pen.line([[hx + 8, hy - 10], [hx + 10, hy - 16]], { w: 2.4 });
     pen.eye(hx + 8, hy - 5, 2.1, { color: BLOOD });
@@ -614,31 +632,28 @@ async function genGround() {
   const W = 2560, H = 1440;
   const rnd = rng32(20260919);
   const pen = makePen(777);
-  const items = 74;
-  for (let i = 0; i < items; i++) {
-    const x = 60 + rnd() * (W - 120), y = 60 + rnd() * (H - 120);
-    const kind = rnd();
-    if (kind < 0.42) {
-      const s = 5 + rnd() * 5;
-      for (let k = -1; k <= 1; k++) pen.line([[x, y], [x + k * s * 0.8, y - s * (1 - Math.abs(k) * 0.3)]], { color: PENCIL, width: 2, alpha: 0.5 });
-    } else if (kind < 0.62) {
-      const r = 4 + rnd() * 5;
-      pen.ellipse(x, y, r, r, { fill: "none", stroke: PENCIL, width: 2, alpha: 0.45, n: 8 });
-    } else if (kind < 0.8) {
-      pen.line([[x, y], [x + 8 + rnd() * 12, y + (rnd() - 0.5) * 10], [x + 18 + rnd() * 14, y + (rnd() - 0.5) * 12]], { color: PENCIL, width: 1.8, alpha: 0.4 });
-    } else if (kind < 0.92) {
-      const r = 8 + rnd() * 16;
-      pen.ellipse(x, y, r, r, { fill: "none", stroke: BLOOD, width: 1.6, alpha: 0.08, n: 10, jitter: 3 });
-      pen.ellipse(x + (rnd() - 0.5) * 6, y + (rnd() - 0.5) * 6, r * 0.55, r * 0.55, { fill: "none", stroke: BLOOD, width: 1.2, alpha: 0.09, n: 8, jitter: 2.5 });
-    } else {
-      pen.line([[x, y], [x, y - 14]], { color: BLOOD, width: 2.2, alpha: 0.16 });
-      pen.ellipse(x, y - 20, 4, 4, { fill: "none", stroke: BLOOD, width: 1.8, alpha: 0.16, n: 8 });
+  // 簇拥构图：8 个簇心各落 2-4 笔（草丛/小石），替代均匀散点——克制而不空
+  const clusters = 8;
+  for (let ci = 0; ci < clusters; ci++) {
+    const cx = 140 + rnd() * (W - 280), cy = 140 + rnd() * (H - 280);
+    const marks = 2 + Math.floor(rnd() * 3);
+    for (let k = 0; k < marks; k++) {
+      const x = cx + (rnd() - 0.5) * 120, y = cy + (rnd() - 0.5) * 90;
+      if (rnd() < 0.62) {
+        const s2 = 6 + rnd() * 6;
+        for (let b = -1; b <= 1; b++) pen.line([[x, y], [x + b * s2 * 0.8, y - s2 * (1 - Math.abs(b) * 0.3)]], { color: PENCIL, width: 2, alpha: 0.42 });
+      } else {
+        const r = 3.5 + rnd() * 4;
+        pen.ellipse(x, y, r, r * 0.8, { fill: "none", stroke: PENCIL, width: 2, alpha: 0.38, n: 8 });
+      }
     }
   }
+  // 一条横穿画面的铅笔小径（有意的构图线）
+  pen.line([[180, 980], [640, 900], [1180, 960], [1720, 880], [2260, 950]], { color: PENCIL, width: 3, alpha: 0.22, jitter: 0.8 });
   let noise = "";
-  for (let i = 0; i < 2600; i++) {
+  for (let i = 0; i < 1100; i++) {
     const x = (rnd() * W).toFixed(0), y = (rnd() * H).toFixed(0);
-    const a = (0.015 + rnd() * 0.03).toFixed(3);
+    const a = (0.012 + rnd() * 0.02).toFixed(3);
     noise += `<rect x="${x}" y="${y}" width="${rnd() > 0.5 ? 2 : 1}" height="1" fill="#6b6154" opacity="${a}"/>`;
   }
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
@@ -646,7 +661,7 @@ async function genGround() {
     ${noise}
     ${pen.body.join("")}
     <radialGradient id="v" cx="50%" cy="50%" r="72%">
-      <stop offset="82%" stop-color="rgba(90,66,40,0)"/><stop offset="100%" stop-color="rgba(90,66,40,0.07)"/>
+      <stop offset="82%" stop-color="rgba(90,66,40,0)"/><stop offset="100%" stop-color="rgba(90,66,40,0.05)"/>
     </radialGradient>
     <rect width="${W}" height="${H}" fill="url(#v)"/>
   </svg>`;
