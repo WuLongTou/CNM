@@ -93,17 +93,17 @@ async function splitFrames(file) {
   return frames;
 }
 
-/** 瘦长全身像切帧（直译 LoadAndStretchSplitFrames，widthRatio 0.45）。 */
-async function stretchFrames(file, widthRatio = 0.45) {
+/** 瘦长全身像切帧（直译 LoadAndStretchSplitFrames，widthRatio 0.45）；strip=false 供透明产物跳过剥底。 */
+async function stretchFrames(file, widthRatio = 0.45, { strip = true } = {}) {
   let img = await loadRaw(file);
-  img = stripBackground(img);
+  if (strip) img = stripBackground(img);
   const regions = findSpriteRegions(img);
   const targetW = Math.max(8, Math.floor(NORMAL_SPRITE_SIZE * widthRatio));
   const frames = [];
   for (const r of regions) {
     let region = crop(img, r.x, r.y, r.w, r.h);
     if (isMostlyTransparent(region)) continue;
-    region = stripBackground(region);
+    if (strip) region = stripBackground(region);
     region = trimTransparent(region);
     frames.push(await stretchFrame(region, targetW));
   }
@@ -113,16 +113,16 @@ async function stretchFrames(file, widthRatio = 0.45) {
   return frames;
 }
 
-/** 网格切帧（直译 LoadSpriteSheetGridFrames）。 */
-async function gridFrames(file, cols, rows) {
-  const img = stripBackground(await loadRaw(file));
+/** 网格切帧（直译 LoadSpriteSheetGridFrames）；strip=false 供透明产物（gen-sketch）跳过剥底。 */
+async function gridFrames(file, cols, rows, { strip = true } = {}) {
+  const img = strip ? stripBackground(await loadRaw(file)) : await loadRaw(file);
   const cw = Math.floor(img.width / cols);
   const ch = Math.floor(img.height / rows);
   const frames = [];
   for (let gy = 0; gy < rows; gy++) {
     for (let gx = 0; gx < cols; gx++) {
       let region = crop(img, gx * cw, gy * ch, cw, ch);
-      region = stripBackground(region);
+      if (strip) region = stripBackground(region);
       region = trimTransparent(region);
       if (!isMostlyTransparent(region)) frames.push(await fitToCanvas(region));
     }
@@ -215,11 +215,13 @@ async function main() {
   /** @type {any[]} */
   const atlases = [];
   for (const who of ["warrior", "ranger", "mage"]) {
-    const walk = await gridFrames(path.join(playerDir, `${who}_walk.png`), 8, 1);
-    const attack = await gridFrames(path.join(playerDir, `${who}_attack.png`), 6, 1);
-    const idle = takeFramesEvenly(await gridFrames(path.join(playerDir, `${who}_idle.png`), 2, 2), 4);
+    // 玩家/妖物源图均为 gen-sketch 生成的透明 PNG，跳过剥底保护浅色填充
+    const walk = await gridFrames(path.join(playerDir, `${who}_walk.png`), 8, 1, { strip: false });
+    const attack = await gridFrames(path.join(playerDir, `${who}_attack.png`), 6, 1, { strip: false });
+    const idle = takeFramesEvenly(await gridFrames(path.join(playerDir, `${who}_idle.png`), 2, 2, { strip: false }), 4);
     for (const [anim, frames] of [["walk", walk], ["attack", attack], ["idle", idle]]) {
-      atlases.push(await writeAtlas(frames.map(flopRaw), `${who}_${anim}`, atlasDir));
+      // gen-sketch 产物面朝右，与 view 层 facing 语义一致，不再水平翻转
+      atlases.push(await writeAtlas(frames, `${who}_${anim}`, atlasDir));
     }
   }
 
@@ -229,7 +231,7 @@ async function main() {
   const enemySrc = path.join(SRC, "sprites", "enemies", "sheets");
   for (const f of fs.readdirSync(enemySrc)) {
     if (!f.endsWith(".png")) continue;
-    const frames = await stretchFrames(path.join(enemySrc, f));
+    const frames = await stretchFrames(path.join(enemySrc, f), 0.45, { strip: false });
     atlases.push(await writeAtlas(frames, f.replace(/\.png$/, ""), enemyDir));
   }
   report.atlases = atlases;
