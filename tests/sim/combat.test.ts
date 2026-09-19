@@ -72,14 +72,18 @@ describe("完美闪避", () => {
 
   it("冲刺中受近战攻击：免伤 + 子弹时间 + 集中窗口", () => {
     const sim = newSim();
-    setupThreat(sim);
-    sim.input = { moveX: 0, moveY: 0, attack: false, dash: true, cycleTarget: false };
-    sim.tick(); // 进入冲刺窗口（0.25s）
+    const z = setupThreat(sim);
     const hp0 = sim.player.hp;
     const events: string[] = [];
     sim.onEvent((e) => events.push(e.event));
-    // 快进到敌人攻击冷却就绪并接触判定
-    for (let i = 0; i < 30 && events.indexOf("perfect_dodge") < 0; i++) sim.tick();
+    // 真实时序：看见起手前摇后 ~8 tick 再冲刺，让判定时刻（前摇结束 21 tick）
+    // 落在冲刺窗口（15 tick）内——前摇预警正是完美闪避的发动前提
+    z.attackCd = 0;
+    sim.tick();
+    expect(z.attackWind).toBeGreaterThan(0); // 进入前摇（定身）
+    for (let i = 0; i < 8; i++) sim.tick();
+    sim.input = { moveX: 0, moveY: 0, attack: false, dash: true, cycleTarget: false };
+    for (let i = 0; i < 60 && events.indexOf("perfect_dodge") < 0; i++) sim.tick();
     expect(events).toContain("perfect_dodge");
     expect(sim.player.hp).toBe(hp0); // 免伤
     expect(sim.slowmoTimer).toBeGreaterThan(0);
@@ -132,9 +136,69 @@ describe("完美闪避", () => {
     setupThreat(sim);
     sim.player.invincible = 0;
     const hp0 = sim.player.hp;
-    // 敌人贴近后攻击
-    for (let i = 0; i < 60 && sim.player.hp === hp0; i++) sim.tick();
+    // 敌人贴近后攻击（冷却 0.2-0.8s + 前摇 0.35s）
+    for (let i = 0; i < 120 && sim.player.hp === hp0; i++) sim.tick();
     expect(sim.player.hp).toBeLessThan(hp0);
     expect(sim.slowmoTimer).toBe(0); // 未触发闪避
+  });
+});
+
+describe("攻击前摇与击退（M20 可读性）", () => {
+  it("妖物进范围先蓄力：定身、蓄完仍在范围才命中", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 60, y: sim.player.y } } });
+    const e = sim.enemies[sim.enemies.length - 1];
+    e.attackCd = 0;
+    const hp0 = sim.player.hp;
+    sim.tick();
+    expect(e.attackWind).toBeGreaterThan(0); // 进入前摇
+    const x0 = e.x; // 基准取起手后位置（首 tick 的最后一步追击位移不计）
+    // 蓄力期定身且不掉血
+    for (let i = 0; i < 10; i++) sim.tick();
+    expect(e.x).toBe(x0);
+    expect(sim.player.hp).toBe(hp0);
+    // 蓄完（0.35s ≈ 21 tick）仍在范围 → 命中
+    for (let i = 0; i < 40 && sim.player.hp === hp0; i++) sim.tick();
+    expect(sim.player.hp).toBeLessThan(hp0);
+    expect(e.attackCd).toBeGreaterThan(0); // 进入攻击冷却
+  });
+
+  it("前摇期玩家走出范围 → 打空", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 60, y: sim.player.y } } });
+    const e = sim.enemies[sim.enemies.length - 1];
+    e.attackCd = 0;
+    sim.tick();
+    expect(e.attackWind).toBeGreaterThan(0);
+    // 前摇期瞬移出射程（×1.15 之外）
+    sim.exec({ action: "teleport", args: { x: sim.player.x + 500, y: sim.player.y } });
+    const hp0 = sim.player.hp;
+    for (let i = 0; i < 40; i++) sim.tick();
+    expect(sim.player.hp).toBe(hp0); // 打空
+    expect(e.attackWind).toBeLessThanOrEqual(0);
+    expect(e.attackCd).toBeGreaterThan(0); // 照样进冷却（挥空代价）
+  });
+
+  it("近战命中击退：普通妖物明显后坠，妖王几乎不动", () => {
+    const hitShift = (boss: boolean) => {
+      const sim = newSim();
+      sim.exec({
+        action: "spawn", args: {
+          type: boss ? 10 : 0, boss,
+          near: { x: sim.player.x + 45, y: sim.player.y },
+        },
+      });
+      const e = sim.enemies[sim.enemies.length - 1];
+      e.hp = 1e9;
+      e.x = sim.player.x + 45; e.y = sim.player.y;
+      const x0 = e.x;
+      sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+      sim.tick();
+      return e.x - x0;
+    };
+    const normal = hitShift(false);
+    const king = hitShift(true);
+    expect(normal).toBeGreaterThan(12);      // 普通：明显后坠（~26px）
+    expect(king).toBeLessThan(normal / 3);   // 妖王：×0.15 几乎不动
   });
 });

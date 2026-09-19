@@ -3,6 +3,7 @@
 
 export const HITSTOP = {
   FrozenScale: 0.03,
+  HitMs: 35,
   CritMs: 45,
   KillMs: 70,
   EliteKillMs: 110,

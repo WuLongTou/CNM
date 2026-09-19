@@ -65,6 +65,8 @@ export interface Enemy {
   barrageCd: number;
   /** 妖王：已放出的弹幕轮次（起始角按黄金角轮转 → 连续轮呈螺旋漂移）。 */
   barrageVolley: number;
+  /** 近战攻击前摇剩余秒（>0 = 蓄力定身，可读预警）。 */
+  attackWind: number;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -715,7 +717,8 @@ export class GameSim {
       for (const e of targets) {
         const r = this.rollDamage();
         if (dashing) r.dmg *= strike;
-        this.hitEnemy(e, r);
+        const d = Math.hypot(e.x - p.x, e.y - p.y) || 1;
+        this.hitEnemy(e, r, (e.x - p.x) / d, (e.y - p.y) / d);
       }
       this.harvestInRange(range);
     } else if (type === "Ranged") {
@@ -791,8 +794,10 @@ export class GameSim {
     });
   }
 
-  private hitEnemy(e: Enemy, r: { dmg: number; crit: boolean }): void {
+  private hitEnemy(e: Enemy, r: { dmg: number; crit: boolean }, ux = 0, uy = 0): void {
     const p = this.player;
+    if (ux !== 0 || uy !== 0) this.knockback(e, ux, uy);
+    this.hitStop.trigger(HITSTOP.HitMs);
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
     // 连击里程碑音效节点（表现层订阅；3 连提示音，避免每层都响）
@@ -888,6 +893,10 @@ export class GameSim {
   private applyHit(x: number, y: number, e: Enemy, dmg: number, fx: { splash: number; psn: number; freeze: number }): void {
     // 甲妖举盾：完全免疫伤害与异常状态
     if (e.type === EnemyType.Knight && e.blockT > 0) return;
+    const dx = e.x - x, dy = e.y - y;
+    const dd = Math.hypot(dx, dy) || 1;
+    this.knockback(e, dx / dd, dy / dd);
+    this.hitStop.trigger(HITSTOP.HitMs);
     this.dealDamage(e, dmg);
     if (fx.psn > 0 && this.rng.chance(fx.psn / 100)) {
       e.psnDps = 3 + dmg * 0.1;
@@ -901,6 +910,19 @@ export class GameSim {
       for (const o of this.nearestEnemies(x, y, fx.splash, 99)) {
         if (o.id !== e.id) this.dealDamage(o, dmg * 0.5); // SplashDamageMult
       }
+    }
+  }
+
+  /** 命中击退：沿指定方向推开（Boss×0.15 / 精英×0.4），地形分离防嵌墙。 */
+  private knockback(e: Enemy, ux: number, uy: number, mult = 1): void {
+    const kb = CFG.Player.HitKnockback * mult * (e.boss ? 0.15 : e.elite ? 0.4 : 1);
+    const nx = Math.min(this.world.w - 22, Math.max(22, e.x + ux * kb));
+    const ny = Math.min(this.world.h - 22, Math.max(22, e.y + uy * kb));
+    if (e.type !== EnemyType.Ship) {
+      const sep = this.terrain.separate(nx, ny, CFG.Enemy.CollisionSize / 2);
+      e.x = sep.x; e.y = sep.y;
+    } else {
+      e.x = nx; e.y = ny; // 浮灯无视地形
     }
   }
 
@@ -1053,8 +1075,11 @@ export class GameSim {
           vy += (oy / od) * CFG.Enemy.SeparationForce;
         }
       }
-      e.x += vx * dt;
-      e.y += vy * dt;
+      // 蓄力前摇定身（攻击承诺，给玩家可读的出手窗口）
+      if (e.attackWind <= 0) {
+        e.x += vx * dt;
+        e.y += vy * dt;
+      }
       // 浮灯漂浮于障碍之上，不受地形挤压
       if (e.type !== EnemyType.Ship) {
         const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
@@ -1071,16 +1096,23 @@ export class GameSim {
       if (e.type === EnemyType.Healer) this.updateHealer(e, dt);
       if (e.type === EnemyType.Summoner) this.updateSummoner(e, dt);
 
-      // 通用近战：隐身中的隐煞不攻击（近身时必已显形，此处兜底）
-      if (!e.stealth && dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
-        e.attackCd = CFG.Enemy.AttackCooldown;
-        if (this.tryPerfectDodge()) continue;
-        if (p.invincible <= 0) {
-          p.hp -= e.damage;
-          p.invincible = CFG.Player.InvincibleDuration;
-          for (const cb of this.onPlayerHurt) cb(p.hp);
-          if (p.hp <= 0) this.onPlayerDied();
+      // 通用近战两段式（M20 可读性）：进范围先蓄力 0.35s（定身前摇，头顶"！"
+      // 预警），蓄完仍在范围（×1.15）才判定命中——走位可躲，冲刺可完美闪避
+      if (e.attackWind > 0) {
+        e.attackWind -= dt;
+        if (e.attackWind <= 0) {
+          e.attackCd = CFG.Enemy.AttackCooldown;
+          if (dist <= CFG.Enemy.AttackRange * CFG.Enemy.WindupHitRangeMult) {
+            if (!this.tryPerfectDodge() && p.invincible <= 0) {
+              p.hp -= e.damage;
+              p.invincible = CFG.Player.InvincibleDuration;
+              for (const cb of this.onPlayerHurt) cb(p.hp);
+              if (p.hp <= 0) this.onPlayerDied();
+            }
+          }
         }
+      } else if (!e.stealth && dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
+        e.attackWind = CFG.Enemy.AttackWindup;
       }
     }
   }
@@ -1366,6 +1398,7 @@ export class GameSim {
       chargeVx: 0, chargeVy: 0, chargeHit: false,
       barrageCd: boss ? BOSS_BARRAGE.first : 0,
       barrageVolley: 0,
+      attackWind: 0,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;

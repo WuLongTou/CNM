@@ -115,9 +115,9 @@ describe("GameSim 战斗闭环", () => {
     sim.exec({ action: "spawn", args: { type: "basic", near: { x: sim.player.x + 30, y: sim.player.y } } });
     const z = sim.enemies[0];
     z.damage = 10;
-    z.attackCd = 0; // 新刷妖物有 0.2-0.8s 初始攻击冷却，清零让首拍即攻击
-    // 第一次受击：HP 120→110，进入无敌帧
-    sim.tick();
+    z.attackCd = 0; // 新刷妖物有 0.2-0.8s 初始攻击冷却，清零让首拍即起手
+    // 第一次受击：前摇 0.35s（21 tick）后判定命中，HP 120→110，进入无敌帧
+    for (let i = 0; i < 40 && sim.player.hp === 120; i++) sim.tick();
     expect(sim.player.hp).toBe(110);
     const hpAfterHit = sim.player.hp;
     sim.tick();

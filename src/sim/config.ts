@@ -9,6 +9,7 @@ export const CFG = {
     BaseDamage: 12.0,
     BaseSpeed: 220.0,
     CollisionSize: 32.0,
+    HitKnockback: 26.0,  // 近战/弹道命中击退距离（Boss×0.15 精英×0.4）
     DashSpeedMult: 3.5,
     DashDuration: 0.25,
     DashCooldown: 0.8,
@@ -39,6 +40,8 @@ export const CFG = {
     CollisionSize: 24.0,
     AttackCooldown: 1.0,
     AttackRange: 70.0,
+    AttackWindup: 0.35,       // 近战攻击前摇（定身蓄力，可读预警）
+    WindupHitRangeMult: 1.15, // 前摇结束时的命中范围倍率（微宽于起手范围）
     SeparationRange: 26.0,
     SeparationForce: 150.0,
     EliteChanceBase: 0.02,

@@ -280,7 +280,13 @@ export class GameView {
       v.container.alpha = z.stealth ? 0.12 : 1;
       // 动感：浮空妖物正弦浮动+轻摇摆；地面妖物行走时小弹跳（相位个体错开）
       const now = performance.now() / 1000;
-      if (FLOATY_TYPES.has(z.type)) {
+      if (z.attackWind > 0) {
+        // 攻击前摇（可读预警）：后倾蓄力 + 血红脉冲，出手意图一目了然
+        v.body.y = 0;
+        v.body.rotation = -v.faceCur * 0.28;
+        const pulse = 0.5 + 0.5 * Math.sin(now * 22);
+        v.body.tint = z.hitFlash > 0 ? 0xd9402a : (pulse > 0.5 ? 0xe8705e : 0xffffff);
+      } else if (FLOATY_TYPES.has(z.type)) {
         v.body.y = Math.sin(now * 2.6 + v.bobPhase) * 3.2;
         v.body.rotation = Math.sin(now * 1.7 + v.bobPhase) * 0.055;
       } else {
@@ -326,6 +332,31 @@ export class GameView {
     this.renderTerrain(sim);
     this.renderWeather(sim);
     this.renderBossBar(sim);
+    this.renderAttackRange(sim);
+  }
+
+  /** 攻击范围指示：妖物接近时浮现真实判定圈（冲刺斩时扩大），圈内妖物脚下血红标线。 */
+  private renderAttackRange(sim: GameSim): void {
+    const g = this.rangeGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    if (sim.player.dead) return;
+    const r = CFG.Player.BaseAttackRange * sim.stats.rangeMult
+      * (sim.player.dashTimer > 0 ? CFG.Combat.DashStrikeRangeMult : 1);
+    let nearest = Infinity;
+    for (const z of sim.enemies) {
+      if (z.stealth) continue;
+      nearest = Math.min(nearest, Math.hypot(z.x - sim.player.x, z.y - sim.player.y));
+    }
+    if (nearest > r * 1.45) return; // 没有威胁接近时不画，保持纸面干净
+    this.sketchCircle(g, sim.player.x, sim.player.y, r, { color: 0x8a8175, width: 1.5, alpha: 0.4 });
+    for (const z of sim.enemies) {
+      if (z.stealth) continue;
+      if (Math.hypot(z.x - sim.player.x, z.y - sim.player.y) <= r) {
+        g.moveTo(z.x - 10, z.y + 32).lineTo(z.x + 10, z.y + 32)
+          .stroke({ width: 2.5, color: BLOOD, alpha: 0.85 });
+      }
+    }
   }
 
   /** 妖王血条：屏幕顶居中，纸白底 + 血红填充 + 炭描边；阶段 2 起带裂纹。 */
@@ -396,8 +427,10 @@ export class GameView {
     this.ripples = alive;
   }
 
-  /** 高阶妖状态提示：甲妖举盾蓝灰圈 / 蛟蓄力红光闪烁。 */
+  /** 高阶妖状态提示：甲妖举盾蓝灰圈 / 蛟蓄力红光闪烁 / 前摇"！"预警；
+   *  玩家近战范围圈与圈内妖物标线（攻击可读性）。 */
   private enemyStateGfx = new Graphics();
+  private rangeGfx = new Graphics();
   /** 妖王顶部血条（屏幕空间，随存活妖王重绘）。 */
   private bossBarGfx = new Graphics();
   private bossNameText: Text | null = null;
@@ -406,6 +439,14 @@ export class GameView {
     if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
     g.clear();
     for (const z of sim.enemies) {
+      if (z.attackWind > 0) {
+        // 前摇预警：头顶手绘"！"（血红，急促脉冲）
+        const pulse = 0.55 + 0.45 * Math.sin(performance.now() / 45);
+        const ly = z.y - 58;
+        g.moveTo(z.x, ly).lineTo(z.x, ly - 11)
+          .stroke({ width: 3.2, color: BLOOD, alpha: pulse });
+        g.circle(z.x, ly + 5, 1.9).fill({ color: BLOOD, alpha: pulse });
+      }
       if (z.type === EnemyType.Knight && z.blockT > 0) {
         g.circle(z.x, z.y, 26).stroke({ width: 3, color: 0x4a6a8a, alpha: 0.85 });
         g.circle(z.x, z.y, 30).stroke({ width: 1.5, color: 0x3a5a7a, alpha: 0.4 });
