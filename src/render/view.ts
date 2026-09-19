@@ -33,14 +33,25 @@ interface EnemyView {
   animName: string;
   frame: number;
   animTimer: number;
+  /** 朝向插值（-1..1）。 */
+  faceCur: number;
+  /** 浮动/弹跳相位（个体错开，破除集体同步）。 */
+  bobPhase: number;
+  /** 上一帧位置（差分判断移动）。 */
+  lastX: number; lastY: number;
 }
 
 /** 玩家外观皮肤：对应武器类型（Melee→warrior / Ranged→ranger / Magic→mage）。 */
 interface PlayerSkin {
   walk: Texture[];
   attack: Texture[];
-  idle: Texture;
+  idle: Texture[];
 }
+
+/** 浮空妖物：呼吸浮动 + 轻微摇摆（游魂/魅影/隐煞/浮灯/蚀群）。 */
+const FLOATY_TYPES = new Set<number>([0, 1, 4, 9, 13]);
+const IDLE_ANIM_STEP = 0.28;
+const AFTERIMAGE_LIFE = 0.22;
 
 export class GameView {
   private app!: Application;
@@ -58,6 +69,11 @@ export class GameView {
   private frameIndex = 0;
   /** 上一帧玩家死亡标记（边沿触发死亡消散）。 */
   private prevPlayerDead = false;
+  /** 玩家朝向插值（-1..1，转身过渡；sim 的 facing 是瞬时 ±1）。 */
+  private playerFace = 1;
+  /** 冲刺残影（渐隐拷贝）。 */
+  private afterimages: Array<{ spr: Sprite; life: number }> = [];
+  private afterimageCd = 0;
 
   /** 加载全部资产并搭建场景。 */
   async init(app: Application): Promise<void> {
@@ -70,15 +86,15 @@ export class GameView {
     ground.width = 3840; ground.height = 2160;
     this.worldLayer.addChild(ground);
 
-    // 玩家三套外观（walk 8 帧 / attack 6 帧 / idle 首帧），按手持武器类型切换
+    // 玩家三套外观（walk 8 帧 / attack 6 帧 / idle 4 帧呼吸），按手持武器类型切换
     for (const who of ["warrior", "ranger", "mage"]) {
       this.playerSkins[who] = {
         walk: await this.loadFrames(`assets/sprites/player/${who}_walk.json`),
         attack: await this.loadFrames(`assets/sprites/player/${who}_attack.json`),
-        idle: (await this.loadFrames(`assets/sprites/player/${who}_idle.json`))[0],
+        idle: await this.loadFrames(`assets/sprites/player/${who}_idle.json`),
       };
     }
-    this.playerSprite = new Sprite(this.playerSkins.warrior.idle);
+    this.playerSprite = new Sprite(this.playerSkins.warrior.idle[0]);
     this.playerSprite.anchor.set(0.5);
     this.worldLayer.addChild(this.playerSprite);
 
@@ -129,7 +145,14 @@ export class GameView {
     }
     if (z.boss) container.scale.set(CFG.Enemy.BossScale);
     this.worldLayer.addChild(container);
-    return { container, body, hpFill: fill, hpBar, animName, frame: 0, animTimer: 0 };
+    // 相位随机化：每只妖物帧起点/计时/浮动相位错开，避免"集体广场舞"
+    return {
+      container, body, hpFill: fill, hpBar, animName,
+      frame: Math.floor(Math.random() * frames.length),
+      animTimer: Math.random() * 0.1,
+      faceCur: z.facing, bobPhase: Math.random() * Math.PI * 2,
+      lastX: z.x, lastY: z.y,
+    };
   }
 
   /** 每帧渲染：tick 固定 60Hz 与渲染同频，直接读最新状态。 */
@@ -177,7 +200,10 @@ export class GameView {
       }
       const skin = this.playerSkins[this.curSkin];
       this.playerSprite.x = p.x; this.playerSprite.y = p.y;
-      this.playerSprite.scale.x = p.facing;
+      // 转身插值：scale.x 快速趋近目标 ±1，翻转有了过程（纸片人转身感）
+      this.playerFace += (p.facing - this.playerFace) * Math.min(1, dt * 14);
+      this.playerSprite.scale.x = Math.abs(this.playerFace) < 0.08
+        ? (this.playerFace < 0 ? -0.08 : 0.08) : this.playerFace;
       if (this.attackTimer > 0) {
         // 攻击动画优先：按帧数均摊播完一轮
         this.attackTimer -= dt;
@@ -193,13 +219,32 @@ export class GameView {
           this.frameIndex = (this.frameIndex + 1) % skin.walk.length;
         }
         this.playerSprite.texture = skin.walk[this.frameIndex];
+        // 行走弹跳：步点轻微起伏（帧动画已有腿摆，这里补重心位移）
+        this.playerSprite.y -= Math.abs(Math.sin(this.animTimer / WALK_ANIM_STEP * Math.PI * 0.5)) * 0;
       } else {
-        this.animTimer = 0;
-        this.frameIndex = 0;
-        this.playerSprite.texture = skin.idle;
+        // 站立呼吸：idle 4 帧慢循环（不再僵死单帧）
+        this.animTimer += dt;
+        if (this.animTimer >= IDLE_ANIM_STEP) {
+          this.animTimer -= IDLE_ANIM_STEP;
+          this.frameIndex = (this.frameIndex + 1) % skin.idle.length;
+        }
+        this.playerSprite.texture = skin.idle[this.frameIndex];
       }
       this.playerSprite.alpha = p.invincible > 0 ? 0.55 + 0.45 * Math.sin(p.invincible * 40) : 1;
+      // 冲刺残影：高速位移期按节拍丢出渐隐拷贝
+      this.afterimageCd -= dt;
+      if (p.dashTimer > 0 && this.afterimageCd <= 0) {
+        this.afterimageCd = 0.045;
+        const ghost = new Sprite(this.playerSprite.texture);
+        ghost.anchor.set(0.5);
+        ghost.position.set(this.playerSprite.x, this.playerSprite.y);
+        ghost.scale.copyFrom(this.playerSprite.scale);
+        ghost.alpha = 0.32;
+        this.worldLayer.addChildAt(ghost, this.worldLayer.getChildIndex(this.playerSprite));
+        this.afterimages.push({ spr: ghost, life: AFTERIMAGE_LIFE });
+      }
     }
+    this.updateAfterimages(dt);
 
     // 妖物：增量同步视图（受击红闪 + HP 条 + 帧动画）
     const alive = new Set<number>();
@@ -208,10 +253,24 @@ export class GameView {
       let v = this.enemyViews.get(z.id);
       if (!v) { v = this.makeEnemyView(z); this.enemyViews.set(z.id, v); }
       v.container.x = z.x; v.container.y = z.y;
-      v.body.scale.x = z.facing;
+      // 转身插值（与玩家同语）
+      v.faceCur += (z.facing - v.faceCur) * Math.min(1, dt * 12);
+      v.body.scale.x = Math.abs(v.faceCur) < 0.1 ? (v.faceCur < 0 ? -0.1 : 0.1) : v.faceCur;
       v.body.tint = z.hitFlash > 0 ? 0xd9402a : 0xffffff;
       // 隐煞隐身：近乎透明（保留一点轮廓提示玩家位置威胁）
       v.container.alpha = z.stealth ? 0.12 : 1;
+      // 动感：浮空妖物正弦浮动+轻摇摆；地面妖物行走时小弹跳（相位个体错开）
+      const now = performance.now() / 1000;
+      if (FLOATY_TYPES.has(z.type)) {
+        v.body.y = Math.sin(now * 2.6 + v.bobPhase) * 3.2;
+        v.body.rotation = Math.sin(now * 1.7 + v.bobPhase) * 0.055;
+      } else {
+        // 地面型：移动时步点弹跳，静止时轻微呼吸；位移由上一帧位置差分得出
+        const moved = Math.hypot(z.x - v.lastX, z.y - v.lastY) > 0.4;
+        v.body.y = -Math.abs(Math.sin(now * 7 + v.bobPhase)) * (moved ? 2.2 : 0.5);
+        v.body.rotation = 0;
+      }
+      v.lastX = z.x; v.lastY = z.y;
       const ratio = Math.max(0, z.hp / z.maxHp);
       v.hpFill.width = 30 * ratio;
       // 妖王走顶部大血条，头顶小条隐藏
@@ -411,6 +470,17 @@ export class GameView {
       alive.push(b);
     }
     this.bursts = alive;
+  }
+
+  private updateAfterimages(dt: number): void {
+    const alive: typeof this.afterimages = [];
+    for (const a of this.afterimages) {
+      a.life -= dt;
+      if (a.life <= 0) { a.spr.destroy(); continue; }
+      a.spr.alpha = (a.life / AFTERIMAGE_LIFE) * 0.32;
+      alive.push(a);
+    }
+    this.afterimages = alive;
   }
 
   /** 墨迹消散：放射炭线 + 小圈 + 血红点，快速扩张淡出（纸上擦除感）。 */
