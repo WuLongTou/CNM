@@ -10,11 +10,12 @@
 - Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
 - 包管理器：npm（`package-lock.json` 为唯一权威锁文件；pnpm-lock.yaml 与 pnpm-workspace.yaml 已删除，勿再引入——git 历史中仍有，仅作考古）。
 - 模态/选择/UI 页面快捷键必须独占输入（硬约束，自 Godot 版平移）：
-  - 装备/合成/帮助/暂停/融合/GameOver 等任何模态页面打开时，游戏操作快捷键
-    （WASD/方向键移动、空格攻击、Shift 冲刺、Tab 切目标等）必须 100% 失效。
+  - 装备/合成/帮助/暂停/融合/GameOver/Victory 等任何模态页面打开时，游戏操作快捷键
+    （WASD/方向键移动、空格攻击、Shift 冲刺）必须 100% 失效。
     实现机制：`GameSim.paused` 置位 + `GameSim.tick` 门控清空全部输入状态。
-  - 绝不复用已绑定的游戏按键做 UI 快捷键（已绑定：WASD/方向键、Space、Shift、Tab、
-    H、C、I、反引号、Esc）。UI 快捷键只用未绑定键（Enter、Delete 等）或纯鼠标。
+  - 绝不复用已绑定的游戏按键做 UI 快捷键（游戏键绑定：WASD/方向键、Space、Shift；
+    UI 键：H、C、I、Esc、反引号、Tab（帮助切页）、Enter、Delete）。
+    新增 UI 快捷键只用未绑定键或纯鼠标。
 - 主题约束：项目为《斩妖录》妖物设定，已全面清除旧主题字样。新增代码、文案、
   资产名不得引入旧主题相关命名（旧怪名称等）；敌人资产源文件统一中性命名（enemy_*）。
 - 美术风格约束（M11 起，M22 v2 填充式重绘）：全局简笔画速写本风格——米白
@@ -34,9 +35,13 @@
 
 页面加载后暴露 `window.__CNM__`（JSON 指令协议，与旧版 cmd-port 同构）：
 `exec({id, action, args})` 支持 status/game_state/start/input/choose/force_combat/
-spawn/give/upgrade/weapons/craft/offer_fusion/buy_meta/meta/inventory/teleport/quit；
+spawn/give/upgrade/weapons/craft/offer_fusion/buy_meta/meta/inventory/teleport/
+goto_round（测试跳阶）/continue（无尽）/quit；
 `getEvents()` 拉取事件推送；`sim` 直接暴露 GameSim 实例。
 
 ## 协作入口
 - 任务分级：低风险（trivial）直接实现；高风险（非 trivial）按全局「方案选择」对比 2–3 种方案。
 - 游戏数值改动需与 `src/sim/config.ts`、`src/sim/weapons.ts` 数据表对照。
+- 战斗/游戏性核心（R1/R2 起）：方向性近战判定、击退/硬直、多武器齐射、质变词条、
+  分幕刷怪（CFG.Acts）均在 `src/sim/game.ts` + `src/sim/weapons.ts` + `src/sim/config.ts`；
+  改动手感参数前先读 `tests/sim/combat.test.ts` 的既有语义断言。
