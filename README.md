@@ -45,9 +45,10 @@ __CNM__.sim                                  // GameSim 实例（深度断言用
 node tools/gen-sketch.mjs   # 重新生成简笔画源图到 assets-src（调造型后需重跑）
 npm run assets:sync         # 从 assets-src 生成 public/assets（剥底/切帧/atlas）
 npm run dev                 # Vite dev server @ 127.0.0.1:5173
-npm run build         # tsc 类型检查 + vite build
+npm run build         # 自动先 assets:sync（prebuild）+ tsc 类型检查 + vite build
 npm test              # vitest 逻辑回归
-npm run e2e           # Playwright E2E（自动起 dev server）
+npm run e2e           # Playwright E2E（自动先 assets:sync 再起 dev server）
+npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 ```
 
 ## 里程碑
@@ -154,12 +155,15 @@ npm run e2e           # Playwright E2E（自动起 dev server）
 ## 构建 / 测试 / 部署
 
 - 安装与测试：`npm ci` → `npm test`（vitest，sim 层逻辑回归）→ `npm run build`
-  （tsc 全量类型检查 + vite 产物）。`public/assets/` 为生成产物不入库，
-  本地跑 e2e 或部署前先 `npm run assets:sync`。
-- e2e：`npm run e2e`（Playwright，完整对局闭环）。断言对帧率计时敏感
-  （串行 + 零重试），仅本地手跑，不进 CI。
-- 部署：`dist/` 为纯静态产物（`vite.config.ts` 未设 `base`，必须以**根路径**
-  部署，如 `https://<域名>/`，不支持子路径）；由 nginx 直接托管，无服务端。
+  （prebuild 自动执行 `assets:sync` + tsc 全量类型检查 + vite 产物）。
+  `public/assets/` 为生成产物不入库，`npm run build` 会自动同步；
+  手动同步：`npm run assets:sync`。
+- e2e：`npx playwright install`（首次需安装浏览器）→ `npm run e2e`
+  （Playwright，自动先 assets:sync 再起 dev server，完整对局闭环）。
+  断言对帧率计时敏感（串行 + 零重试），仅本地手跑，不进 CI。
+- 部署：`dist/` 为纯静态产物，由 nginx 直接托管，无服务端。默认以**根路径**
+  部署（如 `https://<域名>/`）；子路径部署时构建前设置 `VITE_BASE`
+  （如 `VITE_BASE=/zhanyao/ npm run build`，值需带首尾斜杠），不设则保持根路径。
 
 ## 操作
 
