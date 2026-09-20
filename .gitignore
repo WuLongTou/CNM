@@ -30,7 +30,7 @@ browser-data/
 .claude/settings.local.json
 *.import
 
-# Project-level scratch / audit / screenshot directory (see AGENTS.md)
+# Project-level scratch / audit / screenshot directory (not tracked)
 .local/
 
 # Web / Node build artifacts & cache

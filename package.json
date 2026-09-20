@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run assets:sync",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "vitest run",
