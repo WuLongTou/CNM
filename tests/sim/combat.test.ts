@@ -39,15 +39,11 @@ describe("冲刺斩", () => {
     expect(strike).toBeCloseTo(base * CFG.Combat.DashStrikeDmgMult, 0);
   });
 
-  it("冲刺斩近战范围 1.35×：横排双靶只有冲刺斩能同时命中（multi=1）", () => {
+  it("冲刺斩近战范围 1.35×：攻击方向纵深处的远靶只有冲刺斩够得着（multi=1）", () => {
     const hits = (dash: boolean) => {
       const sim = newSim();
       spawnDummy(sim, 40, 0);
-      spawnDummy(sim, -62, 0); // 62px：普通范围 70 内?——用 90 确保超出普通、落在 70×1.35≈94 内
-      // 重摆第二只到 90px
-      const far = sim.enemies[sim.enemies.length - 1];
-      far.x = sim.player.x - 90;
-      far.hp = 1e9;
+      spawnDummy(sim, 92, 0); // 正前方 92px：普通范围 70 外，冲刺斩 70×1.35≈94.5 内
       if (dash) {
         sim.input = { moveX: 0, moveY: 0, attack: false, dash: true, cycleTarget: false };
         sim.tick();
@@ -179,7 +175,7 @@ describe("攻击前摇与击退（M20 可读性）", () => {
     expect(e.attackCd).toBeGreaterThan(0); // 照样进冷却（挥空代价）
   });
 
-  it("近战命中击退：普通妖物明显后坠，妖王几乎不动", () => {
+  it("近战命中击退：速度制后坠普通妖明显，妖王几乎不动", () => {
     const hitShift = (boss: boolean) => {
       const sim = newSim();
       sim.exec({
@@ -193,13 +189,83 @@ describe("攻击前摇与击退（M20 可读性）", () => {
       e.x = sim.player.x + 45; e.y = sim.player.y;
       const x0 = e.x;
       sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
-      sim.tick();
-      return e.x - x0;
+      sim.tick(); // 第一击：击退速度置位
+      let peak = Math.abs(e.x - x0);
+      sim.input = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
+      for (let i = 0; i < 11; i++) {
+        sim.tick();
+        peak = Math.max(peak, Math.abs(e.x - x0));
+      }
+      return peak;
     };
     const normal = hitShift(false);
     const king = hitShift(true);
-    expect(normal).toBeGreaterThan(12);      // 普通：明显后坠（~26px）
-    expect(king).toBeLessThan(normal / 3);   // 妖王：×0.15 几乎不动
+    expect(normal).toBeGreaterThan(8);      // 普通：明显后坠（~25px，硬直期无追击对冲）
+    expect(king).toBeLessThan(normal / 3);  // 妖王：×0.15 几乎不动
+  });
+
+  it("攻击突进：出手向攻击方向位移（重量感）", () => {
+    const sim = newSim();
+    spawnDummy(sim, 60, 0);
+    const x0 = sim.player.x;
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick(); // 结算伤害并置位突进
+    for (let i = 0; i < 6; i++) sim.tick(); // 突进积分（≈32px）
+    expect(sim.player.x).toBeGreaterThan(x0 + 20);
+  });
+});
+
+describe("方向性近战与硬直（R1）", () => {
+  it("扇形判定：正后方的妖物不被命中", () => {
+    const sim = newSim();
+    spawnDummy(sim, 45, 0);    // 身前（aimAng 初始 0 朝右）
+    const behind = spawnDummy(sim, -45, 0); // 正后方 180°，超出扇形半角 55°
+    const c0 = sim.player.combo;
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick();
+    expect(sim.player.combo - c0).toBe(1); // 只有身前目标被扫到
+    expect(behind.hp).toBe(1e9);
+  });
+
+  it("移动方向即攻击方向：向左移动能砍中左靶", () => {
+    const sim = newSim();
+    const left = spawnDummy(sim, -40, 0);
+    const hp0 = left.hp;
+    sim.input = { moveX: -1, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick();
+    expect(hp0 - left.hp).toBeGreaterThan(0);
+  });
+
+  it("吸附锥：攻击方向自动修正到锥内最近妖物", () => {
+    const sim = newSim();
+    // 靶子在右前方 30°（0.52rad < 吸附锥 1.05rad），静止攻击（aimAng=0）应自动命中
+    const t = spawnDummy(sim, 35, -20);
+    const hp0 = t.hp;
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick();
+    expect(hp0 - t.hp).toBeGreaterThan(0);
+  });
+
+  it("受击硬直：普通妖 AI 挂起、蓄力被打断，妖王免疫", () => {
+    const sim = newSim();
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 45, y: sim.player.y } } });
+    const e = sim.enemies[sim.enemies.length - 1];
+    e.hp = 1e9;
+    e.attackWind = 0.2; // 蓄力中
+    const x0 = e.x;
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick();
+    expect(e.staggerT).toBeGreaterThan(0);   // 进入硬直
+    expect(e.attackWind).toBe(0);            // 蓄力被打断
+    expect(e.x).toBeGreaterThan(x0);         // 硬直期无追击对冲，纯击退向后坠
+    // 妖王免疫硬直
+    sim.exec({ action: "spawn", args: { type: 10, boss: true, near: { x: sim.player.x - 45, y: sim.player.y } } });
+    const king = sim.enemies[sim.enemies.length - 1];
+    king.hp = 1e9;
+    king.x = sim.player.x - 45; king.y = sim.player.y;
+    sim.input = { moveX: -1, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick();
+    expect(king.staggerT).toBe(0);
   });
 });
 

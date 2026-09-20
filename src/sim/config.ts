@@ -9,7 +9,7 @@ export const CFG = {
     BaseDamage: 12.0,
     BaseSpeed: 220.0,
     CollisionSize: 32.0,
-    HitKnockback: 26.0,  // 近战/弹道命中击退距离（Boss×0.15 精英×0.4）
+    HitKnockback: 30.0,  // 命中击退总位移 px（速度脉冲+指数摩擦；Boss×0.15 精英×0.4）
     DashSpeedMult: 3.5,
     DashDuration: 0.25,
     DashCooldown: 0.8,
@@ -34,6 +34,12 @@ export const CFG = {
     DodgeSlowFactor: 0.45,       // 子弹时间内敌人/敌弹时间缩放
     FocusTime: 3.0,              // 闪避后增伤窗口
     FocusDmgMult: 1.3,           // 增伤倍率
+    // R1 方向性近战：攻击方向 = 移动方向（自动吸附锥内最近妖物），扇形判定替代 360° 索敌
+    SlashHalfAngle: 0.96,        // 近战扇形判定半角 rad（≈55°，与挥砍弧视觉一致）
+    AimCone: 1.05,               // 攻击方向吸附锥半角 rad（≈60°，锥内自动瞄向最近妖物）
+    LungeSpeed: 460.0,           // 出手突进速度 px/s（攻击带位移的重量感）
+    LungeTime: 0.07,             // 突进时长 s（总位移 ≈32px）
+    KnockbackDecay: 12.0,        // 击退速度指数摩擦 1/s（总位移 = v0/decay）
   },
 
   Enemy: {
@@ -42,6 +48,7 @@ export const CFG = {
     AttackRange: 70.0,
     AttackWindup: 0.35,       // 近战攻击前摇（定身蓄力，可读预警）
     WindupHitRangeMult: 1.15, // 前摇结束时的命中范围倍率（微宽于起手范围）
+    StaggerTime: 0.16,        // 受击硬直 s（精英×0.4，妖王免疫；打断蓄力/冲撞）
     SeparationRange: 26.0,
     SeparationForce: 150.0,
     EliteChanceBase: 0.02,

@@ -25,7 +25,8 @@ export class AudioManager {
       this.bgmGain.gain.value = this.volume * 0.4;
       this.bgmGain.connect(this.ctx.destination);
       const files = ["melee_attack", "ranged_attack", "magic_attack", "enemy_hit", "enemy_die",
-        "player_hurt", "player_die", "game_over", "dash", "upgrade", "weapon_select", "combo_3", "combo_5"];
+        "player_hurt", "player_die", "game_over", "dash", "upgrade", "weapon_select", "combo_3", "combo_5",
+        "lightning", "charm", "explosion", "footstep"];
       await Promise.all(files.map(async (f) => {
         const res = await fetch(`assets/audio/${f}.wav`);
         if (!res.ok) return;
@@ -41,13 +42,22 @@ export class AudioManager {
     }
   }
 
-  play(name: string): void {
+  /** 播放音效。pitch 变调（随机化避免重复感），vol 相对主音量的乘数（<1 压低）。 */
+  play(name: string, opts?: { pitch?: number; vol?: number }): void {
     if (!this.ctx || !this.sfxGain) return;
     const buf = this.buffers.get(name);
     if (!buf) return;
     const src = this.ctx.createBufferSource();
     src.buffer = buf;
-    src.connect(this.sfxGain);
+    src.playbackRate.value = opts?.pitch ?? 1;
+    if (opts?.vol !== undefined && opts.vol < 1) {
+      const g = this.ctx.createGain();
+      g.gain.value = opts.vol;
+      src.connect(g);
+      g.connect(this.sfxGain);
+    } else {
+      src.connect(this.sfxGain);
+    }
     src.start();
   }
 

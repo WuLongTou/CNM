@@ -244,8 +244,8 @@ describe("音频事件与累计成就", () => {
     sim.input = { moveX: 0, moveY: 0, attack: false, dash: true, cycleTarget: false };
     sim.tick();
     expect(events).toContain("player_dash");
-    // 连击 3：命中三次（spawn 靶子贴脸 + 按住攻击）
-    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 10, y: sim.player.y } } });
+    // 连击 3：命中三次（spawn 靶子在前方 40px + 按住攻击；过近会被突进越过）
+    sim.exec({ action: "spawn", args: { type: 0, near: { x: sim.player.x + 40, y: sim.player.y } } });
     const z = sim.enemies[sim.enemies.length - 1]; // 刚 spawn 的贴脸靶子（末位）
     z.hp = 1e9; // 不死靶子
     sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };

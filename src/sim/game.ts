@@ -69,6 +69,12 @@ export interface Enemy {
   attackWind: number;
   /** 出手动作剩余秒（扑击/后坐/脉冲，表现层驱动）。 */
   strikeT: number;
+  /** 击退速度向量（px/s，指数摩擦衰减；表现"被打得后退"而非传送）。 */
+  vx: number; vy: number;
+  /** 受击硬直剩余秒（>0 时 AI 挂起；精英×0.4，妖王免疫）。 */
+  staggerT: number;
+  /** 最近一次被击方向（死亡碎片沿此方向飞溅）。 */
+  lastHitUx: number; lastHitUy: number;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -92,6 +98,10 @@ export interface Player {
   invincible: number;
   combo: number; comboTimer: number;
   facing: number;
+  /** 瞄准方向 rad（移动输入持续更新；攻击沿此方向扇形判定）。 */
+  aimAng: number;
+  /** 攻击突进剩余秒与速度向量（出手位移，重量感）。 */
+  lungeT: number; lungeVx: number; lungeVy: number;
   moving: boolean;
   dead: boolean;
   weapons: WeaponInstance[];
@@ -181,6 +191,13 @@ const MINE_TRIGGER_RANGE = 40;
 const CHEST_OPEN_RANGE = 50;
 const PICKUP_RANGE = 42;
 const MAX_WEAPONS = 6;
+/** 两角的有符号最短差（-π..π），扇形判定/追踪转向共用。 */
+function angDiff(a: number, b: number): number {
+  let d = a - b;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
 /** 升级符箓掉落概率（普通/精英/妖王；妖王固定掉 3 枚）。 */
 const UPGRADE_DROP = { normal: 0.035, elite: 0.3, boss: 1 } as const;
 /** 升级词条中文名（报价卡展示用）。 */
@@ -255,8 +272,8 @@ export class GameSim {
   focusTimer = 0;
   /** 伤害数字钩子（表现层订阅；世界坐标 + 是否暴击）。 */
   onDamage: Array<(x: number, y: number, dmg: number, crit: boolean) => void> = [];
-  /** 攻击钩子（音频层订阅；主动武器类型）。 */
-  onAttack: Array<(type: AttackType) => void> = [];
+  /** 攻击钩子（音频/表现层订阅；主动武器类型 + 本次攻击方向 rad）。 */
+  onAttack: Array<(type: AttackType, ang: number) => void> = [];
   /** 击杀钩子。 */
   onKill: Array<(type: EnemyType, elite: boolean, boss: boolean) => void> = [];
   /** 玩家受击钩子。 */
@@ -299,6 +316,7 @@ export class GameSim {
       speed: c.BaseSpeed, baseDamage,
       attackCd: 0, dashTimer: 0, dashCd: 0, invincible: 0,
       combo: 0, comboTimer: 0, facing: 1, moving: false, dead: false,
+      aimAng: 0, lungeT: 0, lungeVx: 0, lungeVy: 0,
       weapons: [],
     };
     this.terrain = new World(this.rng, this.world, () => this.nextId++);
@@ -676,10 +694,15 @@ export class GameSim {
     let vy = this.input.moveY;
     const len = Math.hypot(vx, vy);
     if (len > 1) { vx /= len; vy /= len; }
+    // 移动方向即瞄准方向（方向性近战的输入语义：朝哪走朝哪砍）
+    if (len > 0.01) p.aimAng = Math.atan2(vy, vx);
     const mult = p.dashTimer > 0 ? c.DashSpeedMult : 1;
     const w = this.weather.state.playerSpeedMult;
-    p.x += vx * p.speed * mult * w * dt;
-    p.y += vy * p.speed * mult * w * dt;
+    // 攻击突进：出手位移叠加在移动上（地形分离照常约束）
+    if (p.lungeT > 0) p.lungeT = Math.max(0, p.lungeT - dt);
+    else { p.lungeVx = 0; p.lungeVy = 0; }
+    p.x += (vx * p.speed * mult * w + p.lungeVx) * dt;
+    p.y += (vy * p.speed * mult * w + p.lungeVy) * dt;
     const sep = this.terrain.separate(p.x, p.y, c.CollisionSize / 2);
     p.x = Math.min(this.world.w - 22, Math.max(22, sep.x));
     p.y = Math.min(this.world.h - 22, Math.max(22, sep.y));
@@ -715,7 +738,9 @@ export class GameSim {
   }
 
   /** 执行一次攻击：按主动武器类型分流；挥空也进冷却；血代价不足则无法攻击。
-   *  冲刺中攻击 = 冲刺斩：伤害 1.5×，按武器类型附加强化（范围/矢数/弹数/溅射）。 */
+   *  冲刺中攻击 = 冲刺斩：伤害 1.5×，按武器类型附加强化（范围/矢数/弹数/溅射）。
+   *  R1 方向性近战：攻击方向 = 瞄准方向（移动朝向），吸附锥内自动瞄最近妖物，
+   *  扇形判定取代 360° 索敌，出手带突进位移。 */
   private performAttack(): void {
     const p = this.player;
     const c = CFG.Player;
@@ -725,11 +750,32 @@ export class GameSim {
     const dashing = p.dashTimer > 0;
     const strike = dashing ? CFG.Combat.DashStrikeDmgMult : 1;
     const range = c.BaseAttackRange * this.stats.rangeMult * (dashing ? CFG.Combat.DashStrikeRangeMult : 1);
-    for (const cb of this.onAttack) cb(type);
+    // 攻击方向：瞄准方向为基准；吸附锥（±AimCone）内最近妖物自动修正——走砍/站桩都能命中
+    let ang = p.aimAng;
+    const aimTarget = this.nearestEnemies(p.x, p.y, 400, 1)[0];
+    if (aimTarget && Math.abs(angDiff(Math.atan2(aimTarget.y - p.y, aimTarget.x - p.x), ang)) <= CFG.Combat.AimCone) {
+      ang = Math.atan2(aimTarget.y - p.y, aimTarget.x - p.x);
+    }
+    p.facing = Math.cos(ang) >= 0 ? 1 : -1;
+    for (const cb of this.onAttack) cb(type, ang);
     if (dashing) for (const cb of this.onDashStrike) cb(p.x, p.y);
 
     if (type === "Melee") {
-      const targets = this.nearestEnemies(p.x, p.y, range, this.stats.multi + (dashing ? 1 : 0));
+      // 出手突进：向攻击方向的位移脉冲（重量感，叠加在移动上）
+      p.lungeT = CFG.Combat.LungeTime;
+      p.lungeVx = Math.cos(ang) * CFG.Combat.LungeSpeed;
+      p.lungeVy = Math.sin(ang) * CFG.Combat.LungeSpeed;
+      // 扇形判定：range 内且方向偏差 ≤ SlashHalfAngle，按距离取 multi 个
+      const half = CFG.Combat.SlashHalfAngle;
+      const targets = this.enemies
+        .filter((e) => {
+          if (e.stealth) return false;
+          const dx = e.x - p.x, dy = e.y - p.y;
+          if (dx * dx + dy * dy > range * range) return false;
+          return Math.abs(angDiff(Math.atan2(dy, dx), ang)) <= half;
+        })
+        .sort((a, b) => ((a.x - p.x) ** 2 + (a.y - p.y) ** 2) - ((b.x - p.x) ** 2 + (b.y - p.y) ** 2))
+        .slice(0, Math.max(1, this.stats.multi + (dashing ? 1 : 0)));
       for (const e of targets) {
         const r = this.rollDamage();
         if (dashing) r.dmg *= strike;
@@ -739,17 +785,17 @@ export class GameSim {
       this.harvestInRange(range);
     } else if (type === "Ranged") {
       const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
-      const baseAng = target ? Math.atan2(target.y - p.y, target.x - p.x) : (p.facing > 0 ? 0 : Math.PI);
+      const baseAng = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
       const n = Math.max(1, this.stats.spread) + (dashing ? 1 : 0);
       for (let i = 0; i < n; i++) {
-        const ang = baseAng + (i - (n - 1) / 2) * 0.21; // ±12° 散射
-        this.fireProjectile(ang, 500, range * 1.2, strike);
+        const a2 = baseAng + (i - (n - 1) / 2) * 0.21; // ±12° 散射
+        this.fireProjectile(a2, 500, range * 1.2, strike);
       }
     } else if (type === "Magic") {
       const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
-      const ang = target ? Math.atan2(target.y - p.y, target.x - p.x) : (p.facing > 0 ? 0 : Math.PI);
-      this.fireProjectile(ang, 300, 5, strike);
-      if (dashing) this.fireProjectile(ang + 0.35, 300, 5, strike);
+      const angM = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
+      this.fireProjectile(angM, 300, 5, strike);
+      if (dashing) this.fireProjectile(angM + 0.35, 300, 5, strike);
     } else {
       // Mine：原地布雷（FIFO 上限）；冲刺斩溅射 1.5×
       if (this.mines.length >= MAX_MINES) this.mines.shift();
@@ -812,7 +858,6 @@ export class GameSim {
 
   private hitEnemy(e: Enemy, r: { dmg: number; crit: boolean }, ux = 0, uy = 0): void {
     const p = this.player;
-    if (ux !== 0 || uy !== 0) this.knockback(e, ux, uy);
     this.hitStop.trigger(HITSTOP.HitMs);
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
@@ -820,7 +865,7 @@ export class GameSim {
     if (p.combo === 3) this.emit("combo_milestone", { count: 3 });
     this.notifyDamage(e.x, e.y, r.dmg, r.crit);
     if (r.crit) this.hitStop.trigger(HITSTOP.CritMs);
-    this.applyHit(e.x, e.y, e, r.dmg, { splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze });
+    this.applyHit(e.x, e.y, e, r.dmg, { splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze }, ux, uy);
   }
 
   /** 伤害数字回调（暴击给更大字号）。 */
@@ -839,9 +884,7 @@ export class GameSim {
         if (t) {
           const want = Math.atan2(t.y - pr.y, t.x - pr.x);
           const cur = Math.atan2(pr.vy, pr.vx);
-          let diff = want - cur;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
+          const diff = angDiff(want, cur);
           const turn = Math.min(Math.abs(diff), 6 * dt) * Math.sign(diff);
           const sp = Math.hypot(pr.vx, pr.vy);
           pr.vx = Math.cos(cur + turn) * sp;
@@ -856,7 +899,9 @@ export class GameSim {
         if (pr.hitIds.has(e.id)) continue;
         if ((e.x - pr.x) ** 2 + (e.y - pr.y) ** 2 <= 24 ** 2) {
           pr.hitIds.add(e.id);
-          this.applyHit(pr.x, pr.y, e, pr.dmg, { splash: pr.splash, psn: pr.psn, freeze: pr.freeze });
+          const sp = Math.hypot(pr.vx, pr.vy) || 1;
+          this.applyHit(pr.x, pr.y, e, pr.dmg,
+            { splash: pr.splash, psn: pr.psn, freeze: pr.freeze }, pr.vx / sp, pr.vy / sp);
           if (pr.chain > 0) this.chainFrom(e, pr.dmg * 0.8, pr.chain, pr.psn, pr.freeze, new Set([e.id]));
           if (pr.pierce > 0) pr.pierce--;
           else continue outer;
@@ -906,12 +951,22 @@ export class GameSim {
       .slice(0, Math.max(1, n));
   }
 
-  private applyHit(x: number, y: number, e: Enemy, dmg: number, fx: { splash: number; psn: number; freeze: number }): void {
+  /** 命中结算：击退冲击 + 伤害 + 异常。ux/uy 为命中冲击方向（弹道取速度方向，
+   *  近战取玩家→妖物方向）；缺省时按命中点→目标方向兜底。 */
+  private applyHit(
+    x: number, y: number, e: Enemy, dmg: number,
+    fx: { splash: number; psn: number; freeze: number },
+    ux?: number, uy?: number,
+  ): void {
     // 甲妖举盾：完全免疫伤害与异常状态
     if (e.type === EnemyType.Knight && e.blockT > 0) return;
-    const dx = e.x - x, dy = e.y - y;
-    const dd = Math.hypot(dx, dy) || 1;
-    this.knockback(e, dx / dd, dy / dd);
+    let ix = ux, iy = uy;
+    if (ix === undefined || iy === undefined) {
+      const dx = e.x - x, dy = e.y - y;
+      const dd = Math.hypot(dx, dy) || 1;
+      ix = dx / dd; iy = dy / dd;
+    }
+    if (ix !== 0 || iy !== 0) this.impact(e, ix, iy);
     this.hitStop.trigger(HITSTOP.HitMs);
     this.dealDamage(e, dmg);
     if (fx.psn > 0 && this.rng.chance(fx.psn / 100)) {
@@ -929,16 +984,19 @@ export class GameSim {
     }
   }
 
-  /** 命中击退：沿指定方向推开（Boss×0.15 / 精英×0.4），地形分离防嵌墙。 */
-  private knockback(e: Enemy, ux: number, uy: number, mult = 1): void {
-    const kb = CFG.Player.HitKnockback * mult * (e.boss ? 0.15 : e.elite ? 0.4 : 1);
-    const nx = Math.min(this.world.w - 22, Math.max(22, e.x + ux * kb));
-    const ny = Math.min(this.world.h - 22, Math.max(22, e.y + uy * kb));
-    if (e.type !== EnemyType.Ship) {
-      const sep = this.terrain.separate(nx, ny, CFG.Enemy.CollisionSize / 2);
-      e.x = sep.x; e.y = sep.y;
-    } else {
-      e.x = nx; e.y = ny; // 浮灯无视地形
+  /** 命中冲击：速度制击退（指数摩擦，总位移 ≈ HitKnockback）+ 受击硬直。
+   *  硬直打断攻击蓄力与蛟冲撞（妖王免疫硬直），被打的妖物有真实"反应"。 */
+  private impact(e: Enemy, ux: number, uy: number): void {
+    const kb = CFG.Player.HitKnockback * (e.boss ? 0.15 : e.elite ? 0.4 : 1);
+    e.vx += ux * kb * CFG.Combat.KnockbackDecay;
+    e.vy += uy * kb * CFG.Combat.KnockbackDecay;
+    e.lastHitUx = ux; e.lastHitUy = uy;
+    if (!e.boss) {
+      e.staggerT = Math.max(e.staggerT, CFG.Enemy.StaggerTime * (e.elite ? 0.4 : 1));
+      if (e.attackWind > 0) e.attackWind = 0;          // 打断近战蓄力
+      if (e.chargeWind > 0 || e.chargeDash > 0) {      // 打断蛟冲撞
+        e.chargeWind = 0; e.chargeDash = 0; e.chargeHit = false;
+      }
     }
   }
 
@@ -1000,6 +1058,27 @@ export class GameSim {
         }
       }
       e.frzT = Math.max(0, e.frzT - dt);
+
+      // 击退位移：速度积分 + 指数摩擦（"被打得后退"有过程，非传送）
+      if (e.vx !== 0 || e.vy !== 0) {
+        e.x += e.vx * dt;
+        e.y += e.vy * dt;
+        const dec = Math.exp(-CFG.Combat.KnockbackDecay * dt);
+        e.vx *= dec; e.vy *= dec;
+        if (e.vx * e.vx + e.vy * e.vy < 25) { e.vx = 0; e.vy = 0; }
+        e.x = Math.min(this.world.w - 22, Math.max(22, e.x));
+        e.y = Math.min(this.world.h - 22, Math.max(22, e.y));
+        if (e.type !== EnemyType.Ship) {
+          const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
+          e.x = sep.x; e.y = sep.y;
+        }
+      }
+      // 受击硬直：AI 挂起（击退位移/通用计时照常结算）——压制走位的反馈窗口
+      if (e.staggerT > 0) {
+        e.staggerT -= dt;
+        continue;
+      }
+
       const weatherMult = this.weather.state.enemySpeedMult;
       const speedMult = (e.frzT > 0 ? 0.4 : 1) * weatherMult; // FreezeSlowMult × 天气
 
@@ -1421,6 +1500,9 @@ export class GameSim {
       barrageVolley: 0,
       attackWind: 0,
       strikeT: 0,
+      vx: 0, vy: 0,
+      staggerT: 0,
+      lastHitUx: 1, lastHitUy: 0,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;

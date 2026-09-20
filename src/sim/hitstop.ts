@@ -15,6 +15,11 @@ export const HITSTOP = {
 export class HitStop {
   remainingMs = 0;
 
+  /** 是否处于凝固中（表现层据此同步减速渲染时间轴）。 */
+  get active(): boolean {
+    return this.remainingMs > 0;
+  }
+
   trigger(ms: number): void {
     this.remainingMs = Math.max(this.remainingMs, ms);
   }

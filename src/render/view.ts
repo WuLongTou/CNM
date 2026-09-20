@@ -41,6 +41,8 @@ interface EnemyView {
   lastX: number; lastY: number;
   /** 扬尘节流。 */
   dustCd: number;
+  /** 死亡碎片参数（最后受击方向 × 精英/妖王加倍）。 */
+  hitUx: number; hitUy: number; big: boolean;
 }
 
 /** 玩家外观皮肤：对应武器类型（Melee→warrior / Ranged→ranger / Magic→mage）。 */
@@ -161,6 +163,7 @@ export class GameView {
       animTimer: Math.random() * 0.1,
       faceCur: z.facing, bobPhase: Math.random() * Math.PI * 2,
       lastX: z.x, lastY: z.y, dustCd: Math.random() * 0.16,
+      hitUx: z.lastHitUx, hitUy: z.lastHitUy, big: z.elite || z.boss,
     };
   }
 
@@ -184,6 +187,7 @@ export class GameView {
     this.worldLayer.x = -this.camX + sx;
     this.worldLayer.y = -this.camY + sy;
     this.updateDamageTexts(dt);
+    this.updateDebris(dt);
     this.updateBursts(dt);
     this.updateScribbles(dt);
     this.updateRipples(dt);
@@ -280,14 +284,19 @@ export class GameView {
       // 转身插值（与玩家同语）
       v.faceCur += (z.facing - v.faceCur) * Math.min(1, dt * 12);
       v.body.scale.x = Math.abs(v.faceCur) < 0.1 ? (v.faceCur < 0 ? -0.1 : 0.1) : v.faceCur;
-      v.body.tint = z.hitFlash > 0 ? 0xd9402a : 0xffffff;
+      v.body.tint = z.hitFlash > 0 ? 0xff4632 : 0xffffff;
+      v.hitUx = z.lastHitUx; v.hitUy = z.lastHitUy;
       // 受击抽搐：红闪期身体小幅抖动（container 定位不动，血条稳定）
       v.body.x = z.hitFlash > 0 ? (Math.random() * 2 - 1) * 3 : 0;
       // 隐煞隐身：近乎透明（保留一点轮廓提示玩家位置威胁）
       v.container.alpha = z.stealth ? 0.12 : 1;
       // 动感：浮空妖物正弦浮动+轻摇摆；地面妖物行走时小弹跳（相位个体错开）
       const now = performance.now() / 1000;
-      if (z.strikeT > 0) {
+      if (z.hitFlash > 0) {
+        // 受击 pop：身体鼓一下再回落（打击的形体反馈，优先于一切动作）
+        const pop = 1 + 0.26 * (z.hitFlash / 0.16);
+        v.body.scale.set(v.body.scale.x >= 0 ? pop : -pop, pop);
+      } else if (z.strikeT > 0) {
         // 出手动作：近战型向玩家扑击（位移+前倾），远程/妖王后坐缩放
         const p2 = z.strikeT / 0.16;
         const punch = Math.sin(Math.min(1, (1 - p2) * 1.6) * Math.PI); // 起手快收手慢
@@ -309,7 +318,7 @@ export class GameView {
         v.body.y = 0;
         v.body.rotation = -v.faceCur * 0.28;
         const pulse = 0.5 + 0.5 * Math.sin(now * 22);
-        v.body.tint = z.hitFlash > 0 ? 0xd9402a : (pulse > 0.5 ? 0xe8705e : 0xffffff);
+        v.body.tint = z.hitFlash > 0 ? 0xff4632 : (pulse > 0.5 ? 0xe8705e : 0xffffff);
       } else if (FLOATY_TYPES.has(z.type)) {
         v.body.y = Math.sin(now * 2.6 + v.bobPhase) * 3.2;
         v.body.rotation = Math.sin(now * 1.7 + v.bobPhase) * 0.055;
@@ -342,7 +351,8 @@ export class GameView {
     }
     for (const [id, v] of this.enemyViews) {
       if (!alive.has(id)) {
-        // 妖物退场：原地画一团手绘"墨迹消散"（纸面擦除感）
+        // 妖物退场：碎片沿最后受击方向飞溅 + 手绘"墨迹消散"（纸面擦除感）
+        this.spawnDeathDebris(v.container.x, v.container.y, v.hitUx, v.hitUy, v.big);
         this.spawnDeathScribble(v.container.x, v.container.y);
         v.container.destroy({ children: true });
         this.enemyViews.delete(id);
@@ -607,8 +617,48 @@ export class GameView {
     this.dusts = alive;
   }
 
-  /** 命中火花：命中点迸 4 条炭线快速淡出（0.16s）。 */
-  private sparkGfx = new Graphics();
+  /** 死亡碎片：沿最后受击方向飞溅的墨点（重力 + 落地摩擦），妖物退场的实体反馈。 */
+  private debrisGfx = new Graphics();
+  private debris: Array<{ x: number; y: number; vx: number; vy: number; r: number; life: number; maxLife: number; blood: boolean }> = [];
+
+  private spawnDeathDebris(x: number, y: number, ux: number, uy: number, big: boolean): void {
+    const n = big ? 14 : 8;
+    for (let i = 0; i < n && this.debris.length < 80; i++) {
+      const a = Math.atan2(uy, ux) + (Math.random() - 0.5) * 1.9;
+      const sp = 90 + Math.random() * 200;
+      const life = 0.45 + Math.random() * 0.25;
+      this.debris.push({
+        x, y: y - 6,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp * 0.6 - 70 - Math.random() * 90,
+        r: 1.6 + Math.random() * 2.2,
+        life, maxLife: life,
+        blood: Math.random() < 0.18,
+      });
+    }
+  }
+
+  private updateDebris(dt: number): void {
+    const alive: typeof this.debris = [];
+    const g = this.debrisGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const d of this.debris) {
+      d.life -= dt;
+      if (d.life <= 0) continue;
+      d.x += d.vx * dt;
+      d.y += d.vy * dt;
+      d.vy += 560 * dt;            // 重力
+      d.vx *= Math.exp(-2.5 * dt); // 空气阻力
+      if (d.vy > 0) d.vy *= Math.exp(-14 * dt); // 下落段强阻尼 → 贴地散开
+      g.circle(d.x, d.y, d.r)
+        .fill({ color: d.blood ? BLOOD : INK, alpha: Math.min(1, (d.life / d.maxLife) * 1.4) * 0.9 });
+      alive.push(d);
+    }
+    this.debris = alive;
+  }
+
+  /** 命中火花：命中点迸 4 条炭线快速淡出（0.16s）。 */  private sparkGfx = new Graphics();
   private sparks: Array<{ x: number; y: number; seed: number; life: number }> = [];
 
   spawnHitSpark(x: number, y: number): void {
@@ -637,12 +687,12 @@ export class GameView {
     this.sparks = alive;
   }
 
-  /** 近战挥砍弧：朝向前方一道手绘弧快速淡出（冲刺斩更大更红）。 */
+  /** 近战挥砍弧：沿实际攻击方向一道手绘弧快速淡出（冲刺斩更大更红）。 */
   private slashes: Array<{ gfx: Graphics; x: number; y: number; dir: number; dash: boolean; life: number }> = [];
 
-  spawnSlash(x: number, y: number, facing: number, dash: boolean): void {
+  spawnSlash(x: number, y: number, dir: number, dash: boolean): void {
     if (this.slashes.length > 6) return;
-    const sl = { gfx: new Graphics(), x, y, dir: facing > 0 ? 0 : Math.PI, dash, life: 0.18 };
+    const sl = { gfx: new Graphics(), x, y, dir, dash, life: 0.18 };
     this.slashes.push(sl);
     this.fxLayer.addChild(sl.gfx);
   }
@@ -834,7 +884,8 @@ export class GameView {
     this.attackIsMelee = type === undefined || type === "Melee";
   }
 
-  /** 伤害数字：世界上浮淡出（暴击更大；白纸上炭红字 + 纸白描边可读）。 */
+  /** 伤害数字：世界上浮淡出（暴击更大；白纸上炭红字 + 纸白描边可读）。
+   *  R1：出生带缩放 pop（暴击弹得更高），打击的视觉锚点。 */
   spawnDamageNumber(x: number, y: number, dmg: number, crit: boolean): void {
     if (this.damageTexts.length > 24) return; // 上限节流
     const t = new Text({ text: String(dmg), style: {
@@ -844,14 +895,19 @@ export class GameView {
     t.anchor.set(0.5);
     t.position.set(x + (Math.random() * 16 - 8), y - 40);
     this.worldLayer.addChild(t);
-    this.damageTexts.push({ t, life: 0.8 });
+    this.damageTexts.push({ t, life: 0.8, age: 0, popFrom: crit ? 1.9 : 1.45 });
   }
 
   private updateDamageTexts(dt: number): void {
-    const alive: Array<{ t: Text; life: number }> = [];
+    const alive: Array<{ t: Text; life: number; age: number; popFrom: number }> = [];
     for (const d of this.damageTexts) {
       d.life -= dt;
+      d.age += dt;
       if (d.life <= 0) { d.t.destroy(); continue; }
+      // pop：0.14s 内从 popFrom 缩回 1（ease-out，暴击弹得更高）
+      const k = Math.min(1, d.age / 0.14);
+      const ease = 1 - (1 - k) * (1 - k);
+      d.t.scale.set(1 + (d.popFrom - 1) * (1 - ease));
       d.t.y -= 45 * dt;
       d.t.alpha = Math.min(1, d.life / 0.4);
       alive.push(d);
@@ -873,7 +929,7 @@ export class GameView {
   private altarGfx = new Graphics();
   /** 震屏强度（指数衰减，对齐 CameraShakeDecay 16）。 */
   private shakePower = 0;
-  private damageTexts: Array<{ t: Text; life: number }> = [];
+  private damageTexts: Array<{ t: Text; life: number; age: number; popFrom: number }> = [];
 
   /** 障碍与祭坛：速写本线稿风（淡彩填充 + 炭描边），每帧低开销重绘。 */
   renderTerrain(sim: GameSim): void {

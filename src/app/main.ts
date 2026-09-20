@@ -3,6 +3,7 @@
 
 import { Application } from "pixi.js";
 import { GameSim, type ExecResult, type SimEvent } from "../sim/game";
+import { HITSTOP } from "../sim/hitstop";
 import { localStorageStorage } from "../sim/save";
 import { GameView } from "../render/view";
 import { InputManager } from "./input";
@@ -87,13 +88,13 @@ async function boot(): Promise<void> {
     }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }
     else if (e.event === "boss_spawn") { notify.push("妖王现世！"); view.shake(10); audio.play("lightning"); }
-    else if (e.event === "boss_barrage") { audio.play("enemy_hit"); }
+    else if (e.event === "boss_barrage") { audio.play("magic_attack", { pitch: 0.85, vol: 0.8 }); }
     else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }
     else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);
     else if (e.event === "enemy_summon") view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad);
     else if (e.event === "enemy_block") view.spawnBurst(Number(d.x), Number(d.y), 0x8ab8d8);
     else if (e.event === "enemy_charge") {
-      if (d.phase === "windup") { view.spawnBurst(Number(d.x), Number(d.y), 0xd93a2b); audio.play("enemy_hit"); }
+      if (d.phase === "windup") { view.spawnBurst(Number(d.x), Number(d.y), 0xd93a2b); audio.play("lightning"); }
       else view.shake(5);
     }
     else if (e.event === "player_dash") audio.play("dash");
@@ -173,19 +174,30 @@ async function boot(): Promise<void> {
   }
 
   function wireSim(): void {
+    // 命中音效节流：高密度割草时限制最短间隔，避免机枪感
+    let lastHitSfxAt = 0;
     sim.onDamage.push((x, y, dmg, crit) => {
       view.spawnDamageNumber(x, y, dmg, crit);
       view.spawnHitSpark(x, y);
-      view.shake(crit ? 8 : 3);
+      view.shake(crit ? 9 : 4.5);
+      const now = performance.now();
+      if (now - lastHitSfxAt >= 40) {
+        lastHitSfxAt = now;
+        // 每击随机变调，暴击高亢——打击的听觉锚点
+        audio.play("enemy_hit", { pitch: crit ? 1.25 : 0.92 + Math.random() * 0.16, vol: 0.6 });
+      }
     });
-    sim.onAttack.push((type) => {
+    sim.onAttack.push((type, ang) => {
       audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
       view.playAttack(type);
-      if (type === "Melee") view.spawnSlash(sim.player.x, sim.player.y, sim.player.facing, sim.player.dashTimer > 0);
+      if (type === "Melee") view.spawnSlash(sim.player.x, sim.player.y, ang, sim.player.dashTimer > 0);
     });
-    sim.onKill.push(() => audio.play("enemy_die"));
+    sim.onKill.push((_type, elite, boss) => {
+      audio.play("enemy_die");
+      view.shake(boss ? 12 : elite ? 8 : 4);
+    });
     sim.onPlayerHurt.push(() => audio.play("player_hurt"));
-    sim.onDashStrike.push((x, y) => { view.shake(2); view.spawnBurst(x, y, 0x6b6154); });
+    sim.onDashStrike.push((x, y) => { view.shake(3); view.spawnBurst(x, y, 0x6b6154); });
     sim.onPerfectDodge.push((x, y) => view.spawnRipple(x, y));
     sim.onEvent(handleEvent);
   }
@@ -214,7 +226,8 @@ async function boot(): Promise<void> {
     get fps() { return Math.round(app.ticker.FPS); },
   };
 
-  // 主循环：固定 60Hz 步长累加器（确定性），命中停顿按墙钟缩放 dt，渲染每帧读最新状态
+  // 主循环：固定 60Hz 步长累加器（确定性），命中停顿按墙钟缩放 dt，渲染每帧读最新状态。
+  // 凝固期间渲染 dt 同步减速——飘字/动画/相机与逻辑一起凝滞（打击感的"世界暂停"感）
   let acc = 0;
   let last = performance.now();
   app.ticker.add(() => {
@@ -228,7 +241,7 @@ async function boot(): Promise<void> {
       sim.tick(FIXED_DT * scale);
       acc -= FIXED_DT;
     }
-    const dtSec = app.ticker.deltaMS / 1000;
+    const dtSec = (app.ticker.deltaMS / 1000) * (sim.hitStop.active ? HITSTOP.FrozenScale : 1);
     view.render(sim, dtSec);
     hud.update();
     minimap.setCamera(view.getCamera().x, view.getCamera().y, view.getCamera().w, view.getCamera().h);
