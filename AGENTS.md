@@ -8,7 +8,7 @@
 
 ## 硬约束
 - Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
-- 包管理器：npm（`package-lock.json` 为唯一权威锁文件；pnpm-lock.yaml 与 pnpm-workspace.yaml 已删除，勿再引入——git 历史中仍有，仅作考古）。
+- 包管理器：npm（`package-lock.json` 为唯一权威锁文件；pnpm-lock.yaml 与 pnpm-workspace.yaml 已删除，勿再引入——git 历史中仍有，仅作考古。本机若因误执行 `pnpm install` 再现 `pnpm-lock.yaml`，属残留，直接删除，勿提交）。
 - 模态/选择/UI 页面快捷键必须独占输入（硬约束，自 Godot 版平移）：
   - 装备/合成/帮助/暂停/融合/GameOver/Victory 等任何模态页面打开时，游戏操作快捷键
     （WASD/方向键移动、空格攻击、Shift 冲刺）必须 100% 失效。

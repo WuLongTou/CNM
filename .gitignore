@@ -41,3 +41,4 @@ test-results/
 playwright-report/
 public/assets/
 tools/sync-report.json
+.zcode/
