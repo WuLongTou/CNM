@@ -41,12 +41,12 @@ describe("GameSim 状态机", () => {
 });
 
 describe("GameSim 刷怪与难度", () => {
-  it("世界妖物数维持在世界下限以上", () => {
+  it("世界妖物数维持当前幕上限内且不低于底噪", () => {
     const { sim } = newSim();
     sim.exec({ action: "start" });
     for (let i = 0; i < 60 * 30; i++) sim.tick(); // 30 秒
-    expect(sim.enemies.length).toBeGreaterThanOrEqual(CFG.Spawning.WorldMinEnemies - 1);
-    expect(sim.enemies.length).toBeLessThanOrEqual(CFG.Spawning.WorldMaxEnemies);
+    expect(sim.enemies.length).toBeGreaterThanOrEqual(CFG.Acts.MinEnemies[sim.act] - 1);
+    expect(sim.enemies.length).toBeLessThanOrEqual(CFG.Acts.MaxEnemies[sim.act]);
   });
 
   it("45 秒推进一威胁阶并推送事件", () => {
@@ -75,6 +75,56 @@ describe("GameSim 刷怪与难度", () => {
     for (let i = 0; i < 60 * 45 * 4 + 10; i++) sim.tick();
     expect(sim.round).toBe(5);
     expect(sim.enemies.some((z) => z.boss)).toBe(true);
+  });
+});
+
+describe("R2 分幕与胜利", () => {
+  it("act 随时间推进；密度上限随幕爬升", () => {
+    const { sim } = newSim();
+    sim.exec({ action: "start" });
+    expect(sim.act).toBe(0);
+    sim.survivalTime = CFG.Acts.ActTime * 2 + 1; // 幕 2
+    expect(sim.act).toBe(2);
+    sim.player.hp = 1e9;
+    for (let i = 0; i < 60 * 40; i++) sim.tick(); // 40s 刷怪窗口
+    expect(sim.enemies.length).toBeLessThanOrEqual(CFG.Acts.MaxEnemies[2]);
+  });
+
+  it("精英潮：幕 2 起每轮追加精英", () => {
+    const { sim } = newSim();
+    sim.exec({ action: "start" });
+    sim.player.hp = 1e9;
+    sim.survivalTime = CFG.Acts.ActTime * 2; // 幕 2
+    const events: string[] = [];
+    sim.onEvent((e) => events.push(e.event));
+    sim.round = 4; // 下一 tick advanceRound → round 5
+    sim.roundTimer = CFG.Difficulty.RampInterval;
+    sim.tick();
+    expect(events).toContain("elite_wave");
+    expect(sim.enemies.some((z) => z.elite)).toBe(true);
+  });
+
+  it("终幕妖王击杀 → Victory；continue 进入无尽", () => {
+    const { sim, save } = newSim();
+    sim.exec({ action: "start" });
+    sim.player.hp = 1e9;
+    sim.exec({ action: "goto_round", args: { round: CFG.Acts.FinalBossRound } });
+    sim.tick(); // advanceRound → 终幕妖王降临
+    expect(sim.round).toBe(CFG.Acts.FinalBossRound);
+    const king = sim.enemies.find((z) => z.final);
+    expect(king).toBeDefined();
+    expect(king!.maxHp).toBeGreaterThan(1000); // 强化倍率生效
+    // 站到妖王左侧向右移动/攻击：aimAng 跟随移动方向，吸附锥内命中
+    king!.hp = 1;
+    sim.exec({ action: "teleport", args: { x: king!.x - 40, y: king!.y } });
+    sim.player.invincible = 1e9;
+    sim.input = { moveX: 1, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    sim.tick();
+    expect(sim.state).toBe("Victory");
+    expect(save.data.games).toBe(1);
+    const c = sim.exec({ action: "continue" });
+    expect(c.data).toEqual({ continued: true });
+    expect(sim.state).toBe("Combat");
   });
 });
 

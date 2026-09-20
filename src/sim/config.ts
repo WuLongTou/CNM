@@ -65,10 +65,17 @@ export const CFG = {
   },
 
   Spawning: {
-    WorldMinEnemies: 6,
-    WorldMaxEnemies: 18,
-    SpawnCooldown: 1.5,
     MinDistFromPlayer: 420.0,
+  },
+
+  // R2 分幕结构：每幕 ActTime 秒，密度/刷怪速率/精英潮分段爬升；终幕妖王击杀通关
+  Acts: {
+    ActTime: 150,                          // 每幕时长 s
+    MaxEnemies: [24, 40, 55, 70],          // 各幕场上妖物上限（密度的爽感来源）
+    MinEnemies: [8, 14, 18, 22],           // 各幕底噪下限
+    SpawnCooldown: [1.2, 1.0, 0.7, 0.55],  // 各幕底噪刷怪间隔 s
+    EliteWaveCount: [0, 2, 3, 5],          // 各幕每轮(45s)追加精英潮数量
+    FinalBossRound: 13,                    // 终幕妖王出现轮（≈585s）
   },
 
   Difficulty: {

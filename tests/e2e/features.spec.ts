@@ -67,6 +67,38 @@ test("合成与永久升级协议", async ({ page }) => {
   expect(meta).toHaveProperty("metaHp");
 });
 
+test("R2 终局：goto_round 13 → 终幕妖王 → 击杀 → Victory 面板 → 无尽", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.__CNM__?.ready === true);
+  const exec: Exec = (cmd) => page.evaluate((c) => window.__CNM__.exec(c), cmd);
+  await exec({ action: "start" });
+  // 排队跳阶：下一次 advanceRound（45s 计时器在页面主循环推进）触发终幕妖王
+  expect((await exec({ action: "goto_round", args: { round: 13 } })).data).toMatchObject({ queued: true });
+  const king = await page.waitForFunction(() => {
+    const sim = window.__CNM__.sim;
+    return sim.round === 13 ? sim.enemies.find((z) => z.final) ?? false : false;
+  });
+  expect(king).toBeTruthy();
+  // 白盒压血 + 外部输入通道攻击（页面主循环每帧 sample() 覆盖 sim.input，
+  // 只有 exec input 的外部输入持续有效；方向攻击：移动方向=攻击方向）
+  const killed = await page.evaluate(() => {
+    const sim = window.__CNM__.sim;
+    const k = sim.enemies.find((z) => z.final)!;
+    k.hp = 1;
+    sim.exec({ action: "teleport", args: { x: k.x - 40, y: k.y } });
+    sim.player.invincible = 1e9;
+    return true;
+  });
+  expect(killed).toBe(true);
+  await exec({ action: "input", args: { move_x: 1, attack: true } });
+  await page.waitForFunction(() => window.__CNM__.sim.state === "Victory");
+  await exec({ action: "input", args: { move_x: 0, attack: false } });
+  // Victory 面板可见，continue 进入无尽
+  await expect(page.locator("#btn-endless")).toBeVisible();
+  expect((await exec({ action: "continue" })).data).toMatchObject({ continued: true });
+  await expect(page.locator("#btn-endless")).toBeHidden();
+});
+
 test("帮助手账：武器图鉴收录全部武器，成就页展示达成状态", async ({ page }) => {
   await page.goto("/");
   await page.waitForFunction(() => window.__CNM__?.ready === true);

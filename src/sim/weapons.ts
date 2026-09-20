@@ -68,10 +68,35 @@ export const ULTIMATE_AT = 6;
 export const ASCEND_MULT = 1.5;
 export const ULTIMATE_MULT = 2.2;
 
-/** 升级卡词条池（随机三选一应用）。 */
-export const UPGRADE_POOL = ["dmg", "asp", "rng"] as const;
+/** 升级卡词条池：数值词条（dmg/asp/rng）+ 行为词条（R2 质变成长——
+ *  multi 多重 / chain 连锁 / pierce 穿透 / psn 淬毒 / freeze 冰缓 / crit 会心 / splash 溅射）。 */
+export const UPGRADE_POOL = [
+  "dmg", "asp", "rng", "multi", "chain", "pierce", "psn", "freeze", "crit", "splash",
+] as const;
 export type UpgradeStat = (typeof UPGRADE_POOL)[number];
-export const UPGRADE_STEP: Record<UpgradeStat, number> = { dmg: 0.15, asp: 0.1, rng: 0.12 };
+/** 各词条单级增量：乘数类为比例加法，机制类为计数/百分点。 */
+export const UPGRADE_STEP: Record<UpgradeStat, number> = {
+  dmg: 0.15, asp: 0.1, rng: 0.12,
+  multi: 1, chain: 1, pierce: 1,
+  psn: 15, freeze: 15, crit: 10, splash: 50,
+};
+
+/** 词条对武器类型是否有效（升级卡只抽有效词条，避免出废卡）。 */
+export function statValidFor(type: AttackType, st: UpgradeStat): boolean {
+  switch (st) {
+    case "multi": return true;                    // 近战多目标 / 远程魔法多发
+    case "chain": return type === "Ranged" || type === "Magic";
+    case "pierce": return type === "Ranged";
+    case "splash": return type === "Melee" || type === "Mine";
+    case "psn": case "freeze": case "crit": return type !== "Mine";
+    default: return true;                          // dmg/asp/rng 全类型有效
+  }
+}
+
+/** 某武器类型的有效词条池。 */
+export function validStats(type: AttackType): UpgradeStat[] {
+  return UPGRADE_POOL.filter((st) => statValidFor(type, st));
+}
 
 /** 融合配方：两件武器名 → 新武器 id（祭坛触发，M3 接入实体）。 */
 export const FUSION_RECIPES: Array<{ a: string; b: string; result: string }> = [
@@ -89,7 +114,21 @@ export interface WeaponInstance {
   type: AttackType;
   /** 升级卡累计次数（达到阈值进阶/终极）。 */
   ups: number;
-  bonus: { dmg: number; asp: number; rng: number };
+  /** 升级词条累计值（缺省视为 0；机制类词条为整数计数/百分点）。 */
+  bonus: Partial<Record<UpgradeStat, number>>;
+  /** 独立出手冷却（R2 齐射：每把武器各自计时，同时出手）。 */
+  cd: number;
+}
+
+/** 构造一件武器实例（bonus 空、冷却就绪）。 */
+export function makeWeapon(defId: string): WeaponInstance {
+  const def = WEAPON_DATA[defId];
+  return { defId, name: def.name, type: def.type, ups: 0, bonus: {}, cd: 0 };
+}
+
+/** 读词条累计值（缺省 0）。 */
+export function bonusOf(w: WeaponInstance, st: UpgradeStat): number {
+  return w.bonus[st] ?? 0;
 }
 
 /** 计算实例当前阶段倍率（终极覆盖进阶）。 */

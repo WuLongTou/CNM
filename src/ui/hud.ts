@@ -15,6 +15,8 @@ export class Hud {
   private timeText!: HTMLElement;
   private weaponText!: HTMLElement;
   private dashDot!: HTMLElement;
+  /** 继续无尽讨伐（Victory 面板按钮）。 */
+  onEndless: (() => void) | null = null;
 
   constructor(private sim: GameSim, private onStart: () => void, private onRestart: () => void) {
     this.root = document.createElement("div");
@@ -22,6 +24,7 @@ export class Hud {
     document.getElementById("app")!.appendChild(this.root);
     this.buildHud();
     this.buildWelcome();
+    this.buildVictory();
     this.buildGameOver();
   }
 
@@ -52,6 +55,9 @@ export class Hud {
   private welcome!: HTMLElement;
   private gameover!: HTMLElement;
   private gameoverStats!: HTMLElement;
+  private victory!: HTMLElement;
+  private victoryStats!: HTMLElement;
+  private victoryCoins!: HTMLElement;
   /** GameOver 面板延迟弹出计时（进 GameOver 起算；让死亡消散先播完）。 */
   private gameOverAt = 0;
 
@@ -80,6 +86,33 @@ export class Hud {
     el.textContent = d.games > 0
       ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局`
       : "初入山林 · 祝武运昌隆";
+  }
+
+  private buildVictory(): void {
+    this.victory = document.createElement("div");
+    this.victory.className = "overlay hidden";
+    this.victory.innerHTML = `
+      <div class="panel">
+        <h1>妖潮平定</h1>
+        <p class="sub">终幕妖王授首 · 山林复归安宁</p>
+        <p id="victory-stats" class="sub"></p>
+        <p id="victory-coins" class="sub"></p>
+        <button id="btn-endless" type="button">继续讨伐（无尽）</button>
+        <button id="btn-victory-restart" type="button">再来一局</button>
+      </div>`;
+    this.root.appendChild(this.victory);
+    this.victoryStats = this.victory.querySelector("#victory-stats")!;
+    this.victoryCoins = this.victory.querySelector("#victory-coins")!;
+    this.victory.querySelector("#btn-endless")!.addEventListener("click", () => this.onEndless?.());
+    this.victory.querySelector("#btn-victory-restart")!.addEventListener("click", () => this.onRestart());
+  }
+
+  private refreshVictory(): void {
+    const s = this.sim;
+    const coins = Math.floor((s.score / 50 + s.kills) * 1.5);
+    this.victoryStats.textContent =
+      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round}`;
+    this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
   }
 
   private buildGameOver(): void {
@@ -151,6 +184,10 @@ export class Hud {
     this.dashDot.style.color = ready ? "#c0392b" : "#b0a894";
     this.dashDot.style.opacity = ready ? "1" : "0.55";
     this.welcome.classList.toggle("hidden", s.state !== "WeaponSelection");
+    // Victory 结算：终幕妖王陨落即弹出
+    this.victory.classList.toggle("hidden", s.state !== "Victory");
+    if (s.state === "Victory" && this.victoryStats.textContent === "") this.refreshVictory();
+    if (s.state !== "Victory") this.victoryStats.textContent = "";
     // GameOver 面板延迟 0.7s 弹出：先看玩家阵亡消散，再进结算
     if (s.state === "GameOver" && this.gameOverAt === 0) this.gameOverAt = performance.now();
     if (s.state !== "GameOver") this.gameOverAt = 0;

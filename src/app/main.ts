@@ -2,7 +2,7 @@
 // 音频、全套 UI 装配（HUD/装备/合成/融合/帮助/暂停/小地图/通知）。
 
 import { Application } from "pixi.js";
-import { GameSim, type ExecResult, type SimEvent } from "../sim/game";
+import { GameSim, UPGRADE_STAT_NAMES, type ExecResult, type SimEvent } from "../sim/game";
 import { HITSTOP } from "../sim/hitstop";
 import { localStorageStorage } from "../sim/save";
 import { GameView } from "../render/view";
@@ -58,6 +58,7 @@ async function boot(): Promise<void> {
   await audio.init();
 
   const hud = new Hud(sim, () => { sim.start(); audio.playBgm(); }, () => restart());
+  hud.onEndless = () => { sim.exec({ action: "continue" }); audio.playBgm(); notify.push("无尽讨伐 · 妖潮再起"); };
   const equipment = new EquipmentPanel(sim);
   const crafting = new CraftingPanel(sim);
   const fusion = new FusionPanel(sim);
@@ -79,7 +80,7 @@ async function boot(): Promise<void> {
     else if (e.event === "weapon_ultimate") { notify.push(`武器终极：${d.name}`); audio.play("combo_5"); }
     else if (e.event === "crafted") { notify.push(`合成：${d.name}`); audio.play("upgrade"); }
     else if (e.event === "upgrade_offer") upgrade.show();
-    else if (e.event === "upgrade_applied") { notify.push(`符箓铭刻：${d.name}（${d.stat === "dmg" ? "伤害" : d.stat === "asp" ? "攻速" : "范围"}）`); audio.play("upgrade"); }
+    else if (e.event === "upgrade_applied") { notify.push(`符箓铭刻：${d.name}（${UPGRADE_STAT_NAMES[d.stat as keyof typeof UPGRADE_STAT_NAMES] ?? d.stat}）`); audio.play("upgrade"); }
     else if (e.event === "fusion_offer") fusion.show();
     else if (e.event === "weather_changed") {
       const WNAMES: Record<string, string> = { Rain: "阴雨", Fog: "浓雾", BloodMoon: "血月升起" };
@@ -88,6 +89,9 @@ async function boot(): Promise<void> {
     }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }
     else if (e.event === "boss_spawn") { notify.push("妖王现世！"); view.shake(10); audio.play("lightning"); }
+    else if (e.event === "final_boss") { notify.banner("终幕妖王", "讨伐成功即平定妖潮"); view.shake(14); audio.play("lightning"); }
+    else if (e.event === "elite_wave") { notify.push("精英潮来袭！"); audio.play("charm"); }
+    else if (e.event === "victory") { notify.banner("妖潮平定", "除妖师大胜"); view.shake(12); audio.play("combo_5"); audio.stopBgm(); }
     else if (e.event === "boss_barrage") { audio.play("magic_attack", { pitch: 0.85, vol: 0.8 }); }
     else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }
     else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);

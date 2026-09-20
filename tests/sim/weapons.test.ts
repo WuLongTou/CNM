@@ -82,33 +82,45 @@ describe("弹道武器", () => {
 });
 
 describe("元素机制", () => {
-  it("中毒：命中后周期掉血", () => {
+  it("中毒：命中后周期掉血（淬毒词条堆叠后必验）", () => {
     const sim = newSim();
     sim.giveWeapon("duandao"); // psn 10%
+    // R2 质变词条：升级淬毒 ×2 → 10% + 30% = 40%（同时验证 bonus 生效）
+    sim.exec({ action: "upgrade", args: { index: 1, stat: "psn" } });
+    sim.exec({ action: "upgrade", args: { index: 1, stat: "psn" } });
     sim.player.x = 1000; sim.player.y = 1000;
     const e = placeTarget(sim, 1040, 1000, 999999);
-    // 多次攻击，10% 概率必中一次毒（rng 确定性下最多 60 次尝试）
     let poisoned = false;
-    for (let i = 0; i < 60 && !poisoned; i++) {
-      sim.player.attackCd = 0;
+    for (let i = 0; i < 30 && !poisoned; i++) {
+      // 击退会把目标推远：每轮放回攻击位、清武器冷却强制出手
+      e.x = sim.player.x + 40; e.y = sim.player.y;
+      for (const w of sim.player.weapons) w.cd = 0;
       sim.input.attack = true;
       sim.tick();
       poisoned = e.psnT > 0;
     }
     expect(poisoned).toBe(true);
+    e.psnT = 3; e.psnDps = 5; e.psnTick = 0; // 确保已中毒，只验证掉血
     const hpBefore = e.hp;
     for (let i = 0; i < 61; i++) sim.tick(); // 1 秒：至少一跳
     expect(e.hp).toBeLessThan(hpBefore);
   });
 
-  it("冰缓：命中后妖物减速", () => {
+  it("冰缓：命中后妖物减速（冰缓词条堆叠后必验）", () => {
     const sim = newSim();
     sim.giveWeapon("bingshuangfazhang"); // freeze 20%
+    // 只留法杖：铁剑的 lunge/击退会持续移动发射点与目标，弹道永远追不上（场景干扰）
+    sim.player.weapons = sim.player.weapons.filter((w) => w.defId === "bingshuangfazhang");
+    // R2 质变词条：升级冰缓 ×2 → 20% + 30% = 50%
+    sim.exec({ action: "upgrade", args: { index: 0, stat: "freeze" } });
+    sim.exec({ action: "upgrade", args: { index: 0, stat: "freeze" } });
     sim.player.x = 1000; sim.player.y = 1000;
-    const e = placeTarget(sim, 1100, 1000, 999999);
+    const e = placeTarget(sim, 1110, 1000, 999999);
     let frozen = false;
-    for (let i = 0; i < 80 && !frozen; i++) {
-      sim.player.attackCd = 0;
+    for (let i = 0; i < 120 && !frozen; i++) {
+      e.x = 1110; e.y = 1000; // 钉住目标，隔离"弹命中 → 冻结判定"链路
+      e.vx = 0; e.vy = 0; e.staggerT = 0;
+      for (const w of sim.player.weapons) w.cd = 0;
       sim.input.attack = true;
       sim.tick();
       frozen = e.frzT > 0;
@@ -147,7 +159,39 @@ describe("升级与进阶", () => {
     // 终极伤害乘数生效：1.5→2.2 全修正
     expect(sim.stats.dmgMult).toBeGreaterThan(2);
   });
+
+  it("R2 齐射：铁剑+弓箭+法杖同时出手（近战命中+两路弹）", () => {
+    const sim = newSim();
+    sim.giveWeapon("gongjian");
+    sim.giveWeapon("fazhang");
+    sim.player.x = 1000; sim.player.y = 1000;
+    placeTarget(sim, 1080, 1000); // 近战范围内（80px，铁剑 lunge 后必中）
+    const proj0 = sim.projectiles.length;
+    for (const w of sim.player.weapons) w.cd = 0;
+    sim.input.attack = true;
+    sim.tick();
+    expect(sim.projectiles.length).toBeGreaterThanOrEqual(proj0 + 2); // 弓+杖两路弹
+  });
+
+  it("R2 多重词条：近战 multi +1 → 一击双目标", () => {
+    const sim = newSim();
+    sim.exec({ action: "upgrade", args: { index: 0, stat: "multi" } }); // 铁剑 multi 1→2
+    spawnTwin(sim, 40, 8);   // 同在扇形内的两只
+    spawnTwin(sim, 38, -14);
+    const c0 = sim.player.combo;
+    sim.input.attack = true;
+    sim.tick();
+    expect(sim.player.combo - c0).toBe(2); // 一挥双中
+  });
 });
+
+/** 两只并排靶子（扇形判定内）。 */
+function spawnTwin(sim: GameSim, dx: number, dy: number) {
+  sim.spawnEnemy({ type: "basic", near: { x: sim.player.x + dx, y: sim.player.y + dy } });
+  const e = sim.enemies[sim.enemies.length - 1];
+  e.hp = 1e9; e.maxHp = 1e9; e.attackCd = 999; e.damage = 0;
+  return e;
+}
 
 describe("宝箱", () => {
   it("靠近宝箱自动开启并获得武器", () => {

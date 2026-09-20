@@ -1,7 +1,9 @@
 // 键盘输入采样：维护物理按键状态，每帧合成为 sim 的 InputState。
-// 键位对齐 project.godot：WASD/方向键移动、Space 攻击、Shift 冲刺、Tab 切目标。
+// 键位：WASD/方向键移动、Space 攻击、Shift 冲刺。
+// （R1 起 Tab"切目标"移除——方向攻击的吸附锥已取代手动选目标；
+//   InputState.cycleTarget 字段保留仅作协议兼容。）
 // 外部调试输入（debug input 指令）与触屏控件状态（虚拟摇杆/按钮）与键盘三者叠加，
-// 脉冲类（dash/cycle）读后即清。
+// 脉冲类（dash）读后即清。
 // 硬约束：非战斗态输入由 sim.tick 门控清零，键盘层无需重复判断。
 
 import type { GameSim, InputState } from "../sim/game";
@@ -19,7 +21,6 @@ export class InputManager {
   /** 外部注入的持续输入（debug API），与键盘叠加。 */
   private external: Partial<InputState> = {};
   private pulseDash = false;
-  private pulseCycle = false;
   private disposers: Array<() => void> = [];
 
   constructor(private sim: GameSim, private touch: TouchInputSource | null = null) {
@@ -28,7 +29,6 @@ export class InputManager {
       if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Tab"].includes(e.key)) e.preventDefault();
       this.keys.add(e.code);
       if (e.code === "ShiftLeft" || e.code === "ShiftRight") this.pulseDash = true;
-      if (e.code === "Tab") this.pulseCycle = true;
     };
     const onUp = (e: KeyboardEvent) => this.keys.delete(e.code);
     const onBlur = () => this.keys.clear();
@@ -48,7 +48,6 @@ export class InputManager {
     if (typeof args.move_y === "number") this.external.moveY = Math.min(1, Math.max(-1, args.move_y));
     if (typeof args.attack === "boolean") this.external.attack = args.attack;
     if (args.dash === true) this.pulseDash = true;
-    if (args.cycle_target === true) this.pulseCycle = true;
   }
 
   /** 注入触屏状态源（装配层在 UI 面板创建后挂载）。 */
@@ -83,10 +82,9 @@ export class InputManager {
       moveY: Math.min(1, Math.max(-1, y + (touch?.moveY ?? 0) + (this.external.moveY ?? 0))),
       attack,
       dash: this.pulseDash,
-      cycleTarget: this.pulseCycle,
+      cycleTarget: false,
     };
     this.pulseDash = false;
-    this.pulseCycle = false;
   }
 
   destroy(): void {

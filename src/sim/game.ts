@@ -8,7 +8,7 @@ import {
 } from "./config";
 import { defaultSave, type SaveData, type SaveStorage } from "./save";
 import {
-  WEAPON_DATA, stageMult, stageTag, UPGRADE_POOL, UPGRADE_STEP,
+  WEAPON_DATA, stageMult, stageTag, UPGRADE_POOL, UPGRADE_STEP, validStats, bonusOf, makeWeapon,
   FUSION_RECIPES,
   type AttackType, type UpgradeStat, type WeaponInstance,
 } from "./weapons";
@@ -19,7 +19,7 @@ import { AchievementSystem } from "./achievements";
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 
-export type GameState = "WeaponSelection" | "Combat" | "GameOver";
+export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
 export interface InputState {
   moveX: number;
@@ -37,6 +37,8 @@ export interface Enemy {
   hp: number; maxHp: number;
   damage: number; speed: number;
   elite: boolean; boss: boolean;
+  /** 终幕妖王（最终 Boss，击杀通关）。 */
+  final: boolean;
   affix: string;
   /** Boss 阶段（0-2，血量 66%/33% 切换）。 */
   bossPhase: number;
@@ -107,7 +109,9 @@ export interface Player {
   weapons: WeaponInstance[];
 }
 
-/** 由武器栏聚合出的战斗属性（RecalculateStats 语义）。 */
+/** 由武器栏聚合出的战斗属性。R2 起"全部装备武器同时出手"，本面板取
+ *  最后获得的主武器聚合值，供 HUD/攻击范围圈等显示用途；真实出手参数
+ *  在 fireWeapon 中按每把武器独立计算。 */
 export interface PlayerStats {
   dmgMult: number;
   aspdMult: number;
@@ -201,7 +205,11 @@ function angDiff(a: number, b: number): number {
 /** 升级符箓掉落概率（普通/精英/妖王；妖王固定掉 3 枚）。 */
 const UPGRADE_DROP = { normal: 0.035, elite: 0.3, boss: 1 } as const;
 /** 升级词条中文名（报价卡展示用）。 */
-export const UPGRADE_STAT_NAMES: Record<UpgradeStat, string> = { dmg: "伤害", asp: "攻速", rng: "范围" };
+export const UPGRADE_STAT_NAMES: Record<UpgradeStat, string> = {
+  dmg: "伤害", asp: "攻速", rng: "范围",
+  multi: "多重", chain: "连锁", pierce: "穿透",
+  psn: "淬毒", freeze: "冰缓", crit: "会心", splash: "溅射",
+};
 /** 远程妖物（射程内站桩射击，超出继续追击）。 */
 const ENEMY_RANGED: Partial<Record<EnemyType, { range: number; cd: number; dmgMult: number; psn?: boolean }>> = {
   [EnemyType.Spitter]: { range: 300, cd: 2.2, dmgMult: 0.8, psn: true },
@@ -256,8 +264,8 @@ export class GameSim {
   weather: WeatherSystem;
   achievements: AchievementSystem;
   bossKills = 0;
-  /** 祭坛融合报价（打开时模态暂停，choose 指令应答）。 */
-  fusionOffer: { a: string; b: string; resultName: string } | null = null;
+  /** 祭坛融合报价（打开时模态暂停，choose 指令应答；resultId 保证展示=所得）。 */
+  fusionOffer: { a: string; b: string; resultName: string; resultId: string } | null = null;
   /** 场上升级符箓拾取物（走近拾取）。 */
   pickups: UpgradePickup[] = [];
   /** 升级三选一报价（打开时模态暂停，choose/resolveUpgrade 应答）。 */
@@ -294,6 +302,8 @@ export class GameSim {
   private bossSpawnedForRound = 0;
   /** 已出场的妖王总数（BOSS_ROSTER 轮换索引）。 */
   private bossSpawnCount = 0;
+  /** 终幕妖王是否已降临（每局一次）。 */
+  private finalBossSpawned = false;
   private events: SimEvent[] = [];
   private listeners: Array<(e: SimEvent) => void> = [];
   /** 存档中的跨局累计击杀基线（本局 kills 之外的存量）。 */
@@ -328,10 +338,7 @@ export class GameSim {
     });
     this.stats = this.recalc();
     // 开局武器：铁剑（标准 roguelike 起手装备；构造期静默入列，不弹获得通知）
-    this.player.weapons.push({
-      defId: "tiejian", name: WEAPON_DATA.tiejian.name, type: WEAPON_DATA.tiejian.type,
-      ups: 0, bonus: { dmg: 0, asp: 0, rng: 0 },
-    });
+    this.player.weapons.push(makeWeapon("tiejian"));
     this.stats = this.recalc();
     this.scatterChests(3);
   }
@@ -366,7 +373,7 @@ export class GameSim {
     return this.activeWeapon?.type ?? "Melee";
   }
 
-  /** 聚合武器栏 → 战斗属性（对齐 RecalculateStats：主动武器给全部特性，其余给被动乘数）。 */
+  /** 聚合主武器（最后获得）→ 面板属性；非主武器只提供 10% 数值支援。 */
   private recalc(): PlayerStats {
     const s: PlayerStats = {
       dmgMult: 1, aspdMult: 1, rangeMult: 1,
@@ -377,28 +384,28 @@ export class GameSim {
     ws.forEach((w, i) => {
       const def = WEAPON_DATA[w.defId];
       const mult = stageMult(w);
+      const effDmg = (def.dmg ?? 1) * mult * (1 + bonusOf(w, "dmg"));
+      const effAsp = (def.asp ?? 1) * (1 + bonusOf(w, "asp"));
+      const effRng = (def.rng ?? 1) * (1 + bonusOf(w, "rng"));
       if (i < ws.length - 1) {
-        // 被动携带：各乘数小幅叠加（EffectCatalog 叠加语义的简化）
-        s.dmgMult *= 1 + ((def.dmg ?? 1) * mult - 1) * 0.1;
-        s.aspdMult *= 1 + ((def.asp ?? 1) * mult - 1) * 0.1;
+        // 次要武器：小幅支援乘数（齐射时代保留一点携带价值）
+        s.dmgMult *= 1 + (effDmg - 1) * 0.1;
+        s.aspdMult *= 1 + (effAsp - 1) * 0.1;
       } else {
-        s.dmgMult *= (def.dmg ?? 1) * mult;
-        s.aspdMult *= (def.asp ?? 1) * mult;
-        s.rangeMult *= (def.rng ?? 1) * mult;
-        s.crit += def.crit ?? 0;
+        s.dmgMult *= effDmg;
+        s.aspdMult *= effAsp;
+        s.rangeMult *= effRng;
+        s.crit = (def.crit ?? 0) + bonusOf(w, "crit");
         s.hpCost += Math.abs(def.hp ?? 0);
-        s.multi = Math.max(s.multi, def.multi ?? 1);
-        s.splash = Math.max(s.splash, def.splash ?? 0);
-        s.psn = Math.max(s.psn, def.psn ?? 0);
-        s.freeze = Math.max(s.freeze, def.freeze ?? 0);
-        s.chain = Math.max(s.chain, def.chain ?? 0);
-        s.pierce = Math.max(s.pierce, def.pierce ?? 0);
-        s.spread = Math.max(s.spread, def.spread ?? 0);
+        s.multi = Math.max(1, (def.multi ?? 1) + bonusOf(w, "multi"));
+        s.splash = (def.splash ?? 0) + bonusOf(w, "splash");
+        s.psn = (def.psn ?? 0) + bonusOf(w, "psn");
+        s.freeze = (def.freeze ?? 0) + bonusOf(w, "freeze");
+        s.chain = (def.chain ?? 0) + bonusOf(w, "chain");
+        s.pierce = (def.pierce ?? 0) + bonusOf(w, "pierce");
+        s.spread = Math.max(1, (def.multi ?? 1) + bonusOf(w, "multi"));
         s.homing = def.homing ?? false;
       }
-      s.dmgMult *= 1 + w.bonus.dmg;
-      s.aspdMult *= 1 + w.bonus.asp;
-      s.rangeMult *= 1 + w.bonus.rng;
     });
     return s;
   }
@@ -419,7 +426,7 @@ export class GameSim {
       this.emit("weapon_gained", { name: def.name, type: def.type });
       return owned;
     }
-    const w: WeaponInstance = { defId: id, name: def.name, type: def.type, ups: 0, bonus: { dmg: 0, asp: 0, rng: 0 } };
+    const w = makeWeapon(id);
     const ws = this.player.weapons;
     if (ws.length >= MAX_WEAPONS) {
       let victim = 0;
@@ -445,7 +452,7 @@ export class GameSim {
     const before = stageTag(w);
     const st = stat ?? this.rng.pick(UPGRADE_POOL);
     w.ups++;
-    w.bonus[st] += UPGRADE_STEP[st];
+    w.bonus[st] = bonusOf(w, st) + UPGRADE_STEP[st];
     this.stats = this.recalc();
     const after = stageTag(w);
     if (after !== before) {
@@ -472,20 +479,23 @@ export class GameSim {
     }
   }
 
-  /** 生成三选一报价（武器×词条去重；模态暂停，choose target:"upgrade" 应答）。 */
+  /** 生成三选一报价（武器×有效词条去重；行为词条可改变攻击方式——R2 质变成长）。 */
   private openUpgradeOffers(): void {
     const ws = this.player.weapons;
     if (ws.length === 0) return;
     const pool: UpgradeOffer[] = [];
     const seen = new Set<string>();
     let guard = 0;
-    while (pool.length < Math.min(3, ws.length * UPGRADE_POOL.length) && guard++ < 60) {
+    const totalCombos = ws.reduce((n, w) => n + validStats(w.type).length, 0);
+    while (pool.length < Math.min(3, totalCombos) && guard++ < 60) {
       const weaponIdx = this.rng.int(0, ws.length - 1);
-      const stat = this.rng.pick(UPGRADE_POOL);
+      const w = ws[weaponIdx];
+      const stats = validStats(w.type);
+      const stat = stats[this.rng.int(0, stats.length - 1)];
       const key = `${weaponIdx}:${stat}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      pool.push({ weaponIdx, weaponName: ws[weaponIdx].name, stat, statName: UPGRADE_STAT_NAMES[stat] });
+      pool.push({ weaponIdx, weaponName: w.name, stat, statName: UPGRADE_STAT_NAMES[stat] });
     }
     if (pool.length === 0) return;
     this.upgradeOffers = pool;
@@ -589,22 +599,24 @@ export class GameSim {
     }
   }
 
-  /** 两件持有武器可组成的融合报价（匹配 FUSION_RECIPES；否则任取两件合成占位）。 */
-  private makeFusionOffer(): { a: string; b: string; resultName: string } | null {
+  /** 两件持有武器可组成的融合报价（匹配 FUSION_RECIPES；否则任取两件随机产物）。
+   *  resultId 与 resultName 同时携带——展示结果与实际所得严格一致。 */
+  private makeFusionOffer(): { a: string; b: string; resultName: string; resultId: string } | null {
     const ws = this.player.weapons;
     if (ws.length < 2) return null;
     for (const r of FUSION_RECIPES) {
       const hasA = ws.some((w) => w.name === r.a);
       const hasB = ws.some((w) => w.name === r.b);
       if (hasA && hasB) {
-        return { a: r.a, b: r.b, resultName: WEAPON_DATA[r.result].name };
+        return { a: r.a, b: r.b, resultName: WEAPON_DATA[r.result].name, resultId: r.result };
       }
     }
     const a = ws[ws.length - 2].name, b = ws[ws.length - 1].name;
-    return { a, b, resultName: WEAPON_DATA[this.rollWeaponDef()].name };
+    const resultId = this.rollWeaponDef();
+    return { a, b, resultName: WEAPON_DATA[resultId].name, resultId };
   }
 
-  /** 应答融合：accept 消耗两件换新武器；reject 丢弃报价。 */
+  /** 应答融合：accept 消耗两件换展示的新武器；reject 丢弃报价。 */
   resolveFusion(accept: boolean): Record<string, unknown> {
     if (!this.fusionOffer) return { handled: false };
     const offer = this.fusionOffer;
@@ -618,7 +630,7 @@ export class GameSim {
         if (ws[i].name === name) { ws.splice(i, 1); break; }
       }
     }
-    const w = this.giveWeapon();
+    const w = this.giveWeapon(offer.resultId);
     this.emit("fusion_done", { result: w.name });
     return { handled: true, accepted: true, result: w.name };
   }
@@ -664,12 +676,38 @@ export class GameSim {
   private advanceRound(): void {
     this.round++;
     this.emit("threat_tier", { tier: this.round });
+    // 终幕妖王：round 达到 FinalBossRound 时降临（击杀通关）
+    if (this.round >= CFG.Acts.FinalBossRound && !this.finalBossSpawned) {
+      this.finalBossSpawned = true;
+      this.spawnFinalBoss();
+      this.scatterChests(1);
+      return;
+    }
     if (this.round % CFG.Enemy.BossInterval === 0 && this.bossSpawnedForRound < this.round) {
       this.bossSpawnedForRound = this.round;
       this.spawnEnemy({ type: BOSS_ROSTER[this.bossSpawnCount % BOSS_ROSTER.length], boss: true, near: "player" });
       this.bossSpawnCount++;
     }
+    // 精英潮：幕压力的分段跳变（R2 分幕节奏）
+    const wave = CFG.Acts.EliteWaveCount[this.act];
+    if (wave > 0) {
+      this.spawnEnemy({ count: wave, type: "random", near: "player", elite: true });
+      this.emit("elite_wave", { count: wave });
+    }
     this.scatterChests(1);
+  }
+
+  /** 终幕妖王：轮换种族 × 强化倍率，带 final 标记（击杀 → Victory）。 */
+  private spawnFinalBoss(): void {
+    const type = BOSS_ROSTER[this.bossSpawnCount % BOSS_ROSTER.length];
+    this.bossSpawnCount++;
+    const pos = this.resolveSpawnPos("player");
+    const e = this.createEnemy(type, pos.x, pos.y, { boss: true });
+    e.final = true;
+    e.hp = Math.ceil(e.hp * 1.6);
+    e.maxHp = e.hp;
+    e.damage = Math.ceil(e.damage * 1.3);
+    this.emit("final_boss", { x: e.x, y: e.y });
   }
 
   /** 难度倍率，对齐 GameManager._GetRoundMult：1 + round * 0.04 * 2 * factor。 */
@@ -720,9 +758,14 @@ export class GameSim {
       if (p.comboTimer <= 0) p.combo = 0;
     }
 
-    if (this.input.attack && p.attackCd <= 0) {
-      this.performAttack();
+    // R2 齐射：每把武器独立冷却，按住攻击全部同时出手（build 的爽感来源）
+    let minCd = Infinity;
+    for (const w of p.weapons) {
+      w.cd = Math.max(0, w.cd - dt);
+      if (this.input.attack && w.cd <= 0) this.fireWeapon(w);
+      minCd = Math.min(minCd, w.cd);
     }
+    p.attackCd = minCd === Infinity ? 0 : minCd;
   }
 
   /** 完美闪避：冲刺窗口内被攻击判定命中 → 免伤 + 子弹时间 + 增伤窗口。
@@ -737,19 +780,44 @@ export class GameSim {
     return true;
   }
 
-  /** 执行一次攻击：按主动武器类型分流；挥空也进冷却；血代价不足则无法攻击。
-   *  冲刺中攻击 = 冲刺斩：伤害 1.5×，按武器类型附加强化（范围/矢数/弹数/溅射）。
-   *  R1 方向性近战：攻击方向 = 瞄准方向（移动朝向），吸附锥内自动瞄最近妖物，
-   *  扇形判定取代 360° 索敌，出手带突进位移。 */
-  private performAttack(): void {
+  /** 对玩家结算一次伤害（完美闪避/无敌帧统一判定）。返回 true = 实际掉血。 */
+  private hurtPlayer(dmg: number): boolean {
     const p = this.player;
-    const c = CFG.Player;
-    if (p.hp <= this.stats.hpCost) return; // _CanPayHealthCost：不能一击自杀
-    p.attackCd = c.BaseAttackCooldown / Math.max(0.1, this.stats.aspdMult);
-    const type = this.attackType;
+    if (p.dead || this.tryPerfectDodge() || p.invincible > 0) return false;
+    p.hp -= dmg;
+    p.invincible = CFG.Player.InvincibleDuration;
+    for (const cb of this.onPlayerHurt) cb(p.hp);
+    if (p.hp <= 0) this.onPlayerDied();
+    return true;
+  }
+
+  /** 单武器出手（R2 齐射）：全部装备武器按各自冷却独立出手；挥空也进冷却；
+   *  血代价不足则该武器不出手。冲刺中攻击 = 冲刺斩：伤害 1.5× + 类型强化。
+   *  R1 方向性近战：近战方向 = 瞄准方向（吸附锥内自动瞄最近妖物），
+   *  扇形判定 + 出手突进；远程/魔法保持自动索敌。 */
+  private fireWeapon(w: WeaponInstance): void {
+    const p = this.player;
+    const def = WEAPON_DATA[w.defId];
+    const mult = stageMult(w);
+    const effDmg = (def.dmg ?? 1) * mult * (1 + bonusOf(w, "dmg"));
+    const effAsp = (def.asp ?? 1) * (1 + bonusOf(w, "asp"));
+    const effRng = (def.rng ?? 1) * (1 + bonusOf(w, "rng"));
+    const hpCost = Math.abs(def.hp ?? 0);
+    if (p.hp <= hpCost) return; // _CanPayHealthCost：不能一击自杀
+    w.cd = CFG.Player.BaseAttackCooldown / Math.max(0.2, effAsp);
+    const critC = (def.crit ?? 0) + bonusOf(w, "crit");
     const dashing = p.dashTimer > 0;
     const strike = dashing ? CFG.Combat.DashStrikeDmgMult : 1;
-    const range = c.BaseAttackRange * this.stats.rangeMult * (dashing ? CFG.Combat.DashStrikeRangeMult : 1);
+    const range = CFG.Player.BaseAttackRange * effRng * (dashing ? CFG.Combat.DashStrikeRangeMult : 1);
+    const multi = Math.max(1, (def.multi ?? 1) + bonusOf(w, "multi"));
+    const fxW = {
+      splash: (def.splash ?? 0) + bonusOf(w, "splash"),
+      psn: (def.psn ?? 0) + bonusOf(w, "psn"),
+      freeze: (def.freeze ?? 0) + bonusOf(w, "freeze"),
+      chain: (def.chain ?? 0) + bonusOf(w, "chain"),
+      pierce: (def.pierce ?? 0) + bonusOf(w, "pierce"),
+      homing: (def.homing ?? false) || w.type === "Magic",
+    };
     // 攻击方向：瞄准方向为基准；吸附锥（±AimCone）内最近妖物自动修正——走砍/站桩都能命中
     let ang = p.aimAng;
     const aimTarget = this.nearestEnemies(p.x, p.y, 400, 1)[0];
@@ -757,10 +825,10 @@ export class GameSim {
       ang = Math.atan2(aimTarget.y - p.y, aimTarget.x - p.x);
     }
     p.facing = Math.cos(ang) >= 0 ? 1 : -1;
-    for (const cb of this.onAttack) cb(type, ang);
+    for (const cb of this.onAttack) cb(w.type, ang);
     if (dashing) for (const cb of this.onDashStrike) cb(p.x, p.y);
 
-    if (type === "Melee") {
+    if (w.type === "Melee") {
       // 出手突进：向攻击方向的位移脉冲（重量感，叠加在移动上）
       p.lungeT = CFG.Combat.LungeTime;
       p.lungeVx = Math.cos(ang) * CFG.Combat.LungeSpeed;
@@ -775,39 +843,39 @@ export class GameSim {
           return Math.abs(angDiff(Math.atan2(dy, dx), ang)) <= half;
         })
         .sort((a, b) => ((a.x - p.x) ** 2 + (a.y - p.y) ** 2) - ((b.x - p.x) ** 2 + (b.y - p.y) ** 2))
-        .slice(0, Math.max(1, this.stats.multi + (dashing ? 1 : 0)));
+        .slice(0, multi + (dashing ? 1 : 0));
       for (const e of targets) {
-        const r = this.rollDamage();
+        const r = this.rollDamage(effDmg, critC);
         if (dashing) r.dmg *= strike;
         const d = Math.hypot(e.x - p.x, e.y - p.y) || 1;
-        this.hitEnemy(e, r, (e.x - p.x) / d, (e.y - p.y) / d);
+        this.hitEnemy(e, r, (e.x - p.x) / d, (e.y - p.y) / d, fxW);
       }
       this.harvestInRange(range);
-    } else if (type === "Ranged") {
-      const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
+    } else if (w.type === "Ranged") {
+      const target = this.nearestEnemies(p.x, p.y, 600 * effRng, 1)[0];
       const baseAng = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
-      const n = Math.max(1, this.stats.spread) + (dashing ? 1 : 0);
+      const n = Math.max(1, (def.spread ?? 1) + bonusOf(w, "multi")) + (dashing ? 1 : 0);
       for (let i = 0; i < n; i++) {
         const a2 = baseAng + (i - (n - 1) / 2) * 0.21; // ±12° 散射
-        this.fireProjectile(a2, 500, range * 1.2, strike);
+        this.fireProjectile(a2, 500, range * 1.2, effDmg, critC, strike, fxW);
       }
-    } else if (type === "Magic") {
-      const target = this.nearestEnemies(p.x, p.y, 600 * this.stats.rangeMult, 1)[0];
+    } else if (w.type === "Magic") {
+      const target = this.nearestEnemies(p.x, p.y, 600 * effRng, 1)[0];
       const angM = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
-      this.fireProjectile(angM, 300, 5, strike);
-      if (dashing) this.fireProjectile(angM + 0.35, 300, 5, strike);
+      this.fireProjectile(angM, 300, 5, effDmg, critC, strike, fxW);
+      if (dashing) this.fireProjectile(angM + 0.35, 300, 5, effDmg, critC, strike, fxW);
     } else {
       // Mine：原地布雷（FIFO 上限）；冲刺斩溅射 1.5×
       if (this.mines.length >= MAX_MINES) this.mines.shift();
       this.mines.push({
         id: this.nextId++, x: p.x, y: p.y,
-        dmg: this.rollDamage().dmg * strike,
-        splash: Math.max(60, this.stats.splash) * (dashing ? strike : 1),
-        psn: this.stats.psn,
+        dmg: this.rollDamage(effDmg, critC).dmg * strike,
+        splash: Math.max(60, fxW.splash) * (dashing ? strike : 1),
+        psn: fxW.psn,
         arm: 0.4,
       });
     }
-    if (this.stats.hpCost > 0) p.hp = Math.max(1, p.hp - this.stats.hpCost);
+    if (hpCost > 0) p.hp = Math.max(1, p.hp - hpCost);
   }
 
   /** 近战顺带采集范围内的资源节点（对齐 _HarvestNearbyResources）。 */
@@ -831,32 +899,41 @@ export class GameSim {
     }
   }
 
-  private rollDamage(): { dmg: number; crit: boolean } {
+  /** 伤害结算：基础伤害 × 武器倍率 × 连击 × 集中窗口，暴击独立判定。 */
+  private rollDamage(dmgMult: number, critChance = 0): { dmg: number; crit: boolean } {
     const p = this.player;
-    let dmg = p.baseDamage * this.stats.dmgMult;
+    let dmg = p.baseDamage * dmgMult;
     // 连击：每层 +5% 上限 +50%
     const comboBonus = Math.min(p.combo * CFG.Combo.DamageBonusPerLevel, CFG.Combo.MaxBonus);
     dmg *= 1 + comboBonus;
     // 完美闪避后的集中窗口：伤害 1.3×
     if (this.focusTimer > 0) dmg *= CFG.Combat.FocusDmgMult;
-    const crit = this.rng.chance(this.stats.crit / 100);
+    const crit = this.rng.chance(critChance / 100);
     if (crit) dmg *= CFG.Player.CritMultiplier;
     return { dmg, crit };
   }
 
-  private fireProjectile(ang: number, speed: number, life: number, dmgMult = 1): void {
+  private fireProjectile(
+    ang: number, speed: number, life: number,
+    dmgMult: number, critChance: number, strike: number,
+    fx: { splash: number; psn: number; freeze: number; chain: number; pierce: number; homing: boolean },
+  ): void {
+    const r = this.rollDamage(dmgMult, critChance);
     this.projectiles.push({
       id: this.nextId++,
       x: this.player.x, y: this.player.y,
       vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
-      dmg: this.rollDamage().dmg * dmgMult,
-      life, pierce: this.stats.pierce, hitIds: new Set(),
-      homing: this.stats.homing || this.attackType === "Magic",
-      splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze, chain: this.stats.chain,
+      dmg: r.dmg * strike,
+      life, pierce: fx.pierce, hitIds: new Set(),
+      homing: fx.homing,
+      splash: fx.splash, psn: fx.psn, freeze: fx.freeze, chain: fx.chain,
     });
   }
 
-  private hitEnemy(e: Enemy, r: { dmg: number; crit: boolean }, ux = 0, uy = 0): void {
+  private hitEnemy(
+    e: Enemy, r: { dmg: number; crit: boolean }, ux = 0, uy = 0,
+    fx: { splash: number; psn: number; freeze: number } = { splash: 0, psn: 0, freeze: 0 },
+  ): void {
     const p = this.player;
     this.hitStop.trigger(HITSTOP.HitMs);
     p.combo++;
@@ -865,7 +942,7 @@ export class GameSim {
     if (p.combo === 3) this.emit("combo_milestone", { count: 3 });
     this.notifyDamage(e.x, e.y, r.dmg, r.crit);
     if (r.crit) this.hitStop.trigger(HITSTOP.CritMs);
-    this.applyHit(e.x, e.y, e, r.dmg, { splash: this.stats.splash, psn: this.stats.psn, freeze: this.stats.freeze }, ux, uy);
+    this.applyHit(e.x, e.y, e, r.dmg, fx, ux, uy);
   }
 
   /** 伤害数字回调（暴击给更大字号）。 */
@@ -1022,6 +1099,14 @@ export class GameSim {
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
+    // explosive 词缀：死亡自爆（逼玩家杀完就走位，勿贴脸输出）
+    if (e.affix === "explosive") {
+      const p = this.player;
+      if (!p.dead && Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast * 0.8) {
+        this.hurtPlayer(Math.ceil(e.damage * 0.8));
+      }
+      this.emit("enemy_explode", { x: e.x, y: e.y });
+    }
     let pts = ENEMY_SCORE[e.type] ?? 10;
     if (e.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
     if (e.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
@@ -1038,6 +1123,32 @@ export class GameSim {
         });
       }
     }
+    // 终幕妖王陨落 → 通关结算（R2 胜利条件）
+    if (e.final) this.onVictory();
+  }
+
+  /** 通关结算：金币 1.5× 加成，进入 Victory 态（可继续无尽）。返回金币数。 */
+  private onVictory(): number {
+    this.state = "Victory";
+    const coins = this.finalizeRun(1.5);
+    this.emit("victory", { coins });
+    return coins;
+  }
+
+  /** 局末结算存档（死亡/通关共用）：高分/累计击杀/局数/金币/成就。 */
+  private finalizeRun(coinsMult: number): number {
+    const prev = this.save.load() ?? defaultSave();
+    const coins = Math.floor((this.score / 50 + this.kills) * coinsMult);
+    this.save.save({
+      highScore: Math.max(prev.highScore, this.score),
+      totalKills: prev.totalKills + this.kills,
+      games: prev.games + 1,
+      coins: prev.coins + coins,
+      metaHp: prev.metaHp,
+      metaDmg: prev.metaDmg,
+      achievements: [...this.achievements.unlocked],
+    });
+    return coins;
   }
 
   private updateEnemies(dt: number): void {
@@ -1080,7 +1191,9 @@ export class GameSim {
       }
 
       const weatherMult = this.weather.state.enemySpeedMult;
-      const speedMult = (e.frzT > 0 ? 0.4 : 1) * weatherMult; // FreezeSlowMult × 天气
+      let speedMult = (e.frzT > 0 ? 0.4 : 1) * weatherMult; // FreezeSlowMult × 天气
+      // frenzy 词缀：低血狂暴（40% 血以下速度 ×1.5）
+      if (e.affix === "frenzy" && e.hp < e.maxHp * 0.4) speedMult *= 1.5;
 
       if (e.affix === "regen" && e.hp < e.maxHp) {
         e.hp = Math.min(e.maxHp, e.hp + e.maxHp * 0.02 * dt);
@@ -1203,12 +1316,7 @@ export class GameSim {
           e.strikeT = 0.16; // 扑击动作（扑空也播——出手必有动作语言）
 
           if (dist <= CFG.Enemy.AttackRange * CFG.Enemy.WindupHitRangeMult) {
-            if (!this.tryPerfectDodge() && p.invincible <= 0) {
-              p.hp -= e.damage;
-              p.invincible = CFG.Player.InvincibleDuration;
-              for (const cb of this.onPlayerHurt) cb(p.hp);
-              if (p.hp <= 0) this.onPlayerDied();
-            }
+            this.hurtPlayer(e.damage);
           }
         }
       } else if (!e.stealth && dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
@@ -1222,14 +1330,7 @@ export class GameSim {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     const p = this.player;
     if (!p.dead && Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast) {
-      if (!this.tryPerfectDodge()) {
-        if (p.invincible <= 0) {
-          p.hp -= Math.ceil(e.damage * EXPLODER.dmgMult);
-          p.invincible = CFG.Player.InvincibleDuration;
-          for (const cb of this.onPlayerHurt) cb(p.hp);
-          if (p.hp <= 0) this.onPlayerDied();
-        }
-      }
+      this.hurtPlayer(Math.ceil(e.damage * EXPLODER.dmgMult));
     }
     this.emit("enemy_explode", { x: e.x, y: e.y });
   }
@@ -1267,16 +1368,9 @@ export class GameSim {
       if (pr.x < 0 || pr.x > this.world.w || pr.y < 0 || pr.y > this.world.h) continue;
       if (!p.dead &&
           Math.hypot(pr.x - p.x, pr.y - p.y) <= CFG.Player.CollisionSize / 2 + 6) {
-        if (this.tryPerfectDodge()) continue; // 子弹时间中擦身而过，弹不解体
-        if (p.invincible <= 0) {
-          p.hp -= pr.dmg;
-          p.invincible = CFG.Player.InvincibleDuration;
-          for (const cb of this.onPlayerHurt) cb(p.hp);
-          if (p.hp <= 0) this.onPlayerDied();
-        }
+        this.hurtPlayer(pr.dmg); // 闪避/无敌帧在 hurtPlayer 统一判定
         continue;
-      }
-      keep.push(pr);
+      }      keep.push(pr);
     }
     this.enemyProjectiles = keep;
   }
@@ -1326,13 +1420,7 @@ export class GameSim {
       if (!e.chargeHit && !p.dead &&
           Math.hypot(p.x - e.x, p.y - e.y) <= CFG.Enemy.CollisionSize / 2 + CFG.Player.CollisionSize / 2) {
         e.chargeHit = true;
-        if (this.tryPerfectDodge()) return true; // 闪避冲撞：不受伤，蛟继续冲
-        if (p.invincible <= 0) {
-          p.hp -= Math.ceil(e.damage * DRAGON.dmgMult);
-          p.invincible = CFG.Player.InvincibleDuration;
-          for (const cb of this.onPlayerHurt) cb(p.hp);
-          if (p.hp <= 0) this.onPlayerDied();
-        }
+        this.hurtPlayer(Math.ceil(e.damage * DRAGON.dmgMult));
       }
       if (e.chargeDash <= 0) e.chargeHit = false;
       return true;
@@ -1376,27 +1464,31 @@ export class GameSim {
     p.hp = 0;
     p.dead = true;
     this.state = "GameOver";
-    const prev = this.save.load() ?? defaultSave();
-    const next: SaveData = {
-      highScore: Math.max(prev.highScore, this.score),
-      totalKills: prev.totalKills + this.kills,
-      games: prev.games + 1,
-      coins: prev.coins + Math.floor(this.score / 50) + this.kills,
-      metaHp: prev.metaHp,
-      metaDmg: prev.metaDmg,
-      achievements: [...this.achievements.unlocked],
-    };
-    this.save.save(next);
+    this.finalizeRun(1);
     this.emit("game_over", this.snapshot());
   }
 
-  /** 持续探索刷怪：世界妖物数维持 [6,18]，冷却 1.5s。 */
+  /** 当前幕（0-3，R2 分幕结构：密度/刷怪速率/精英潮按幕爬升）。 */
+  get act(): number {
+    return Math.min(3, Math.floor(this.survivalTime / CFG.Acts.ActTime));
+  }
+
+  private actCap(): { max: number; min: number; cd: number } {
+    const a = this.act;
+    return {
+      max: CFG.Acts.MaxEnemies[a],
+      min: CFG.Acts.MinEnemies[a],
+      cd: CFG.Acts.SpawnCooldown[a],
+    };
+  }
+
+  /** 怪潮供给：底噪（min 以下快速补）+ 持续供给（向 max 爬升的压迫感）。 */
   private maintainEnemies(dt: number): void {
     this.spawnCd = Math.max(0, this.spawnCd - dt);
-    if (this.enemies.length >= CFG.Spawning.WorldMinEnemies) return;
-    if (this.enemies.length >= CFG.Spawning.WorldMaxEnemies) return;
+    const cap = this.actCap();
+    if (this.enemies.length >= cap.max) return;
     if (this.spawnCd > 0) return;
-    this.spawnCd = CFG.Spawning.SpawnCooldown;
+    this.spawnCd = this.enemies.length < cap.min ? 0.15 : cap.cd;
     this.spawnEnemy({ type: "random", near: "player" });
   }
 
@@ -1405,7 +1497,8 @@ export class GameSim {
     const count = Math.min(Math.max(opts.count ?? 1, 1), 50);
     let spawned = 0;
     for (let i = 0; i < count; i++) {
-      if (this.enemies.length >= CFG.Spawning.WorldMaxEnemies && !opts.boss) break;
+      // 妖王/精英潮不受幕上限约束（潮就是要形成压力）
+      if (this.enemies.length >= this.actCap().max && !opts.boss && !opts.elite) break;
       const type = this.resolveType(opts.type);
       const pos = this.resolveSpawnPos(opts.near ?? "player");
       this.createEnemy(type, pos.x, pos.y, opts);
@@ -1478,6 +1571,7 @@ export class GameSim {
       hp, maxHp: hp,
       damage, speed,
       elite, boss,
+      final: false,
       affix: elite ? this.pickAffix() : "none",
       bossPhase: 0,
       shieldHp: 0,
@@ -1597,6 +1691,21 @@ export class GameSim {
         p.x = Math.min(this.world.w - 22, Math.max(22, x));
         p.y = Math.min(this.world.h - 22, Math.max(22, y));
         return { teleported: true, pos: { x: p.x, y: p.y } };
+      }
+      case "continue": {
+        // 通关后继续无尽讨伐
+        if (this.state !== "Victory") return { continued: false };
+        this.state = "Combat";
+        return { continued: true };
+      }
+      case "goto_round": {
+        // 调试/E2E：排队跳到指定威胁阶（下一次 tick 触发 advanceRound 的完整逻辑）
+        const r = typeof args.round === "number" ? Math.max(1, Math.floor(args.round)) : 1;
+        if (r <= this.round) return { round: this.round, queued: false };
+        this.round = r - 1;
+        this.roundTimer = CFG.Difficulty.RampInterval;
+        this.survivalTime = Math.max(this.survivalTime, (r - 1) * CFG.Difficulty.RampInterval);
+        return { round: this.round, queued: true };
       }
       case "quit": return { quitting: true };
       default: throw new Error("未知动作: " + action);
