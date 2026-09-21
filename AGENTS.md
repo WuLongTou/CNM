@@ -6,6 +6,13 @@
 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好等）以全局 `~/AGENTS.md` 为准，
 本文件只做项目特有补充，不得放宽或违背全局约束。
 
+## 按需加载的 skill（.agents/skills/）
+
+| skill | 何时加载 |
+|---|---|
+| cnm-auto-test | 用 window.__CNM__ 协议做自动化测试/状态探查/跳阶时 |
+
+
 ## 硬约束
 - Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
 - 包管理器：npm（`package-lock.json` 为唯一权威锁文件；pnpm-lock.yaml 与 pnpm-workspace.yaml 已删除，勿再引入——git 历史中仍有，仅作考古。本机若因误执行 `pnpm install` 再现 `pnpm-lock.yaml`，属残留，直接删除，勿提交）。
@@ -31,13 +38,9 @@
 - `npm run e2e` — Playwright E2E（自动起 dev server）
 - `npm run assets:sync` — 从 assets-src 生成 public/assets（剥底/切帧/atlas）
 
-## AI 自动测试入口
+## AI 自动测试入口（详见 skill cnm-auto-test）
 
-页面加载后暴露 `window.__CNM__`（JSON 指令协议，与旧版 cmd-port 同构）：
-`exec({id, action, args})` 支持 status/game_state/start/input/choose/force_combat/
-spawn/give/upgrade/weapons/craft/offer_fusion/buy_meta/meta/inventory/teleport/
-goto_round（测试跳阶）/continue（无尽）/quit；
-`getEvents()` 拉取事件推送；`sim` 直接暴露 GameSim 实例。
+页面 window.__CNM__ 指令协议（exec/getEvents/sim）已移入 skill cnm-auto-test，此处不再重复。
 
 ## 协作入口
 - 任务分级：低风险（trivial）直接实现；高风险（非 trivial）按全局「方案选择」对比 2–3 种方案。
