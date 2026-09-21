@@ -160,10 +160,18 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
   手动同步：`npm run assets:sync`。
 - e2e：`npx playwright install`（首次需安装浏览器）→ `npm run e2e`
   （Playwright，自动先 assets:sync 再起 dev server，完整对局闭环）。
-  断言对帧率计时敏感（串行 + 零重试），仅本地手跑，不进 CI。
+  断言对帧率计时敏感（串行 + 零重试），仅本地手跑，不进 CI；
+  全量 e2e 对机器负载敏感，建议空载运行（此前实测批量跑偶发超时、单跑通过，属已知特性）。
 - 部署：`dist/` 为纯静态产物，由 nginx 直接托管，无服务端。默认以**根路径**
   部署（如 `https://<域名>/`）；子路径部署时构建前设置 `VITE_BASE`
   （如 `VITE_BASE=/zhanyao/ npm run build`，值需带首尾斜杠），不设则保持根路径。
+  可用 `scripts/deploy.sh` 一键完成「门禁 → 构建 → 版本戳 → 推送」：
+  - `./scripts/deploy.sh` — 先跑 `npm test` 门禁，再 `npm run build`，并在
+    `dist/` 写版本戳 `.deploy-version`（git describe 一行 + UTC 构建时间一行）；
+  - `./scripts/deploy.sh --smoke` — 构建后起 `npm run preview` 并 curl 断言 200；
+  - `SERVER=user@host REMOTE_DIR=/srv/cnm ./scripts/deploy.sh --push` —
+    经 rsync 推送 `dist/` 到 nginx 托管目录；SERVER/REMOTE_DIR 必须显式给出，
+    缺失时脚本直接报错退出（防误推）。
 
 ## 操作
 

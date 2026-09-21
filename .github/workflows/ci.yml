@@ -15,17 +15,26 @@ permissions:
 
 jobs:
   test-build:
-    name: Unit Tests & Build (npm)
+    name: Unit Tests & Build (node ${{ matrix.node }})
     runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        # engines 声明 >=22.12，.nvmrc 固定 24；两档都过门禁
+        node: [22, 24]
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-node@v6
         with:
-          node-version-file: .nvmrc
+          node-version: ${{ matrix.node }}
           cache: npm
 
+      # CI 固定走官方源：仓库 .npmrc 固定了 npmmirror（本地开发走镜像更快），
+      # runner 直连官方源更稳；npm 环境变量优先级高于 .npmrc，仅对本步生效
       - name: npm ci
+        env:
+          npm_config_registry: https://registry.npmjs.org
         run: npm ci
 
       - name: asset sync (public/assets 为生成产物，先同步再测试；build 的 prebuild 会再同步一次)
@@ -52,7 +61,9 @@ jobs:
           grep -qi '<html' /tmp/preview.html || { echo "preview 响应非 HTML"; exit 1; }
           echo "preview smoke 通过 (HTTP 200 + HTML)"
 
+      # 多档矩阵下同名 artifact 会互相冲突，只保留默认版本（24，同 .nvmrc）一档上传
       - name: upload dist artifact
+        if: matrix.node == 24
         uses: actions/upload-artifact@v7
         with:
           name: dist
