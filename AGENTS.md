@@ -6,12 +6,6 @@
 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好等）以全局 `~/AGENTS.md` 为准，
 本文件只做项目特有补充，不得放宽或违背全局约束。
 
-## 按需加载的 skill（.agents/skills/）
-
-| skill | 何时加载 |
-|---|---|
-| cnm-auto-test | 用 window.__CNM__ 协议做自动化测试/状态探查/跳阶时 |
-
 
 ## 硬约束
 - Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
