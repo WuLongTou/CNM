@@ -212,6 +212,12 @@ function angDiff(a: number, b: number): number {
 }
 /** 升级符箓掉落概率（普通/精英/妖王；妖王固定掉 3 枚）。 */
 const UPGRADE_DROP = { normal: 0.035, elite: 0.3, boss: 1 } as const;
+/** 图鉴合并（R15）：跨局累计 + 本局分类型；老存档缺 codex 按空处理。 */
+export function mergeCodex(prev: Record<number, number> | undefined, run: Record<number, number>): Record<number, number> {
+  const next: Record<number, number> = { ...(prev ?? {}) };
+  for (const [k, v] of Object.entries(run)) next[Number(k)] = (next[Number(k)] ?? 0) + v;
+  return next;
+}
 /** 升级词条中文名（报价卡展示用）。 */
 export const UPGRADE_STAT_NAMES: Record<UpgradeStat, string> = {
   dmg: "伤害", asp: "攻速", rng: "范围",
@@ -294,6 +300,8 @@ export class GameSim {
   bossKills = 0;
   /** 本局宝妖讨伐数（R14；成就口径）。 */
   goblinKills = 0;
+  /** 本局分类型击杀（R15 图鉴；类型 id → 本局击杀，结算时并入存档 codex）。 */
+  killCounts: Record<number, number> = {};
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
   /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
@@ -1408,6 +1416,7 @@ export class GameSim {
     this.kills++;
     if (e.boss) this.bossKills++;
     else if (e.elite) this.eliteKills++;
+    this.killCounts[e.type] = (this.killCounts[e.type] ?? 0) + 1;
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
@@ -1492,6 +1501,7 @@ export class GameSim {
       maxDifficulty: cleared !== null
         ? Math.max(prev.maxDifficulty ?? -1, cleared)
         : (prev.maxDifficulty ?? -1),
+      codex: mergeCodex(prev.codex, this.killCounts),
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -2078,6 +2088,11 @@ export class GameSim {
         };
       }
       case "inventory": return { counts: { ...this.inventory.counts } };
+      case "codex": {
+        // R15 图鉴：本局分类型 + 跨局累计（含本局实时合并，老存档缺字段按空处理）
+        const prev = this.save.load() ?? defaultSave();
+        return { run: { ...this.killCounts }, total: mergeCodex(prev.codex, this.killCounts) };
+      }
       case "roles": {
         return {
           current: this.role.id,

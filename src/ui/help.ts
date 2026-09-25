@@ -100,11 +100,18 @@ export class HelpPanel {
       </table>`;
   }
 
+  /** 妖物图鉴（R15 讨伐计数）：三维 + 本局击杀 + 跨局累计（战绩陈列）。 */
   private renderEnemyCodex(): void {
+    const codex = this.sim.exec({ action: "codex" }).data as {
+      run: Record<number, number>; total: Record<number, number>;
+    };
     this.bodyEl.innerHTML = `<table class="help-table">
       ${Object.keys(ENEMY_NAMES).map((k) => {
-        const s = ENEMY_STATS[Number(k)];
-        return `<tr><td>${ENEMY_NAMES[Number(k)]}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td></tr>`;
+        const id = Number(k);
+        const s = ENEMY_STATS[id];
+        const run = codex.run[id] ?? 0;
+        const total = codex.total[id] ?? 0;
+        return `<tr><td>${ENEMY_NAMES[id]}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td><td>本局 ${run} · 累计 ${total}</td></tr>`;
       }).join("")}
     </table>`;
   }
