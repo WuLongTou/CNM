@@ -18,6 +18,7 @@ import { UpgradePanel } from "../ui/upgrade";
 import { MiniMap } from "../ui/minimap";
 import { Notify } from "../ui/notify";
 import { TouchControls, shouldUseTouch } from "../ui/touch";
+import { Coach } from "../ui/coach";
 import "./style.css";
 
 /** 目标帧率：渲染限帧与逻辑步长共用同一来源（sim 固定 60Hz 步长）。 */
@@ -67,6 +68,7 @@ async function boot(): Promise<void> {
   const pauseMenu = new PauseMenu(sim, audio);
   const minimap = new MiniMap(() => sim);
   const notify = new Notify();
+  const coach = new Coach(sim);
   const eventBuffer: SimEvent[] = [];
 
   // sim 事件 → 通知条/音效（事件本身仍进 eventBuffer 供 Playwright 断言）
@@ -186,6 +188,7 @@ async function boot(): Promise<void> {
     help.resimulate(sim);
     fusion.resimulate(sim);
     pauseMenu.resimulate(sim);
+    coach.resimulate(sim);
     input.clearExternal();
   }
 
@@ -266,6 +269,7 @@ async function boot(): Promise<void> {
     if (crafting.visible) crafting.refresh();
     fusion.update();
     upgrade.update();
+    coach.update();
   });
 
   // 启动完成：移除 boot 文案

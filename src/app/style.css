@@ -106,6 +106,15 @@ canvas { position: absolute; z-index: 0; }
 .notify { background: rgba(245, 238, 222, 0.94); color: #8e2a20; border: 1.5px solid #332e29; border-radius: 7px 9px 7px 10px; padding: 6px 18px; font-size: 13px; box-shadow: 2px 2px 0 rgba(51, 46, 41, 0.25); opacity: 0; transform: translateY(-8px); transition: all 0.3s; }
 .notify.show { opacity: 1; transform: translateY(0); }
 
+/* ── 新手教练（R11）：底部中央常驻提示条，非模态不拦截输入 ── */
+#coach-tip {
+  position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+  background: rgba(245, 238, 222, 0.95); color: #332e29;
+  border: 2px solid #332e29; border-radius: 8px 11px 8px 12px;
+  box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.3);
+  padding: 8px 22px; font-size: 13px; letter-spacing: 0.04em; white-space: nowrap;
+}
+
 /* ── 融合面板 ── */
 .fusion-btns { display: flex; gap: 12px; justify-content: center; }
 .fusion-btns button { font-size: 15px; padding: 8px 24px; }

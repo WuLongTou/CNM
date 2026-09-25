@@ -349,6 +349,8 @@ export class GameSim {
   difficulty: DifficultyDef;
   /** 存档中的最高通关难度（R10 解锁判定用；-1 = 从未通关）。 */
   private maxDifficulty = -1;
+  /** 是否首局（R11 新手教练用；存档局数为 0 即首局，中途 quit 不计局也算首局，无害）。 */
+  isFirstRun = true;
 
   constructor(
     seed = 1,
@@ -373,6 +375,7 @@ export class GameSim {
     this.metaRegen = prev?.metaRegen ?? 0;
     // 跨局累计击杀基线（成就「累计击杀」用；死亡结算时存档累加）
     this.baseTotalKills = prev?.totalKills ?? 0;
+    this.isFirstRun = (prev?.games ?? 0) === 0;
     this.player = {
       x: this.world.w / 2, y: this.world.h / 2,
       hp: maxHp, maxHp,
@@ -2037,6 +2040,7 @@ export class GameSim {
       banishes_left: this.banishesLeft,
       difficulty: this.difficulty.id,
       difficulty_name: this.difficulty.name,
+      first_run: this.isFirstRun,
       elite_kills: this.eliteKills,
       max_combo: this.maxCombo,
       secs_to_next_tier: Math.ceil(this.secsToNextTier),
