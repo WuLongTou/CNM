@@ -18,6 +18,7 @@ import { WeatherSystem, type WeatherType } from "./weather";
 import { AchievementSystem } from "./achievements";
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
+import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
@@ -308,11 +309,18 @@ export class GameSim {
   private listeners: Array<(e: SimEvent) => void> = [];
   /** 存档中的跨局累计击杀基线（本局 kills 之外的存量）。 */
   private baseTotalKills = 0;
+  /** 当前职业（R3 开局职业；欢迎页可换，start 后锁定）。 */
+  role: RoleDef;
 
-  constructor(seed = 1, save: SaveStorage = { load: () => null, save: () => {} }) {
+  constructor(
+    seed = 1,
+    save: SaveStorage = { load: () => null, save: () => {} },
+    roleId: string = DEFAULT_ROLE,
+  ) {
     this.seed = seed;
     this.rng = new Rng(seed);
     this.save = save;
+    this.role = getRole(roleId);
     const c = CFG.Player;
     const prev = save.load();
     // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）
@@ -337,8 +345,8 @@ export class GameSim {
       this.persistAchievements();
     });
     this.stats = this.recalc();
-    // 开局武器：铁剑（标准 roguelike 起手装备；构造期静默入列，不弹获得通知）
-    this.player.weapons.push(makeWeapon("tiejian"));
+    // 开局武器：职业起手装备（R3；构造期静默入列，不弹获得通知）
+    this.player.weapons.push(makeWeapon(this.role.startWeapon));
     this.stats = this.recalc();
     this.scatterChests(3);
   }
@@ -407,6 +415,10 @@ export class GameSim {
         s.homing = def.homing ?? false;
       }
     });
+    // 职业被动（R3）：面板与 HUD 范围圈显示同步；真实出手数值在 rollDamage/fireWeapon 同乘
+    s.dmgMult *= this.role.dmgMult;
+    s.aspdMult *= this.role.aspdMult;
+    s.rangeMult *= this.role.rangeMult;
     return s;
   }
 
@@ -445,6 +457,18 @@ export class GameSim {
     return this.rng.weighted(entries);
   }
 
+  /** 切换职业（R3）：仅开局前（欢迎页）允许；起手武器跟随职业重置。 */
+  setRole(id: string): Record<string, unknown> {
+    if (this.state !== "WeaponSelection") {
+      return { applied: false, note: "仅开局前可选职业", role: this.role.id };
+    }
+    this.role = getRole(id);
+    this.player.weapons = [makeWeapon(this.role.startWeapon)];
+    this.stats = this.recalc();
+    this.emit("role_changed", { id: this.role.id, name: this.role.name });
+    return { applied: true, role: this.role.id, weapon: WEAPON_DATA[this.role.startWeapon].name };
+  }
+
   /** 应用升级卡：随机/指定词条 +1 级，跨阈值触发进阶/终极事件。 */
   applyUpgrade(index: number, stat?: UpgradeStat): Record<string, unknown> {
     const w = this.player.weapons[index];
@@ -469,9 +493,10 @@ export class GameSim {
     if (this.upgradeOffers || this.fusionOffer || this.player.weapons.length === 0) return;
     const p = this.player;
     if (p.dead) return;
+    const pickR = PICKUP_RANGE * this.role.pickMult;
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const u = this.pickups[i];
-      if ((u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= PICKUP_RANGE ** 2) {
+      if ((u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= pickR * pickR) {
         this.pickups.splice(i, 1);
         this.openUpgradeOffers();
         return;
@@ -722,7 +747,7 @@ export class GameSim {
 
     if (this.input.dash && p.dashCd <= 0) {
       p.dashTimer = c.DashDuration;
-      p.dashCd = c.DashCooldown;
+      p.dashCd = c.DashCooldown * this.role.dashCdMult;
       this.emit("player_dash", { x: p.x, y: p.y });
     }
     this.input.dash = false;
@@ -804,11 +829,12 @@ export class GameSim {
     const effRng = (def.rng ?? 1) * (1 + bonusOf(w, "rng"));
     const hpCost = Math.abs(def.hp ?? 0);
     if (p.hp <= hpCost) return; // _CanPayHealthCost：不能一击自杀
-    w.cd = CFG.Player.BaseAttackCooldown / Math.max(0.2, effAsp);
+    w.cd = CFG.Player.BaseAttackCooldown / Math.max(0.2, effAsp * this.role.aspdMult);
     const critC = (def.crit ?? 0) + bonusOf(w, "crit");
     const dashing = p.dashTimer > 0;
     const strike = dashing ? CFG.Combat.DashStrikeDmgMult : 1;
-    const range = CFG.Player.BaseAttackRange * effRng * (dashing ? CFG.Combat.DashStrikeRangeMult : 1);
+    const range = CFG.Player.BaseAttackRange * effRng * this.role.rangeMult
+      * (dashing ? CFG.Combat.DashStrikeRangeMult : 1);
     const multi = Math.max(1, (def.multi ?? 1) + bonusOf(w, "multi"));
     const fxW = {
       splash: (def.splash ?? 0) + bonusOf(w, "splash"),
@@ -852,7 +878,7 @@ export class GameSim {
       }
       this.harvestInRange(range);
     } else if (w.type === "Ranged") {
-      const target = this.nearestEnemies(p.x, p.y, 600 * effRng, 1)[0];
+      const target = this.nearestEnemies(p.x, p.y, 600 * effRng * this.role.rangeMult, 1)[0];
       const baseAng = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
       const n = Math.max(1, (def.spread ?? 1) + bonusOf(w, "multi")) + (dashing ? 1 : 0);
       for (let i = 0; i < n; i++) {
@@ -860,7 +886,7 @@ export class GameSim {
         this.fireProjectile(a2, 500, range * 1.2, effDmg, critC, strike, fxW);
       }
     } else if (w.type === "Magic") {
-      const target = this.nearestEnemies(p.x, p.y, 600 * effRng, 1)[0];
+      const target = this.nearestEnemies(p.x, p.y, 600 * effRng * this.role.rangeMult, 1)[0];
       const angM = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
       this.fireProjectile(angM, 300, 5, effDmg, critC, strike, fxW);
       if (dashing) this.fireProjectile(angM + 0.35, 300, 5, effDmg, critC, strike, fxW);
@@ -902,7 +928,7 @@ export class GameSim {
   /** 伤害结算：基础伤害 × 武器倍率 × 连击 × 集中窗口，暴击独立判定。 */
   private rollDamage(dmgMult: number, critChance = 0): { dmg: number; crit: boolean } {
     const p = this.player;
-    let dmg = p.baseDamage * dmgMult;
+    let dmg = p.baseDamage * dmgMult * this.role.dmgMult;
     // 连击：每层 +5% 上限 +50%
     const comboBonus = Math.min(p.combo * CFG.Combo.DamageBonusPerLevel, CFG.Combo.MaxBonus);
     dmg *= 1 + comboBonus;
@@ -1680,6 +1706,16 @@ export class GameSim {
         };
       }
       case "inventory": return { counts: { ...this.inventory.counts } };
+      case "roles": {
+        return {
+          current: this.role.id,
+          list: Object.values(ROLES).map((r) => ({
+            id: r.id, name: r.name, desc: r.desc, passive: r.passive,
+            weapon: WEAPON_DATA[r.startWeapon].name,
+          })),
+        };
+      }
+      case "set_role": return this.setRole(typeof args.role === "string" ? args.role : "");
       case "weapons": return {
         active: this.attackType,
         list: this.player.weapons.map((w, i) => ({ index: i, ...w, stage: stageTag(w) })),
@@ -1741,6 +1777,8 @@ export class GameSim {
       player_max_hp: this.player.maxHp,
       player_pos: { x: this.player.x, y: this.player.y },
       weapon: this.activeWeapon?.name ?? null,
+      role: this.role.id,
+      role_name: this.role.name,
     };
   }
 

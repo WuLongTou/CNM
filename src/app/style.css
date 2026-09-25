@@ -53,6 +53,22 @@ canvas { position: absolute; z-index: 0; }
 }
 .panel button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
 
+/* ── 欢迎页职业选择卡（R3 开局职业）：纸卡三选一，纯鼠标交互 ── */
+.role-cards { display: flex; gap: 12px; justify-content: center; margin: 0 0 18px; }
+.role-card {
+  width: 148px; padding: 12px 8px 10px; cursor: pointer; text-align: center;
+  display: flex; flex-direction: column; gap: 3px;
+  background: #fbf6ea; color: #332e29; border: 2px solid #b8ab90;
+  border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.25);
+  font-size: 12px; line-height: 1.4;
+}
+.role-card:hover { border-color: #c0392b; transform: translateY(-2px); }
+.role-card.selected { border-color: #c0392b; background: #f6e3da; box-shadow: 2px 3px 0 rgba(192, 57, 43, 0.35); }
+.role-card b { font-size: 17px; color: #6a1a12; letter-spacing: 0.14em; }
+.role-card .rc-weapon { color: #8a8175; }
+.role-card .rc-passive { color: #8e2a20; font-weight: 700; }
+.role-card .rc-desc { color: #a89a80; }
+
 /* ── 装备面板 ── */
 .panel-wide { min-width: 420px; }
 .panel h2 { margin: 0 0 14px; color: #8e2a20; letter-spacing: 0.12em;

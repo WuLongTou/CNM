@@ -3,12 +3,15 @@
 // UI 快捷键约束：本层只用鼠标按钮，不占用任何游戏按键。
 
 import type { GameSim } from "../sim/game";
+import { ROLES } from "../sim/roles";
+import { WEAPON_DATA } from "../sim/weapons";
 
 export class Hud {
   private root: HTMLElement;
   private hpFill!: HTMLElement;
   private hpText!: HTMLElement;
   private roundText!: HTMLElement;
+  private roleText!: HTMLElement;
   private weatherText!: HTMLElement;
   private scoreText!: HTMLElement;
   private killsText!: HTMLElement;
@@ -36,7 +39,7 @@ export class Hud {
         <span id="hp-text"></span>
         <span id="dash-dot" title="冲刺就绪">⚡</span></div>
       <div class="stats">
-        <span id="round"></span><span id="weather"></span><span id="score"></span>
+        <span id="round"></span><span id="role"></span><span id="weather"></span><span id="score"></span>
         <span id="kills"></span><span id="time"></span>
         <span id="weapon"></span>
       </div>`;
@@ -44,6 +47,7 @@ export class Hud {
     this.hpFill = hud.querySelector("#hp-fill")!;
     this.hpText = hud.querySelector("#hp-text")!;
     this.roundText = hud.querySelector("#round")!;
+    this.roleText = hud.querySelector("#role")!;
     this.weatherText = hud.querySelector("#weather")!;
     this.scoreText = hud.querySelector("#score")!;
     this.killsText = hud.querySelector("#kills")!;
@@ -69,13 +73,45 @@ export class Hud {
         <img class="title-sketch" src="assets/sprites/ui/title_sketch.png" alt="" draggable="false">
         <h1>斩妖录</h1>
         <p class="sub">简笔画速写本 · 除妖生存</p>
+        <div class="role-cards" id="role-cards"></div>
         <p id="save-stats" class="sub"></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
     this.root.appendChild(this.welcome);
     this.welcome.querySelector("#btn-start")!.addEventListener("click", () => this.onStart());
+    this.buildRoleCards();
     this.refreshSaveStats();
+  }
+
+  /** 欢迎页职业选择卡（R3）：纯鼠标交互（不占用任何游戏/UI 键位），点击即切换。 */
+  private buildRoleCards(): void {
+    const wrap = this.welcome.querySelector<HTMLElement>("#role-cards")!;
+    wrap.innerHTML = "";
+    for (const r of Object.values(ROLES)) {
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "role-card";
+      card.dataset.role = r.id;
+      card.innerHTML = `
+        <b>${r.name}</b>
+        <span class="rc-weapon">起手 ${WEAPON_DATA[r.startWeapon].name}</span>
+        <span class="rc-passive">${r.passive}</span>
+        <span class="rc-desc">${r.desc}</span>`;
+      card.addEventListener("click", () => {
+        this.sim.setRole(r.id);
+        this.refreshRoleCards();
+      });
+      wrap.appendChild(card);
+    }
+    this.refreshRoleCards();
+  }
+
+  /** 按当前 sim 职业高亮选中卡。 */
+  private refreshRoleCards(): void {
+    const cur = this.sim.role.id;
+    this.welcome.querySelectorAll<HTMLElement>(".role-card").forEach((c) =>
+      c.classList.toggle("selected", c.dataset.role === cur));
   }
 
   /** 欢迎页历史战绩（最高分/总击杀/局数），零局时显示引言。 */
@@ -153,6 +189,7 @@ export class Hud {
   resimulate(sim: GameSim): void {
     this.sim = sim;
     this.refreshSaveStats();
+    this.refreshRoleCards();
   }
 
   /** 触屏设备上替换欢迎页操作提示（默认文案为键盘键位）。 */
@@ -168,6 +205,7 @@ export class Hud {
     this.hpFill.style.width = `${ratio * 100}%`;
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
     this.roundText.textContent = `威胁阶 ${s.round}`;
+    this.roleText.textContent = `职业 ${s.role.name}`;
     const w = s.weather.state;
     const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
     this.weatherText.textContent =

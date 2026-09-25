@@ -4,6 +4,7 @@ import { GameSim, BOSS_ROSTER } from "../../src/sim/game";
 import { CFG } from "../../src/sim/config";
 import { memoryStorage } from "../../src/sim/save";
 import { BOSS_BARRAGE } from "../../src/sim/game";
+import { ROLES } from "../../src/sim/roles";
 
 describe("妖王环形弹幕", () => {
   function bossSim() {
@@ -123,7 +124,8 @@ describe("妖王种族轮换（M19）", () => {
     sim.tick();
     const dealt = hp0 - mech.hp;
     expect(dealt).toBeGreaterThan(0);
-    expect(dealt).toBeLessThan(100); // 25% 减伤后应为 75
-    expect(dealt).toBe(75);
+    expect(dealt).toBeLessThan(100); // 25% 减伤后为基线 75
+    // R3 起默认职业剑修带全局伤害 ×1.15（75 × 1.15）
+    expect(dealt).toBeCloseTo(75 * ROLES.sword.dmgMult, 6);
   });
 });
