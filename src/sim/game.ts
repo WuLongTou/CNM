@@ -800,6 +800,11 @@ export class GameSim {
     this.achievements.update({
       kills: this.kills, survivalTime: this.survivalTime,
       bossKills: this.bossKills, totalKills: this.baseTotalKills + this.kills,
+      // R12 系统成就口径（限额类用“已用”= 起步 - 剩余）
+      eliteKills: this.eliteKills, maxCombo: this.maxCombo,
+      weaponCount: this.player.weapons.length,
+      rerollsUsed: CFG.Upgrade.RerollsPerRun - this.rerollsLeft,
+      banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
     });
   }
 
@@ -1361,12 +1366,16 @@ export class GameSim {
   }
 
   /** 通关结算：金币 1.5× 加成，进入 Victory 态（可继续无尽）。返回金币数。
-   *  R10：通关刷新最高通关难度；首次开出下一档即广播解锁。 */
+   *  R10：通关刷新最高通关难度；首次开出下一档即广播解锁。
+   *  R12：通关三成就直接 grant（终局后 tick 停摆，走 tick 判定够不着）。 */
   private onVictory(): number {
     this.state = "Victory";
     const prevMax = (this.save.load() ?? defaultSave()).maxDifficulty ?? -1;
     const coins = this.finalizeRun(1.5, this.difficulty.id);
     this.emit("victory", { coins });
+    this.achievements.grant("pacify");
+    if (this.difficulty.id >= 1) this.achievements.grant("demon_queller");
+    if (this.difficulty.id >= 2) this.achievements.grant("warden");
     const next = DIFFICULTIES[(this.difficulty.id + 1) as DifficultyId];
     if (next && next.unlockBy !== null && next.unlockBy > prevMax) {
       this.emit("difficulty_unlocked", { id: next.id, name: next.name });

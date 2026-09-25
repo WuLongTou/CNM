@@ -1,10 +1,24 @@
-// 成就系统（简化复刻）：局内里程碑（首杀/存活/Boss）+ 跨局累计成就（存档 totalKills）。
+// 成就系统（简化复刻）：局内里程碑（首杀/存活/Boss）+ 跨局累计成就（存档 totalKills）
+// + R12 系统成就（重抽/放逐/精英/连击/集齐/通关三档，还 R4–R11 的内容债）。
+
+export interface AchievementState {
+  kills: number;
+  survivalTime: number;
+  bossKills: number;
+  totalKills: number;
+  /** R12：精英讨伐 / 最高连击 / 持有武器数 / 已用重抽 / 已用放逐。 */
+  eliteKills: number;
+  maxCombo: number;
+  weaponCount: number;
+  rerollsUsed: number;
+  banishesUsed: number;
+}
 
 export interface AchievementDef {
   id: string;
   name: string;
   desc: string;
-  check: (s: { kills: number; survivalTime: number; bossKills: number; totalKills: number }) => boolean;
+  check: (s: AchievementState) => boolean;
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -15,6 +29,18 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "survive_180", name: "久经沙场", desc: "单局存活 180 秒", check: (s) => s.survivalTime >= 180 },
   { id: "survive_300", name: "守山之人", desc: "单局存活 300 秒", check: (s) => s.survivalTime >= 300 },
   { id: "boss_slayer", name: "斩妖大将", desc: "击杀一只妖王", check: (s) => s.bossKills >= 1 },
+  // ── R12 系统成就 ──
+  { id: "fate_twist", name: "变数", desc: "重抽一次升级报价", check: (s) => s.rerollsUsed >= 1 },
+  { id: "sever", name: "断舍离", desc: "放逐一个升级组合", check: (s) => s.banishesUsed >= 1 },
+  { id: "hunter_10", name: "猎手", desc: "讨伐 10 只精英妖物", check: (s) => s.eliteKills >= 10 },
+  { id: "hunter_30", name: "猎魔人", desc: "讨伐 30 只精英妖物", check: (s) => s.eliteKills >= 30 },
+  { id: "combo_20", name: "连绵不绝", desc: "单局最高连击 20", check: (s) => s.maxCombo >= 20 },
+  { id: "combo_50", name: "万军取首", desc: "单局最高连击 50", check: (s) => s.maxCombo >= 50 },
+  { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", check: (s) => s.weaponCount >= 6 },
+  // 通关三档由 onVictory 直接 grant（终局后 tick 停摆，走 tick 判定够不着）
+  { id: "pacify", name: "妖潮平定", desc: "讨伐终幕妖王通关一次", check: () => false },
+  { id: "demon_queller", name: "伏魔真君", desc: "以伏魔难度通关", check: () => false },
+  { id: "warden", name: "镇狱天师", desc: "以镇狱难度通关", check: () => false },
 ];
 
 export class AchievementSystem {
@@ -26,11 +52,19 @@ export class AchievementSystem {
     for (const id of persisted) this.unlocked.add(id);
   }
 
-  update(state: { kills: number; survivalTime: number; bossKills: number; totalKills: number }): void {
+  /** 直接授予（通关类：tick 停摆够不着判定，只能走这里；重复授予返回 false）。 */
+  grant(id: string): boolean {
+    const a = ACHIEVEMENTS.find((x) => x.id === id);
+    if (!a || this.unlocked.has(id)) return false;
+    this.unlocked.add(id);
+    for (const cb of this.onUnlock) cb(a);
+    return true;
+  }
+
+  update(state: AchievementState): void {
     for (const a of ACHIEVEMENTS) {
       if (!this.unlocked.has(a.id) && a.check(state)) {
-        this.unlocked.add(a.id);
-        for (const cb of this.onUnlock) cb(a);
+        this.grant(a.id);
       }
     }
   }
