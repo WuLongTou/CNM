@@ -120,6 +120,7 @@ async function boot(): Promise<void> {
     else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);
     else if (e.event === "enemy_summon") view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad);
     else if (e.event === "enemy_block") view.spawnBurst(Number(d.x), Number(d.y), 0x8ab8d8);
+    else if (e.event === "enemy_blink") { view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad); audio.play("magic_attack", { pitch: 1.3, vol: 0.5 }); }
     else if (e.event === "enemy_charge") {
       if (d.phase === "windup") { view.spawnBurst(Number(d.x), Number(d.y), 0xd93a2b); audio.play("lightning"); }
       else view.shake(5);

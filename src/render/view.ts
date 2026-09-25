@@ -127,6 +127,44 @@ export class GameView {
     return entries.map(([, t]) => t);
   }
 
+  /** 词缀徽标（R17）：头顶 10px 级小符号，一眼可辨七词缀（boss 均为 none，不画）。 */
+  private markAffix(container: Container, affix: string): void {
+    const my = -70;
+    const g = new Graphics();
+    switch (affix) {
+      case "swift": // 双速线
+        g.moveTo(-7, my - 2).lineTo(7, my - 2).stroke({ width: 2, color: INK });
+        g.moveTo(-7, my + 2).lineTo(7, my + 2).stroke({ width: 2, color: INK });
+        break;
+      case "regen": // 绿十字
+        g.moveTo(-2.5, my - 5).lineTo(-2.5, my + 5).stroke({ width: 3, color: 0x6ab04c });
+        g.moveTo(-6, my - 1.5).lineTo(1, my - 1.5).stroke({ width: 3, color: 0x6ab04c });
+        break;
+      case "shield": // 淡蓝圈
+        g.circle(0, my - 1, 5).stroke({ width: 2.2, color: 0x8ab8d8 });
+        break;
+      case "explosive": // 血红爆点
+        g.circle(0, my - 1, 3.2).fill(BLOOD);
+        g.moveTo(-6, my - 1).lineTo(6, my - 1).stroke({ width: 1.6, color: BLOOD });
+        g.moveTo(0, my - 7).lineTo(0, my + 5).stroke({ width: 1.6, color: BLOOD });
+        break;
+      case "frenzy": // 暗红双线
+        g.moveTo(-6, my - 2).lineTo(6, my - 2).stroke({ width: 2, color: 0x8e2a20 });
+        g.moveTo(-6, my + 2).lineTo(6, my + 2).stroke({ width: 2, color: 0x8e2a20 });
+        break;
+      case "split": // 一大一小双圈（母子）
+        g.circle(-3.5, my - 1, 4).stroke({ width: 2, color: INK });
+        g.circle(4, my, 2.4).stroke({ width: 1.8, color: INK });
+        break;
+      case "blink": // 紫菱形
+        g.moveTo(0, my - 6).lineTo(4.5, my - 1).lineTo(0, my + 4).lineTo(-4.5, my - 1).closePath()
+          .fill(0x8e44ad);
+        break;
+      default: return;
+    }
+    container.addChild(g);
+  }
+
   private makeEnemyView(z: Enemy): EnemyView {
     const animName = ENEMY_ATLAS[z.type] ?? "enemy_basic_walk";
     const frames = this.enemyTextures.get(animName) ?? this.enemyTextures.get("enemy_basic_walk")!;
@@ -155,6 +193,8 @@ export class GameView {
       ring.x = -(z.boss ? 30 : 20); ring.y = -60;
       container.addChild(ring);
     }
+    // R17 词缀徽标：头顶小符号（见词缀知打法；色调沿用既有语义——治疗绿/格挡蓝/召唤紫/危险红）
+    if (z.affix !== "none") this.markAffix(container, z.affix);
     if (z.boss) container.scale.set(CFG.Enemy.BossScale);
     this.worldLayer.addChild(container);
     // 相位随机化：每只妖物帧起点/计时/浮动相位错开，避免"集体广场舞"

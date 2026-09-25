@@ -62,6 +62,8 @@ export interface Enemy {
   floatPhase: number;
   /** 甲妖：举盾剩余秒 / 举盾冷却秒。 */
   blockT: number; blockCd: number;
+  /** 疾影词缀：闪现冷却秒（R17）。 */
+  blinkCd: number;
   /** 蛟：冲撞冷却 / 蓄力剩余 / 冲刺剩余 / 锁定方向 / 本次冲刺是否已命中。 */
   chargeCd: number; chargeWind: number; chargeDash: number;
   chargeVx: number; chargeVy: number; chargeHit: boolean;
@@ -261,6 +263,8 @@ const SUMMONER = { cd: 6, count: 2, swarmCap: 12 };
 const MECH_ARMOR = 0.75;
 /** 甲妖举盾：持续 / 冷却（举盾期间完全免伤）。 */
 const KNIGHT = { blockSec: 1.2, cd: 5 };
+/** 疾影词缀（R17）：闪现周期 / 落点距玩家 / 开局宽限（先露面再闪）。 */
+const BLINK = { cd: 4, range: 150, grace: 2.5 };
 /** 蛟冲撞：冷却 / 蓄力 / 冲刺时长 / 冲刺速度倍数 / 接触伤害倍数。 */
 const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
 /** 宝妖（R14）：血量 / 逃逸速度 / 逃逸时限秒 / 击杀符箓数。速度超玩家基础移速（追得上要切角+冲刺）。 */
@@ -1433,6 +1437,12 @@ export class GameSim {
     if (e.boss) this.bossKills++;
     else if (e.elite) this.eliteKills++;
     this.killCounts[e.type] = (this.killCounts[e.type] ?? 0) + 1;
+    // R17 分裂：死亡时爆出 2 只满血蚀群（分裂体为普通怪，不连锁；妖王不分裂）
+    if (e.affix === "split" && !e.boss) {
+      for (let i = 0; i < 2; i++) {
+        this.spawnEnemy({ type: 13, near: { x: e.x + this.rng.range(-40, 40), y: e.y + this.rng.range(-40, 40) } });
+      }
+    }
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
@@ -1633,6 +1643,22 @@ export class GameSim {
 
       // 甲妖：周期举盾（免伤状态机，不阻断移动）
       if (e.type === EnemyType.Knight) this.updateKnightBlock(e, dt);
+
+      // 疾影词缀（R17）：周期闪现至玩家近点（反风筝；落点在近战范围外，给反应时间）
+      if (e.affix === "blink" && !e.goblin) {
+        e.blinkCd -= dt;
+        if (e.blinkCd <= 0) {
+          e.blinkCd = BLINK.cd;
+          const ang = Math.atan2(p.y - e.y, p.x - e.x);
+          e.x = p.x - Math.cos(ang) * BLINK.range;
+          e.y = p.y - Math.sin(ang) * BLINK.range;
+          e.x = Math.min(this.world.w - 22, Math.max(22, e.x));
+          e.y = Math.min(this.world.h - 22, Math.max(22, e.y));
+          const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
+          e.x = sep.x; e.y = sep.y;
+          this.emit("enemy_blink", { x: e.x, y: e.y });
+        }
+      }
 
       // 宝妖（R14）：只逃不打；倒计时结束带宝消失（击退/硬直照常生效，打中能减速）
       if (e.goblin) {
@@ -1996,6 +2022,7 @@ export class GameSim {
       floatPhase: this.rng.range(0, Math.PI * 2),
       blockT: 0,
       blockCd: KNIGHT.cd * 0.6,
+      blinkCd: BLINK.grace,
       chargeCd: DRAGON.cd * 0.6,
       chargeWind: 0, chargeDash: 0,
       chargeVx: 0, chargeVy: 0, chargeHit: false,
@@ -2014,8 +2041,9 @@ export class GameSim {
     return e;
   }
 
+  /** 精英词缀池（R17 起 7 种：分裂/疾影新增）。 */
   private pickAffix(): string {
-    return this.rng.pick(["swift", "regen", "shield", "explosive", "frenzy"] as const);
+    return this.rng.pick(["swift", "regen", "shield", "explosive", "frenzy", "split", "blink"] as const);
   }
 
   // ── 调试/AI 指令（JSON 协议，与 Godot 旧版 cmd-port 同构） ──
@@ -2237,7 +2265,7 @@ export class GameSim {
           id: e.id, type: ENEMY_NAMES[e.type] ?? String(e.type), type_id: e.type,
           hp: Math.ceil(e.hp), max_hp: e.maxHp,
           pos: { x: e.x, y: e.y },
-          elite: e.elite, boss: e.boss, goblin: e.goblin,
+          elite: e.elite, boss: e.boss, goblin: e.goblin, affix: e.affix,
         })),
       },
       chests: this.chests.filter((c) => !c.opened).map((c) => ({ x: c.x, y: c.y, elite: c.elite })),
