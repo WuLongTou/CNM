@@ -64,7 +64,9 @@ export class Hud {
   private gameoverStats!: HTMLElement;
   private victory!: HTMLElement;
   private victoryStats!: HTMLElement;
+  private victoryDebrief!: HTMLElement;
   private victoryCoins!: HTMLElement;
+  private gameoverDebrief!: HTMLElement;
   /** GameOver 面板延迟弹出计时（进 GameOver 起算；让死亡消散先播完）。 */
   private gameOverAt = 0;
 
@@ -138,12 +140,14 @@ export class Hud {
         <h1>妖潮平定</h1>
         <p class="sub">终幕妖王授首 · 山林复归安宁</p>
         <p id="victory-stats" class="sub"></p>
+        <p id="victory-debrief" class="sub"></p>
         <p id="victory-coins" class="sub"></p>
         <button id="btn-endless" type="button">继续讨伐（无尽）</button>
         <button id="btn-victory-restart" type="button">再来一局</button>
       </div>`;
     this.root.appendChild(this.victory);
     this.victoryStats = this.victory.querySelector("#victory-stats")!;
+    this.victoryDebrief = this.victory.querySelector("#victory-debrief")!;
     this.victoryCoins = this.victory.querySelector("#victory-coins")!;
     this.victory.querySelector("#btn-endless")!.addEventListener("click", () => this.onEndless?.());
     this.victory.querySelector("#btn-victory-restart")!.addEventListener("click", () => this.onRestart());
@@ -154,6 +158,7 @@ export class Hud {
     const coins = Math.floor((s.score / 50 + s.kills) * 1.5);
     this.victoryStats.textContent =
       `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round}`;
+    this.victoryDebrief.textContent = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
   }
 
@@ -164,12 +169,14 @@ export class Hud {
       <div class="panel">
         <h1>除妖师陨落</h1>
         <p id="gameover-stats" class="sub"></p>
+        <p id="gameover-debrief" class="sub"></p>
         <div class="meta-row" id="meta-row"></div>
         <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
       </div>`;
     this.root.appendChild(this.gameover);
     this.gameoverStats = this.gameover.querySelector("#gameover-stats")!;
+    this.gameoverDebrief = this.gameover.querySelector("#gameover-debrief")!;
     this.gameover.querySelector("#btn-restart")!.addEventListener("click", () => this.onRestart());
   }
 
@@ -204,6 +211,11 @@ export class Hud {
     (this.gameover.querySelector("#meta-coins") as HTMLElement).textContent = `金币 ${m.coins}`;
   }
 
+  /** 战绩复盘行（R9；对标 VS 结算屏）：精英讨伐/最高连击/收集武器。 */
+  private debriefText(s: GameSim): string {
+    return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件`;
+  }
+
   /** 重开一局时替换绑定的 sim 实例（新局存档可能已更新战绩/解锁）。 */
   resimulate(sim: GameSim): void {
     this.sim = sim;
@@ -223,7 +235,8 @@ export class Hud {
     const ratio = Math.max(0, s.player.hp / s.player.maxHp);
     this.hpFill.style.width = `${ratio * 100}%`;
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
-    this.roundText.textContent = `威胁阶 ${s.round}`;
+    // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
+    this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶`;
     this.roleText.textContent = `职业 ${s.role.name}`;
     const w = s.weather.state;
     const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
@@ -257,6 +270,7 @@ export class Hud {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
         `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · 金币 +${coins}`;
+      this.gameoverDebrief.textContent = this.debriefText(s);
       this.refreshMeta();
     }
   }

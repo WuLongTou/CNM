@@ -285,6 +285,10 @@ export class GameSim {
   weather: WeatherSystem;
   achievements: AchievementSystem;
   bossKills = 0;
+  /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
+  eliteKills = 0;
+  /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
+  maxCombo = 0;
   /** 祭坛融合报价（打开时模态暂停，choose 指令应答；resultId 保证展示=所得）。 */
   fusionOffer: { a: string; b: string; resultName: string; resultId: string } | null = null;
   /** 场上升级符箓拾取物（走近拾取）。 */
@@ -895,6 +899,11 @@ export class GameSim {
     return 1 + this.round * CFG.Difficulty.RoundMultiplierBase * 2 * factor;
   }
 
+  /** 距下一威胁阶秒数（R9 威胁预告；HUD 倒计时用）。 */
+  get secsToNextTier(): number {
+    return Math.max(0, CFG.Difficulty.RampInterval - this.roundTimer);
+  }
+
   private updatePlayer(dt: number): void {
     const p = this.player;
     const c = CFG.Player;
@@ -1123,6 +1132,7 @@ export class GameSim {
     this.hitStop.trigger(HITSTOP.HitMs);
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
+    if (p.combo > this.maxCombo) this.maxCombo = p.combo;
     // 连击里程碑音效节点（表现层订阅；3 连提示音，避免每层都响）
     if (p.combo === 3) this.emit("combo_milestone", { count: 3 });
     this.notifyDamage(e.x, e.y, r.dmg, r.crit);
@@ -1281,6 +1291,7 @@ export class GameSim {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     this.kills++;
     if (e.boss) this.bossKills++;
+    else if (e.elite) this.eliteKills++;
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
@@ -1966,6 +1977,9 @@ export class GameSim {
       role_name: this.role.name,
       rerolls_left: this.rerollsLeft,
       banishes_left: this.banishesLeft,
+      elite_kills: this.eliteKills,
+      max_combo: this.maxCombo,
+      secs_to_next_tier: Math.ceil(this.secsToNextTier),
     };
   }
 
