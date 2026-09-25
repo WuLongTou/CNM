@@ -190,6 +190,7 @@ export class Hud {
         <p id="victory-coins" class="sub"></p>
         <button id="btn-endless" type="button">继续讨伐（无尽）</button>
         <button id="btn-victory-restart" type="button">再来一局</button>
+        <p class="hint">按 R 再来一局</p>
       </div>`;
     this.root.appendChild(this.victory);
     this.victoryStats = this.victory.querySelector("#victory-stats")!;
@@ -219,6 +220,7 @@ export class Hud {
         <div class="meta-row" id="meta-row"></div>
         <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
+        <p class="hint">按 R 再来一局</p>
       </div>`;
     this.root.appendChild(this.gameover);
     this.gameoverStats = this.gameover.querySelector("#gameover-stats")!;
@@ -294,7 +296,8 @@ export class Hud {
       w.type === "Clear" ? "天气 晴" : `天气 ${WNAMES[w.type]}${w.intensity === "Moderate" ? "·烈" : ""}`;
     this.scoreText.textContent = `分数 ${s.score}`;
     this.killsText.textContent = `击杀 ${s.kills}`;
-    this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s`;
+    // R18 幕显示：R2 分幕结构此前 HUD 无感知，此处点名
+    this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s · 第${s.act + 1}幕`;
     this.weaponText.textContent = s.activeWeapon
       ? `武器 ${s.activeWeapon.name}${s.player.combo >= 3 ? ` · 连击 ${s.player.combo}` : ""}`
       : "徒手";

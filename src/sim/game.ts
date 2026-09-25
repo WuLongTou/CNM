@@ -2239,6 +2239,7 @@ export class GameSim {
       secs_to_next_tier: Math.ceil(this.secsToNextTier),
       death_cause: this.deathCause,
       next_event_in: Math.ceil(this.eventTimer),
+      act: this.act,
     };
   }
 

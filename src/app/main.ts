@@ -171,6 +171,13 @@ async function boot(): Promise<void> {
       equipment.toggle(false);
       crafting.toggle();
     },
+    quickRestart(): void {
+      // R18 结算屏一键重开：仅 GameOver/Victory 且无模态时；战斗中按 R 无效果（防误触）。
+      // R 与升级重抽同键但上下文互斥（报价打开时 upgrade.onKey 先吞掉，此处 unreachable）。
+      if (anyModalOpen()) return;
+      if (sim.state !== "GameOver" && sim.state !== "Victory") return;
+      restart();
+    },
   };
   const onKey = (e: KeyboardEvent) => {
     if (upgrade.onKey(e)) return;
@@ -180,6 +187,7 @@ async function boot(): Promise<void> {
     else if (e.code === "Escape") uiActions.togglePause();
     else if (e.code === "KeyC") uiActions.openEquipment();
     else if (e.code === "KeyI") uiActions.openCrafting();
+    else if (e.code === "KeyR") uiActions.quickRestart();
   };
   window.addEventListener("keydown", onKey);
 
@@ -190,7 +198,10 @@ async function boot(): Promise<void> {
   }
 
   function restart(): void {
-    sim = new GameSim(Date.now() % 100000, localStorageStorage());
+    // R18 记住上局选择：职业/难度沿用（同存档下锁天然成立，无需额外校验）
+    const roleId = sim.role.id;
+    const difficultyId = sim.difficulty.id;
+    sim = new GameSim(Date.now() % 100000, localStorageStorage(), roleId, difficultyId);
     wireSim();
     input.forceSim(sim);
     hud.resimulate(sim);

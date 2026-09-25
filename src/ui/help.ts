@@ -159,7 +159,9 @@ export class HelpPanel {
       return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
         `<td>${a.desc} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
     });
-    this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;
+    // R18 成就进度：已达成 / 总数（总数取表长，不硬编码）
+    const got = ACHIEVEMENTS.filter((a) => unlocked.has(a.id)).length;
+    this.bodyEl.innerHTML = `<p class="sub">已达成 ${got} / ${ACHIEVEMENTS.length}</p><table class="help-table">${rows.join("")}</table>`;
   }
 
   private renderMechanics(): void {
