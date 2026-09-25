@@ -3,10 +3,12 @@ import { GameSim } from "../../src/sim/game";
 import { CFG } from "../../src/sim/config";
 import { DEFAULT_ROLE, ROLES } from "../../src/sim/roles";
 import { WEAPON_DATA } from "../../src/sim/weapons";
-import { memoryStorage } from "../../src/sim/save";
+import { defaultSave, memoryStorage } from "../../src/sim/save";
 
+// R6 起非默认职业需先解锁：本文件 helper 预置两项解锁成就（锁语义由 role-unlock.test.ts 覆盖）
 function newSim(seed = 7, roleId?: string) {
   const save = memoryStorage();
+  save.save({ ...defaultSave(), achievements: ["slayer_50", "boss_slayer"] });
   return new GameSim(seed, save, roleId);
 }
 

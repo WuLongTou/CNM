@@ -68,6 +68,10 @@ canvas { position: absolute; z-index: 0; }
 .role-card .rc-weapon { color: #8a8175; }
 .role-card .rc-passive { color: #8e2a20; font-weight: 700; }
 .role-card .rc-desc { color: #a89a80; }
+/* R6 未解锁职业：置灰 + 去悬浮（条件文案直接印在卡上，点击无反应） */
+.role-card.locked { opacity: 0.62; cursor: default; background: #e9e0cb; }
+.role-card.locked:hover { border-color: #b8ab90; transform: none; }
+.role-card.locked b { color: #6b6154; }
 
 /* ── 装备面板 ── */
 .panel-wide { min-width: 420px; }

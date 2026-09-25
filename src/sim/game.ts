@@ -15,7 +15,7 @@ import {
 import { Inventory, type Material } from "./inventory";
 import { RECIPES } from "./recipes";
 import { WeatherSystem, type WeatherType } from "./weather";
-import { AchievementSystem } from "./achievements";
+import { ACHIEVEMENTS, AchievementSystem } from "./achievements";
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
@@ -370,7 +370,17 @@ export class GameSim {
     this.achievements.onUnlock.push((a) => {
       this.emit("achievement", { id: a.id, name: a.name, desc: a.desc });
       this.persistAchievements();
+      // R6：被该成就解锁的职业即刻广播（欢迎页下局可选；UI 弹解锁横幅）
+      for (const r of Object.values(ROLES)) {
+        if (r.unlockAchievement === a.id) {
+          this.emit("role_unlocked", { id: r.id, name: r.name });
+        }
+      }
     });
+    // R6：构造指定职业若未解锁直接抛错（协议层返回 ok:false，不静默回退）
+    if (!this.isRoleUnlocked(this.role.id)) {
+      throw new Error("职业未解锁: " + this.role.name);
+    }
     this.stats = this.recalc();
     // 开局武器：职业起手装备（R3；构造期静默入列，不弹获得通知）
     this.player.weapons.push(makeWeapon(this.role.startWeapon));
@@ -484,12 +494,30 @@ export class GameSim {
     return this.rng.weighted(entries);
   }
 
-  /** 切换职业（R3）：仅开局前（欢迎页）允许；起手武器跟随职业重置。 */
+  /** 职业是否已解锁（R6）：无条件职业恒开放，否则看成就达成。 */
+  isRoleUnlocked(id: string): boolean {
+    const r = getRole(id);
+    return r.unlockAchievement === null || this.achievements.unlocked.has(r.unlockAchievement);
+  }
+
+  /** 职业解锁条件文案（R6；已解锁/无条件返回 null）。单事实源：取自成就定义。 */
+  roleUnlockHint(id: string): { name: string; desc: string } | null {
+    const r = getRole(id);
+    if (r.unlockAchievement === null) return null;
+    const a = ACHIEVEMENTS.find((x) => x.id === r.unlockAchievement);
+    return a ? { name: a.name, desc: a.desc } : null;
+  }
+
+  /** 切换职业（R3）：仅开局前（欢迎页）允许；起手武器跟随职业重置。R6 起未解锁拒绝。 */
   setRole(id: string): Record<string, unknown> {
     if (this.state !== "WeaponSelection") {
       return { applied: false, note: "仅开局前可选职业", role: this.role.id };
     }
-    this.role = getRole(id);
+    const next = getRole(id);
+    if (!this.isRoleUnlocked(id)) {
+      return { applied: false, note: `职业未解锁：${next.name}`, role: this.role.id };
+    }
+    this.role = next;
     this.player.weapons = [makeWeapon(this.role.startWeapon)];
     this.stats = this.recalc();
     this.emit("role_changed", { id: this.role.id, name: this.role.name });
@@ -1795,6 +1823,8 @@ export class GameSim {
           list: Object.values(ROLES).map((r) => ({
             id: r.id, name: r.name, desc: r.desc, passive: r.passive,
             weapon: WEAPON_DATA[r.startWeapon].name,
+            unlocked: this.isRoleUnlocked(r.id),
+            unlock: this.roleUnlockHint(r.id),
           })),
         };
       }

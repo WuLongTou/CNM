@@ -87,21 +87,24 @@ export class Hud {
     this.refreshSaveStats();
   }
 
-  /** 欢迎页职业选择卡（R3）：纯鼠标交互（不占用任何游戏/UI 键位），点击即切换。 */
+  /** 欢迎页职业选择卡（R3 纯鼠标选卡；R6 未解锁置灰并明示条件，点击不切换）。 */
   private buildRoleCards(): void {
     const wrap = this.welcome.querySelector<HTMLElement>("#role-cards")!;
     wrap.innerHTML = "";
     for (const r of Object.values(ROLES)) {
       const card = document.createElement("button");
       card.type = "button";
-      card.className = "role-card";
       card.dataset.role = r.id;
+      const open = this.sim.isRoleUnlocked(r.id);
+      card.className = open ? "role-card" : "role-card locked";
+      const hint = open ? null : this.sim.roleUnlockHint(r.id);
       card.innerHTML = `
-        <b>${r.name}</b>
+        <b>${r.name}${open ? "" : " 🔒"}</b>
         <span class="rc-weapon">起手 ${WEAPON_DATA[r.startWeapon].name}</span>
         <span class="rc-passive">${r.passive}</span>
-        <span class="rc-desc">${r.desc}</span>`;
+        <span class="rc-desc">${hint ? `${hint.name}：${hint.desc}` : r.desc}</span>`;
       card.addEventListener("click", () => {
+        if (!this.sim.isRoleUnlocked(r.id)) return;
         this.sim.setRole(r.id);
         this.refreshRoleCards();
       });
@@ -201,11 +204,11 @@ export class Hud {
     (this.gameover.querySelector("#meta-coins") as HTMLElement).textContent = `金币 ${m.coins}`;
   }
 
-  /** 重开一局时替换绑定的 sim 实例（新局存档可能已更新战绩）。 */
+  /** 重开一局时替换绑定的 sim 实例（新局存档可能已更新战绩/解锁）。 */
   resimulate(sim: GameSim): void {
     this.sim = sim;
     this.refreshSaveStats();
-    this.refreshRoleCards();
+    this.buildRoleCards();
   }
 
   /** 触屏设备上替换欢迎页操作提示（默认文案为键盘键位）。 */

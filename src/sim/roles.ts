@@ -24,6 +24,8 @@ export interface RoleDef {
   dashCdMult: number;
   /** 符箓/掉落拾取半径乘数。 */
   pickMult: number;
+  /** 解锁条件：成就 id（R6；null = 开局即开放）。单事实源——改成就即改解锁。 */
+  unlockAchievement: string | null;
 }
 
 export const ROLES: Record<RoleId, RoleDef> = {
@@ -31,16 +33,19 @@ export const ROLES: Record<RoleId, RoleDef> = {
     id: "sword", name: "剑修", desc: "近战除妖师",
     passive: "伤害 +15%", startWeapon: "tiejian",
     dmgMult: 1.15, aspdMult: 1, rangeMult: 1, dashCdMult: 1, pickMult: 1,
+    unlockAchievement: null,
   },
   archer: {
     id: "archer", name: "弓手", desc: "远程风筝流",
     passive: "攻速 +15% · 冲刺冷却 -20%", startWeapon: "gongjian",
     dmgMult: 1, aspdMult: 1.15, rangeMult: 1, dashCdMult: 0.8, pickMult: 1,
+    unlockAchievement: "slayer_50",
   },
   mage: {
     id: "mage", name: "术士", desc: "妖术控场",
     passive: "范围 +20% · 拾取半径 +50%", startWeapon: "fazhang",
     dmgMult: 1, aspdMult: 1, rangeMult: 1.2, dashCdMult: 1, pickMult: 1.5,
+    unlockAchievement: "boss_slayer",
   },
 };
 

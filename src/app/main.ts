@@ -82,6 +82,7 @@ async function boot(): Promise<void> {
     else if (e.event === "upgrade_offer") upgrade.show();
     else if (e.event === "upgrade_applied") { notify.push(`符箓铭刻：${d.name}（${UPGRADE_STAT_NAMES[d.stat as keyof typeof UPGRADE_STAT_NAMES] ?? d.stat}）`); audio.play("upgrade"); }
     else if (e.event === "upgrade_skipped") { notify.push(`跳过升级 · 调息回复 ${d.heal} 生命`); audio.play("charm"); }
+    else if (e.event === "role_unlocked") { notify.push(`新职业解锁：${d.name}（下局可选）`); notify.banner("新职业解锁", d.name); audio.play("combo_5"); }
     else if (e.event === "fusion_offer") fusion.show();
     else if (e.event === "weather_changed") {
       const WNAMES: Record<string, string> = { Rain: "阴雨", Fog: "浓雾", BloodMoon: "血月升起" };
