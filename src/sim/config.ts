@@ -83,6 +83,13 @@ export const CFG = {
     RoundMultiplierBase: 0.04, // roundMult = 1 + round * base * 2
     SpawnScaleFactor: 1.2,     // 刷怪数值缩放用的 factor（对齐 C# _GetRoundMult(1.2f)）
   },
+
+  // R4 升级 agency：三选一的重抽与跳过（对标 Vampire Survivors 的 Reroll/Skip）；
+  // 跳过带治疗补偿——残血时「贪升级还是保命」构成真实决策
+  Upgrade: {
+    RerollsPerRun: 2, // 每局重抽次数
+    SkipHeal: 15,     // 跳过即时回复生命（不超上限）
+  },
 } as const;
 
 /** 妖物类型（序号与 C# EnemyType 枚举一致，SpawnTable 用数字索引）。 */

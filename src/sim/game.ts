@@ -271,6 +271,8 @@ export class GameSim {
   pickups: UpgradePickup[] = [];
   /** 升级三选一报价（打开时模态暂停，choose/resolveUpgrade 应答）。 */
   upgradeOffers: UpgradeOffer[] | null = null;
+  /** 本局剩余重抽次数（R4；RerollsPerRun 起步，重抽一次消耗一次）。 */
+  rerollsLeft = CFG.Upgrade.RerollsPerRun;
   /** 上一次天气类型（切换检测，初始 Clear 与 WeatherSystem 一致）。 */
   private lastWeatherType: WeatherType = "Clear";
   /** 命中停顿（打击感）。 */
@@ -504,10 +506,11 @@ export class GameSim {
     }
   }
 
-  /** 生成三选一报价（武器×有效词条去重；行为词条可改变攻击方式——R2 质变成长）。 */
-  private openUpgradeOffers(): void {
+  /** 生成三选一报价组合（武器×有效词条去重；行为词条可改变攻击方式——R2 质变成长）。
+   *  返回 null 表示无有效组合（武器池空）。 */
+  private makeUpgradeOffers(): UpgradeOffer[] | null {
     const ws = this.player.weapons;
-    if (ws.length === 0) return;
+    if (ws.length === 0) return null;
     const pool: UpgradeOffer[] = [];
     const seen = new Set<string>();
     let guard = 0;
@@ -522,7 +525,12 @@ export class GameSim {
       seen.add(key);
       pool.push({ weaponIdx, weaponName: w.name, stat, statName: UPGRADE_STAT_NAMES[stat] });
     }
-    if (pool.length === 0) return;
+    return pool.length === 0 ? null : pool;
+  }
+
+  private openUpgradeOffers(): void {
+    const pool = this.makeUpgradeOffers();
+    if (!pool) return;
     this.upgradeOffers = pool;
     this.paused = true;
     this.emit("upgrade_offer", { offers: pool });
@@ -538,6 +546,34 @@ export class GameSim {
     const r = this.applyUpgrade(offer.weaponIdx, offer.stat);
     this.emit("upgrade_applied", { name: r.name, stat: offer.stat, stage: r.stage });
     return { handled: true, ...r };
+  }
+
+  /** 重抽三选一（R4）：消耗一次重抽并重新随机报价；次数用尽或无报价时拒绝。 */
+  rerollUpgrade(): Record<string, unknown> {
+    if (!this.upgradeOffers) return { handled: false, note: "无进行中的报价" };
+    if (this.rerollsLeft <= 0) return { handled: false, note: "重抽已用完", rerollsLeft: 0 };
+    this.rerollsLeft--;
+    const pool = this.makeUpgradeOffers();
+    if (!pool) {
+      // 理论不可达（报价开着说明武器池非空）；防御性回滚
+      this.rerollsLeft++;
+      return { handled: false, note: "无可抽组合" };
+    }
+    this.upgradeOffers = pool;
+    this.emit("upgrade_offer", { offers: pool, rerolled: true });
+    return { handled: true, rerollsLeft: this.rerollsLeft, offers: pool };
+  }
+
+  /** 跳过三选一（R4）：放弃本次升级，立即回复 SkipHeal 生命（不超上限）——残血时的真实取舍。 */
+  skipUpgrade(): Record<string, unknown> {
+    if (!this.upgradeOffers) return { handled: false, note: "无进行中的报价" };
+    this.upgradeOffers = null;
+    this.paused = false;
+    const before = this.player.hp;
+    const healed = Math.round(Math.min(CFG.Upgrade.SkipHeal, this.player.maxHp - before));
+    this.player.hp = before + healed;
+    this.emit("upgrade_skipped", { heal: healed, hp: this.player.hp });
+    return { handled: true, healed, hp: this.player.hp };
   }
 
   // ── 宝箱 ────────────────────────────────────────────────
@@ -1657,8 +1693,11 @@ export class GameSim {
         if (args.target === "fusion") {
           return this.resolveFusion(args.choice === "accept");
         }
-        // target:"upgrade"：index=三选一序号（对齐 UpgradePanel 1/2/3 快捷键）
+        // target:"upgrade"：index=三选一序号（对齐 UpgradePanel 1/2/3 快捷键）；
+        // reroll=true 重抽一次（R4）；skip=true 跳过并回复生命（R4，对齐 R/X 快捷键）
         if (args.target === "upgrade") {
+          if (args.reroll === true) return this.rerollUpgrade();
+          if (args.skip === true) return this.skipUpgrade();
           return this.resolveUpgrade(typeof args.index === "number" ? args.index : -1);
         }
         return { handled: false, note: "未知 target" };
@@ -1779,6 +1818,7 @@ export class GameSim {
       weapon: this.activeWeapon?.name ?? null,
       role: this.role.id,
       role_name: this.role.name,
+      rerolls_left: this.rerollsLeft,
     };
   }
 
