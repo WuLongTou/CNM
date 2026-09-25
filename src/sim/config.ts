@@ -84,6 +84,16 @@ export const CFG = {
     SpawnScaleFactor: 1.2,     // 刷怪数值缩放用的 factor（对齐 C# _GetRoundMult(1.2f)）
   },
 
+  // R13 妖潮异变：周期性突发事件（对标 Hades 房间事件 / VS 怪潮惊喜）——
+  // 紧张（围猎/精锐）与释放（宝藏）轮转，保持长局的新鲜感
+  Events: {
+    FirstAt: 100,   // 首发时刻（秒，Combat 计时）
+    Interval: 130,  // 后续间隔（秒）
+    SurgeBase: 6,   // 围猎基数（+ 2×幕数）
+    SurgeRadius: 500, // 围猎环半径 px
+    CacheCount: 2,  // 宝藏显形宝箱数
+  },
+
   // R4/R7 升级 agency：三选一的重抽/跳过/放逐（对标 Vampire Survivors 的
   // Reroll/Skip/Banish）；跳过带治疗补偿——残血时「贪升级还是保命」构成真实决策
   Upgrade: {

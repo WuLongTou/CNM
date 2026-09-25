@@ -105,6 +105,13 @@ async function boot(): Promise<void> {
     else if (e.event === "final_boss") { notify.banner("终幕妖王", "讨伐成功即平定妖潮"); view.shake(14); audio.play("lightning"); }
     else if (e.event === "elite_wave") { notify.push("精英潮来袭！"); audio.play("charm"); }
     else if (e.event === "threat_tier") { notify.push(`威胁阶 ${d.tier} · 妖潮渐强`); audio.play("charm"); }
+    else if (e.event === "map_event") {
+      const k = (e.data as { kind?: string }).kind;
+      const label = k === "surge" ? "妖群合围" : k === "hunt" ? "精锐现身" : "宝藏显形";
+      notify.banner("妖潮异变", label);
+      notify.push(`妖潮异变：${label}`);
+      audio.play(k === "cache" ? "charm" : "lightning");
+    }
     else if (e.event === "victory") { notify.banner("妖潮平定", "除妖师大胜"); view.shake(12); audio.play("combo_5"); audio.stopBgm(); }
     else if (e.event === "boss_barrage") { audio.play("magic_attack", { pitch: 0.85, vol: 0.8 }); }
     else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }

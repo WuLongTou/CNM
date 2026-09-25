@@ -331,6 +331,10 @@ export class GameSim {
   private nextId = 1;
   private spawnCd = 0;
   roundTimer = 0;
+  /** 下次妖潮异变倒计时（R13；FirstAt 起步，触发后按 Interval 续杯）。 */
+  eventTimer = CFG.Events.FirstAt;
+  /** 已触发异变次数（轮转序号）。 */
+  eventCount = 0;
   private bossSpawnedForRound = 0;
   /** 已出场的妖王总数（BOSS_ROSTER 轮换索引）。 */
   private bossSpawnCount = 0;
@@ -791,6 +795,7 @@ export class GameSim {
     this.updatePickups();
     this.updateAltars();
     this.maintainEnemies(dt);
+    this.updateEvents(dt);
     this.weather.update(dt);
     // 天气切换事件（HUD 标签/通知/表现层共用）
     if (this.weather.state.type !== this.lastWeatherType) {
@@ -895,6 +900,50 @@ export class GameSim {
     next[def.field] = level + 1;
     this.save.save(next);
     return { bought: true, kind, level: level + 1, coins: next.coins, price: metaPrice(level + 1) };
+  }
+
+  /** 妖潮异变调度（R13）：Combat 计时轮转三事件（围猎/精锐/宝藏），紧张与释放交替。 */
+  private updateEvents(dt: number): void {
+    this.eventTimer -= dt;
+    if (this.eventTimer > 0) return;
+    this.eventTimer += CFG.Events.Interval;
+    const kinds = ["surge", "hunt", "cache"] as const;
+    const kind = kinds[this.eventCount % kinds.length];
+    this.eventCount++;
+    if (kind === "surge") this.eventSurge();
+    else if (kind === "hunt") this.eventHunt();
+    else this.eventCache();
+  }
+
+  /** 围猎：玩家为圆心环形刷快攻群（数量随幕数爬升的压迫感）。
+   *  直调 createEnemy 突破幕上限——潮就是要形成压力（同精英潮/妖王待遇）。 */
+  private eventSurge(): void {
+    const p = this.player;
+    const n = CFG.Events.SurgeBase + this.act * 2;
+    const type = this.act >= 2 ? EnemyType.Swarm : EnemyType.Fast;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2;
+      const x = Math.min(this.world.w - 22, Math.max(22, p.x + Math.cos(ang) * CFG.Events.SurgeRadius));
+      const y = Math.min(this.world.h - 22, Math.max(22, p.y + Math.sin(ang) * CFG.Events.SurgeRadius));
+      this.createEnemy(type, x, y, {});
+    }
+    this.emit("map_event", { kind: "surge", count: n });
+  }
+
+  /** 精锐现身：近点刷一只精英（按需投放的 R8 时刻）。 */
+  private eventHunt(): void {
+    this.spawnEnemy({ type: "random", near: "player", elite: true });
+    this.emit("map_event", { kind: "hunt", count: 1 });
+  }
+
+  /** 宝藏显形：玩家两侧各显一只普通宝箱（释放时刻，走过去拿）。 */
+  private eventCache(): void {
+    const p = this.player;
+    for (let i = 0; i < CFG.Events.CacheCount; i++) {
+      const dx = i === 0 ? -220 : 220;
+      this.dropChest(p.x + dx, p.y, false);
+    }
+    this.emit("map_event", { kind: "cache", count: CFG.Events.CacheCount });
   }
 
   private advanceRound(): void {
@@ -2053,6 +2102,7 @@ export class GameSim {
       elite_kills: this.eliteKills,
       max_combo: this.maxCombo,
       secs_to_next_tier: Math.ceil(this.secsToNextTier),
+      next_event_in: Math.ceil(this.eventTimer),
     };
   }
 
