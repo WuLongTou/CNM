@@ -10,6 +10,12 @@ import { WEAPON_DATA } from "../sim/weapons";
 /** 永久升级商店条目（meta 协议 shop 列表项）。 */
 interface MetaShopItem { kind: string; name: string; desc: string; level: number; price: number; }
 
+/** 濒危红边不透明度（R16 纯函数可单测）：血量 ≥35% 无显示，越低越红，空血拉满。 */
+export function dangerOpacity(hpRatio: number): number {
+  if (hpRatio >= 0.35) return 0;
+  return Math.min(1, (0.35 - Math.max(0, hpRatio)) / 0.35);
+}
+
 export class Hud {
   private root: HTMLElement;
   private hpFill!: HTMLElement;
@@ -30,6 +36,11 @@ export class Hud {
     this.root = document.createElement("div");
     this.root.id = "ui-root";
     document.getElementById("app")!.appendChild(this.root);
+    // R16 濒危红边：盖在画布上、UI 之下，不拦截点击（同纸感叠加层级语义）
+    const danger = document.createElement("div");
+    danger.id = "danger-fx";
+    document.getElementById("app")!.appendChild(danger);
+    this.dangerEl = danger;
     this.buildHud();
     this.buildWelcome();
     this.buildVictory();
@@ -70,6 +81,7 @@ export class Hud {
   private victoryDebrief!: HTMLElement;
   private victoryCoins!: HTMLElement;
   private gameoverDebrief!: HTMLElement;
+  private dangerEl!: HTMLElement;
   /** GameOver 面板延迟弹出计时（进 GameOver 起算；让死亡消散先播完）。 */
   private gameOverAt = 0;
 
@@ -269,6 +281,8 @@ export class Hud {
     const s = this.sim;
     const ratio = Math.max(0, s.player.hp / s.player.maxHp);
     this.hpFill.style.width = `${ratio * 100}%`;
+    // R16 濒危红边：血量越低红边越重（只读 sim，不拦截输入）
+    this.dangerEl.style.opacity = String(dangerOpacity(ratio));
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
     // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
     this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶`;
@@ -305,7 +319,7 @@ export class Hud {
     if (wasOver && overReady) {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
-        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins}`;
+        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins} · 死于${s.deathCause ?? "妖潮"}`;
       this.gameoverDebrief.textContent = this.debriefText(s);
       this.refreshMeta();
     }

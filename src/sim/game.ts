@@ -94,6 +94,8 @@ export interface EnemyProjectile {
   life: number;
   /** 毒弹标记（表现层着色）。 */
   psn: boolean;
+  /** 死因来源文案（R16；发射时按妖物/弹种写定）。 */
+  src: string;
 }
 
 export interface Player {
@@ -302,6 +304,8 @@ export class GameSim {
   goblinKills = 0;
   /** 本局分类型击杀（R15 图鉴；类型 id → 本局击杀，结算时并入存档 codex）。 */
   killCounts: Record<number, number> = {};
+  /** 本局死因（R16；致死伤害来源文案，未阵亡为 null）。 */
+  deathCause: string | null = null;
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
   /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
@@ -1097,14 +1101,26 @@ export class GameSim {
     return true;
   }
 
-  /** 对玩家结算一次伤害（完美闪避/无敌帧统一判定）。返回 true = 实际掉血。 */
-  private hurtPlayer(dmg: number): boolean {
+  /** 妖物名（含阶位前缀；R16 死因陈列用）：妖王×王 / 精英前缀 / 普通直称。 */
+  private foeName(e: Enemy): string {
+    const base = ENEMY_NAMES[e.type] ?? "妖物";
+    if (e.boss) return `${base}王`;
+    if (e.elite) return `精英${base}`;
+    return base;
+  }
+
+  /** 对玩家结算一次伤害（完美闪避/无敌帧统一判定）。返回 true = 实际掉血。
+   *  R16：致死时记录死因（结算屏“死于×”）。 */
+  private hurtPlayer(dmg: number, cause = "妖潮"): boolean {
     const p = this.player;
     if (p.dead || this.tryPerfectDodge() || p.invincible > 0) return false;
     p.hp -= dmg;
     p.invincible = CFG.Player.InvincibleDuration;
     for (const cb of this.onPlayerHurt) cb(p.hp);
-    if (p.hp <= 0) this.onPlayerDied();
+    if (p.hp <= 0) {
+      this.deathCause = cause;
+      this.onPlayerDied();
+    }
     return true;
   }
 
@@ -1424,7 +1440,7 @@ export class GameSim {
     if (e.affix === "explosive") {
       const p = this.player;
       if (!p.dead && Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast * 0.8) {
-        this.hurtPlayer(Math.ceil(e.damage * 0.8));
+        this.hurtPlayer(Math.ceil(e.damage * 0.8), `${this.foeName(e)}自爆`);
       }
       this.emit("enemy_explode", { x: e.x, y: e.y });
     }
@@ -1704,7 +1720,7 @@ export class GameSim {
           e.strikeT = 0.16; // 扑击动作（扑空也播——出手必有动作语言）
 
           if (dist <= CFG.Enemy.AttackRange * CFG.Enemy.WindupHitRangeMult) {
-            this.hurtPlayer(e.damage);
+            this.hurtPlayer(e.damage, this.foeName(e));
           }
         }
       } else if (!e.stealth && dist <= CFG.Enemy.AttackRange && e.attackCd <= 0) {
@@ -1718,7 +1734,7 @@ export class GameSim {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     const p = this.player;
     if (!p.dead && Math.hypot(p.x - e.x, p.y - e.y) <= EXPLODER.blast) {
-      this.hurtPlayer(Math.ceil(e.damage * EXPLODER.dmgMult));
+      this.hurtPlayer(Math.ceil(e.damage * EXPLODER.dmgMult), `${this.foeName(e)}自爆`);
     }
     this.emit("enemy_explode", { x: e.x, y: e.y });
   }
@@ -1734,6 +1750,8 @@ export class GameSim {
       const d = Math.hypot(dx, dy) || 1;
       vx = (dx / d) * speed; vy = (dy / d) * speed;
     }
+    // R16 死因来源：毒弹 / 妖王弹幕 / 远程箭矢（发射时按妖物写定）
+    const foe = this.foeName(e);
     this.enemyProjectiles.push({
       id: this.nextId++,
       x: e.x, y: e.y,
@@ -1741,6 +1759,7 @@ export class GameSim {
       dmg: Math.max(1, Math.ceil(e.damage * dmgMult)),
       life: 3,
       psn,
+      src: psn ? `${foe}毒弹` : e.boss ? `${foe}弹幕` : `${foe}箭矢`,
     });
     this.emit("enemy_shot", { x: e.x, y: e.y });
   }
@@ -1756,7 +1775,7 @@ export class GameSim {
       if (pr.x < 0 || pr.x > this.world.w || pr.y < 0 || pr.y > this.world.h) continue;
       if (!p.dead &&
           Math.hypot(pr.x - p.x, pr.y - p.y) <= CFG.Player.CollisionSize / 2 + 6) {
-        this.hurtPlayer(pr.dmg); // 闪避/无敌帧在 hurtPlayer 统一判定
+        this.hurtPlayer(pr.dmg, pr.src); // 闪避/无敌帧在 hurtPlayer 统一判定
         continue;
       }      keep.push(pr);
     }
@@ -1808,7 +1827,7 @@ export class GameSim {
       if (!e.chargeHit && !p.dead &&
           Math.hypot(p.x - e.x, p.y - e.y) <= CFG.Enemy.CollisionSize / 2 + CFG.Player.CollisionSize / 2) {
         e.chargeHit = true;
-        this.hurtPlayer(Math.ceil(e.damage * DRAGON.dmgMult));
+        this.hurtPlayer(Math.ceil(e.damage * DRAGON.dmgMult), `${this.foeName(e)}冲撞`);
       }
       if (e.chargeDash <= 0) e.chargeHit = false;
       return true;
@@ -2190,6 +2209,7 @@ export class GameSim {
       elite_kills: this.eliteKills,
       max_combo: this.maxCombo,
       secs_to_next_tier: Math.ceil(this.secsToNextTier),
+      death_cause: this.deathCause,
       next_event_in: Math.ceil(this.eventTimer),
     };
   }
