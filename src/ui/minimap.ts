@@ -70,8 +70,9 @@ export class MiniMap {
       g.fill();
     }
     for (const e of sim.enemies) {
-      g.fillStyle = e.boss ? "#a8741a" : e.elite ? "#d97b2a" : "#c0392b";
-      const s = e.boss ? 4 : 2.5;
+      // R14 宝妖：亮金大点（妖王古铜/精英橙红/普通血红之外的一眼可辨）
+      g.fillStyle = e.goblin ? "#ffd94d" : e.boss ? "#a8741a" : e.elite ? "#d97b2a" : "#c0392b";
+      const s = e.boss ? 4 : e.goblin ? 3.5 : 2.5;
       g.fillRect(e.x * sx - s / 2, e.y * sy - s / 2, s, s);
     }
     if (!sim.player.dead) {

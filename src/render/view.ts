@@ -146,9 +146,10 @@ export class GameView {
     hpBar.addChild(bg, fill, edge);
     container.addChild(hpBar);
 
-    if (z.elite || z.boss) {
+    if (z.elite || z.boss || z.goblin) {
       const ring = new Sprite(Texture.WHITE);
-      ring.tint = z.boss ? 0xb8860b : 0x9a6a10;
+      // R14 宝妖：亮金环（精英暗金、妖王古铜，三者可辨）
+      ring.tint = z.boss ? 0xb8860b : z.goblin ? 0xffd94d : 0x9a6a10;
       ring.alpha = 0.9;
       ring.width = z.boss ? 60 : 40; ring.height = z.boss ? 6 : 4;
       ring.x = -(z.boss ? 30 : 20); ring.y = -60;
@@ -163,7 +164,7 @@ export class GameView {
       animTimer: Math.random() * 0.1,
       faceCur: z.facing, bobPhase: Math.random() * Math.PI * 2,
       lastX: z.x, lastY: z.y, dustCd: Math.random() * 0.16,
-      hitUx: z.lastHitUx, hitUy: z.lastHitUy, big: z.elite || z.boss,
+      hitUx: z.lastHitUx, hitUy: z.lastHitUy, big: z.elite || z.boss || z.goblin,
     };
   }
 

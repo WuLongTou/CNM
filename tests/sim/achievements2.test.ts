@@ -14,9 +14,9 @@ function offerSim(seed = 111) {
 }
 
 describe("R12 系统成就", () => {
-  it("成就表 17 项，id 唯一", () => {
-    expect(ACHIEVEMENTS.length).toBe(17);
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(17);
+  it("成就表 18 项，id 唯一", () => {
+    expect(ACHIEVEMENTS.length).toBe(18);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(18);
   });
 
   it("变数：重抽一次即达成并广播", () => {

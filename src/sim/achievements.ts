@@ -12,6 +12,8 @@ export interface AchievementState {
   weaponCount: number;
   rerollsUsed: number;
   banishesUsed: number;
+  /** R14：宝妖讨伐数。 */
+  goblinKills: number;
 }
 
 export interface AchievementDef {
@@ -37,6 +39,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "combo_20", name: "连绵不绝", desc: "单局最高连击 20", check: (s) => s.maxCombo >= 20 },
   { id: "combo_50", name: "万军取首", desc: "单局最高连击 50", check: (s) => s.maxCombo >= 50 },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", check: (s) => s.weaponCount >= 6 },
+  { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", check: (s) => s.goblinKills >= 1 },
   // 通关三档由 onVictory 直接 grant（终局后 tick 停摆，走 tick 判定够不着）
   { id: "pacify", name: "妖潮平定", desc: "讨伐终幕妖王通关一次", check: () => false },
   { id: "demon_queller", name: "伏魔真君", desc: "以伏魔难度通关", check: () => false },

@@ -107,7 +107,7 @@ async function boot(): Promise<void> {
     else if (e.event === "threat_tier") { notify.push(`威胁阶 ${d.tier} · 妖潮渐强`); audio.play("charm"); }
     else if (e.event === "map_event") {
       const k = (e.data as { kind?: string }).kind;
-      const label = k === "surge" ? "妖群合围" : k === "hunt" ? "精锐现身" : "宝藏显形";
+      const label = k === "surge" ? "妖群合围" : k === "hunt" ? "精锐现身" : k === "goblin" ? "宝妖游荡" : "宝藏显形";
       notify.banner("妖潮异变", label);
       notify.push(`妖潮异变：${label}`);
       audio.play(k === "cache" ? "charm" : "lightning");
@@ -115,6 +115,8 @@ async function boot(): Promise<void> {
     else if (e.event === "victory") { notify.banner("妖潮平定", "除妖师大胜"); view.shake(12); audio.play("combo_5"); audio.stopBgm(); }
     else if (e.event === "boss_barrage") { audio.play("magic_attack", { pitch: 0.85, vol: 0.8 }); }
     else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }
+    else if (e.event === "goblin_slayed") { view.spawnBurst(Number(d.x), Number(d.y), 0xffd94d); view.shake(6); notify.push("讨伐宝妖，大丰收！"); audio.play("combo_5"); }
+    else if (e.event === "goblin_escape") { notify.push("宝妖带着宝藏逃走了…"); audio.play("charm"); }
     else if (e.event === "enemy_heal") view.spawnBurst(Number(d.x), Number(d.y), 0x6ab04c);
     else if (e.event === "enemy_summon") view.spawnBurst(Number(d.x), Number(d.y), 0x8e44ad);
     else if (e.event === "enemy_block") view.spawnBurst(Number(d.x), Number(d.y), 0x8ab8d8);

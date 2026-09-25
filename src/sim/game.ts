@@ -79,6 +79,10 @@ export interface Enemy {
   staggerT: number;
   /** 最近一次被击方向（死亡碎片沿此方向飞溅）。 */
   lastHitUx: number; lastHitUy: number;
+  /** 宝妖（R14 Diablo 式 loot goblin）：只逃不打，倒计时结束带宝消失。 */
+  goblin: boolean;
+  /** 宝妖逃逸倒计时秒。 */
+  goblinT: number;
 }
 
 /** 敌方弹道（瘴妖毒弹 / 弩妖箭矢）：直线飞行，命中玩家造成伤害。 */
@@ -251,6 +255,8 @@ const MECH_ARMOR = 0.75;
 const KNIGHT = { blockSec: 1.2, cd: 5 };
 /** 蛟冲撞：冷却 / 蓄力 / 冲刺时长 / 冲刺速度倍数 / 接触伤害倍数。 */
 const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
+/** 宝妖（R14）：血量 / 逃逸速度 / 逃逸时限秒 / 击杀符箓数。速度超玩家基础移速（追得上要切角+冲刺）。 */
+const GOBLIN = { hp: 30, fleeSpeed: 250, escapeSec: 15, pickupCount: 2 };
 /** 妖王环形弹幕：周期向四周放径向弹，阶段越高弹越密（M15）。 */
 export const BOSS_BARRAGE = { cd: 4.5, first: 3, dmgMult: 0.7, speed: 280, count: [9, 11, 13] };
 /** 妖王种族轮换（M19）：按出场次序循环，各带原生机制与外观——
@@ -286,6 +292,8 @@ export class GameSim {
   weather: WeatherSystem;
   achievements: AchievementSystem;
   bossKills = 0;
+  /** 本局宝妖讨伐数（R14；成就口径）。 */
+  goblinKills = 0;
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
   /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
@@ -332,7 +340,7 @@ export class GameSim {
   private spawnCd = 0;
   roundTimer = 0;
   /** 下次妖潮异变倒计时（R13；FirstAt 起步，触发后按 Interval 续杯）。 */
-  eventTimer = CFG.Events.FirstAt;
+  eventTimer: number = CFG.Events.FirstAt;
   /** 已触发异变次数（轮转序号）。 */
   eventCount = 0;
   private bossSpawnedForRound = 0;
@@ -810,6 +818,7 @@ export class GameSim {
       weaponCount: this.player.weapons.length,
       rerollsUsed: CFG.Upgrade.RerollsPerRun - this.rerollsLeft,
       banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
+      goblinKills: this.goblinKills,
     });
   }
 
@@ -902,17 +911,35 @@ export class GameSim {
     return { bought: true, kind, level: level + 1, coins: next.coins, price: metaPrice(level + 1) };
   }
 
-  /** 妖潮异变调度（R13）：Combat 计时轮转三事件（围猎/精锐/宝藏），紧张与释放交替。 */
+  /** 妖潮异变调度（R13 三事件；R14 起四事件轮转：围猎/精锐/宝藏/宝妖），紧张与释放交替。 */
   private updateEvents(dt: number): void {
     this.eventTimer -= dt;
     if (this.eventTimer > 0) return;
     this.eventTimer += CFG.Events.Interval;
-    const kinds = ["surge", "hunt", "cache"] as const;
+    const kinds = ["surge", "hunt", "cache", "goblin"] as const;
     const kind = kinds[this.eventCount % kinds.length];
     this.eventCount++;
     if (kind === "surge") this.eventSurge();
     else if (kind === "hunt") this.eventHunt();
-    else this.eventCache();
+    else if (kind === "cache") this.eventCache();
+    else this.eventGoblin();
+  }
+
+  /** 宝妖游荡（R14 Diablo 式 loot goblin）：复用魅影外形，只逃不打；
+   *  讨伐爆精英箱 + 符箓，15 秒后带宝消失。直调 createEnemy 突破幕上限。 */
+  private eventGoblin(): void {
+    const p = this.player;
+    const ang = this.rng.range(0, Math.PI * 2);
+    const x = Math.min(this.world.w - 22, Math.max(22, p.x + Math.cos(ang) * 380));
+    const y = Math.min(this.world.h - 22, Math.max(22, p.y + Math.sin(ang) * 380));
+    const g = this.createEnemy(EnemyType.Fast, x, y, {});
+    g.goblin = true;
+    g.goblinT = GOBLIN.escapeSec;
+    g.hp = g.maxHp = GOBLIN.hp;
+    g.speed = GOBLIN.fleeSpeed;
+    g.damage = 0;
+    g.affix = "none";
+    this.emit("map_event", { kind: "goblin", count: 1 });
   }
 
   /** 围猎：玩家为圆心环形刷快攻群（数量随幕数爬升的压迫感）。
@@ -1398,6 +1425,19 @@ export class GameSim {
     this.score += pts;
     // R8 精英掉宝：非妖王精英必掉精英宝箱（高价值目标时刻；妖王保持符箓×3）
     if (e.elite && !e.boss) this.dropChest(e.x, e.y, true);
+    // R14 宝妖讨伐：必爆精英箱 + 符箓（追杀的 jackpot）
+    if (e.goblin) {
+      this.goblinKills++;
+      this.dropChest(e.x, e.y, true);
+      for (let i = 0; i < GOBLIN.pickupCount; i++) {
+        this.pickups.push({
+          id: this.nextId++,
+          x: e.x + this.rng.range(-30, 30),
+          y: e.y + this.rng.range(-30, 30),
+        });
+      }
+      this.emit("goblin_slayed", { x: e.x, y: e.y });
+    }
     // 升级符箓掉落：普通低概率 / 精英高概率 / 妖王必掉 3 枚
     const rate = e.boss ? UPGRADE_DROP.boss : e.elite ? UPGRADE_DROP.elite : UPGRADE_DROP.normal;
     if (this.rng.chance(rate)) {
@@ -1567,6 +1607,38 @@ export class GameSim {
 
       // 甲妖：周期举盾（免伤状态机，不阻断移动）
       if (e.type === EnemyType.Knight) this.updateKnightBlock(e, dt);
+
+      // 宝妖（R14）：只逃不打；倒计时结束带宝消失（击退/硬直照常生效，打中能减速）
+      if (e.goblin) {
+        e.goblinT -= dt;
+        if (e.goblinT <= 0) {
+          this.enemies = this.enemies.filter((o) => o.id !== e.id);
+          this.emit("goblin_escape", { x: e.x, y: e.y });
+          continue;
+        }
+        const flee = GOBLIN.fleeSpeed * speedMult;
+        e.floatPhase += dt * 3;
+        const sw = Math.sin(e.floatPhase) * 40;
+        let gx = (-dx / dist) * flee + (-dy / dist) * sw;
+        let gy = (-dy / dist) * flee + (dx / dist) * sw;
+        for (const o of this.enemies) {
+          if (o.id === e.id) continue;
+          const ox = e.x - o.x, oy = e.y - o.y;
+          const od = Math.hypot(ox, oy);
+          if (od > 0.01 && od < CFG.Enemy.SeparationRange) {
+            gx += (ox / od) * CFG.Enemy.SeparationForce;
+            gy += (oy / od) * CFG.Enemy.SeparationForce;
+          }
+        }
+        e.x += gx * dt;
+        e.y += gy * dt;
+        e.x = Math.min(this.world.w - 22, Math.max(22, e.x));
+        e.y = Math.min(this.world.h - 22, Math.max(22, e.y));
+        const sep = this.terrain.separate(e.x, e.y, CFG.Enemy.CollisionSize / 2);
+        e.x = sep.x; e.y = sep.y;
+        e.facing = dx >= 0 ? -1 : 1; // 脸朝逃跑方向
+        continue;
+      }
 
       // 远程妖物（瘴妖/弩妖）：射程内站桩射击，超出射程继续追击
       const ranged = ENEMY_RANGED[e.type];
@@ -1905,6 +1977,7 @@ export class GameSim {
       vx: 0, vy: 0,
       staggerT: 0,
       lastHitUx: 1, lastHitUy: 0,
+      goblin: false, goblinT: 0,
     };
     if (e.affix === "swift") e.speed = speed * 1.5; // EliteSwiftMult
     if (e.affix === "shield") e.shieldHp = 25;
@@ -2129,7 +2202,7 @@ export class GameSim {
           id: e.id, type: ENEMY_NAMES[e.type] ?? String(e.type), type_id: e.type,
           hp: Math.ceil(e.hp), max_hp: e.maxHp,
           pos: { x: e.x, y: e.y },
-          elite: e.elite, boss: e.boss,
+          elite: e.elite, boss: e.boss, goblin: e.goblin,
         })),
       },
       chests: this.chests.filter((c) => !c.opened).map((c) => ({ x: c.x, y: c.y, elite: c.elite })),
