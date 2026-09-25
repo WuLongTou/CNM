@@ -174,6 +174,12 @@ export interface UpgradePickup {
   x: number; y: number;
 }
 
+/** 回春丹拾取物（R20 Diablo 血球 / VS 炸鸡位）：击杀掉落，走近即时回复生命。 */
+export interface HealOrb {
+  id: number;
+  x: number; y: number;
+}
+
 /** 升级三选一报价项（对 WeaponInstance 应用一次升级）。 */
 export interface UpgradeOffer {
   weaponIdx: number;
@@ -216,6 +222,9 @@ function angDiff(a: number, b: number): number {
 }
 /** 升级符箓掉落概率（普通/精英/妖王；妖王固定掉 3 枚）。 */
 const UPGRADE_DROP = { normal: 0.035, elite: 0.3, boss: 1 } as const;
+/** 回春丹掉落（R20）：普通 2% / 精英 10% / 妖王必掉 1 枚；每枚回复量不超上限。 */
+const HEAL_DROP = { normal: 0.02, elite: 0.1 } as const;
+const HEAL_AMOUNT = 12;
 /** 图鉴合并（R15）：跨局累计 + 本局分类型；老存档缺 codex 按空处理。 */
 export function mergeCodex(prev: Record<number, number> | undefined, run: Record<number, number>): Record<number, number> {
   const next: Record<number, number> = { ...(prev ?? {}) };
@@ -318,6 +327,8 @@ export class GameSim {
   fusionOffer: { a: string; b: string; resultName: string; resultId: string } | null = null;
   /** 场上升级符箓拾取物（走近拾取）。 */
   pickups: UpgradePickup[] = [];
+  /** 场上回春丹拾取物（R20；走近即时回复，不开模态）。 */
+  healOrbs: HealOrb[] = [];
   /** 升级三选一报价（打开时模态暂停，choose/resolveUpgrade 应答）。 */
   upgradeOffers: UpgradeOffer[] | null = null;
   /** 本局剩余重抽次数（R4；RerollsPerRun 起步，重抽一次消耗一次）。 */
@@ -622,20 +633,41 @@ export class GameSim {
 
   // ── 升级符箓（击杀掉落 → 走近拾取 → 三选一） ─────────────
 
+  /** 拾取半径（R20 抽取复用：符箓与回春丹同口径，吃职业/聚灵加成）。 */
+  private pickRadius(): number {
+    // R5 聚灵：拾取半径随永久等级放大
+    return PICKUP_RANGE * this.role.pickMult * (1 + this.metaMag * META_SHOP.mag.step);
+  }
+
   private updatePickups(): void {
     // 报价/融合模态期间不拾取，站在符箓上等待自然排队；
     // 徒手时不拾取（无武器可升级，符箓留在地上不浪费）
     if (this.upgradeOffers || this.fusionOffer || this.player.weapons.length === 0) return;
     const p = this.player;
     if (p.dead) return;
-    // R5 聚灵：拾取半径随永久等级放大
-    const pickR = PICKUP_RANGE * this.role.pickMult * (1 + this.metaMag * META_SHOP.mag.step);
+    const pickR = this.pickRadius();
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const u = this.pickups[i];
       if ((u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= pickR * pickR) {
         this.pickups.splice(i, 1);
         this.openUpgradeOffers();
         return;
+      }
+    }
+  }
+
+  /** 回春丹拾取（R20）：走近即时回复，不开模态（模态中也能吃，无冲突）。 */
+  private updateHealOrbs(): void {
+    const p = this.player;
+    if (p.dead || p.hp >= p.maxHp) return;
+    const pickR = this.pickRadius();
+    for (let i = this.healOrbs.length - 1; i >= 0; i--) {
+      const o = this.healOrbs[i];
+      if ((o.x - p.x) ** 2 + (o.y - p.y) ** 2 <= pickR * pickR) {
+        this.healOrbs.splice(i, 1);
+        const healed = Math.min(HEAL_AMOUNT, p.maxHp - p.hp);
+        p.hp += healed;
+        this.emit("heal_picked", { heal: healed, hp: p.hp });
       }
     }
   }
@@ -817,6 +849,7 @@ export class GameSim {
     this.updateMines(dt);
     this.updateChests();
     this.updatePickups();
+    this.updateHealOrbs();
     this.updateAltars();
     this.maintainEnemies(dt);
     this.updateEvents(dt);
@@ -1484,6 +1517,14 @@ export class GameSim {
           y: e.y + this.rng.range(-30, 30),
         });
       }
+    }
+    // R20 回春丹掉落：妖王必掉 1 枚，精英/普通按概率（局内即时续航，不开模态）
+    if (e.boss || this.rng.chance(e.elite ? HEAL_DROP.elite : HEAL_DROP.normal)) {
+      this.healOrbs.push({
+        id: this.nextId++,
+        x: e.x + this.rng.range(-30, 30),
+        y: e.y + this.rng.range(-30, 30),
+      });
     }
     // 终幕妖王陨落 → 通关结算（R2 胜利条件）
     if (e.final) this.onVictory();

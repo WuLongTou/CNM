@@ -85,6 +85,7 @@ async function boot(): Promise<void> {
     else if (e.event === "weapon_ascended") { notify.push(`武器进阶：${d.name}`); audio.play("upgrade"); }
     else if (e.event === "weapon_ultimate") { notify.push(`武器终极：${d.name}`); audio.play("combo_5"); }
     else if (e.event === "crafted") { notify.push(`合成：${d.name}`); audio.play("upgrade"); }
+    else if (e.event === "heal_picked") { audio.play("charm", { vol: 0.4 }); }
     else if (e.event === "difficulty_unlocked") { notify.push(`新难度解锁：${d.name}（下局可选）`); notify.banner("新难度解锁", d.name); audio.play("combo_5"); }
     else if (e.event === "upgrade_offer") {
       upgrade.show();

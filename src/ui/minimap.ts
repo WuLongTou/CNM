@@ -63,6 +63,11 @@ export class MiniMap {
         g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
       }
     }
+    // R20 回春丹：绿十字点（与符箓/宝箱三者可辨）
+    g.fillStyle = "#6ab04c";
+    for (const o of sim.healOrbs) {
+      g.fillRect(o.x * sx - 1.5, o.y * sy - 1.5, 3, 3);
+    }
     // 升级符箓：血红菱形（纸底上醒目，区别于宝箱金方块），屏幕外掉落也可寻
     g.fillStyle = "#c0392b";
     for (const u of sim.pickups) {

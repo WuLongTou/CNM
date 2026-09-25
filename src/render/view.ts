@@ -405,6 +405,7 @@ export class GameView {
     this.renderEnemyStates(sim);
     this.renderMines(sim);
     this.renderPickups(sim);
+    this.renderHealOrbs(sim);
     this.renderChests(sim);
     this.renderTerrain(sim);
     this.renderWeather(sim);
@@ -813,6 +814,23 @@ export class GameView {
       else g.lineTo(px, py);
     }
     g.stroke({ width: o.width, color: o.color, alpha: o.alpha });
+  }
+
+  /** 回春丹（R20）：绿十字药丸 + 淡圈，整体轻微上下浮动（与符箓同相位节奏）。 */
+  private healGfx = new Graphics();
+  private renderHealOrbs(sim: GameSim): void {
+    const g = this.healGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    const bob = Math.sin(performance.now() / 220) * 3;
+    for (const o of sim.healOrbs) {
+      g.circle(o.x, o.y + 4, 12).stroke({ width: 1.5, color: INK, alpha: 0.3 });
+      g.circle(o.x, o.y + bob, 7)
+        .fill({ color: 0xfbf6ea, alpha: 0.95 })
+        .stroke({ width: 1.8, color: 0x6ab04c });
+      g.rect(o.x - 1.8, o.y - 5 + bob, 3.6, 10).fill(0x6ab04c);
+      g.rect(o.x - 5, o.y - 1.8 + bob, 10, 3.6).fill(0x6ab04c);
+    }
   }
 
   /** 宝箱：简笔木箱——炭描边方框 + 箱盖线 + 血红锁扣点。 */
