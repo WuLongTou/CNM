@@ -211,6 +211,24 @@ export const UPGRADE_STAT_NAMES: Record<UpgradeStat, string> = {
   multi: "多重", chain: "连锁", pierce: "穿透",
   psn: "淬毒", freeze: "冰缓", crit: "会心", splash: "溅射",
 };
+/** 永久升级商店（R5，6 维；对标 Vampire Survivors 跨局成长面板）。
+ *  step = 每级增量（hp 为固定生命值，其余为比例/速率）；价格统一 PRICE_BASE×(lv+1)。 */
+export type MetaKind = "hp" | "dmg" | "spd" | "mag" | "greed" | "regen";
+export type MetaField = "metaHp" | "metaDmg" | "metaSpd" | "metaMag" | "metaGreed" | "metaRegen";
+export interface MetaDef { field: MetaField; name: string; desc: string; step: number; }
+export const META_SHOP: Record<MetaKind, MetaDef> = {
+  hp: { field: "metaHp", name: "体魄", desc: "生命 +20", step: 20 },
+  dmg: { field: "metaDmg", name: "杀伐", desc: "伤害 +10%", step: 0.1 },
+  spd: { field: "metaSpd", name: "疾风", desc: "移速 +4%", step: 0.04 },
+  mag: { field: "metaMag", name: "聚灵", desc: "拾取 +12%", step: 0.12 },
+  greed: { field: "metaGreed", name: "点金", desc: "金币 +10%", step: 0.1 },
+  regen: { field: "metaRegen", name: "回春", desc: "回复 +0.4/秒", step: 0.4 },
+};
+export const META_PRICE_BASE = 50;
+/** 永久升级价格：50 金币 ×（现等级+1）。 */
+export function metaPrice(level: number): number {
+  return META_PRICE_BASE * (level + 1);
+}
 /** 远程妖物（射程内站桩射击，超出继续追击）。 */
 const ENEMY_RANGED: Partial<Record<EnemyType, { range: number; cd: number; dmgMult: number; psn?: boolean }>> = {
   [EnemyType.Spitter]: { range: 300, cd: 2.2, dmgMult: 0.8, psn: true },
@@ -311,6 +329,9 @@ export class GameSim {
   private listeners: Array<(e: SimEvent) => void> = [];
   /** 存档中的跨局累计击杀基线（本局 kills 之外的存量）。 */
   private baseTotalKills = 0;
+  /** R5 永久升级快照（构造期自存档读取；拾取/回复挂点用；点金结算时直读存档）。 */
+  private metaMag = 0;
+  private metaRegen = 0;
   /** 当前职业（R3 开局职业；欢迎页可换，start 后锁定）。 */
   role: RoleDef;
 
@@ -325,15 +346,19 @@ export class GameSim {
     this.role = getRole(roleId);
     const c = CFG.Player;
     const prev = save.load();
-    // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）
+    // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）；
+    // R5：移速 +4%/级、拾取 +12%/级、金币 +10%/级、回复 +0.4/s/级
     const maxHp = c.MaxHealth + (prev?.metaHp ?? 0) * 20;
     const baseDamage = c.BaseDamage * (1 + (prev?.metaDmg ?? 0) * 0.1);
+    const speed = c.BaseSpeed * (1 + (prev?.metaSpd ?? 0) * META_SHOP.spd.step);
+    this.metaMag = prev?.metaMag ?? 0;
+    this.metaRegen = prev?.metaRegen ?? 0;
     // 跨局累计击杀基线（成就「累计击杀」用；死亡结算时存档累加）
     this.baseTotalKills = prev?.totalKills ?? 0;
     this.player = {
       x: this.world.w / 2, y: this.world.h / 2,
       hp: maxHp, maxHp,
-      speed: c.BaseSpeed, baseDamage,
+      speed, baseDamage,
       attackCd: 0, dashTimer: 0, dashCd: 0, invincible: 0,
       combo: 0, comboTimer: 0, facing: 1, moving: false, dead: false,
       aimAng: 0, lungeT: 0, lungeVx: 0, lungeVy: 0,
@@ -495,7 +520,8 @@ export class GameSim {
     if (this.upgradeOffers || this.fusionOffer || this.player.weapons.length === 0) return;
     const p = this.player;
     if (p.dead) return;
-    const pickR = PICKUP_RANGE * this.role.pickMult;
+    // R5 聚灵：拾取半径随永久等级放大
+    const pickR = PICKUP_RANGE * this.role.pickMult * (1 + this.metaMag * META_SHOP.mag.step);
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const u = this.pickups[i];
       if ((u.x - p.x) ** 2 + (u.y - p.y) ** 2 <= pickR * pickR) {
@@ -718,20 +744,17 @@ export class GameSim {
     return { crafted: true, name: r.name };
   }
 
-  /** 购买永久升级（GameOver 结算界面）：血/伤各一级，价格 50 金币 × 现等级。 */
-  buyMeta(kind: "hp" | "dmg"): Record<string, unknown> {
+  /** 购买永久升级（GameOver 结算界面，R5 起 6 维）：价格 50 金币 ×（现等级+1）。 */
+  buyMeta(kind: MetaKind): Record<string, unknown> {
+    const def = META_SHOP[kind] ?? META_SHOP.hp;
     const prev = this.save.load() ?? defaultSave();
-    const level = kind === "hp" ? prev.metaHp : prev.metaDmg;
-    const price = 50 * (level + 1);
-    if (prev.coins < price) return { bought: false, reason: "金币不足" };
-    const next: SaveData = {
-      ...prev,
-      coins: prev.coins - price,
-      metaHp: prev.metaHp + (kind === "hp" ? 1 : 0),
-      metaDmg: prev.metaDmg + (kind === "dmg" ? 1 : 0),
-    };
+    const level = prev[def.field] ?? 0;
+    const price = metaPrice(level);
+    if (prev.coins < price) return { bought: false, reason: "金币不足", kind, level, price };
+    const next: SaveData = { ...prev, coins: prev.coins - price };
+    next[def.field] = level + 1;
     this.save.save(next);
-    return { bought: true, kind, level: level + 1, coins: next.coins };
+    return { bought: true, kind, level: level + 1, coins: next.coins, price: metaPrice(level + 1) };
   }
 
   private advanceRound(): void {
@@ -780,6 +803,10 @@ export class GameSim {
     const p = this.player;
     const c = CFG.Player;
     if (p.dead) return;
+    // R5 回春：永久回复按秒累加（不超上限；暂停/非战斗态 tick 不驱动，天然门控）
+    if (this.metaRegen > 0 && p.hp < p.maxHp) {
+      p.hp = Math.min(p.maxHp, p.hp + this.metaRegen * META_SHOP.regen.step * dt);
+    }
 
     if (this.input.dash && p.dashCd <= 0) {
       p.dashTimer = c.DashDuration;
@@ -1197,10 +1224,11 @@ export class GameSim {
     return coins;
   }
 
-  /** 局末结算存档（死亡/通关共用）：高分/累计击杀/局数/金币/成就。 */
+  /** 局末结算存档（死亡/通关共用）：高分/累计击杀/局数/金币/成就；R5 点金放大金币。 */
   private finalizeRun(coinsMult: number): number {
     const prev = this.save.load() ?? defaultSave();
-    const coins = Math.floor((this.score / 50 + this.kills) * coinsMult);
+    const greed = 1 + (prev.metaGreed ?? 0) * META_SHOP.greed.step;
+    const coins = Math.floor((this.score / 50 + this.kills) * coinsMult * greed);
     this.save.save({
       highScore: Math.max(prev.highScore, this.score),
       totalKills: prev.totalKills + this.kills,
@@ -1208,6 +1236,10 @@ export class GameSim {
       coins: prev.coins + coins,
       metaHp: prev.metaHp,
       metaDmg: prev.metaDmg,
+      metaSpd: prev.metaSpd ?? 0,
+      metaMag: prev.metaMag ?? 0,
+      metaGreed: prev.metaGreed ?? 0,
+      metaRegen: prev.metaRegen ?? 0,
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -1736,12 +1768,24 @@ export class GameSim {
         this.emit("fusion_offer", offer);
         return { offered: true, ...offer };
       }
-      case "buy_meta": return this.buyMeta(args.kind === "dmg" ? "dmg" : "hp");
+      case "buy_meta": {
+        // 未知 kind 回退 hp（保持旧调用兼容）
+        const k = typeof args.kind === "string" && args.kind in META_SHOP
+          ? (args.kind as MetaKind) : "hp";
+        return this.buyMeta(k);
+      }
       case "meta": {
         const d = this.save.load() ?? defaultSave();
+        const kinds = Object.keys(META_SHOP) as MetaKind[];
         return {
           coins: d.coins, metaHp: d.metaHp, metaDmg: d.metaDmg,
           highScore: d.highScore, totalKills: d.totalKills, games: d.games,
+          // R5 商店列表（UI 按钮与自动化测试共用；顶层旧字段保留兼容）
+          shop: kinds.map((k) => {
+            const def = META_SHOP[k];
+            const level = d[def.field] ?? 0;
+            return { kind: k, name: def.name, desc: def.desc, level, price: metaPrice(level) };
+          }),
         };
       }
       case "inventory": return { counts: { ...this.inventory.counts } };

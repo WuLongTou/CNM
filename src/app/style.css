@@ -90,7 +90,7 @@ canvas { position: absolute; z-index: 0; }
 .fusion-btns { display: flex; gap: 12px; justify-content: center; }
 .fusion-btns button { font-size: 15px; padding: 8px 24px; }
 #btn-reject { background: #8a8175; }
-.meta-row { display: flex; gap: 10px; justify-content: center; margin-bottom: 10px; }
+.meta-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 520px; margin: 0 auto 10px; }
 .meta-row button { font-size: 13px; padding: 6px 14px; background: #a8741a; }
 
 /* ── 升级三选一：符纸卡 ── */

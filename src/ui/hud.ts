@@ -6,6 +6,9 @@ import type { GameSim } from "../sim/game";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 
+/** 永久升级商店条目（meta 协议 shop 列表项）。 */
+interface MetaShopItem { kind: string; name: string; desc: string; level: number; price: number; }
+
 export class Hud {
   private root: HTMLElement;
   private hpFill!: HTMLElement;
@@ -158,30 +161,43 @@ export class Hud {
       <div class="panel">
         <h1>除妖师陨落</h1>
         <p id="gameover-stats" class="sub"></p>
-        <div class="meta-row">
-          <button id="btn-meta-hp" type="button"></button>
-          <button id="btn-meta-dmg" type="button"></button>
-        </div>
+        <div class="meta-row" id="meta-row"></div>
         <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
       </div>`;
     this.root.appendChild(this.gameover);
     this.gameoverStats = this.gameover.querySelector("#gameover-stats")!;
     this.gameover.querySelector("#btn-restart")!.addEventListener("click", () => this.onRestart());
-    const buy = (kind: "hp" | "dmg") => {
-      this.sim.exec({ action: "buy_meta", args: { kind } });
-      this.refreshMeta();
-    };
-    this.gameover.querySelector("#btn-meta-hp")!.addEventListener("click", () => buy("hp"));
-    this.gameover.querySelector("#btn-meta-dmg")!.addEventListener("click", () => buy("dmg"));
   }
 
+  private fetchMeta(): { coins: number; shop: MetaShopItem[] } {
+    return this.sim.exec({ action: "meta" }).data as { coins: number; shop: MetaShopItem[] };
+  }
+
+  private metaLabel(item: MetaShopItem): string {
+    return `${item.name} ${item.desc}（Lv.${item.level} · ${item.price}金）`;
+  }
+
+  /** 永久升级商店（R5，6 维）：面板弹出时建按钮；购买只原位更新文案不换节点
+   *  （重建会摘除点击中的按钮并丢焦点）。纯鼠标交互。 */
   private refreshMeta(): void {
-    const m = this.sim.exec({ action: "meta" }).data as { coins: number; metaHp: number; metaDmg: number };
-    (this.gameover.querySelector("#btn-meta-hp") as HTMLElement).textContent =
-      `生命 +20（Lv.${m.metaHp}）`;
-    (this.gameover.querySelector("#btn-meta-dmg") as HTMLElement).textContent =
-      `伤害 +10%（Lv.${m.metaDmg}）`;
+    const m = this.fetchMeta();
+    const row = this.gameover.querySelector<HTMLElement>("#meta-row")!;
+    row.innerHTML = "";
+    for (const item of m.shop) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.kind = item.kind;
+      b.textContent = this.metaLabel(item);
+      b.addEventListener("click", () => {
+        this.sim.exec({ action: "buy_meta", args: { kind: item.kind } });
+        const m2 = this.fetchMeta();
+        const updated = m2.shop.find((s) => s.kind === item.kind);
+        if (updated) b.textContent = this.metaLabel(updated);
+        (this.gameover.querySelector("#meta-coins") as HTMLElement).textContent = `金币 ${m2.coins}`;
+      });
+      row.appendChild(b);
+    }
     (this.gameover.querySelector("#meta-coins") as HTMLElement).textContent = `金币 ${m.coins}`;
   }
 
@@ -232,7 +248,9 @@ export class Hud {
     const overReady = s.state === "GameOver" && performance.now() - this.gameOverAt > 700;
     const wasOver = this.gameover.classList.contains("hidden");
     this.gameover.classList.toggle("hidden", !overReady);
-    if (!wasOver && overReady) {
+    // R5 修正：只在 hidden→visible 的过渡帧触发一次（旧条件 !wasOver 在面板
+    // 显示后每帧为真，导致 refreshMeta 每帧重建按钮、点击永远落空）
+    if (wasOver && overReady) {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
         `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · 金币 +${coins}`;
