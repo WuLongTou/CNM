@@ -149,6 +149,8 @@ async function boot(): Promise<void> {
   const uiActions = {
     toggleHelp(): void {
       if (sim.state === "GameOver") return;
+      // 已开则只关（旧流程 closeAllModals 后又 toggle 翻回去，H 永远关不上）
+      if (help.visible) { closeAllModals(); return; }
       closeAllModals();
       help.toggle();
     },
