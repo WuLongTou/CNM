@@ -84,11 +84,12 @@ export const CFG = {
     SpawnScaleFactor: 1.2,     // 刷怪数值缩放用的 factor（对齐 C# _GetRoundMult(1.2f)）
   },
 
-  // R4 升级 agency：三选一的重抽与跳过（对标 Vampire Survivors 的 Reroll/Skip）；
-  // 跳过带治疗补偿——残血时「贪升级还是保命」构成真实决策
+  // R4/R7 升级 agency：三选一的重抽/跳过/放逐（对标 Vampire Survivors 的
+  // Reroll/Skip/Banish）；跳过带治疗补偿——残血时「贪升级还是保命」构成真实决策
   Upgrade: {
-    RerollsPerRun: 2, // 每局重抽次数
-    SkipHeal: 15,     // 跳过即时回复生命（不超上限）
+    RerollsPerRun: 2,  // 每局重抽次数
+    SkipHeal: 15,      // 跳过即时回复生命（不超上限）
+    BanishesPerRun: 1, // 每局放逐次数（R7：移除一对“武器×词条”组合，本局不再出现）
   },
 } as const;
 

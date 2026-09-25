@@ -291,6 +291,10 @@ export class GameSim {
   upgradeOffers: UpgradeOffer[] | null = null;
   /** 本局剩余重抽次数（R4；RerollsPerRun 起步，重抽一次消耗一次）。 */
   rerollsLeft = CFG.Upgrade.RerollsPerRun;
+  /** 本局剩余放逐次数（R7；BanishesPerRun 起步）。 */
+  banishesLeft = CFG.Upgrade.BanishesPerRun;
+  /** 本局已放逐组合（R7；键为“武器定义 id:词条”，换武器/位置不影响）。 */
+  bannedCombos = new Set<string>();
   /** 上一次天气类型（切换检测，初始 Clear 与 WeatherSystem 一致）。 */
   private lastWeatherType: WeatherType = "Clear";
   /** 命中停顿（打击感）。 */
@@ -560,8 +564,25 @@ export class GameSim {
     }
   }
 
+  /** 单抽一张报价（R7 抽取：跳过本次报价内已出组合与本局已放逐组合）。 */
+  private drawOffer(exclude: Set<string>): UpgradeOffer | null {
+    const ws = this.player.weapons;
+    if (ws.length === 0) return null;
+    for (let t = 0; t < 30; t++) {
+      const weaponIdx = this.rng.int(0, ws.length - 1);
+      const w = ws[weaponIdx];
+      const stats = validStats(w.type);
+      const stat = stats[this.rng.int(0, stats.length - 1)];
+      const key = `${weaponIdx}:${stat}`;
+      if (exclude.has(key)) continue;
+      if (this.bannedCombos.has(`${w.defId}:${stat}`)) continue;
+      return { weaponIdx, weaponName: w.name, stat, statName: UPGRADE_STAT_NAMES[stat] };
+    }
+    return null;
+  }
+
   /** 生成三选一报价组合（武器×有效词条去重；行为词条可改变攻击方式——R2 质变成长）。
-   *  返回 null 表示无有效组合（武器池空）。 */
+   *  返回 null 表示无有效组合（武器池空或全被放逐）。 */
   private makeUpgradeOffers(): UpgradeOffer[] | null {
     const ws = this.player.weapons;
     if (ws.length === 0) return null;
@@ -570,14 +591,10 @@ export class GameSim {
     let guard = 0;
     const totalCombos = ws.reduce((n, w) => n + validStats(w.type).length, 0);
     while (pool.length < Math.min(3, totalCombos) && guard++ < 60) {
-      const weaponIdx = this.rng.int(0, ws.length - 1);
-      const w = ws[weaponIdx];
-      const stats = validStats(w.type);
-      const stat = stats[this.rng.int(0, stats.length - 1)];
-      const key = `${weaponIdx}:${stat}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      pool.push({ weaponIdx, weaponName: w.name, stat, statName: UPGRADE_STAT_NAMES[stat] });
+      const o = this.drawOffer(seen);
+      if (!o) break;
+      seen.add(`${o.weaponIdx}:${o.stat}`);
+      pool.push(o);
     }
     return pool.length === 0 ? null : pool;
   }
@@ -616,6 +633,35 @@ export class GameSim {
     this.upgradeOffers = pool;
     this.emit("upgrade_offer", { offers: pool, rerolled: true });
     return { handled: true, rerollsLeft: this.rerollsLeft, offers: pool };
+  }
+
+  /** 放逐三选一中的一张（R7）：该“武器×词条”组合本局不再出现，并重补一张报价；
+   *  池空无可补时槽位消失（报价空则直接关闭）。每局限放逐 BanishesPerRun 次。 */
+  banishUpgrade(index: number): Record<string, unknown> {
+    if (!this.upgradeOffers) return { handled: false, note: "无进行中的报价" };
+    if (this.banishesLeft <= 0) return { handled: false, note: "放逐已用完", banishesLeft: 0 };
+    const offer = this.upgradeOffers[index];
+    if (!offer) return { handled: false, note: "无效选项", offers: this.upgradeOffers };
+    const w = this.player.weapons[offer.weaponIdx];
+    if (!w) return { handled: false, note: "武器已不在栏中" };
+    this.banishesLeft--;
+    const bannedKey = `${w.defId}:${offer.stat}`;
+    this.bannedCombos.add(bannedKey);
+    const exclude = new Set(this.upgradeOffers.map((o) => `${o.weaponIdx}:${o.stat}`));
+    const rep = this.drawOffer(exclude);
+    if (rep) this.upgradeOffers[index] = rep;
+    else this.upgradeOffers.splice(index, 1);
+    if (this.upgradeOffers.length === 0) {
+      // 防御性关闭（理论仅池空时可达）：等价于无可选升级
+      this.upgradeOffers = null;
+      this.paused = false;
+    } else {
+      this.emit("upgrade_offer", {
+        offers: this.upgradeOffers, banished: true,
+        name: offer.weaponName, stat: offer.stat, statName: offer.statName,
+      });
+    }
+    return { handled: true, banishesLeft: this.banishesLeft, banned: bannedKey, offers: this.upgradeOffers };
   }
 
   /** 跳过三选一（R4）：放弃本次升级，立即回复 SkipHeal 生命（不超上限）——残血时的真实取舍。 */
@@ -1754,10 +1800,12 @@ export class GameSim {
           return this.resolveFusion(args.choice === "accept");
         }
         // target:"upgrade"：index=三选一序号（对齐 UpgradePanel 1/2/3 快捷键）；
-        // reroll=true 重抽一次（R4）；skip=true 跳过并回复生命（R4，对齐 R/X 快捷键）
+        // reroll=true 重抽一次（R4）；skip=true 跳过并回复生命（R4，对齐 R/X 快捷键）；
+        // banish=序号则放逐该卡（R7，对齐 4/5/6 快捷键）
         if (args.target === "upgrade") {
           if (args.reroll === true) return this.rerollUpgrade();
           if (args.skip === true) return this.skipUpgrade();
+          if (typeof args.banish === "number") return this.banishUpgrade(args.banish);
           return this.resolveUpgrade(typeof args.index === "number" ? args.index : -1);
         }
         return { handled: false, note: "未知 target" };
@@ -1893,6 +1941,7 @@ export class GameSim {
       role: this.role.id,
       role_name: this.role.name,
       rerolls_left: this.rerollsLeft,
+      banishes_left: this.banishesLeft,
     };
   }
 
