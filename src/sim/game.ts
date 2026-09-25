@@ -16,6 +16,7 @@ import { Inventory, type Material } from "./inventory";
 import { RECIPES } from "./recipes";
 import { WeatherSystem, type WeatherType } from "./weather";
 import { ACHIEVEMENTS, AchievementSystem } from "./achievements";
+import { DEFAULT_DIFFICULTY, DIFFICULTIES, getDifficulty, type DifficultyDef, type DifficultyId } from "./difficulty";
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
@@ -344,16 +345,23 @@ export class GameSim {
   private metaRegen = 0;
   /** 当前职业（R3 开局职业；欢迎页可换，start 后锁定）。 */
   role: RoleDef;
+  /** 当前难度（R10；欢迎页可换，start 后锁定）。 */
+  difficulty: DifficultyDef;
+  /** 存档中的最高通关难度（R10 解锁判定用；-1 = 从未通关）。 */
+  private maxDifficulty = -1;
 
   constructor(
     seed = 1,
     save: SaveStorage = { load: () => null, save: () => {} },
     roleId: string = DEFAULT_ROLE,
+    difficultyId: number = DEFAULT_DIFFICULTY,
   ) {
     this.seed = seed;
     this.rng = new Rng(seed);
     this.save = save;
     this.role = getRole(roleId);
+    this.difficulty = getDifficulty(difficultyId);
+    this.maxDifficulty = save.load()?.maxDifficulty ?? -1;
     const c = CFG.Player;
     const prev = save.load();
     // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）；
@@ -390,6 +398,10 @@ export class GameSim {
     // R6：构造指定职业若未解锁直接抛错（协议层返回 ok:false，不静默回退）
     if (!this.isRoleUnlocked(this.role.id)) {
       throw new Error("职业未解锁: " + this.role.name);
+    }
+    // R10：构造指定难度若未解锁直接抛错
+    if (!this.isDifficultyUnlocked(this.difficulty.id)) {
+      throw new Error("难度未解锁: " + this.difficulty.name);
     }
     this.stats = this.recalc();
     // 开局武器：职业起手装备（R3；构造期静默入列，不弹获得通知）
@@ -523,6 +535,26 @@ export class GameSim {
     if (r.unlockAchievement === null) return null;
     const a = ACHIEVEMENTS.find((x) => x.id === r.unlockAchievement);
     return a ? { name: a.name, desc: a.desc } : null;
+  }
+
+  /** 难度是否已开放（R10）：无条件难度恒开放，否则看最高通关。 */
+  isDifficultyUnlocked(id: number): boolean {
+    const d = getDifficulty(id);
+    return d.unlockBy === null || d.unlockBy <= this.maxDifficulty;
+  }
+
+  /** 切换难度（R10）：仅开局前（欢迎页）允许；未解锁拒绝。 */
+  setDifficulty(id: number): Record<string, unknown> {
+    if (this.state !== "WeaponSelection") {
+      return { applied: false, note: "仅开局前可选难度", difficulty: this.difficulty.id };
+    }
+    const next = getDifficulty(id);
+    if (!this.isDifficultyUnlocked(id)) {
+      return { applied: false, note: `难度未解锁：${next.name}`, difficulty: this.difficulty.id };
+    }
+    this.difficulty = next;
+    this.emit("difficulty_changed", { id: next.id, name: next.name });
+    return { applied: true, difficulty: next.id, name: next.name };
   }
 
   /** 切换职业（R3）：仅开局前（欢迎页）允许；起手武器跟随职业重置。R6 起未解锁拒绝。 */
@@ -1325,19 +1357,26 @@ export class GameSim {
     if (e.final) this.onVictory();
   }
 
-  /** 通关结算：金币 1.5× 加成，进入 Victory 态（可继续无尽）。返回金币数。 */
+  /** 通关结算：金币 1.5× 加成，进入 Victory 态（可继续无尽）。返回金币数。
+   *  R10：通关刷新最高通关难度；首次开出下一档即广播解锁。 */
   private onVictory(): number {
     this.state = "Victory";
-    const coins = this.finalizeRun(1.5);
+    const prevMax = (this.save.load() ?? defaultSave()).maxDifficulty ?? -1;
+    const coins = this.finalizeRun(1.5, this.difficulty.id);
     this.emit("victory", { coins });
+    const next = DIFFICULTIES[(this.difficulty.id + 1) as DifficultyId];
+    if (next && next.unlockBy !== null && next.unlockBy > prevMax) {
+      this.emit("difficulty_unlocked", { id: next.id, name: next.name });
+    }
     return coins;
   }
 
-  /** 局末结算存档（死亡/通关共用）：高分/累计击杀/局数/金币/成就；R5 点金放大金币。 */
-  private finalizeRun(coinsMult: number): number {
+  /** 局末结算存档（死亡/通关共用）：高分/累计击杀/局数/金币/成就；R5 点金放大金币；
+   *  R10 难度放大金币；通关（cleared 非空）刷新最高通关难度，死亡不刷新。 */
+  private finalizeRun(coinsMult: number, cleared: DifficultyId | null = null): number {
     const prev = this.save.load() ?? defaultSave();
     const greed = 1 + (prev.metaGreed ?? 0) * META_SHOP.greed.step;
-    const coins = Math.floor((this.score / 50 + this.kills) * coinsMult * greed);
+    const coins = Math.floor((this.score / 50 + this.kills) * coinsMult * greed * this.difficulty.coinMult);
     this.save.save({
       highScore: Math.max(prev.highScore, this.score),
       totalKills: prev.totalKills + this.kills,
@@ -1349,6 +1388,9 @@ export class GameSim {
       metaMag: prev.metaMag ?? 0,
       metaGreed: prev.metaGreed ?? 0,
       metaRegen: prev.metaRegen ?? 0,
+      maxDifficulty: cleared !== null
+        ? Math.max(prev.maxDifficulty ?? -1, cleared)
+        : (prev.maxDifficulty ?? -1),
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -1742,8 +1784,10 @@ export class GameSim {
   private createEnemy(type: EnemyType, x: number, y: number, opts: SpawnOpts): Enemy {
     const stats = ENEMY_STATS[type];
     const mult = this.roundMult(CFG.Difficulty.SpawnScaleFactor);
-    let hp = Math.ceil(stats.hp * mult);
-    let damage = Math.ceil(stats.dmg * mult);
+    // R10 难度：妖物血伤同乘（速度不动，保证走位公平）
+    const foe = this.difficulty.foeMult;
+    let hp = Math.ceil(stats.hp * mult * foe);
+    let damage = Math.ceil(stats.dmg * mult * foe);
     let speed = stats.speed;
     let elite = opts.elite ?? false;
     let boss = opts.boss ?? false;
@@ -1912,6 +1956,20 @@ export class GameSim {
         };
       }
       case "set_role": return this.setRole(typeof args.role === "string" ? args.role : "");
+      case "difficulties": {
+        return {
+          current: this.difficulty.id,
+          list: Object.values(DIFFICULTIES).map((d) => ({
+            id: d.id, name: d.name, desc: d.desc,
+            unlocked: this.isDifficultyUnlocked(d.id),
+            unlockBy: d.unlockBy,
+          })),
+        };
+      }
+      case "set_difficulty": {
+        const id = typeof args.difficulty === "number" ? args.difficulty : -1;
+        return this.setDifficulty(id);
+      }
       case "weapons": return {
         active: this.attackType,
         list: this.player.weapons.map((w, i) => ({ index: i, ...w, stage: stageTag(w) })),
@@ -1977,6 +2035,8 @@ export class GameSim {
       role_name: this.role.name,
       rerolls_left: this.rerollsLeft,
       banishes_left: this.banishesLeft,
+      difficulty: this.difficulty.id,
+      difficulty_name: this.difficulty.name,
       elite_kills: this.eliteKills,
       max_combo: this.maxCombo,
       secs_to_next_tier: Math.ceil(this.secsToNextTier),

@@ -20,6 +20,8 @@ export interface SaveData {
   metaGreed: number;
   /** 永久升级等级：生命回复 +0.4/s/级（R5）。 */
   metaRegen: number;
+  /** 通关过的最高难度 id（R10；-1 = 从未通关，老存档缺字段默认 -1）。 */
+  maxDifficulty: number;
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -33,6 +35,7 @@ export function defaultSave(): SaveData {
   return {
     highScore: 0, totalKills: 0, games: 0, coins: 0,
     metaHp: 0, metaDmg: 0, metaSpd: 0, metaMag: 0, metaGreed: 0, metaRegen: 0,
+    maxDifficulty: -1,
     achievements: [],
   };
 }

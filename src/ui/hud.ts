@@ -3,6 +3,7 @@
 // UI 快捷键约束：本层只用鼠标按钮，不占用任何游戏按键。
 
 import type { GameSim } from "../sim/game";
+import { DIFFICULTIES } from "../sim/difficulty";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 
@@ -14,6 +15,7 @@ export class Hud {
   private hpFill!: HTMLElement;
   private hpText!: HTMLElement;
   private roundText!: HTMLElement;
+  private difficultyText!: HTMLElement;
   private roleText!: HTMLElement;
   private weatherText!: HTMLElement;
   private scoreText!: HTMLElement;
@@ -42,7 +44,7 @@ export class Hud {
         <span id="hp-text"></span>
         <span id="dash-dot" title="冲刺就绪">⚡</span></div>
       <div class="stats">
-        <span id="round"></span><span id="role"></span><span id="weather"></span><span id="score"></span>
+        <span id="round"></span><span id="difficulty"></span><span id="role"></span><span id="weather"></span><span id="score"></span>
         <span id="kills"></span><span id="time"></span>
         <span id="weapon"></span>
       </div>`;
@@ -50,6 +52,7 @@ export class Hud {
     this.hpFill = hud.querySelector("#hp-fill")!;
     this.hpText = hud.querySelector("#hp-text")!;
     this.roundText = hud.querySelector("#round")!;
+    this.difficultyText = hud.querySelector("#difficulty")!;
     this.roleText = hud.querySelector("#role")!;
     this.weatherText = hud.querySelector("#weather")!;
     this.scoreText = hud.querySelector("#score")!;
@@ -79,6 +82,7 @@ export class Hud {
         <h1>斩妖录</h1>
         <p class="sub">简笔画速写本 · 除妖生存</p>
         <div class="role-cards" id="role-cards"></div>
+        <div class="diff-row" id="diff-row"></div>
         <p id="save-stats" class="sub"></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
@@ -86,7 +90,37 @@ export class Hud {
     this.root.appendChild(this.welcome);
     this.welcome.querySelector("#btn-start")!.addEventListener("click", () => this.onStart());
     this.buildRoleCards();
+    this.buildDiffRow();
     this.refreshSaveStats();
+  }
+
+  /** 欢迎页难度选择（R10）：三档小按钮，纯鼠标；未解锁置灰并印条件。 */
+  private buildDiffRow(): void {
+    const wrap = this.welcome.querySelector<HTMLElement>("#diff-row")!;
+    wrap.innerHTML = "";
+    for (const d of Object.values(DIFFICULTIES)) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.diff = String(d.id);
+      const open = this.sim.isDifficultyUnlocked(d.id);
+      b.className = open ? "diff-btn" : "diff-btn locked";
+      const need = d.unlockBy === null ? null : DIFFICULTIES[d.unlockBy];
+      b.innerHTML = `<b>${d.name}${open ? "" : " 🔒"}</b><i>${open ? d.desc : `通关${need!.name}解锁`}</i>`;
+      b.addEventListener("click", () => {
+        if (!this.sim.isDifficultyUnlocked(d.id)) return;
+        this.sim.setDifficulty(d.id);
+        this.refreshDiffRow();
+      });
+      wrap.appendChild(b);
+    }
+    this.refreshDiffRow();
+  }
+
+  /** 按当前 sim 难度高亮选中钮。 */
+  private refreshDiffRow(): void {
+    const cur = String(this.sim.difficulty.id);
+    this.welcome.querySelectorAll<HTMLElement>(".diff-btn").forEach((x) =>
+      x.classList.toggle("selected", x.dataset.diff === cur));
   }
 
   /** 欢迎页职业选择卡（R3 纯鼠标选卡；R6 未解锁置灰并明示条件，点击不切换）。 */
@@ -157,7 +191,7 @@ export class Hud {
     const s = this.sim;
     const coins = Math.floor((s.score / 50 + s.kills) * 1.5);
     this.victoryStats.textContent =
-      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round}`;
+      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度`;
     this.victoryDebrief.textContent = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
   }
@@ -221,6 +255,7 @@ export class Hud {
     this.sim = sim;
     this.refreshSaveStats();
     this.buildRoleCards();
+    this.buildDiffRow();
   }
 
   /** 触屏设备上替换欢迎页操作提示（默认文案为键盘键位）。 */
@@ -237,6 +272,7 @@ export class Hud {
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
     // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
     this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶`;
+    this.difficultyText.textContent = `难度 ${s.difficulty.name}`;
     this.roleText.textContent = `职业 ${s.role.name}`;
     const w = s.weather.state;
     const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
@@ -269,7 +305,7 @@ export class Hud {
     if (wasOver && overReady) {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
-        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · 金币 +${coins}`;
+        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins}`;
       this.gameoverDebrief.textContent = this.debriefText(s);
       this.refreshMeta();
     }
