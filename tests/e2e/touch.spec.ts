@@ -31,9 +31,13 @@ test.describe("桌面上下文：不挂载触屏控件", () => {
 test.describe("触屏上下文（手机视口）", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } });
 
-  test("挂载摇杆/攻击/冲刺与 UI 按钮排", async ({ page }) => {
+  test("挂载摇杆/攻击/冲刺与 UI 按钮排（开局后可见）", async ({ page }) => {
     await page.goto("/");
     await page.waitForFunction(() => window.__CNM__?.ready === true);
+    // R19：欢迎页隐藏触屏层（首屏干净）
+    await expect(page.locator("#touch-root")).toBeHidden();
+    await page.click("#btn-start");
+    await page.waitForFunction(() => window.__CNM__.exec({ action: "status" }).data?.state === "Combat");
     await expect(page.locator("#joy-base")).toBeVisible();
     await expect(page.locator("#tbtn-attack")).toBeVisible();
     await expect(page.locator("#tbtn-dash")).toBeVisible();
@@ -86,6 +90,61 @@ test.describe("触屏上下文（手机视口）", () => {
       pointerId: 7, bubbles: true, pointerType: "touch", isPrimary: true,
     });
     await page.waitForFunction(() => window.__CNM__.sim.input.attack === false);
+  });
+
+  // R19 移动端首屏与面板可用性：欢迎页藏小地图/触屏/教练条；模态打开时藏摇杆与击/冲
+  // （留 UI 按钮排解暂停）；职业卡片横排不断字；HUD 状态项不断字；高面板内部可滚。
+  test("欢迎页隐藏小地图/触屏层/教练条", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => window.__CNM__?.ready === true);
+    await expect(page.locator("#minimap")).toBeHidden();
+    await expect(page.locator("#touch-root")).toBeHidden();
+    await expect(page.locator("#coach-tip")).toBeHidden();
+  });
+
+  test("模态打开时隐藏摇杆与击/冲，保留 UI 按钮排", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => window.__CNM__?.ready === true);
+    await page.click("#btn-start");
+    await page.waitForFunction(() => window.__CNM__.exec({ action: "status" }).data?.state === "Combat");
+    await page.click("#tbtn-help");
+    await expect(page.locator(".overlay:not(.hidden) .help-panel")).toBeVisible();
+    await expect(page.locator("#joy-base")).toBeHidden();
+    await expect(page.locator("#touch-btns")).toBeHidden();
+    await expect(page.locator("#touch-ui")).toBeVisible();
+  });
+
+  test("职业卡片横排不断字，页面无横向溢出", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => window.__CNM__?.ready === true);
+    const noOverflow = await page.evaluate(() =>
+      document.documentElement.scrollWidth <= window.innerWidth + 1);
+    expect(noOverflow).toBe(true);
+    // 逐字竖排的坏味道：卡片被内容撑到 3 倍高以上；阈值 400 留足字体差异余量
+    const heights = await page.locator(".role-card").evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().height));
+    expect(heights.length).toBe(3);
+    for (const h of heights) expect(h).toBeLessThan(400);
+  });
+
+  test("HUD 状态项不断字，高升级面板内部可滚", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForFunction(() => window.__CNM__?.ready === true);
+    await page.click("#btn-start");
+    await page.waitForFunction(() => window.__CNM__.exec({ action: "status" }).data?.state === "Combat");
+    const spanHeights = await page.locator(".stats span").evaluateAll((els) =>
+      els.map((el) => el.getBoundingClientRect().height));
+    for (const h of spanHeights) expect(h).toBeLessThan(30);
+    await page.evaluate(() => {
+      window.__CNM__.sim.pickups.push({ id: 1, x: window.__CNM__.sim.player.x + 5, y: window.__CNM__.sim.player.y });
+    });
+    await page.waitForSelector(".upgrade-card");
+    const scrollable = await page.locator(".upgrade-cards").evaluate((el) => {
+      const panel = el.closest(".panel-wide") as HTMLElement;
+      const cs = getComputedStyle(panel);
+      return cs.maxHeight !== "none" && cs.overflowY === "auto";
+    });
+    expect(scrollable).toBe(true);
   });
 
   test("UI 按钮排打开帮助面板，Esc 语义按钮可关闭", async ({ page }) => {

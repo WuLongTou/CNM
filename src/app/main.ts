@@ -196,6 +196,10 @@ async function boot(): Promise<void> {
     input.setTouchSource(new TouchControls(uiActions));
     hud.setHint("左侧摇杆移动 · 击钮攻击 · 冲钮冲刺");
   }
+  // R19 显隐缓存（桌面端无触屏节点，恒 null 跳过）
+  const touchRoot = document.getElementById("touch-root");
+  const joyBase = document.getElementById("joy-base");
+  const touchBtns = document.getElementById("touch-btns");
 
   function restart(): void {
     // R18 记住上局选择：职业/难度沿用（同存档下锁天然成立，无需额外校验）
@@ -293,6 +297,11 @@ async function boot(): Promise<void> {
     fusion.update();
     upgrade.update();
     coach.update();
+    // R19 触屏层级：非战斗藏整棵触屏 UI；模态打开时藏摇杆/击/冲（留 UI 按钮排解暂停）
+    if (touchRoot) touchRoot.classList.toggle("hidden", sim.state !== "Combat");
+    const modal = anyModalOpen();
+    if (joyBase) joyBase.classList.toggle("hidden", modal);
+    if (touchBtns) touchBtns.classList.toggle("hidden", modal);
   });
 
   // 启动完成：移除 boot 文案

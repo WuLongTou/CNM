@@ -21,9 +21,13 @@ export class MiniMap {
   }
 
   update(): void {
+    const sim = this.sim();
+    // R19：非战斗态（欢迎/结算）隐藏小地图——半透明遮罩下会透出来抢戏
+    const inCombat = sim.state === "Combat";
+    this.canvas.style.display = inCombat ? "" : "none";
+    if (!inCombat) return;
     // 15fps 节流即可
     if (++this.frame % 4 !== 0) return;
-    const sim = this.sim();
     const g = this.ctx;
     const sx = W / sim.world.w;
     const sy = H / sim.world.h;

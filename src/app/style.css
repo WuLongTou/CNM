@@ -58,15 +58,33 @@ canvas { position: absolute; z-index: 0; }
   border: 1.5px solid #b8ab90; border-radius: 8px 11px 8px 12px; user-select: none; }
 .panel .sub { margin: 0 0 22px; color: #6b6154; font-size: 14px; }
 .panel .hint { margin: 18px 0 0; color: #8a8175; font-size: 12px; }
-.panel button {
+/* R19 收敛：只作用面板直接子按钮。旧全局写法以更高特异度覆盖嵌套卡片按钮的
+   padding（10px 42px 吃掉卡片内容至 16px 宽，CJK 逐字断行），桌面靠宽度遮羞、窄屏全碎。 */
+.panel > button {
+  display: inline-block; margin: 4px 6px;
   font-size: 18px; padding: 10px 42px; cursor: pointer; letter-spacing: 0.1em;
   background: #c0392b; color: #f5eede; border: 2px solid #332e29;
   border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.4);
 }
-.panel button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
+.panel > button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
+/* 嵌套按钮组回填（原先吃全局规则，现各自写全）：融合 / 结算商店 / 帮助页签 / 放逐 */
+.fusion-btns button {
+  background: #c0392b; color: #f5eede; border: 2px solid #332e29;
+  border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.4);
+  cursor: pointer; letter-spacing: 0.1em;
+}
+.fusion-btns button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
+.meta-row button {
+  color: #f5eede; border: 2px solid #332e29;
+  border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.4);
+  cursor: pointer; letter-spacing: 0.06em;
+}
+.meta-row button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
+.help-tabs button { cursor: pointer; letter-spacing: 0.06em; border-radius: 6px 8px 6px 9px; }
+.uc-banish { letter-spacing: 0.06em; }
 
 /* ── 欢迎页职业选择卡（R3 开局职业）：纸卡三选一，纯鼠标交互 ── */
-.role-cards { display: flex; gap: 12px; justify-content: center; margin: 0 0 18px; }
+.role-cards { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin: 0 0 18px; }
 .role-card {
   width: 148px; padding: 12px 8px 10px; cursor: pointer; text-align: center;
   display: flex; flex-direction: column; gap: 3px;
@@ -84,6 +102,8 @@ canvas { position: absolute; z-index: 0; }
 .role-card.locked { opacity: 0.62; cursor: default; background: #e9e0cb; }
 .role-card.locked:hover { border-color: #b8ab90; transform: none; }
 .role-card.locked b { color: #6b6154; }
+/* R19 防压字：卡片禁止被 flex 挤压（窄屏换行而非压到 CJK min-content=单字竖排） */
+.role-card, .diff-btn { flex-shrink: 0; }
 
 /* ── 欢迎页难度选择（R10）：三档小按钮，纯鼠标 ── */
 .diff-row { display: flex; gap: 10px; justify-content: center; margin: 0 0 14px; }
@@ -213,7 +233,7 @@ canvas { position: absolute; z-index: 0; }
 
 /* ── 暂停面板 ── */
 .vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #6b6154; font-size: 14px; }
-.panel button { display: inline-block; margin: 4px 6px; }
+
 
 /* ── 触屏控件（仅触屏设备/或 ?touch=1 时由 JS 挂载）── */
 /* touch-action:none 阻断浏览器手势（滚动/双击缩放），保证摇杆跟手 */
@@ -246,12 +266,27 @@ canvas { position: absolute; z-index: 0; }
 
 /* ── 小屏（手机竖屏）：HUD 收纳 + 面板自适应 ── */
 @media (max-width: 640px) {
-  #hud { gap: 10px; padding: 0 10px; font-size: 12px; height: 46px; }
+  #hud { gap: 10px; padding: 6px 10px; font-size: 12px; height: auto; min-height: 46px; }
   .hp-wrap { min-width: 0; }
   .hp-bar { width: 96px; }
-  .stats { gap: 10px; }
-  .panel { padding: 26px 22px; max-width: calc(100vw - 32px); }
+  /* R19：状态项不拆字（nowrap），整行换行成两排，避免竖排碎列 */
+  .stats { gap: 4px 10px; flex-wrap: wrap; }
+  .stats span { white-space: nowrap; }
+  #hp-text { white-space: nowrap; }
+  .panel { padding: 26px 22px; max-width: calc(100vw - 32px); min-width: 0; }
   .panel h1 { font-size: 26px; }
   .panel-wide, .help-panel { min-width: 0; width: calc(100vw - 32px); }
+  /* R19：高面板内部滚动（升级三卡竖排超高屏时，重抽/跳过按钮够得着） */
+  .panel-wide { max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); overflow-y: auto; }
+  /* R19：超高面板安全居中（flex 居中会裁掉顶部不可达，改 margin:auto 守卫） */
+  .overlay { overflow-y: auto; align-items: flex-start; padding: 12px 0; }
+  .overlay > .panel { margin: auto; }
   #minimap { width: 96px !important; height: auto !important; }
+  /* R19：欢迎页三选一缩小排下（390px 屏三卡 3×104+2×8 刚好） */
+  .role-cards, .diff-row { gap: 8px; }
+  .role-card { width: 104px; padding: 10px 6px 8px; font-size: 11px; }
+  .role-card b { font-size: 15px; }
+  .diff-btn { min-width: 92px; padding: 6px 10px; }
+  /* R19：教练条换行 + 上移避让摇杆/按钮区 */
+  #coach-tip { white-space: normal; max-width: calc(100vw - 32px); text-align: center; bottom: 170px; }
 }

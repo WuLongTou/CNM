@@ -74,9 +74,17 @@ export class Coach {
     });
   }
 
-  /** 每帧同步 sim → 提示条（条件变化或事件消退时切换）。 */
+  /** 每帧同步 sim → 提示条（条件变化或事件消退时切换）。
+   *  R19：仅战斗态显示——欢迎/结算/模态下藏条（半透明遮罩下抢戏）。 */
   update(): void {
     const s = this.sim;
+    if (s.state !== "Combat") {
+      if (this.current !== null) {
+        this.current = null;
+        this.el.classList.add("hidden");
+      }
+      return;
+    }
     const tip = coachTrigger({
       isFirstRun: s.isFirstRun,
       kills: s.kills,
