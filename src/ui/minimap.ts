@@ -50,8 +50,14 @@ export class MiniMap {
     }
     for (const c of sim.chests) {
       if (c.opened) continue;
-      g.fillStyle = "#d9a520";
-      g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
+      // R8 精英箱：血红大方块（普通箱为金小方块，符箓为血红菱形，三者可辨）
+      if (c.elite) {
+        g.fillStyle = "#c0392b";
+        g.fillRect(c.x * sx - 2, c.y * sy - 2, 4, 4);
+      } else {
+        g.fillStyle = "#d9a520";
+        g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
+      }
     }
     // 升级符箓：血红菱形（纸底上醒目，区别于宝箱金方块），屏幕外掉落也可寻
     g.fillStyle = "#c0392b";

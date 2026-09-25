@@ -155,6 +155,8 @@ export interface Chest {
   id: number;
   x: number; y: number;
   opened: boolean;
+  /** 精英宝箱（R8）：精英击杀掉落，开出稀有度≥2 武器 + 1 枚符箓。 */
+  elite: boolean;
 }
 
 /** 升级符箓拾取物：击杀掉落，走近触发升级三选一。 */
@@ -498,6 +500,13 @@ export class GameSim {
     return this.rng.weighted(entries);
   }
 
+  /** 精英宝箱摇奖（R8）：限定稀有度≥2，同稀有度权重，保证高价值目标时刻。 */
+  private rollEliteWeaponDef(): string {
+    const ids = Object.keys(WEAPON_DATA).filter((id) => WEAPON_DATA[id].rarity >= 2);
+    const entries = ids.map((id) => [id, [6, 3, 1][WEAPON_DATA[id].rarity - 2]] as const);
+    return this.rng.weighted(entries);
+  }
+
   /** 职业是否已解锁（R6）：无条件职业恒开放，否则看成就达成。 */
   isRoleUnlocked(id: string): boolean {
     const r = getRole(id);
@@ -681,8 +690,17 @@ export class GameSim {
   private scatterChests(n: number): void {
     for (let i = 0; i < n && this.chests.length < 8; i++) {
       const p = this.resolveSpawnPos("random");
-      this.chests.push({ id: this.nextId++, x: p.x, y: p.y, opened: false });
+      this.chests.push({ id: this.nextId++, x: p.x, y: p.y, opened: false, elite: false });
     }
+  }
+
+  /** 掉宝箱（R8）：先清理已开箱（无存在意义，兼控数组规模），软上限 12 防极端刷屏。 */
+  private dropChest(x: number, y: number, elite: boolean): void {
+    this.chests = this.chests.filter((c) => !c.opened);
+    if (this.chests.length >= 12) return;
+    const wx = Math.min(this.world.w - 22, Math.max(22, x));
+    const wy = Math.min(this.world.h - 22, Math.max(22, y));
+    this.chests.push({ id: this.nextId++, x: wx, y: wy, opened: false, elite });
   }
 
   private updateChests(): void {
@@ -691,8 +709,12 @@ export class GameSim {
     for (const c of this.chests) {
       if (!c.opened && (c.x - p.x) ** 2 + (c.y - p.y) ** 2 <= CHEST_OPEN_RANGE ** 2) {
         c.opened = true;
-        const w = this.giveWeapon();
-        this.emit("chest_opened", { pos: { x: c.x, y: c.y }, weapon: w.name });
+        // R8 精英箱：高稀有武器 + 1 枚符箓（高价值目标时刻的双重奖励）
+        const w = c.elite ? this.giveWeapon(this.rollEliteWeaponDef()) : this.giveWeapon();
+        if (c.elite) {
+          this.pickups.push({ id: this.nextId++, x: c.x + 24, y: c.y });
+        }
+        this.emit("chest_opened", { pos: { x: c.x, y: c.y }, weapon: w.name, elite: c.elite });
       }
     }
     if (this.chests.every((c) => c.opened)) this.scatterChests(2);
@@ -1274,6 +1296,8 @@ export class GameSim {
     if (e.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
     if (e.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
     this.score += pts;
+    // R8 精英掉宝：非妖王精英必掉精英宝箱（高价值目标时刻；妖王保持符箓×3）
+    if (e.elite && !e.boss) this.dropChest(e.x, e.y, true);
     // 升级符箓掉落：普通低概率 / 精英高概率 / 妖王必掉 3 枚
     const rate = e.boss ? UPGRADE_DROP.boss : e.elite ? UPGRADE_DROP.elite : UPGRADE_DROP.normal;
     if (this.rng.chance(rate)) {
@@ -1971,7 +1995,7 @@ export class GameSim {
           elite: e.elite, boss: e.boss,
         })),
       },
-      chests: this.chests.filter((c) => !c.opened).map((c) => ({ x: c.x, y: c.y })),
+      chests: this.chests.filter((c) => !c.opened).map((c) => ({ x: c.x, y: c.y, elite: c.elite })),
       weather: {
         type: this.weather.state.type,
         intensity: this.weather.state.intensity,

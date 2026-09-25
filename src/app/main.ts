@@ -74,7 +74,11 @@ async function boot(): Promise<void> {
     eventBuffer.push(e);
     const d = e.data as Record<string, string>;
     if (e.event === "weapon_gained") { notify.push(`获得武器：${d.name}`); audio.play("weapon_select"); }
-    else if (e.event === "chest_opened") { notify.push(`宝箱开启：${d.weapon}`); audio.play("upgrade"); }
+    else if (e.event === "chest_opened") {
+      const elite = (e.data as { elite?: boolean }).elite === true;
+      notify.push(elite ? `精英宝箱开启：${d.weapon}（+符箓）` : `宝箱开启：${d.weapon}`);
+      audio.play("upgrade");
+    }
     else if (e.event === "achievement") { notify.push(`成就达成：${d.name}`); notify.banner("成就达成", d.name); }
     else if (e.event === "weapon_ascended") { notify.push(`武器进阶：${d.name}`); audio.play("upgrade"); }
     else if (e.event === "weapon_ultimate") { notify.push(`武器终极：${d.name}`); audio.play("combo_5"); }

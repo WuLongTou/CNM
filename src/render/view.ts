@@ -781,6 +781,14 @@ export class GameView {
     g.clear();
     for (const c of sim.chests) {
       if (c.opened) continue;
+      if (c.elite) {
+        // R8 精英箱：同纸金底 + 血红描边/锁 + 大一圈（高价值一望可辨）
+        g.rect(c.x - 15, c.y - 12, 30, 24).fill({ color: 0xe8d5a8, alpha: 0.95 })
+          .stroke({ width: 3, color: BLOOD });
+        g.moveTo(c.x - 15, c.y - 4).lineTo(c.x + 15, c.y - 4).stroke({ width: 2, color: BLOOD, alpha: 0.85 });
+        g.circle(c.x, c.y - 2, 3).fill(BLOOD);
+        continue;
+      }
       g.rect(c.x - 13, c.y - 10, 26, 20).fill({ color: 0xe8d5a8, alpha: 0.95 })
         .stroke({ width: 2.5, color: INK });
       g.moveTo(c.x - 13, c.y - 3).lineTo(c.x + 13, c.y - 3).stroke({ width: 1.8, color: INK, alpha: 0.7 });
