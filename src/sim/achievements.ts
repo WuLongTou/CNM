@@ -54,6 +54,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "nine_realms", name: "九界平定", desc: "制霸全部 9 格（3 职业×3 难度）", check: () => false },
   // R27 博物学家走 tick 判定（14 种妖物图鉴全金边）
   { id: "naturalist", name: "博物学家", desc: "图鉴十四妖物皆满百杀镀金", check: (s) => s.codexGold >= 14 },
+  // R29 千人斩走 tick 判定（单局击杀数）
+  { id: "slayer_1000", name: "千人斩", desc: "单局击杀 1000", check: (s) => s.kills >= 1000 },
 ];
 
 export class AchievementSystem {

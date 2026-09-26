@@ -13,6 +13,7 @@ export class PauseMenu {
     this.el.innerHTML = `
       <div class="panel">
         <h2>暂停</h2>
+        <p class="sub" id="pause-stats"></p>
         <label class="vol-row">音量
           <input id="vol" type="range" min="0" max="100" step="5" />
           <span id="vol-num"></span>
@@ -41,6 +42,15 @@ export class PauseMenu {
     this.visible = force ?? !this.visible;
     this.el.classList.toggle("hidden", !this.visible);
     this.sim.paused = this.visible;
+    // R29 暂停战绩：打开时刷新本局比分/击杀/存活/目标（随时知道战况）
+    if (this.visible) {
+      const s = this.sim;
+      const el = this.el.querySelector<HTMLElement>("#pause-stats");
+      if (el) {
+        el.textContent = `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s` +
+          ` · 威胁阶 ${s.round} · ${s.role.name}/${s.difficulty.name}`;
+      }
+    }
   }
 
   /** restart 后换绑新 sim：旧局连同其暂停态一起作废（新 sim 未暂停），面板复位隐藏。 */

@@ -1539,6 +1539,9 @@ export class GameSim {
   private onEnemyKilled(e: Enemy): void {
     this.enemies = this.enemies.filter((o) => o.id !== e.id);
     this.kills++;
+    // R29 击杀里程碑（R24 连击播报的姊妹篇；千人斩配横幅+成就）
+    if (this.kills === 100 || this.kills === 500) this.emit("kill_milestone", { count: this.kills });
+    else if (this.kills === 1000) this.emit("kill_legend", { count: 1000 });
     if (e.boss) this.bossKills++;
     else if (e.elite) this.eliteKills++;
     // R24 精英首杀播报（本局第一只精英，处决时刻的文本礼花）

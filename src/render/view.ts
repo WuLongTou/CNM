@@ -506,7 +506,8 @@ export class GameView {
       this.bossNameText.anchor.set(0.5, 0);
       this.app.stage.addChild(this.bossNameText);
     }
-    this.bossNameText.text = `妖王 · ${ENEMY_NAMES[boss.type] ?? "???"}${boss.bossPhase > 0 ? ` · 狂暴 ${boss.bossPhase + 1} 阶` : ""}`;
+    // R29 血量百分比（随时知道还剩多少）
+    this.bossNameText.text = `妖王 · ${ENEMY_NAMES[boss.type] ?? "???"}${boss.bossPhase > 0 ? ` · 狂暴 ${boss.bossPhase + 1} 阶` : ""} · ${Math.ceil(ratio * 100)}%`;
     this.bossNameText.position.set(sw / 2, y + H + 4);
   }
 
