@@ -418,6 +418,8 @@ export class GameSim {
   private runArmory = new Set<string>();
   /** 本局实际炼成的武器（R32 融合图鉴）。 */
   private runFused = new Set<string>();
+  /** 本局达成终极阶段的武器（R35 终极图鉴）。 */
+  private runUltimates = new Set<string>();
   /** R5 永久升级快照（构造期自存档读取；拾取/回复挂点用；点金结算时直读存档）。 */
   private metaMag = 0;
   private metaRegen = 0;
@@ -704,6 +706,8 @@ export class GameSim {
     this.stats = this.recalc();
     const after = stageTag(w);
     if (after !== before) {
+      // R35 终极图鉴：首次达终极即入库（藏珍已含，阶段单独记录）
+      if (after === "ultimate") this.runUltimates.add(w.defId);
       this.emit(after === "ultimate" ? "weapon_ultimate" : "weapon_ascended", { name: w.name, stage: after });
     }
     return { name: w.name, ups: w.ups, stat: st, stage: after };
@@ -1685,6 +1689,8 @@ export class GameSim {
         : (prev.dailyBest ?? { date: "", score: 0 }),
       // R30 藏珍：本局新获并入跨局（死亡也记——拥有过即是拥有过）
       armory: [...new Set([...(prev.armory ?? []), ...this.runArmory])],
+      // R35 终极图鉴：达过终极即永久点亮（死亡也记）
+      ultimates: [...new Set([...(prev.ultimates ?? []), ...this.runUltimates])],
       // R32 融合图鉴：本局炼成的入跨局库（用 giveWeapon 而非 makeWeapon，藏珍同步点亮）
       fused: [...new Set([...(prev.fused ?? []), ...this.runFused])],
       achievements: [...this.achievements.unlocked],
@@ -2317,6 +2323,11 @@ export class GameSim {
         const prev = this.save.load() ?? defaultSave();
         return { fused: [...new Set([...(prev.fused ?? []), ...this.runFused])] };
       }
+      case "ultimates": {
+        // R35 终极图鉴：达过终极阶段的武器（武器图鉴阶段标记用）
+        const prev = this.save.load() ?? defaultSave();
+        return { reached: [...new Set([...(prev.ultimates ?? []), ...this.runUltimates])] };
+      }
       case "roles": {
         return {
           current: this.role.id,
@@ -2418,6 +2429,7 @@ export class GameSim {
       seed: this.seed,
       pacts: [...this.pacts],
       score_mult: this.pactScoreMult(),
+      ultimateCount: new Set([...(this.save.load()?.ultimates ?? []), ...this.runUltimates]).size,
       role: this.role.id,
       role_name: this.role.name,
       rerolls_left: this.rerollsLeft,

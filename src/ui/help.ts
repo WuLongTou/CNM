@@ -141,11 +141,12 @@ export class HelpPanel {
     return t.join(" · ");
   }
 
-  /** 武器藏珍（R30 图鉴迷雾）：拥有过点亮，未见过灰隐（名 ???，描述不剧透）。 */
+  /** 武器藏珍（R30 图鉴迷雾 / R35 终极标记）：拥有过点亮，达过终极挂徽。 */
   private renderWeaponCodex(): void {
     const TYPE_NAMES: Record<WeaponDef["type"], string> = { Melee: "近战", Ranged: "远程", Magic: "魔法", Mine: "地雷" };
     const order: Array<WeaponDef["type"]> = ["Melee", "Ranged", "Magic", "Mine"];
     const owned = new Set((this.sim.exec({ action: "armory" }).data as { owned: string[] }).owned);
+    const ult = new Set((this.sim.exec({ action: "ultimates" }).data as { reached: string[] }).reached);
     const fusionable = new Set(FUSION_RECIPES.flatMap((r) => [r.a, r.b]));
     const rows = order.flatMap((type) =>
       Object.entries(WEAPON_DATA)
@@ -157,8 +158,9 @@ export class HelpPanel {
           }
           const stars = "★".repeat(d.rarity);
           const fuse = fusionable.has(d.name) ? " · 可祭炼" : "";
+          const ulti = ult.has(id) ? `<span class="w-ult">终极</span>` : "";
           const tags = this.weaponTags(d);
-          return `<tr><td>${d.name}<i class="w-star">${stars}</i></td>` +
+          return `<tr><td>${d.name}${ulti}<i class="w-star">${stars}</i></td>` +
             `<td>[${TYPE_NAMES[d.type]}] ${d.desc}${tags ? `<br><span class="w-tags">${tags}</span>` : ""}${fuse ? `<span class="w-fuse">${fuse}</span>` : ""}</td></tr>`;
         }));
     this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;

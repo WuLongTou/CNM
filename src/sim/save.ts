@@ -32,6 +32,8 @@ export interface SaveData {
   armory: string[];
   /** 融合图鉴（R32；实际炼成过的武器 defId，老存档缺字段默认 []）。 */
   fused: string[];
+  /** 终极图鉴（R35；达成过终极阶段的武器 defId，老存档缺字段默认 []）。 */
+  ultimates: string[];
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -51,6 +53,7 @@ export function defaultSave(): SaveData {
     dailyBest: { date: "", score: 0 },
     armory: [],
     fused: [],
+    ultimates: [],
     achievements: [],
   };
 }

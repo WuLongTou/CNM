@@ -262,6 +262,11 @@ canvas { position: absolute; z-index: 0; }
 .help-table .w-star { color: #a8741a; font-style: normal; font-size: 11px; margin-left: 4px; letter-spacing: -1px; }
 .help-table .w-tags { color: #8a8175; font-size: 11px; }
 .help-table .w-fuse { color: #7a3a8a; font-size: 11px; }
+/* R35 终极徽标：达过终极阶段的武器名旁小红章 */
+.help-table .w-ult {
+  font-style: normal; font-size: 10px; color: #f5eede; background: #c0392b;
+  border-radius: 3px 5px 3px 6px; padding: 1px 5px; margin-left: 5px; vertical-align: 1px;
+}
 
 /* ── 暂停面板 ── */
 .vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #6b6154; font-size: 14px; }
