@@ -140,7 +140,14 @@ async function boot(): Promise<void> {
       audio.play("combo_5");
       notify.push("完美闪避！妖物迟滞 · 妖力凝聚");
     }
-    else if (e.event === "combo_milestone") audio.play("combo_3");
+    else if (e.event === "combo_milestone") {
+      const n = Number(d.count ?? 3);
+      if (n >= 50) { notify.push(`连击 ${n}！`); audio.play("combo_5"); }
+      else if (n >= 10) { notify.push(`连击 ${n}！`); audio.play("combo_3"); }
+      else audio.play("combo_3");
+    }
+    else if (e.event === "combo_century") { notify.push("百连斩！"); notify.banner("百连斩", "连击 100"); audio.play("combo_5"); }
+    else if (e.event === "first_elite") { notify.push("讨伐精英！"); audio.play("combo_5"); }
     else if (e.event === "game_over") { audio.play("player_die"); audio.stopBgm(); view.shake(18); }
   };
 

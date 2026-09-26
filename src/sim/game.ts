@@ -1326,8 +1326,12 @@ export class GameSim {
     p.combo++;
     p.comboTimer = CFG.Combo.DecayTime;
     if (p.combo > this.maxCombo) this.maxCombo = p.combo;
-    // 连击里程碑音效节点（表现层订阅；3 连提示音，避免每层都响）
-    if (p.combo === 3) this.emit("combo_milestone", { count: 3 });
+    // 连击里程碑（R24 扩展）：3 音效既有；10/25/50 播报；100 横幅（配百连斩成就）
+    if (p.combo === 3 || p.combo === 10 || p.combo === 25 || p.combo === 50) {
+      this.emit("combo_milestone", { count: p.combo });
+    } else if (p.combo === 100) {
+      this.emit("combo_century", { count: 100 });
+    }
     this.notifyDamage(e.x, e.y, r.dmg, r.crit);
     if (r.crit) this.hitStop.trigger(HITSTOP.CritMs);
     this.applyHit(e.x, e.y, e, r.dmg, fx, ux, uy);
@@ -1485,6 +1489,8 @@ export class GameSim {
     this.kills++;
     if (e.boss) this.bossKills++;
     else if (e.elite) this.eliteKills++;
+    // R24 精英首杀播报（本局第一只精英，处决时刻的文本礼花）
+    if (!e.boss && e.elite && this.eliteKills === 1) this.emit("first_elite", { x: e.x, y: e.y });
     this.killCounts[e.type] = (this.killCounts[e.type] ?? 0) + 1;
     // R17 分裂：死亡时爆出 2 只满血蚀群（分裂体为普通怪，不连锁；妖王不分裂）
     if (e.affix === "split" && !e.boss) {
