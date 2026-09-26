@@ -39,7 +39,7 @@ describe("R24 处决播报", () => {
     punch(sim, 100);
     sim.tick();
     expect(sim.achievements.unlocked.has("combo_100")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(25); // R30 藏珍满架
+    expect(ACHIEVEMENTS.length).toBe(26); // R32 炼金大师
   });
 
   it("精英首杀播报一次；妖王不算", () => {

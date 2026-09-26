@@ -416,6 +416,8 @@ export class GameSim {
   private baseArmory: string[] = [];
   /** 本局新获武器（R30；起手/宝箱/合成/融合/调试给入列，结算并入库）。 */
   private runArmory = new Set<string>();
+  /** 本局实际炼成的武器（R32 融合图鉴）。 */
+  private runFused = new Set<string>();
   /** R5 永久升级快照（构造期自存档读取；拾取/回复挂点用；点金结算时直读存档）。 */
   private metaMag = 0;
   private metaRegen = 0;
@@ -947,6 +949,8 @@ export class GameSim {
       codexGold: countGold(this.baseCodex, this.killCounts),
       armoryCount: new Set([...this.baseArmory, ...this.runArmory]).size,
       armoryTotal: Object.keys(WEAPON_DATA).length,
+      fusedCount: FUSION_RECIPES.filter((r) => this.runFused.has(r.result) || (this.save.load()?.fused ?? []).includes(r.result)).length,
+      fusedTotal: FUSION_RECIPES.length,
     });
   }
 
@@ -1000,6 +1004,8 @@ export class GameSim {
       }
     }
     const w = this.giveWeapon(offer.resultId);
+    // R32 融合图鉴：只记真正经祭坛炼成的（藏珍给入不重复记）
+    this.runFused.add(offer.resultId);
     this.emit("fusion_done", { result: w.name });
     return { handled: true, accepted: true, result: w.name };
   }
@@ -1679,6 +1685,8 @@ export class GameSim {
         : (prev.dailyBest ?? { date: "", score: 0 }),
       // R30 藏珍：本局新获并入跨局（死亡也记——拥有过即是拥有过）
       armory: [...new Set([...(prev.armory ?? []), ...this.runArmory])],
+      // R32 融合图鉴：本局炼成的入跨局库（用 giveWeapon 而非 makeWeapon，藏珍同步点亮）
+      fused: [...new Set([...(prev.fused ?? []), ...this.runFused])],
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -2303,6 +2311,11 @@ export class GameSim {
         // R30 藏珍：跨局拥有 + 本局新获（图鉴迷雾点亮用）
         const prev = this.save.load() ?? defaultSave();
         return { owned: [...new Set([...(prev.armory ?? []), ...this.runArmory])] };
+      }
+      case "fusions": {
+        // R32 融合图鉴：实际炼成过的武器（配方点亮用）
+        const prev = this.save.load() ?? defaultSave();
+        return { fused: [...new Set([...(prev.fused ?? []), ...this.runFused])] };
       }
       case "roles": {
         return {

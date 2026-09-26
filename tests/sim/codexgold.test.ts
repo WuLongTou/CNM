@@ -33,7 +33,7 @@ describe("R27 图鉴金边", () => {
     sim2.exec({ action: "start" });
     sim2.tick();
     expect(sim2.achievements.unlocked.has("naturalist")).toBe(false);
-    expect(ACHIEVEMENTS.length).toBe(25); // R30 藏珍满架
+    expect(ACHIEVEMENTS.length).toBe(26); // R32 炼金大师
   });
 
   it("本局击杀补足最后一块拼图", () => {

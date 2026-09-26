@@ -41,6 +41,6 @@ describe("R30 武器藏珍", () => {
     sim.giveWeapon(ALL_WEAPONS[ALL_WEAPONS.length - 1]);
     sim.tick();
     expect(sim.achievements.unlocked.has("curator")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(25);
+    expect(ACHIEVEMENTS.length).toBe(26); // R32 炼金大师
   });
 });

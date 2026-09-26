@@ -19,6 +19,9 @@ export interface AchievementState {
   /** R30：藏珍拥有数 / 武器总数。 */
   armoryCount: number;
   armoryTotal: number;
+  /** R32：已炼成配方种数 / 配方总数。 */
+  fusedCount: number;
+  fusedTotal: number;
 }
 
 export interface AchievementDef {
@@ -61,6 +64,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "slayer_1000", name: "千人斩", desc: "单局击杀 1000", check: (s) => s.kills >= 1000 },
   // R30 藏珍满架走 tick 判定（拥有数追平总数）
   { id: "curator", name: "藏珍满架", desc: "集齐全部武器", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal },
+  // R32 炼金大师走 tick 判定（六配方全炼成）
+  { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal },
 ];
 
 export class AchievementSystem {

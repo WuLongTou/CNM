@@ -30,6 +30,8 @@ export interface SaveData {
   dailyBest: { date: string; score: number };
   /** 武器藏珍（R30；拥有过的武器 defId，老存档缺字段默认 []）。 */
   armory: string[];
+  /** 融合图鉴（R32；实际炼成过的武器 defId，老存档缺字段默认 []）。 */
+  fused: string[];
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -48,6 +50,7 @@ export function defaultSave(): SaveData {
     clears: {},
     dailyBest: { date: "", score: 0 },
     armory: [],
+    fused: [],
     achievements: [],
   };
 }

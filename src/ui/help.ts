@@ -172,6 +172,9 @@ export class HelpPanel {
   }
 
   private renderMechanics(): void {
+    // R32 融合图鉴：实际炼成过的配方种数（页签内插值展示）
+    const fused = new Set((this.sim.exec({ action: "fusions" }).data as { fused: string[] }).fused);
+    const fusedCount = FUSION_RECIPES.filter((r) => fused.has(r.result)).length;
     this.bodyEl.innerHTML = `
       <table class="help-table">
         <tr><td>方向攻击</td><td>近战朝移动方向挥砍（±55° 扇形），锥内妖物自动吸附瞄准；出手带突进位移——朝哪走朝哪砍</td></tr>
@@ -191,7 +194,7 @@ export class HelpPanel {
         <tr><td>战利品</td><td>符箓（普通 3.5%/精英 30%/妖王 3 枚）· 精英宝箱（高稀有武器+符箓）· 回春丹（普通 2%/精英 10%/妖王 1 枚，走近回复 12 生命）</td></tr>
         <tr><td>妖物机制</td><td>爆魈自爆 · 隐煞潜行 · 瘴妖毒弹 · 愈妖疗伤 · 唤灵召唤 · 弩妖远程<br>铁傀甲坚（受伤-25%）· 甲妖举盾免伤 · 蛟蓄力冲撞 · 浮灯飘忽无碍</td></tr>
         <tr><td>血誓契约</td><td>欢迎页立誓加难换结算加成（可叠加）：血战（妖血+25%，结算+25%）/ 人海（密度+30%，结算+30%）/ 脆体（上限-25%，结算+50%）——三重全立并通关有成就</td></tr>
-        <tr><td>祭坛融合</td><td>携带两件武器靠近祭坛，可按展示配方祭炼为新武器</td></tr>
+        <tr><td>祭坛融合</td><td>携带两件武器靠近祭坛，可按展示配方祭炼为新武器${fusedCount > 0 ? `（已炼成 ${fusedCount} 种，集齐全配方有成就）` : ""}</td></tr>
         <tr><td>妖潮异变</td><td>开局 100 秒后每 130 秒突发事件轮转：妖群合围（环形快攻群）/ 精锐现身（近点精英）/ 宝藏显形（两侧宝箱）/ 宝妖游荡（追杀爆精英箱，15 秒后逃走），横幅预告</td></tr>
         <tr><td>永久升级</td><td>结算金币在陨落界面购买跨局成长：体魄（生命）/ 杀伐（伤害）/ 疾风（移速）/ 聚灵（拾取）/ 点金（金币）/ 回春（回复），价格 50×（等级+1）</td></tr>
         <tr><td>天气</td><td>雨减速、雾降能见、血月妖潮狂暴且精英频出</td></tr>
