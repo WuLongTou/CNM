@@ -4,6 +4,7 @@
 import type { GameSim } from "../sim/game";
 import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
+import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
 import { ACHIEVEMENTS } from "../sim/achievements";
 import { shouldUseTouch } from "./touch";
@@ -100,7 +101,7 @@ export class HelpPanel {
       </table>`;
   }
 
-  /** 妖物图鉴（R15 讨伐计数）：三维 + 本局击杀 + 跨局累计（战绩陈列）。 */
+  /** 妖物图鉴（R15 讨伐计数，R27 金边）：三维 + 本局击杀 + 跨局累计；满百镀金行。 */
   private renderEnemyCodex(): void {
     const codex = this.sim.exec({ action: "codex" }).data as {
       run: Record<number, number>; total: Record<number, number>;
@@ -111,7 +112,8 @@ export class HelpPanel {
         const s = ENEMY_STATS[id];
         const run = codex.run[id] ?? 0;
         const total = codex.total[id] ?? 0;
-        return `<tr><td>${ENEMY_NAMES[id]}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td><td>本局 ${run} · 累计 ${total}</td></tr>`;
+        const gold = total >= CODEX_GOLD_THRESHOLD;
+        return `<tr${gold ? ` class="codex-gold"` : ""}><td>${ENEMY_NAMES[id]}${gold ? `<i class="w-star">★</i>` : ""}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td><td>本局 ${run} · 累计 ${total}</td></tr>`;
       }).join("")}
     </table>`;
   }

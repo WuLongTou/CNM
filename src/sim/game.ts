@@ -243,6 +243,19 @@ export function clearsTotal(clears: Record<string, number[]> | undefined): numbe
   return Object.values(clears ?? {}).reduce((n, l) => n + l.length, 0);
 }
 
+/** 图鉴金边阈值（R27）：单类跨局累计满百镀金。 */
+export const CODEX_GOLD_THRESHOLD = 100;
+/** 金边种类数（R27 纯函数可单测）：存档基线 + 本局击杀合并后达阈值的类型数。 */
+export function countGold(base: Record<number, number> | undefined, run: Record<number, number>): number {
+  const seen = new Set([...Object.keys(base ?? {}), ...Object.keys(run)]);
+  let n = 0;
+  for (const k of seen) {
+    const id = Number(k);
+    if ((base?.[id] ?? 0) + (run[id] ?? 0) >= CODEX_GOLD_THRESHOLD) n++;
+  }
+  return n;
+}
+
 /** 图鉴合并（R15）：跨局累计 + 本局分类型；老存档缺 codex 按空处理。 */
 export function mergeCodex(prev: Record<number, number> | undefined, run: Record<number, number>): Record<number, number> {
   const next: Record<number, number> = { ...(prev ?? {}) };
@@ -397,6 +410,8 @@ export class GameSim {
   private listeners: Array<(e: SimEvent) => void> = [];
   /** 存档中的跨局累计击杀基线（本局 kills 之外的存量）。 */
   private baseTotalKills = 0;
+  /** 存档中的图鉴基线（R27 金边判定用；构造期缓存，tick 内只做 14 键扫描）。 */
+  private baseCodex: Record<number, number> = {};
   /** R5 永久升级快照（构造期自存档读取；拾取/回复挂点用；点金结算时直读存档）。 */
   private metaMag = 0;
   private metaRegen = 0;
@@ -438,6 +453,7 @@ export class GameSim {
     this.metaRegen = prev?.metaRegen ?? 0;
     // 跨局累计击杀基线（成就「累计击杀」用；死亡结算时存档累加）
     this.baseTotalKills = prev?.totalKills ?? 0;
+    this.baseCodex = { ...(prev?.codex ?? {}) };
     this.isFirstRun = (prev?.games ?? 0) === 0;
     this.player = {
       x: this.world.w / 2, y: this.world.h / 2,
@@ -919,6 +935,7 @@ export class GameSim {
       rerollsUsed: CFG.Upgrade.RerollsPerRun - this.rerollsLeft,
       banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
       goblinKills: this.goblinKills,
+      codexGold: countGold(this.baseCodex, this.killCounts),
     });
   }
 

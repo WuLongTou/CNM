@@ -14,6 +14,8 @@ export interface AchievementState {
   banishesUsed: number;
   /** R14：宝妖讨伐数。 */
   goblinKills: number;
+  /** R27：图鉴金边种类数（单类跨局累计满百）。 */
+  codexGold: number;
 }
 
 export interface AchievementDef {
@@ -50,6 +52,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // R21 制霸双璧同样由 onVictory 直接 grant
   { id: "three_heroes", name: "三英聚义", desc: "三个职业各通关至少一次", check: () => false },
   { id: "nine_realms", name: "九界平定", desc: "制霸全部 9 格（3 职业×3 难度）", check: () => false },
+  // R27 博物学家走 tick 判定（14 种妖物图鉴全金边）
+  { id: "naturalist", name: "博物学家", desc: "图鉴十四妖物皆满百杀镀金", check: (s) => s.codexGold >= 14 },
 ];
 
 export class AchievementSystem {
