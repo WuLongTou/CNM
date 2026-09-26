@@ -28,6 +28,8 @@ export interface SaveData {
   clears: Record<string, number[]>;
   /** 今日最佳（R26；仅当日种子开局计分，老存档缺字段默认空）。 */
   dailyBest: { date: string; score: number };
+  /** 武器藏珍（R30；拥有过的武器 defId，老存档缺字段默认 []）。 */
+  armory: string[];
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -45,6 +47,7 @@ export function defaultSave(): SaveData {
     codex: {},
     clears: {},
     dailyBest: { date: "", score: 0 },
+    armory: [],
     achievements: [],
   };
 }

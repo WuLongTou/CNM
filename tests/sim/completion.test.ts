@@ -75,12 +75,12 @@ describe("R21 制霸矩阵", () => {
     expect(save.data.clears).toEqual({ sword: [0] });
   });
 
-  it("meta 动作返回制霸总数；成就表 24 项", () => {
+  it("meta 动作返回制霸总数；成就表 25 项", () => {
     const save = memoryStorage();
     save.save({ ...defaultSave(), clears: { sword: [0, 1], mage: [2] } });
     const sim = new GameSim(211, save);
     const meta = sim.exec({ action: "meta" }).data as { clears: number };
     expect(meta.clears).toBe(3);
-    expect(ACHIEVEMENTS.length).toBe(24); // R29 千人斩
+    expect(ACHIEVEMENTS.length).toBe(25); // R30 藏珍满架
   });
 });

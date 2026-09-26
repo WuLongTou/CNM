@@ -16,6 +16,9 @@ export interface AchievementState {
   goblinKills: number;
   /** R27：图鉴金边种类数（单类跨局累计满百）。 */
   codexGold: number;
+  /** R30：藏珍拥有数 / 武器总数。 */
+  armoryCount: number;
+  armoryTotal: number;
 }
 
 export interface AchievementDef {
@@ -56,6 +59,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "naturalist", name: "博物学家", desc: "图鉴十四妖物皆满百杀镀金", check: (s) => s.codexGold >= 14 },
   // R29 千人斩走 tick 判定（单局击杀数）
   { id: "slayer_1000", name: "千人斩", desc: "单局击杀 1000", check: (s) => s.kills >= 1000 },
+  // R30 藏珍满架走 tick 判定（拥有数追平总数）
+  { id: "curator", name: "藏珍满架", desc: "集齐全部武器", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal },
 ];
 
 export class AchievementSystem {

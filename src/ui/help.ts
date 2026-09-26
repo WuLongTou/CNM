@@ -136,15 +136,20 @@ export class HelpPanel {
     return t.join(" · ");
   }
 
+  /** 武器藏珍（R30 图鉴迷雾）：拥有过点亮，未见过灰隐（名 ???，描述不剧透）。 */
   private renderWeaponCodex(): void {
     const TYPE_NAMES: Record<WeaponDef["type"], string> = { Melee: "近战", Ranged: "远程", Magic: "魔法", Mine: "地雷" };
     const order: Array<WeaponDef["type"]> = ["Melee", "Ranged", "Magic", "Mine"];
+    const owned = new Set((this.sim.exec({ action: "armory" }).data as { owned: string[] }).owned);
     const fusionable = new Set(FUSION_RECIPES.flatMap((r) => [r.a, r.b]));
     const rows = order.flatMap((type) =>
-      Object.values(WEAPON_DATA)
-        .filter((d) => d.type === type)
-        .sort((a, b) => a.tier - b.tier)
-        .map((d) => {
+      Object.entries(WEAPON_DATA)
+        .filter(([, d]) => d.type === type)
+        .sort((a, b) => a[1].tier - b[1].tier)
+        .map(([id, d]) => {
+          if (!owned.has(id)) {
+            return `<tr class="armory-unknown"><td>？？？</td><td>[${TYPE_NAMES[d.type]}] 未曾持有</td></tr>`;
+          }
           const stars = "★".repeat(d.rarity);
           const fuse = fusionable.has(d.name) ? " · 可祭炼" : "";
           const tags = this.weaponTags(d);

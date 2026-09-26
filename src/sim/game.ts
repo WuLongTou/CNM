@@ -412,6 +412,10 @@ export class GameSim {
   private baseTotalKills = 0;
   /** 存档中的图鉴基线（R27 金边判定用；构造期缓存，tick 内只做 14 键扫描）。 */
   private baseCodex: Record<number, number> = {};
+  /** 存档中的藏珍基线（R30；构造期缓存）。 */
+  private baseArmory: string[] = [];
+  /** 本局新获武器（R30；起手/宝箱/合成/融合/调试给入列，结算并入库）。 */
+  private runArmory = new Set<string>();
   /** R5 永久升级快照（构造期自存档读取；拾取/回复挂点用；点金结算时直读存档）。 */
   private metaMag = 0;
   private metaRegen = 0;
@@ -454,6 +458,8 @@ export class GameSim {
     // 跨局累计击杀基线（成就「累计击杀」用；死亡结算时存档累加）
     this.baseTotalKills = prev?.totalKills ?? 0;
     this.baseCodex = { ...(prev?.codex ?? {}) };
+    this.baseArmory = [...(prev?.armory ?? [])];
+    this.runArmory.add(this.role.startWeapon);
     this.isFirstRun = (prev?.games ?? 0) === 0;
     this.player = {
       x: this.world.w / 2, y: this.world.h / 2,
@@ -571,6 +577,8 @@ export class GameSim {
     const id = defId ?? this.rollWeaponDef();
     const def = WEAPON_DATA[id];
     if (!def) throw new Error("未知武器: " + id);
+    // R30 藏珍：拥有过即入库（重复精炼同样算拥有过）
+    this.runArmory.add(id);
     // 重复获得：不生成重复件，改为既有武器精炼 +1 级（宝箱不开空，保留获得反馈）
     const owned = this.player.weapons.find((w) => w.defId === id);
     if (owned) {
@@ -677,6 +685,7 @@ export class GameSim {
     }
     this.role = next;
     this.player.weapons = [makeWeapon(this.role.startWeapon)];
+    this.runArmory.add(this.role.startWeapon);
     this.stats = this.recalc();
     this.emit("role_changed", { id: this.role.id, name: this.role.name });
     return { applied: true, role: this.role.id, weapon: WEAPON_DATA[this.role.startWeapon].name };
@@ -936,6 +945,8 @@ export class GameSim {
       banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
       goblinKills: this.goblinKills,
       codexGold: countGold(this.baseCodex, this.killCounts),
+      armoryCount: new Set([...this.baseArmory, ...this.runArmory]).size,
+      armoryTotal: Object.keys(WEAPON_DATA).length,
     });
   }
 
@@ -1666,6 +1677,8 @@ export class GameSim {
             : this.score,
         }
         : (prev.dailyBest ?? { date: "", score: 0 }),
+      // R30 藏珍：本局新获并入跨局（死亡也记——拥有过即是拥有过）
+      armory: [...new Set([...(prev.armory ?? []), ...this.runArmory])],
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -2285,6 +2298,11 @@ export class GameSim {
         // R15 图鉴：本局分类型 + 跨局累计（含本局实时合并，老存档缺字段按空处理）
         const prev = this.save.load() ?? defaultSave();
         return { run: { ...this.killCounts }, total: mergeCodex(prev.codex, this.killCounts) };
+      }
+      case "armory": {
+        // R30 藏珍：跨局拥有 + 本局新获（图鉴迷雾点亮用）
+        const prev = this.save.load() ?? defaultSave();
+        return { owned: [...new Set([...(prev.armory ?? []), ...this.runArmory])] };
       }
       case "roles": {
         return {

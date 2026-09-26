@@ -256,6 +256,9 @@ canvas { position: absolute; z-index: 0; }
 .help-table tr.ach-done td { color: #a8741a; }
 /* R27 图鉴金边：满百镀金行（名金字 + 星标，沿用 w-star 金） */
 .help-table tr.codex-gold td:first-child { color: #a8741a; }
+/* R30 藏珍迷雾：未见武器灰隐（名与描述皆不可读） */
+.help-table tr.armory-unknown td { color: #b8ab90; }
+.help-table tr.armory-unknown td:first-child { color: #b8ab90; }
 .help-table .w-star { color: #a8741a; font-style: normal; font-size: 11px; margin-left: 4px; letter-spacing: -1px; }
 .help-table .w-tags { color: #8a8175; font-size: 11px; }
 .help-table .w-fuse { color: #7a3a8a; font-size: 11px; }
