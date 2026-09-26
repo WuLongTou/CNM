@@ -16,6 +16,27 @@ export function dangerOpacity(hpRatio: number): number {
   return Math.min(1, (0.35 - Math.max(0, hpRatio)) / 0.35);
 }
 
+/** 自定义种子解析（R22 纯函数可单测）：1~999999999 整数有效，否则 null（调用方回退随机）。 */
+export function parseSeed(raw: string): number | null {
+  const t = raw.trim();
+  if (!/^\d{1,9}$/.test(t)) return null;
+  const n = Number(t);
+  return n >= 1 && n <= 999999999 ? n : null;
+}
+
+export interface ShareSummary {
+  score: number; kills: number; survivalTime: number; round: number;
+  roleName: string; difficultyName: string; seed: number;
+  cleared: boolean;
+}
+
+/** 战绩分享文案（R22 纯函数可单测）：单行速通分享格式，含种子可复现。 */
+export function shareText(s: ShareSummary): string {
+  const mark = s.cleared ? "通关" : "陨落";
+  return `【斩妖录】${mark} · 分数${s.score} · 击杀${s.kills} · 存活${s.survivalTime.toFixed(0)}s` +
+    ` · 威胁阶${s.round} · ${s.roleName}/${s.difficultyName}难度 · 种子${s.seed}`;
+}
+
 export class Hud {
   private root: HTMLElement;
   private hpFill!: HTMLElement;
@@ -31,6 +52,8 @@ export class Hud {
   private dashDot!: HTMLElement;
   /** 继续无尽讨伐（Victory 面板按钮）。 */
   onEndless: (() => void) | null = null;
+  /** 分享复制结果反馈（R22；装配层接 notify）。 */
+  onShareCopy: ((ok: boolean) => void) | null = null;
 
   constructor(private sim: GameSim, private onStart: () => void, private onRestart: () => void) {
     this.root = document.createElement("div");
@@ -96,6 +119,7 @@ export class Hud {
         <div class="role-cards" id="role-cards"></div>
         <div class="diff-row" id="diff-row"></div>
         <p id="save-stats" class="sub"></p>
+        <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
@@ -104,6 +128,20 @@ export class Hud {
     this.buildRoleCards();
     this.buildDiffRow();
     this.refreshSaveStats();
+    this.refreshSeedRow();
+  }
+
+  /** 当前种子展示（R22；重开/新局后刷新）。 */
+  private refreshSeedRow(): void {
+    const el = this.welcome.querySelector<HTMLElement>("#seed-now");
+    if (el) el.textContent = String(this.sim.seed);
+  }
+
+  /** 待用自定义种子（R22；输入有效则返回，否则 null 由装配层回退随机）。 */
+  pendingSeed(): number | null {
+    const input = this.welcome.querySelector<HTMLInputElement>("#seed-input");
+    if (!input) return null;
+    return parseSeed(input.value);
   }
 
   /** 欢迎页难度选择（R10）：三档小按钮，纯鼠标；未解锁置灰并印条件。 */
@@ -192,6 +230,7 @@ export class Hud {
         <p id="victory-coins" class="sub"></p>
         <button id="btn-endless" type="button">继续讨伐（无尽）</button>
         <button id="btn-victory-restart" type="button">再来一局</button>
+        <button id="btn-victory-share" type="button">复制战绩</button>
         <p class="hint">按 R 再来一局</p>
       </div>`;
     this.root.appendChild(this.victory);
@@ -200,6 +239,7 @@ export class Hud {
     this.victoryCoins = this.victory.querySelector("#victory-coins")!;
     this.victory.querySelector("#btn-endless")!.addEventListener("click", () => this.onEndless?.());
     this.victory.querySelector("#btn-victory-restart")!.addEventListener("click", () => this.onRestart());
+    this.victory.querySelector("#btn-victory-share")!.addEventListener("click", () => this.shareRun(true));
   }
 
   private refreshVictory(): void {
@@ -222,12 +262,14 @@ export class Hud {
         <div class="meta-row" id="meta-row"></div>
         <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
+        <button id="btn-gameover-share" type="button">复制战绩</button>
         <p class="hint">按 R 再来一局</p>
       </div>`;
     this.root.appendChild(this.gameover);
     this.gameoverStats = this.gameover.querySelector("#gameover-stats")!;
     this.gameoverDebrief = this.gameover.querySelector("#gameover-debrief")!;
     this.gameover.querySelector("#btn-restart")!.addEventListener("click", () => this.onRestart());
+    this.gameover.querySelector("#btn-gameover-share")!.addEventListener("click", () => this.shareRun(false));
   }
 
   private fetchMeta(): { coins: number; shop: MetaShopItem[] } {
@@ -266,10 +308,30 @@ export class Hud {
     return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件`;
   }
 
+  /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
+  private shareRun(cleared: boolean): void {
+    const s = this.sim;
+    const text = shareText({
+      score: s.score, kills: s.kills, survivalTime: s.survivalTime, round: s.round,
+      roleName: s.role.name, difficultyName: s.difficulty.name, seed: s.seed, cleared,
+    });
+    try {
+      const done = navigator.clipboard?.writeText(text);
+      if (done && typeof (done as Promise<void>).then === "function") {
+        (done as Promise<void>).then(() => this.onShareCopy?.(true), () => this.onShareCopy?.(false));
+      } else {
+        this.onShareCopy?.(false);
+      }
+    } catch {
+      this.onShareCopy?.(false);
+    }
+  }
+
   /** 重开一局时替换绑定的 sim 实例（新局存档可能已更新战绩/解锁）。 */
   resimulate(sim: GameSim): void {
     this.sim = sim;
     this.refreshSaveStats();
+    this.refreshSeedRow();
     this.buildRoleCards();
     this.buildDiffRow();
   }

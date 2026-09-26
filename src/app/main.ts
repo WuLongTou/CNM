@@ -58,8 +58,15 @@ async function boot(): Promise<void> {
   view.attachFx();
   await audio.init();
 
-  const hud = new Hud(sim, () => { sim.start(); audio.playBgm(); }, () => restart());
+  // R22：欢迎页填了自定义种子则用该种子开局（可复现速通），否则沿用当前实例
+  const hud = new Hud(sim, () => {
+    const seed = hud.pendingSeed();
+    if (seed !== null) restart(seed);
+    sim.start();
+    audio.playBgm();
+  }, () => restart());
   hud.onEndless = () => { sim.exec({ action: "continue" }); audio.playBgm(); notify.push("无尽讨伐 · 妖潮再起"); };
+  hud.onShareCopy = (ok) => notify.push(ok ? "战绩已复制，去跟同道切磋吧" : "复制失败（浏览器未授权剪贴板）");
   const equipment = new EquipmentPanel(sim);
   const crafting = new CraftingPanel(sim);
   const fusion = new FusionPanel(sim);
@@ -202,11 +209,13 @@ async function boot(): Promise<void> {
   const joyBase = document.getElementById("joy-base");
   const touchBtns = document.getElementById("touch-btns");
 
-  function restart(): void {
-    // R18 记住上局选择：职业/难度沿用（同存档下锁天然成立，无需额外校验）
+  function restart(seed?: number): void {
+    // R18 记住上局选择：职业/难度沿用（同存档下锁天然成立，无需额外校验）；
+    // R22 自定义种子优先（输入框留值则连打同一种子；清空回随机）
     const roleId = sim.role.id;
     const difficultyId = sim.difficulty.id;
-    sim = new GameSim(Date.now() % 100000, localStorageStorage(), roleId, difficultyId);
+    const runSeed = seed ?? hud.pendingSeed() ?? Date.now() % 100000;
+    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId);
     wireSim();
     input.forceSim(sim);
     hud.resimulate(sim);

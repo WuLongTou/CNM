@@ -2293,6 +2293,7 @@ export class GameSim {
       player_max_hp: this.player.maxHp,
       player_pos: { x: this.player.x, y: this.player.y },
       weapon: this.activeWeapon?.name ?? null,
+      seed: this.seed,
       role: this.role.id,
       role_name: this.role.name,
       rerolls_left: this.rerollsLeft,

@@ -67,6 +67,14 @@ canvas { position: absolute; z-index: 0; }
   border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.4);
 }
 .panel > button:hover { background: #d94a3a; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
+/* R22 分享按钮次级化（与再来一局并排，避免双主按钮抢戏；同 #btn-reject 灰） */
+#btn-gameover-share, #btn-victory-share { background: #8a8175; }
+#btn-gameover-share:hover, #btn-victory-share:hover { background: #9a8f7d; transform: translateY(1px); box-shadow: 1px 2px 0 rgba(51, 46, 41, 0.4); }
+/* R22 种子行：小字 + 纸面输入框（移动端不撑开面板） */
+.seed-row input {
+  width: 110px; font-size: 13px; padding: 3px 8px; color: #332e29;
+  background: #fbf6ea; border: 1.5px solid #6b6154; border-radius: 5px 7px 5px 8px;
+}
 /* 嵌套按钮组回填（原先吃全局规则，现各自写全）：融合 / 结算商店 / 帮助页签 / 放逐 */
 .fusion-btns button {
   background: #c0392b; color: #f5eede; border: 2px solid #332e29;
