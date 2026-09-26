@@ -44,6 +44,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "pacify", name: "妖潮平定", desc: "讨伐终幕妖王通关一次", check: () => false },
   { id: "demon_queller", name: "伏魔真君", desc: "以伏魔难度通关", check: () => false },
   { id: "warden", name: "镇狱天师", desc: "以镇狱难度通关", check: () => false },
+  // R21 制霸双璧同样由 onVictory 直接 grant
+  { id: "three_heroes", name: "三英聚义", desc: "三个职业各通关至少一次", check: () => false },
+  { id: "nine_realms", name: "九界平定", desc: "制霸全部 9 格（3 职业×3 难度）", check: () => false },
 ];
 
 export class AchievementSystem {

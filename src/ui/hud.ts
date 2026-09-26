@@ -172,9 +172,11 @@ export class Hud {
   private refreshSaveStats(): void {
     const el = this.welcome.querySelector<HTMLElement>("#save-stats");
     if (!el) return;
-    const d = this.sim.exec({ action: "meta" }).data as { highScore: number; totalKills: number; games: number };
+    const d = this.sim.exec({ action: "meta" }).data as {
+      highScore: number; totalKills: number; games: number; clears: number;
+    };
     el.textContent = d.games > 0
-      ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局`
+      ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局 · 制霸 ${d.clears}/9`
       : "初入山林 · 祝武运昌隆";
   }
 

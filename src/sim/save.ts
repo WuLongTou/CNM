@@ -24,6 +24,8 @@ export interface SaveData {
   maxDifficulty: number;
   /** 图鉴讨伐数（R15；妖物类型 id → 跨局累计击杀，老存档缺字段默认 {}）。 */
   codex: Record<number, number>;
+  /** 制霸记录（R21；职业 id → 通关过的难度 id 列表，老存档缺字段默认 {}）。 */
+  clears: Record<string, number[]>;
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -39,6 +41,7 @@ export function defaultSave(): SaveData {
     metaHp: 0, metaDmg: 0, metaSpd: 0, metaMag: 0, metaGreed: 0, metaRegen: 0,
     maxDifficulty: -1,
     codex: {},
+    clears: {},
     achievements: [],
   };
 }

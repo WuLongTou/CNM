@@ -225,6 +225,22 @@ const UPGRADE_DROP = { normal: 0.035, elite: 0.3, boss: 1 } as const;
 /** 回春丹掉落（R20）：普通 2% / 精英 10% / 妖王必掉 1 枚；每枚回复量不超上限。 */
 const HEAL_DROP = { normal: 0.02, elite: 0.1 } as const;
 const HEAL_AMOUNT = 12;
+/** 制霸记录合并（R21）：职业 → 已通关难度去重排序列表；老存档缺 clears 按空处理。 */
+export function recordClear(
+  prev: Record<string, number[]> | undefined, roleId: string, difficulty: DifficultyId,
+): Record<string, number[]> {
+  const next: Record<string, number[]> = { ...(prev ?? {}) };
+  const list = next[roleId] ?? [];
+  if (!list.includes(difficulty)) list.push(difficulty);
+  next[roleId] = [...list].sort((a, b) => a - b);
+  return next;
+}
+
+/** 制霸总数（R21；满格 3 职业 × 3 难度 = 9）。 */
+export function clearsTotal(clears: Record<string, number[]> | undefined): number {
+  return Object.values(clears ?? {}).reduce((n, l) => n + l.length, 0);
+}
+
 /** 图鉴合并（R15）：跨局累计 + 本局分类型；老存档缺 codex 按空处理。 */
 export function mergeCodex(prev: Record<number, number> | undefined, run: Record<number, number>): Record<number, number> {
   const next: Record<number, number> = { ...(prev ?? {}) };
@@ -1541,6 +1557,10 @@ export class GameSim {
     this.achievements.grant("pacify");
     if (this.difficulty.id >= 1) this.achievements.grant("demon_queller");
     if (this.difficulty.id >= 2) this.achievements.grant("warden");
+    // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
+    const clears = (this.save.load() ?? defaultSave()).clears ?? {};
+    if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");
+    if (clearsTotal(clears) >= 9) this.achievements.grant("nine_realms");
     const next = DIFFICULTIES[(this.difficulty.id + 1) as DifficultyId];
     if (next && next.unlockBy !== null && next.unlockBy > prevMax) {
       this.emit("difficulty_unlocked", { id: next.id, name: next.name });
@@ -1569,6 +1589,10 @@ export class GameSim {
         ? Math.max(prev.maxDifficulty ?? -1, cleared)
         : (prev.maxDifficulty ?? -1),
       codex: mergeCodex(prev.codex, this.killCounts),
+      // R21 制霸：仅通关记录职业×难度（死亡不记）
+      clears: cleared !== null
+        ? recordClear(prev.clears, this.role.id, cleared)
+        : { ...(prev.clears ?? {}) },
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -2167,6 +2191,7 @@ export class GameSim {
         return {
           coins: d.coins, metaHp: d.metaHp, metaDmg: d.metaDmg,
           highScore: d.highScore, totalKills: d.totalKills, games: d.games,
+          clears: clearsTotal(d.clears),
           // R5 商店列表（UI 按钮与自动化测试共用；顶层旧字段保留兼容）
           shop: kinds.map((k) => {
             const def = META_SHOP[k];
