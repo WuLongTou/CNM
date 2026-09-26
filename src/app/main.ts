@@ -222,7 +222,8 @@ async function boot(): Promise<void> {
     const roleId = sim.role.id;
     const difficultyId = sim.difficulty.id;
     const runSeed = seed ?? hud.pendingSeed() ?? Date.now() % 100000;
-    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId);
+    // R25 血誓沿用（同职业/难度）
+    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId, [...sim.pacts]);
     wireSim();
     input.forceSim(sim);
     hud.resimulate(sim);

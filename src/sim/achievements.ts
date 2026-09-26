@@ -39,6 +39,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "combo_20", name: "连绵不绝", desc: "单局最高连击 20", check: (s) => s.maxCombo >= 20 },
   { id: "combo_50", name: "万军取首", desc: "单局最高连击 50", check: (s) => s.maxCombo >= 50 },
   { id: "combo_100", name: "百连斩", desc: "单局最高连击 100", check: (s) => s.maxCombo >= 100 },
+  // R25 三重血誓由 onVictory 直接 grant
+  { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", check: () => false },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", check: (s) => s.weaponCount >= 6 },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", check: (s) => s.goblinKills >= 1 },
   // 通关三档由 onVictory 直接 grant（终局后 tick 停摆，走 tick 判定够不着）

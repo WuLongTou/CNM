@@ -115,6 +115,18 @@ canvas { position: absolute; z-index: 0; }
 
 /* ── 欢迎页难度选择（R10）：三档小按钮，纯鼠标 ── */
 .diff-row { display: flex; gap: 10px; justify-content: center; margin: 0 0 14px; }
+/* ── 欢迎页血誓多选（R25）：三誓芯片，多选高亮（防压字：flex-shrink:0，窄屏换行）── */
+.pact-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 0 0 14px; }
+.pact-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 108px; padding: 8px 14px; cursor: pointer; text-align: center; flex-shrink: 0;
+  background: #fbf6ea; color: #332e29; border: 2px solid #b8ab90;
+  border-radius: 8px 11px 8px 12px; box-shadow: 2px 3px 0 rgba(51, 46, 41, 0.25);
+}
+.pact-btn:hover { border-color: #c0392b; transform: translateY(-2px); }
+.pact-btn.selected { border-color: #c0392b; background: #f6e3da; box-shadow: 2px 3px 0 rgba(192, 57, 43, 0.35); }
+.pact-btn b { font-size: 15px; color: #6a1a12; letter-spacing: 0.2em; }
+.pact-btn i { font-style: normal; font-size: 11px; color: #8a8175; }
 .diff-btn {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   min-width: 108px; padding: 8px 14px; cursor: pointer; text-align: center;
@@ -291,7 +303,7 @@ canvas { position: absolute; z-index: 0; }
   .overlay > .panel { margin: auto; }
   #minimap { width: 96px !important; height: auto !important; }
   /* R19：欢迎页三选一缩小排下（390px 屏三卡 3×104+2×8 刚好） */
-  .role-cards, .diff-row { gap: 8px; }
+  .role-cards, .diff-row, .pact-row { gap: 8px; }
   .role-card { width: 104px; padding: 10px 6px 8px; font-size: 11px; }
   .role-card b { font-size: 15px; }
   .diff-btn { min-width: 92px; padding: 6px 10px; }

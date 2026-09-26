@@ -20,6 +20,7 @@ import { DEFAULT_DIFFICULTY, DIFFICULTIES, getDifficulty, type DifficultyDef, ty
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
+import { PACTS, PACT_IDS, type PactId } from "./pacts";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
@@ -402,6 +403,8 @@ export class GameSim {
   role: RoleDef;
   /** 当前难度（R10；欢迎页可换，start 后锁定）。 */
   difficulty: DifficultyDef;
+  /** 本局血誓（R25；欢迎页多选，start 后锁定；默认空集零影响）。 */
+  pacts = new Set<PactId>();
   /** 存档中的最高通关难度（R10 解锁判定用；-1 = 从未通关）。 */
   private maxDifficulty = -1;
   /** 是否首局（R11 新手教练用；存档局数为 0 即首局，中途 quit 不计局也算首局，无害）。 */
@@ -412,18 +415,22 @@ export class GameSim {
     save: SaveStorage = { load: () => null, save: () => {} },
     roleId: string = DEFAULT_ROLE,
     difficultyId: number = DEFAULT_DIFFICULTY,
+    pacts: string[] = [],
   ) {
     this.seed = seed;
     this.rng = new Rng(seed);
     this.save = save;
     this.role = getRole(roleId);
     this.difficulty = getDifficulty(difficultyId);
+    for (const id of pacts) if ((PACT_IDS as string[]).includes(id)) this.pacts.add(id as PactId);
     this.maxDifficulty = save.load()?.maxDifficulty ?? -1;
     const c = CFG.Player;
     const prev = save.load();
     // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）；
-    // R5：移速 +4%/级、拾取 +12%/级、金币 +10%/级、回复 +0.4/s/级
-    const maxHp = c.MaxHealth + (prev?.metaHp ?? 0) * 20;
+    // R5：移速 +4%/级、拾取 +12%/级、金币 +10%/级、回复 +0.4/s/级；
+    // R25 脆体：生命上限打折（建角时一次结算）
+    const frail = this.pacts.has("frail") ? PACTS.frail.frailMult : 1;
+    const maxHp = Math.floor((c.MaxHealth + (prev?.metaHp ?? 0) * 20) * frail);
     const baseDamage = c.BaseDamage * (1 + (prev?.metaDmg ?? 0) * 0.1);
     const speed = c.BaseSpeed * (1 + (prev?.metaSpd ?? 0) * META_SHOP.spd.step);
     this.metaMag = prev?.metaMag ?? 0;
@@ -613,6 +620,33 @@ export class GameSim {
     this.difficulty = next;
     this.emit("difficulty_changed", { id: next.id, name: next.name });
     return { applied: true, difficulty: next.id, name: next.name };
+  }
+
+  /** 切换血誓组合（R25）：仅开局前（欢迎页）允许；未知 id 整体拒绝（不静默吞）。 */
+  setPacts(ids: string[]): Record<string, unknown> {
+    if (this.state !== "WeaponSelection") {
+      return { applied: false, note: "仅开局前可立誓", pacts: [...this.pacts] };
+    }
+    const known = PACT_IDS as string[];
+    if (ids.some((id) => !known.includes(id))) {
+      return { applied: false, note: "未知血誓", pacts: [...this.pacts] };
+    }
+    this.pacts = new Set(ids as PactId[]);
+    // 脆体改上限：建角已按旧组合结算，此处同步重算（满血）。
+    const c = CFG.Player;
+    const prev = this.save.load();
+    const frail = this.pacts.has("frail") ? PACTS.frail.frailMult : 1;
+    this.player.maxHp = Math.floor((c.MaxHealth + (prev?.metaHp ?? 0) * 20) * frail);
+    this.player.hp = this.player.maxHp;
+    this.emit("pacts_changed", { pacts: [...this.pacts] });
+    return { applied: true, pacts: [...this.pacts] };
+  }
+
+  /** 结算分数乘数（R25；多誓连乘，无誓为 1）。 */
+  pactScoreMult(): number {
+    let m = 1;
+    for (const id of this.pacts) m *= PACTS[id].scoreMult;
+    return m;
   }
 
   /** 切换职业（R3）：仅开局前（欢迎页）允许；起手武器跟随职业重置。R6 起未解锁拒绝。 */
@@ -1512,7 +1546,8 @@ export class GameSim {
     let pts = ENEMY_SCORE[e.type] ?? 10;
     if (e.elite) pts = Math.floor(pts * CFG.Enemy.EliteScoreMult);
     if (e.boss) pts = Math.floor(pts * CFG.Enemy.BossScoreMult);
-    this.score += pts;
+    // R25 血誓：结算分数连乘（经分数自然流入结算金币）
+    this.score += Math.floor(pts * this.pactScoreMult());
     // R8 精英掉宝：非妖王精英必掉精英宝箱（高价值目标时刻；妖王保持符箓×3）
     if (e.elite && !e.boss) this.dropChest(e.x, e.y, true);
     // R14 宝妖讨伐：必爆精英箱 + 符箓（追杀的 jackpot）
@@ -1563,6 +1598,8 @@ export class GameSim {
     this.achievements.grant("pacify");
     if (this.difficulty.id >= 1) this.achievements.grant("demon_queller");
     if (this.difficulty.id >= 2) this.achievements.grant("warden");
+    // R25 三重血誓通关（终局直授；tick 停摆走判定够不着）
+    if (this.pacts.size >= 3) this.achievements.grant("oathbound");
     // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
     const clears = (this.save.load() ?? defaultSave()).clears ?? {};
     if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");
@@ -1994,6 +2031,10 @@ export class GameSim {
     if (this.spawnCd > 0) return;
     this.spawnCd = this.enemies.length < cap.min ? 0.15 : cap.cd;
     this.spawnEnemy({ type: "random", near: "player" });
+    // R25 人海：每次维持刷怪后 30% 概率多刷一只（上限约束照常）
+    if (this.pacts.has("horde") && this.rng.chance(PACTS.horde.spawnBonus)) {
+      this.spawnEnemy({ type: "random", near: "player" });
+    }
   }
 
   /** 刷怪：距玩家 ≥420px 环形随机（对齐 EnemySpawnMinDistFromPlayer）。 */
@@ -2043,9 +2084,10 @@ export class GameSim {
   private createEnemy(type: EnemyType, x: number, y: number, opts: SpawnOpts): Enemy {
     const stats = ENEMY_STATS[type];
     const mult = this.roundMult(CFG.Difficulty.SpawnScaleFactor);
-    // R10 难度：妖物血伤同乘（速度不动，保证走位公平）
+    // R10 难度：妖物血伤同乘（速度不动，保证走位公平）；R25 血战：生命再 ×1.25
     const foe = this.difficulty.foeMult;
-    let hp = Math.ceil(stats.hp * mult * foe);
+    const blood = this.pacts.has("blood") ? PACTS.blood.hpMult : 1;
+    let hp = Math.ceil(stats.hp * mult * foe * blood);
     let damage = Math.ceil(stats.dmg * mult * foe);
     let speed = stats.speed;
     let elite = opts.elite ?? false;
@@ -2238,6 +2280,17 @@ export class GameSim {
         const id = typeof args.difficulty === "number" ? args.difficulty : -1;
         return this.setDifficulty(id);
       }
+      case "pacts": {
+        return {
+          current: [...this.pacts],
+          score_mult: this.pactScoreMult(),
+          list: PACT_IDS.map((id) => ({ ...PACTS[id] })),
+        };
+      }
+      case "set_pacts": {
+        const ids = Array.isArray(args.pacts) ? args.pacts.filter((x) => typeof x === "string") : [];
+        return this.setPacts(ids);
+      }
       case "weapons": return {
         active: this.attackType,
         list: this.player.weapons.map((w, i) => ({ index: i, ...w, stage: stageTag(w) })),
@@ -2300,6 +2353,8 @@ export class GameSim {
       player_pos: { x: this.player.x, y: this.player.y },
       weapon: this.activeWeapon?.name ?? null,
       seed: this.seed,
+      pacts: [...this.pacts],
+      score_mult: this.pactScoreMult(),
       role: this.role.id,
       role_name: this.role.name,
       rerolls_left: this.rerollsLeft,

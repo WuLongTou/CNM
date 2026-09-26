@@ -4,6 +4,7 @@
 
 import type { GameSim } from "../sim/game";
 import { DIFFICULTIES } from "../sim/difficulty";
+import { PACTS, PACT_IDS, type PactId } from "../sim/pacts";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 
@@ -118,6 +119,7 @@ export class Hud {
         <p class="sub">简笔画速写本 · 除妖生存</p>
         <div class="role-cards" id="role-cards"></div>
         <div class="diff-row" id="diff-row"></div>
+        <div class="pact-row" id="pact-row"></div>
         <p id="save-stats" class="sub"></p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
         <button id="btn-start" type="button">开始游戏</button>
@@ -127,6 +129,7 @@ export class Hud {
     this.welcome.querySelector("#btn-start")!.addEventListener("click", () => this.onStart());
     this.buildRoleCards();
     this.buildDiffRow();
+    this.buildPactRow();
     this.refreshSaveStats();
     this.refreshSeedRow();
   }
@@ -164,6 +167,35 @@ export class Hud {
       wrap.appendChild(b);
     }
     this.refreshDiffRow();
+  }
+
+  /** 欢迎页血誓多选（R25）：三誓芯片，点击翻转，无锁全开放。 */
+  private buildPactRow(): void {
+    const wrap = this.welcome.querySelector<HTMLElement>("#pact-row")!;
+    wrap.innerHTML = "";
+    for (const id of PACT_IDS) {
+      const d = PACTS[id];
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.pact = id;
+      b.className = "pact-btn";
+      b.innerHTML = `<b>${d.name}</b><i>${d.desc}</i>`;
+      b.addEventListener("click", () => {
+        const cur = new Set(this.sim.pacts);
+        if (cur.has(id)) cur.delete(id);
+        else cur.add(id);
+        this.sim.setPacts([...cur]);
+        this.refreshPactRow();
+      });
+      wrap.appendChild(b);
+    }
+    this.refreshPactRow();
+  }
+
+  /** 按当前 sim 血誓高亮选中钮。 */
+  private refreshPactRow(): void {
+    this.welcome.querySelectorAll<HTMLElement>(".pact-btn").forEach((x) =>
+      x.classList.toggle("selected", this.sim.pacts.has(x.dataset.pact as PactId)));
   }
 
   /** 按当前 sim 难度高亮选中钮。 */
@@ -246,7 +278,8 @@ export class Hud {
     const s = this.sim;
     const coins = Math.floor((s.score / 50 + s.kills) * 1.5);
     this.victoryStats.textContent =
-      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度`;
+      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度` +
+      (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
     this.victoryDebrief.textContent = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
   }
@@ -334,6 +367,7 @@ export class Hud {
     this.refreshSeedRow();
     this.buildRoleCards();
     this.buildDiffRow();
+    this.buildPactRow();
   }
 
   /** 触屏设备上替换欢迎页操作提示（默认文案为键盘键位）。 */
@@ -352,7 +386,9 @@ export class Hud {
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
     // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
     this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶`;
-    this.difficultyText.textContent = `难度 ${s.difficulty.name}`;
+    // R25 血誓公示：有立誓则难度后追加誓名
+    const oath = [...s.pacts].map((id) => PACTS[id].name).join("·");
+    this.difficultyText.textContent = oath ? `难度 ${s.difficulty.name}·${oath}` : `难度 ${s.difficulty.name}`;
     this.roleText.textContent = `职业 ${s.role.name}`;
     const w = s.weather.state;
     const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
@@ -386,7 +422,8 @@ export class Hud {
     if (wasOver && overReady) {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
-        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins} · 死于${s.deathCause ?? "妖潮"}`;
+        `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins} · 死于${s.deathCause ?? "妖潮"}` +
+        (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
       this.gameoverDebrief.textContent = this.debriefText(s);
       this.refreshMeta();
     }
