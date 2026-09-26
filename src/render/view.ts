@@ -411,6 +411,44 @@ export class GameView {
     this.renderWeather(sim);
     this.renderBossBar(sim);
     this.renderAttackRange(sim);
+    this.renderThreatArrows(sim);
+  }
+
+  /** 妖潮来袭标（R28）：屏外精英/妖王/宝妖的边缘方向箭头。
+   *  小地图给位置，箭头给即时方向（色调沿用身份环语义：妖王血红/宝妖亮金/精英暗金）。 */
+  private threatGfx = new Graphics();
+  private renderThreatArrows(sim: GameSim): void {
+    const g = this.threatGfx;
+    if (g.parent !== this.app.stage) this.app.stage.addChild(g);
+    g.clear();
+    const W = this.app.screen.width, H = this.app.screen.height;
+    // 安全边距：避开顶部 HUD 条与底部教练条/触屏区（DOM 盖在画布上）
+    const ML = 30, MR = 30, MT = 76, MB = 100;
+    const cands: Array<{ d: number; sx: number; sy: number; color: number }> = [];
+    for (const e of sim.enemies) {
+      if (!e.elite && !e.boss && !e.goblin) continue;
+      const s = this.worldToScreen(e.x, e.y);
+      if (s.x > -20 && s.x < W + 20 && s.y > -20 && s.y < H + 20) continue;
+      cands.push({
+        d: (e.x - sim.player.x) ** 2 + (e.y - sim.player.y) ** 2,
+        sx: s.x, sy: s.y,
+        color: e.boss ? BLOOD : e.goblin ? 0xffd94d : 0x9a6a10,
+      });
+    }
+    cands.sort((a, b) => a.d - b.d);
+    for (const c of cands.slice(0, 6)) {
+      const ang = Math.atan2(c.sy - H / 2, c.sx - W / 2);
+      const x = Math.min(W - MR, Math.max(ML, c.sx));
+      const y = Math.min(H - MB, Math.max(MT, c.sy));
+      const s = 9;
+      const dx = Math.cos(ang), dy = Math.sin(ang);
+      g.moveTo(x + dx * s, y + dy * s)
+        .lineTo(x - dx * s * 0.6 - dy * s * 0.7, y - dy * s * 0.6 + dx * s * 0.7)
+        .lineTo(x - dx * s * 0.6 + dy * s * 0.7, y - dy * s * 0.6 - dx * s * 0.7)
+        .closePath()
+        .fill(c.color)
+        .stroke({ width: 1.5, color: INK });
+    }
   }
 
   /** 攻击范围指示：妖物接近时浮现真实判定圈（冲刺斩时扩大），圈内妖物脚下血红标线。 */
