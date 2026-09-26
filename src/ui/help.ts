@@ -102,13 +102,18 @@ export class HelpPanel {
   }
 
   /** 妖物图鉴（R15 讨伐计数，R27 金边）：三维 + 本局击杀 + 跨局累计；满百镀金行。 */
+  /** 妖物图鉴（R15 计数 / R27 金边 / R33 汇总行）：页首陈列收集进度一目了然。 */
   private renderEnemyCodex(): void {
     const codex = this.sim.exec({ action: "codex" }).data as {
       run: Record<number, number>; total: Record<number, number>;
     };
-    this.bodyEl.innerHTML = `<table class="help-table">
-      ${Object.keys(ENEMY_NAMES).map((k) => {
-        const id = Number(k);
+    const ids = Object.keys(ENEMY_NAMES).map(Number);
+    const goldCount = ids.filter((id) => (codex.total[id] ?? 0) >= CODEX_GOLD_THRESHOLD).length;
+    const seenCount = ids.filter((id) => (codex.total[id] ?? 0) > 0).length;
+    const totalKills = ids.reduce((n, id) => n + (codex.total[id] ?? 0), 0);
+    this.bodyEl.innerHTML = `<p class="sub">点亮 ${seenCount}/${ids.length} · 镀金 ${goldCount}/${ids.length}（单类满 ${CODEX_GOLD_THRESHOLD} 杀） · 总讨伐 ${totalKills}</p>
+    <table class="help-table">
+      ${ids.map((id) => {
         const s = ENEMY_STATS[id];
         const run = codex.run[id] ?? 0;
         const total = codex.total[id] ?? 0;
