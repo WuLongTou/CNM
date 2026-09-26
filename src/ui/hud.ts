@@ -5,6 +5,7 @@
 import type { GameSim } from "../sim/game";
 import { DIFFICULTIES } from "../sim/difficulty";
 import { PACTS, PACT_IDS, type PactId } from "../sim/pacts";
+import { dailyKey, dailySeed } from "../sim/daily";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 
@@ -122,6 +123,7 @@ export class Hud {
         <div class="pact-row" id="pact-row"></div>
         <p id="save-stats" class="sub"></p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
+        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
@@ -132,6 +134,25 @@ export class Hud {
     this.buildPactRow();
     this.refreshSaveStats();
     this.refreshSeedRow();
+    this.refreshDailyRow();
+    this.welcome.querySelector("#btn-daily")!.addEventListener("click", () => {
+      // R26 一键挑战今日：填入当日种子后走正常开局流程（职业/难度/血誓选择照常）
+      const input = this.welcome.querySelector<HTMLInputElement>("#seed-input");
+      if (input) input.value = String(dailySeed());
+      this.onStart();
+    });
+  }
+
+  /** 今日妖潮行（R26）：当日种子 + 同日最佳（跨天自动换榜）。 */
+  private refreshDailyRow(): void {
+    const seedEl = this.welcome.querySelector<HTMLElement>("#daily-seed");
+    const bestEl = this.welcome.querySelector<HTMLElement>("#daily-best");
+    if (!seedEl || !bestEl) return;
+    seedEl.textContent = String(dailySeed());
+    const d = this.sim.exec({ action: "meta" }).data as {
+      dailyBest: { date: string; score: number };
+    };
+    bestEl.textContent = d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "";
   }
 
   /** 当前种子展示（R22；重开/新局后刷新）。 */
@@ -365,6 +386,7 @@ export class Hud {
     this.sim = sim;
     this.refreshSaveStats();
     this.refreshSeedRow();
+    this.refreshDailyRow();
     this.buildRoleCards();
     this.buildDiffRow();
     this.buildPactRow();

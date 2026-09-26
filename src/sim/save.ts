@@ -26,6 +26,8 @@ export interface SaveData {
   codex: Record<number, number>;
   /** 制霸记录（R21；职业 id → 通关过的难度 id 列表，老存档缺字段默认 {}）。 */
   clears: Record<string, number[]>;
+  /** 今日最佳（R26；仅当日种子开局计分，老存档缺字段默认空）。 */
+  dailyBest: { date: string; score: number };
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -42,6 +44,7 @@ export function defaultSave(): SaveData {
     maxDifficulty: -1,
     codex: {},
     clears: {},
+    dailyBest: { date: "", score: 0 },
     achievements: [],
   };
 }

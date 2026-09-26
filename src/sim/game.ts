@@ -21,6 +21,7 @@ import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 import { PACTS, PACT_IDS, type PactId } from "./pacts";
+import { dailyKey, dailySeed } from "./daily";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
@@ -1636,6 +1637,15 @@ export class GameSim {
       clears: cleared !== null
         ? recordClear(prev.clears, this.role.id, cleared)
         : { ...(prev.clears ?? {}) },
+      // R26 今日最佳：仅当日种子开局计分（输赢都计，同日取最高；跨天重新开榜）
+      dailyBest: this.seed === dailySeed()
+        ? {
+          date: dailyKey(),
+          score: prev.dailyBest?.date === dailyKey()
+            ? Math.max(prev.dailyBest.score, this.score)
+            : this.score,
+        }
+        : (prev.dailyBest ?? { date: "", score: 0 }),
       achievements: [...this.achievements.unlocked],
     });
     return coins;
@@ -2240,6 +2250,8 @@ export class GameSim {
           coins: d.coins, metaHp: d.metaHp, metaDmg: d.metaDmg,
           highScore: d.highScore, totalKills: d.totalKills, games: d.games,
           clears: clearsTotal(d.clears),
+          dailySeed: dailySeed(),
+          dailyBest: d.dailyBest ?? { date: "", score: 0 },
           // R5 商店列表（UI 按钮与自动化测试共用；顶层旧字段保留兼容）
           shop: kinds.map((k) => {
             const def = META_SHOP[k];
