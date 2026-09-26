@@ -73,6 +73,8 @@ async function boot(): Promise<void> {
   const upgrade = new UpgradePanel(sim);
   const help = new HelpPanel(sim);
   const pauseMenu = new PauseMenu(sim, audio);
+  // R36：暂停菜单重开走正常 restart()（保留血誓/自定义种子）
+  pauseMenu.onRestart = () => restart();
   const minimap = new MiniMap(() => sim);
   const notify = new Notify();
   const coach = new Coach(sim);

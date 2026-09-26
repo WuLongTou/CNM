@@ -6,6 +6,8 @@ import type { AudioManager } from "../app/audio";
 export class PauseMenu {
   private el: HTMLElement;
   visible = false;
+  /** 装配层接线：走正常 restart()（保留血誓/种子/战绩），替代旧整页刷新（R36）。 */
+  onRestart: (() => void) | null = null;
 
   constructor(private sim: GameSim, private audio: AudioManager) {
     this.el = document.createElement("div");
@@ -33,7 +35,8 @@ export class PauseMenu {
     this.el.querySelector("#btn-resume")!.addEventListener("click", () => this.toggle(false));
     this.el.querySelector("#btn-pause-restart")!.addEventListener("click", () => {
       this.toggle(false);
-      location.reload();
+      // R36：整页 reload 会丢血誓/自定义种子并绕过 resimulate 链，改走装配层 restart()
+      this.onRestart?.();
     });
     this.el.addEventListener("click", (e) => { if (e.target === this.el) this.toggle(false); });
   }
