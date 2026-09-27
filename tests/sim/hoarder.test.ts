@@ -26,6 +26,6 @@ describe("R38 终极收藏家", () => {
     ultimateOf(sim.player.weapons.length - 1);
     sim.tick();
     expect(sim.achievements.unlocked.has("ultimate_hoarder")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(27);
+    expect(ACHIEVEMENTS.length).toBe(28); // R47 妖王猎手
   });
 });

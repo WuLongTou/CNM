@@ -344,6 +344,8 @@ export class GameSim {
   weather: WeatherSystem;
   achievements: AchievementSystem;
   bossKills = 0;
+  /** Boss 连战中讨伐的妖王数（R47 妖王猎手成就口径；普通模式恒 0）。 */
+  bossRushKills = 0;
   /** 本局宝妖讨伐数（R14；成就口径）。 */
   goblinKills = 0;
   /** 本局分类型击杀（R15 图鉴；类型 id → 本局击杀，结算时并入存档 codex）。 */
@@ -964,6 +966,7 @@ export class GameSim {
       banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
       goblinKills: this.goblinKills,
       codexGold: countGold(this.baseCodex, this.killCounts),
+      bossRushKills: this.bossRush ? this.bossRushKills : 0,
       armoryCount: new Set([...this.baseArmory, ...this.runArmory]).size,
       armoryTotal: Object.keys(WEAPON_DATA).length,
       fusedCount: FUSION_RECIPES.filter((r) => this.runFused.has(r.result) || (this.save.load()?.fused ?? []).includes(r.result)).length,
@@ -1587,7 +1590,11 @@ export class GameSim {
     // R29 击杀里程碑（R24 连击播报的姊妹篇；千人斩配横幅+成就）
     if (this.kills === 100 || this.kills === 500) this.emit("kill_milestone", { count: this.kills });
     else if (this.kills === 1000) this.emit("kill_legend", { count: 1000 });
-    if (e.boss) this.bossKills++;
+    if (e.boss) {
+      this.bossKills++;
+      // R47 妖王猎手：仅连战模式计入成就口径
+      if (this.bossRush) this.bossRushKills++;
+    }
     else if (e.elite) this.eliteKills++;
     // R24 精英首杀播报（本局第一只精英，处决时刻的文本礼花）
     if (!e.boss && e.elite && this.eliteKills === 1) this.emit("first_elite", { x: e.x, y: e.y });

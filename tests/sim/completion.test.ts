@@ -81,6 +81,6 @@ describe("R21 制霸矩阵", () => {
     const sim = new GameSim(211, save);
     const meta = sim.exec({ action: "meta" }).data as { clears: number };
     expect(meta.clears).toBe(3);
-    expect(ACHIEVEMENTS.length).toBe(27); // R38 终极收藏家
+    expect(ACHIEVEMENTS.length).toBe(28); // R47 妖王猎手
   });
 });

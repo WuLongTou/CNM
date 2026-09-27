@@ -24,6 +24,8 @@ export interface AchievementState {
   fusedTotal: number;
   /** R38：本局达终极的不同武器数。 */
   ultimateRunCount: number;
+  /** R47：Boss 连战中讨伐的妖王数（普通模式不计）。 */
+  bossRushKills: number;
 }
 
 export interface AchievementDef {
@@ -70,6 +72,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal },
   // R38 终极收藏家走 tick 判定（5 把不同武器达终极）
   { id: "ultimate_hoarder", name: "终极收藏家", desc: "单局 5 把不同武器皆达终极", check: (s) => s.ultimateRunCount >= 5 },
+  // R47 妖王猎手走 tick 判定（Boss 连战 5 妖王专属）
+  { id: "boss_hunter", name: "妖王猎手", desc: "Boss 连战中讨伐 5 只妖王", check: (s) => s.bossRushKills >= 5 },
 ];
 
 export class AchievementSystem {
