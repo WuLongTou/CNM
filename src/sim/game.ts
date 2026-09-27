@@ -370,6 +370,8 @@ export class GameSim {
   bannedCombos = new Set<string>();
   /** 上一次天气类型（切换检测，初始 Clear 与 WeatherSystem 一致）。 */
   private lastWeatherType: WeatherType = "Clear";
+  /** 各天气驻留秒数（R42 复盘回顾用；tick 内累加）。 */
+  weatherTime: Record<string, number> = {};
   /** 命中停顿（打击感）。 */
   hitStop = new HitStop();
   /** 完美闪避子弹时间剩余时长（>0 时敌人/敌弹按 DodgeSlowFactor 慢放）。 */
@@ -939,6 +941,8 @@ export class GameSim {
     this.maintainEnemies(dt);
     this.updateEvents(dt);
     this.weather.update(dt);
+    // R42 天气回顾：按当前天气累加驻留时长（结算复盘陈列）
+    this.weatherTime[this.weather.state.type] = (this.weatherTime[this.weather.state.type] ?? 0) + dt;
     // 天气切换事件（HUD 标签/通知/表现层共用）
     if (this.weather.state.type !== this.lastWeatherType) {
       this.lastWeatherType = this.weather.state.type;
@@ -2449,6 +2453,7 @@ export class GameSim {
       max_combo: this.maxCombo,
       secs_to_next_tier: Math.ceil(this.secsToNextTier),
       death_cause: this.deathCause,
+      weather_time: { ...this.weatherTime },
       next_event_in: Math.ceil(this.eventTimer),
       act: this.act,
     };

@@ -361,7 +361,15 @@ export class Hud {
 
   /** 战绩复盘行（R9；对标 VS 结算屏）：精英讨伐/最高连击/收集武器。 */
   private debriefText(s: GameSim): string {
-    return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件`;
+    // R42 天气回顾：驻留 ≥10s 的天气按时长降序陈列
+    const entries = Object.entries(s.weatherTime)
+      .filter(([, t]) => t >= 10)
+      .sort((a, b) => b[1] - a[1]);
+    const WN: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
+    const weather = entries.length > 0
+      ? ` · 历${entries.map(([type, t]) => `${WN[type] ?? type} ${Math.round(t)}s`).join(" / ")}`
+      : "";
+    return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
