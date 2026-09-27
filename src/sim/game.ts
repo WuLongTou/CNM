@@ -403,6 +403,8 @@ export class GameSim {
   eventTimer: number = CFG.Events.FirstAt;
   /** 已触发异变次数（轮转序号）。 */
   eventCount = 0;
+  /** 各异变事件触发次数（R43 复盘回顾用）。 */
+  eventTally: Record<string, number> = {};
   private bossSpawnedForRound = 0;
   /** 已出场的妖王总数（BOSS_ROSTER 轮换索引）。 */
   private bossSpawnCount = 0;
@@ -1065,6 +1067,8 @@ export class GameSim {
     const kinds = ["surge", "hunt", "cache", "goblin"] as const;
     const kind = kinds[this.eventCount % kinds.length];
     this.eventCount++;
+    // R43 异变回顾：按事件种类计数（结算复盘陈列）
+    this.eventTally[kind] = (this.eventTally[kind] ?? 0) + 1;
     if (kind === "surge") this.eventSurge();
     else if (kind === "hunt") this.eventHunt();
     else if (kind === "cache") this.eventCache();
@@ -2454,6 +2458,7 @@ export class GameSim {
       secs_to_next_tier: Math.ceil(this.secsToNextTier),
       death_cause: this.deathCause,
       weather_time: { ...this.weatherTime },
+      event_tally: { ...this.eventTally },
       next_event_in: Math.ceil(this.eventTimer),
       act: this.act,
     };

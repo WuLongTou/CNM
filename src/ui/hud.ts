@@ -369,7 +369,15 @@ export class Hud {
     const weather = entries.length > 0
       ? ` · 历${entries.map(([type, t]) => `${WN[type] ?? type} ${Math.round(t)}s`).join(" / ")}`
       : "";
-    return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}`;
+    // R43 异变回顾：触发过的异变按次数降序陈列
+    const EN: Record<string, string> = { surge: "合围", hunt: "精锐", cache: "宝藏", goblin: "宝妖" };
+    const tally = Object.entries(s.eventTally)
+      .filter(([, n]) => n > 0)
+      .sort((a, b) => b[1] - a[1]);
+    const events = tally.length > 0
+      ? ` · 异变${tally.map(([k, n]) => `${EN[k] ?? k}×${n}`).join(" / ")}`
+      : "";
+    return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
