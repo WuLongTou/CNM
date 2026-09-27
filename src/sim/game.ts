@@ -21,6 +21,7 @@ import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 import { PACTS, PACT_IDS, type PactId } from "./pacts";
+import { AFFIX_IDS } from "./affixes";
 import { dailyKey, dailySeed, dailyTheme } from "./daily";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
@@ -2284,9 +2285,9 @@ export class GameSim {
     return e;
   }
 
-  /** 精英词缀池（R17 起 7 种：分裂/疾影新增）。 */
+  /** 精英词缀池（R17 起 7 种；R56 起从 AFFIXES 表抽，单一事实源）。 */
   private pickAffix(): string {
-    return this.rng.pick(["swift", "regen", "shield", "explosive", "frenzy", "split", "blink"] as const);
+    return this.rng.pick(AFFIX_IDS);
   }
 
   // ── 调试/AI 指令（JSON 协议，与 Godot 旧版 cmd-port 同构） ──

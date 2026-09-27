@@ -7,6 +7,7 @@ import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from "../sim/achievements";
+import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { PACTS } from "../sim/pacts";
 import { shouldUseTouch } from "./touch";
 import { dailyTheme } from "../sim/daily";
@@ -17,7 +18,7 @@ export class HelpPanel {
   private bodyEl!: HTMLElement;
   visible = false;
 
-  private pages = ["操作", "妖物图鉴", "武器图鉴", "成就", "机制"];
+  private pages = ["操作", "妖物图鉴", "词缀图鉴", "武器图鉴", "成就", "机制"];
 
   constructor(private sim: GameSim) {
     this.el = document.createElement("div");
@@ -68,6 +69,7 @@ export class HelpPanel {
     switch (this.pages[this.page]) {
       case "操作": this.renderControls(); break;
       case "妖物图鉴": this.renderEnemyCodex(); break;
+      case "词缀图鉴": this.renderAffixCodex(); break;
       case "武器图鉴": this.renderWeaponCodex(); break;
       case "成就": this.renderAchievements(); break;
       case "机制": this.renderMechanics(); break;
@@ -141,6 +143,18 @@ export class HelpPanel {
     if (d.crit) t.push(`暴击+${d.crit}%`);
     if (d.multi && d.multi > 1) t.push(`多目标×${d.multi}`);
     return t.join(" · ");
+  }
+
+  /** 词缀图鉴（R56）：七词缀的徽标形状 / 行为 / 应对，全部从 AFFIXES 表派生。 */
+  private renderAffixCodex(): void {
+    const rows = AFFIX_IDS.map((id) => {
+      const a = AFFIXES[id];
+      return `<tr><td>${a.name}</td>` +
+        `<td>徽标：${a.badge}<br><span class="w-tags">${a.effect}</span><br>` +
+        `<span class="w-fuse">应对：${a.counter}</span></td></tr>`;
+    });
+    this.bodyEl.innerHTML = `<p class="sub">精英妖物头顶徽标一览（共 ${AFFIX_IDS.length} 种）</p>` +
+      `<table class="help-table">${rows.join("")}</table>`;
   }
 
   /** 武器藏珍（R30 图鉴迷雾 / R35 终极标记）：拥有过点亮，达过终极挂徽。 */
