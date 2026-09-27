@@ -21,7 +21,7 @@ import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 import { PACTS, PACT_IDS, type PactId } from "./pacts";
-import { dailyKey, dailySeed } from "./daily";
+import { dailyKey, dailySeed, dailyTheme } from "./daily";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
@@ -475,7 +475,8 @@ export class GameSim {
       weapons: [],
     };
     this.terrain = new World(this.rng, this.world, () => this.nextId++);
-    this.weather = new WeatherSystem(this.rng);
+    // R39 每日主题：当日种子开局时天气偏向当天主题（异种子/随机局无偏向）
+    this.weather = new WeatherSystem(this.rng, this.seed === dailySeed() ? dailyTheme().favor : null);
     this.achievements = new AchievementSystem(prev?.achievements ?? []);
     this.achievements.onUnlock.push((a) => {
       this.emit("achievement", { id: a.id, name: a.name, desc: a.desc });
@@ -2301,6 +2302,7 @@ export class GameSim {
           highScore: d.highScore, totalKills: d.totalKills, games: d.games,
           clears: clearsTotal(d.clears),
           dailySeed: dailySeed(),
+          dailyTheme: dailyTheme(),
           dailyBest: d.dailyBest ?? { date: "", score: 0 },
           // R5 商店列表（UI 按钮与自动化测试共用；顶层旧字段保留兼容）
           shop: kinds.map((k) => {

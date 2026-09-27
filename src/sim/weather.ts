@@ -29,7 +29,8 @@ export class WeatherSystem {
   private timer = 0;
   private static SWITCH_INTERVAL = 60;
 
-  constructor(private rng: Rng) {}
+  /** R39 每日主题：非空时 reroll 有 50% 概率命中偏向天气。 */
+  constructor(private rng: Rng, private favor: WeatherType | null = null) {}
 
   update(dt: number): void {
     this.timer += dt;
@@ -40,7 +41,10 @@ export class WeatherSystem {
   }
 
   private reroll(): void {
-    const type = this.rng.pick(["Clear", "Rain", "Fog", "BloodMoon"] as const);
+    // R39 每日主题偏向：50% 直接锁定主题天气（其余走均匀随机）
+    const type = this.favor && this.rng.chance(0.5)
+      ? this.favor
+      : this.rng.pick(["Clear", "Rain", "Fog", "BloodMoon"] as const);
     const intensity = this.rng.chance(0.7) ? "Light" : "Moderate";
     const base = WEATHER_TABLE[type];
     const scale = intensity === "Moderate" ? 1.5 : 1;

@@ -5,7 +5,7 @@
 import type { GameSim } from "../sim/game";
 import { DIFFICULTIES } from "../sim/difficulty";
 import { PACTS, PACT_IDS, type PactId } from "../sim/pacts";
-import { dailyKey, dailySeed } from "../sim/daily";
+import { dailyKey, dailySeed, dailyTheme } from "../sim/daily";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 
@@ -148,11 +148,13 @@ export class Hud {
     const seedEl = this.welcome.querySelector<HTMLElement>("#daily-seed");
     const bestEl = this.welcome.querySelector<HTMLElement>("#daily-best");
     if (!seedEl || !bestEl) return;
+    const theme = dailyTheme();
     seedEl.textContent = String(dailySeed());
     const d = this.sim.exec({ action: "meta" }).data as {
       dailyBest: { date: string; score: number };
     };
-    bestEl.textContent = d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "";
+    bestEl.textContent =
+      ` · ${theme.label}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
   }
 
   /** 当前种子展示（R22；重开/新局后刷新）。 */
