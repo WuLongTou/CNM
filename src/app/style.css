@@ -257,6 +257,8 @@ canvas { position: absolute; z-index: 0; }
 /* R51 成就分组小标题：血红小字 + 组间呼吸感 */
 .help-body .ach-group { margin: 14px 0 4px; color: #8e2a20; font-weight: 700; font-size: 13px; }
 .help-body .ach-group:first-of-type { margin-top: 8px; }
+/* R53 结算屏本局成就行：金字强调（与帮助页已达成同色系） */
+.panel .ach-line { color: #a8741a; font-weight: 700; }
 /* R27 图鉴金边：满百镀金行（名金字 + 星标，沿用 w-star 金） */
 .help-table tr.codex-gold td:first-child { color: #a8741a; }
 /* R30 藏珍迷雾：未见武器灰隐（名与描述皆不可读） */

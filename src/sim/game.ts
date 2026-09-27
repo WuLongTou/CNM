@@ -346,6 +346,8 @@ export class GameSim {
   bossKills = 0;
   /** Boss 连战中讨伐的妖王数（R47 妖王猎手成就口径；普通模式恒 0）。 */
   bossRushKills = 0;
+  /** 本局新达成的成就（R53 结算陈列；不含开局前已解锁的）。 */
+  runAchievements: Array<{ id: string; name: string; desc: string }> = [];
   /** 本局宝妖讨伐数（R14；成就口径）。 */
   goblinKills = 0;
   /** 本局分类型击杀（R15 图鉴；类型 id → 本局击杀，结算时并入存档 codex）。 */
@@ -488,7 +490,10 @@ export class GameSim {
     // R39 每日主题：当日种子开局时天气偏向当天主题（异种子/随机局无偏向）
     this.weather = new WeatherSystem(this.rng, this.seed === dailySeed() ? dailyTheme().favor : null);
     this.achievements = new AchievementSystem(prev?.achievements ?? []);
+    // R53 本局成就：构造时快照既有解锁集，之后新解锁的即“本局达成”
+    const preRun = new Set(this.achievements.unlocked);
     this.achievements.onUnlock.push((a) => {
+      if (!preRun.has(a.id)) this.runAchievements.push({ id: a.id, name: a.name, desc: a.desc });
       this.emit("achievement", { id: a.id, name: a.name, desc: a.desc });
       this.persistAchievements();
       // R6：被该成就解锁的职业即刻广播（欢迎页下局可选；UI 弹解锁横幅）
@@ -2507,6 +2512,7 @@ export class GameSim {
       seed: this.seed,
       pacts: [...this.pacts],
       boss_rush: this.bossRush,
+      run_achievements: this.runAchievements.map((a) => a.name),
       score_mult: this.pactScoreMult(),
       ultimateCount: new Set([...(this.save.load()?.ultimates ?? []), ...this.runUltimates]).size,
       role: this.role.id,

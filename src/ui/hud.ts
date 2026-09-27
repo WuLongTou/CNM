@@ -18,6 +18,12 @@ export function dangerOpacity(hpRatio: number): number {
   return Math.min(1, (0.35 - Math.max(0, hpRatio)) / 0.35);
 }
 
+/** 本局成就陈列行（R53 纯函数可单测）：无则空串，有则“本局成就 N 项：名 / 名”。 */
+export function runAchievementLine(names: string[]): string {
+  if (names.length === 0) return "";
+  return `本局成就 ${names.length} 项：${names.join(" / ")}`;
+}
+
 /** 连战档位标签（R50 纯函数可单测）：0 档不显示，≥1 档显示“狂化 N 档 ×倍率”。 */
 export function rushTierLabel(bossRush: boolean, killed: number, mult: number): string {
   if (!bossRush) return "";
@@ -122,7 +128,9 @@ export class Hud {
   private victoryStats!: HTMLElement;
   private victoryDebrief!: HTMLElement;
   private victoryCoins!: HTMLElement;
+  private victoryAchievements!: HTMLElement;
   private gameoverDebrief!: HTMLElement;
+  private gameoverAchievements!: HTMLElement;
   private dangerEl!: HTMLElement;
   /** GameOver 面板延迟弹出计时（进 GameOver 起算；让死亡消散先播完）。 */
   private gameOverAt = 0;
@@ -312,6 +320,7 @@ export class Hud {
         <p id="victory-stats" class="sub"></p>
         <p id="victory-debrief" class="sub"></p>
         <p id="victory-coins" class="sub"></p>
+        <p id="victory-achievements" class="sub ach-line"></p>
         <button id="btn-endless" type="button">继续讨伐（无尽）</button>
         <button id="btn-victory-restart" type="button">再来一局</button>
         <button id="btn-victory-share" type="button">复制战绩</button>
@@ -321,6 +330,7 @@ export class Hud {
     this.victoryStats = this.victory.querySelector("#victory-stats")!;
     this.victoryDebrief = this.victory.querySelector("#victory-debrief")!;
     this.victoryCoins = this.victory.querySelector("#victory-coins")!;
+    this.victoryAchievements = this.victory.querySelector("#victory-achievements")!;
     this.victory.querySelector("#btn-endless")!.addEventListener("click", () => this.onEndless?.());
     this.victory.querySelector("#btn-victory-restart")!.addEventListener("click", () => this.onRestart());
     this.victory.querySelector("#btn-victory-share")!.addEventListener("click", () => this.shareRun(true));
@@ -335,6 +345,8 @@ export class Hud {
       (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
     this.victoryDebrief.textContent = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
+    // R53 本局成就陈列（R48 补授后结算已含终局同 tick 的成就）
+    this.victoryAchievements.textContent = runAchievementLine(s.runAchievements.map((a) => a.name));
   }
 
   private buildGameOver(): void {
@@ -345,6 +357,7 @@ export class Hud {
         <h1>除妖师陨落</h1>
         <p id="gameover-stats" class="sub"></p>
         <p id="gameover-debrief" class="sub"></p>
+        <p id="gameover-achievements" class="sub ach-line"></p>
         <div class="meta-row" id="meta-row"></div>
         <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
@@ -354,6 +367,7 @@ export class Hud {
     this.root.appendChild(this.gameover);
     this.gameoverStats = this.gameover.querySelector("#gameover-stats")!;
     this.gameoverDebrief = this.gameover.querySelector("#gameover-debrief")!;
+    this.gameoverAchievements = this.gameover.querySelector("#gameover-achievements")!;
     this.gameover.querySelector("#btn-restart")!.addEventListener("click", () => this.onRestart());
     this.gameover.querySelector("#btn-gameover-share")!.addEventListener("click", () => this.shareRun(false));
   }
@@ -503,6 +517,7 @@ export class Hud {
         (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
         (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
       this.gameoverDebrief.textContent = this.debriefText(s);
+      this.gameoverAchievements.textContent = runAchievementLine(s.runAchievements.map((a) => a.name));
       this.refreshMeta();
     }
   }
