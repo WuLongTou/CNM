@@ -28,52 +28,59 @@ export interface AchievementState {
   bossRushKills: number;
 }
 
+/** 成就分组（R51）：帮助页按线归类渲染，避免 28 条平铺成信息墙。 */
+export type AchievementGroup = "战功" | "技艺" | "收藏" | "征伐";
+
+export const ACHIEVEMENT_GROUPS: AchievementGroup[] = ["战功", "技艺", "收藏", "征伐"];
+
 export interface AchievementDef {
   id: string;
   name: string;
   desc: string;
+  /** 帮助页分组（同组连续排列）。 */
+  group: AchievementGroup;
   check: (s: AchievementState) => boolean;
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
-  { id: "first_blood", name: "初试锋芒", desc: "击杀第一只妖物", check: (s) => s.kills >= 1 },
-  { id: "slayer_50", name: "除妖行者", desc: "累计击杀 50", check: (s) => s.totalKills >= 50 },
-  { id: "slayer_200", name: "妖物克星", desc: "累计击杀 200", check: (s) => s.totalKills >= 200 },
-  { id: "survive_60", name: "站稳脚跟", desc: "单局存活 60 秒", check: (s) => s.survivalTime >= 60 },
-  { id: "survive_180", name: "久经沙场", desc: "单局存活 180 秒", check: (s) => s.survivalTime >= 180 },
-  { id: "survive_300", name: "守山之人", desc: "单局存活 300 秒", check: (s) => s.survivalTime >= 300 },
-  { id: "boss_slayer", name: "斩妖大将", desc: "击杀一只妖王", check: (s) => s.bossKills >= 1 },
+  { id: "first_blood", name: "初试锋芒", desc: "击杀第一只妖物", group: "战功", check: (s) => s.kills >= 1 },
+  { id: "slayer_50", name: "除妖行者", desc: "累计击杀 50", group: "战功", check: (s) => s.totalKills >= 50 },
+  { id: "slayer_200", name: "妖物克星", desc: "累计击杀 200", group: "战功", check: (s) => s.totalKills >= 200 },
+  { id: "survive_60", name: "站稳脚跟", desc: "单局存活 60 秒", group: "战功", check: (s) => s.survivalTime >= 60 },
+  { id: "survive_180", name: "久经沙场", desc: "单局存活 180 秒", group: "战功", check: (s) => s.survivalTime >= 180 },
+  { id: "survive_300", name: "守山之人", desc: "单局存活 300 秒", group: "战功", check: (s) => s.survivalTime >= 300 },
+  { id: "boss_slayer", name: "斩妖大将", desc: "击杀一只妖王", group: "战功", check: (s) => s.bossKills >= 1 },
   // ── R12 系统成就 ──
-  { id: "fate_twist", name: "变数", desc: "重抽一次升级报价", check: (s) => s.rerollsUsed >= 1 },
-  { id: "sever", name: "断舍离", desc: "放逐一个升级组合", check: (s) => s.banishesUsed >= 1 },
-  { id: "hunter_10", name: "猎手", desc: "讨伐 10 只精英妖物", check: (s) => s.eliteKills >= 10 },
-  { id: "hunter_30", name: "猎魔人", desc: "讨伐 30 只精英妖物", check: (s) => s.eliteKills >= 30 },
-  { id: "combo_20", name: "连绵不绝", desc: "单局最高连击 20", check: (s) => s.maxCombo >= 20 },
-  { id: "combo_50", name: "万军取首", desc: "单局最高连击 50", check: (s) => s.maxCombo >= 50 },
-  { id: "combo_100", name: "百连斩", desc: "单局最高连击 100", check: (s) => s.maxCombo >= 100 },
+  { id: "fate_twist", name: "变数", desc: "重抽一次升级报价", group: "技艺", check: (s) => s.rerollsUsed >= 1 },
+  { id: "sever", name: "断舍离", desc: "放逐一个升级组合", group: "技艺", check: (s) => s.banishesUsed >= 1 },
+  { id: "hunter_10", name: "猎手", desc: "讨伐 10 只精英妖物", group: "技艺", check: (s) => s.eliteKills >= 10 },
+  { id: "hunter_30", name: "猎魔人", desc: "讨伐 30 只精英妖物", group: "技艺", check: (s) => s.eliteKills >= 30 },
+  { id: "combo_20", name: "连绵不绝", desc: "单局最高连击 20", group: "技艺", check: (s) => s.maxCombo >= 20 },
+  { id: "combo_50", name: "万军取首", desc: "单局最高连击 50", group: "技艺", check: (s) => s.maxCombo >= 50 },
+  { id: "combo_100", name: "百连斩", desc: "单局最高连击 100", group: "技艺", check: (s) => s.maxCombo >= 100 },
   // R25 三重血誓由 onVictory 直接 grant
-  { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", check: () => false },
-  { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", check: (s) => s.weaponCount >= 6 },
-  { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", check: (s) => s.goblinKills >= 1 },
+  { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", group: "征伐", check: () => false },
+  { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", check: (s) => s.weaponCount >= 6 },
+  { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", check: (s) => s.goblinKills >= 1 },
   // 通关三档由 onVictory 直接 grant（终局后 tick 停摆，走 tick 判定够不着）
-  { id: "pacify", name: "妖潮平定", desc: "讨伐终幕妖王通关一次", check: () => false },
-  { id: "demon_queller", name: "伏魔真君", desc: "以伏魔难度通关", check: () => false },
-  { id: "warden", name: "镇狱天师", desc: "以镇狱难度通关", check: () => false },
+  { id: "pacify", name: "妖潮平定", desc: "讨伐终幕妖王通关一次", group: "征伐", check: () => false },
+  { id: "demon_queller", name: "伏魔真君", desc: "以伏魔难度通关", group: "征伐", check: () => false },
+  { id: "warden", name: "镇狱天师", desc: "以镇狱难度通关", group: "征伐", check: () => false },
   // R21 制霸双璧同样由 onVictory 直接 grant
-  { id: "three_heroes", name: "三英聚义", desc: "三个职业各通关至少一次", check: () => false },
-  { id: "nine_realms", name: "九界平定", desc: "制霸全部 9 格（3 职业×3 难度）", check: () => false },
+  { id: "three_heroes", name: "三英聚义", desc: "三个职业各通关至少一次", group: "征伐", check: () => false },
+  { id: "nine_realms", name: "九界平定", desc: "制霸全部 9 格（3 职业×3 难度）", group: "征伐", check: () => false },
   // R27 博物学家走 tick 判定（14 种妖物图鉴全金边）
-  { id: "naturalist", name: "博物学家", desc: "图鉴十四妖物皆满百杀镀金", check: (s) => s.codexGold >= 14 },
+  { id: "naturalist", name: "博物学家", desc: "图鉴十四妖物皆满百杀镀金", group: "收藏", check: (s) => s.codexGold >= 14 },
   // R29 千人斩走 tick 判定（单局击杀数）
-  { id: "slayer_1000", name: "千人斩", desc: "单局击杀 1000", check: (s) => s.kills >= 1000 },
+  { id: "slayer_1000", name: "千人斩", desc: "单局击杀 1000", group: "征伐", check: (s) => s.kills >= 1000 },
   // R30 藏珍满架走 tick 判定（拥有数追平总数）
-  { id: "curator", name: "藏珍满架", desc: "集齐全部武器", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal },
+  { id: "curator", name: "藏珍满架", desc: "集齐全部武器", group: "收藏", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal },
   // R32 炼金大师走 tick 判定（六配方全炼成）
-  { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal },
+  { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", group: "收藏", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal },
   // R38 终极收藏家走 tick 判定（5 把不同武器达终极）
-  { id: "ultimate_hoarder", name: "终极收藏家", desc: "单局 5 把不同武器皆达终极", check: (s) => s.ultimateRunCount >= 5 },
+  { id: "ultimate_hoarder", name: "终极收藏家", desc: "单局 5 把不同武器皆达终极", group: "技艺", check: (s) => s.ultimateRunCount >= 5 },
   // R47 妖王猎手走 tick 判定（Boss 连战 5 妖王专属）
-  { id: "boss_hunter", name: "妖王猎手", desc: "Boss 连战中讨伐 5 只妖王", check: (s) => s.bossRushKills >= 5 },
+  { id: "boss_hunter", name: "妖王猎手", desc: "Boss 连战中讨伐 5 只妖王", group: "征伐", check: (s) => s.bossRushKills >= 5 },
 ];
 
 export class AchievementSystem {

@@ -6,7 +6,7 @@ import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
-import { ACHIEVEMENTS } from "../sim/achievements";
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from "../sim/achievements";
 import { PACTS } from "../sim/pacts";
 import { shouldUseTouch } from "./touch";
 import { dailyTheme } from "../sim/daily";
@@ -168,16 +168,22 @@ export class HelpPanel {
     this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;
   }
 
+  /** 成就页（R51 分组）：按四条线分组渲染，每组标注该组进度。 */
   private renderAchievements(): void {
     const unlocked = this.sim.achievements.unlocked;
-    const rows = ACHIEVEMENTS.map((a) => {
-      const done = unlocked.has(a.id);
-      return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
-        `<td>${a.desc} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
+    const total = ACHIEVEMENTS.filter((a) => unlocked.has(a.id)).length;
+    const sections = ACHIEVEMENT_GROUPS.map((g) => {
+      const list = ACHIEVEMENTS.filter((a) => a.group === g);
+      const got = list.filter((a) => unlocked.has(a.id)).length;
+      const rows = list.map((a) => {
+        const done = unlocked.has(a.id);
+        return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
+          `<td>${a.desc} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
+      }).join("");
+      return `<p class="sub ach-group">${g} ${got}/${list.length}</p><table class="help-table">${rows}</table>`;
     });
     // R18 成就进度：已达成 / 总数（总数取表长，不硬编码）
-    const got = ACHIEVEMENTS.filter((a) => unlocked.has(a.id)).length;
-    this.bodyEl.innerHTML = `<p class="sub">已达成 ${got} / ${ACHIEVEMENTS.length}</p><table class="help-table">${rows.join("")}</table>`;
+    this.bodyEl.innerHTML = `<p class="sub">已达成 ${total} / ${ACHIEVEMENTS.length}</p>${sections.join("")}`;
   }
 
   private renderMechanics(): void {
