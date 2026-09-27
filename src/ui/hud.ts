@@ -38,13 +38,22 @@ export interface ShareSummary {
   score: number; kills: number; survivalTime: number; round: number;
   roleName: string; difficultyName: string; seed: number;
   cleared: boolean;
+  /** R52：挑战类型标识（Boss 连战 / 每日妖潮 / 空 = 普通局）。 */
+  mode?: string;
+  /** R52：血誓誓名串（空 = 未立誓）。 */
+  pacts?: string;
+  /** R52：连战狂化档位（0 = 未狂化/非连战）。 */
+  rushTier?: number;
 }
 
-/** 战绩分享文案（R22 纯函数可单测）：单行速通分享格式，含种子可复现。 */
+/** 战绩分享文案（R22 纯函数可单测）：单行速通分享格式，含模式/血誓/种子等复现信息。 */
 export function shareText(s: ShareSummary): string {
   const mark = s.cleared ? "通关" : "陨落";
-  return `【斩妖录】${mark} · 分数${s.score} · 击杀${s.kills} · 存活${s.survivalTime.toFixed(0)}s` +
-    ` · 威胁阶${s.round} · ${s.roleName}/${s.difficultyName}难度 · 种子${s.seed}`;
+  const mode = s.mode ? ` · ${s.mode}` : "";
+  const pacts = s.pacts ? ` · 血誓${s.pacts}` : "";
+  const tier = s.rushTier && s.rushTier > 0 ? ` · 狂化${s.rushTier}档` : "";
+  return `【斩妖录】${mark}${mode} · 分数${s.score} · 击杀${s.kills} · 存活${s.survivalTime.toFixed(0)}s` +
+    ` · 威胁阶${s.round} · ${s.roleName}/${s.difficultyName}难度${pacts}${tier} · 种子${s.seed}`;
 }
 
 export class Hud {
@@ -404,9 +413,13 @@ export class Hud {
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
   private shareRun(cleared: boolean): void {
     const s = this.sim;
+    // R52：挑战类型/血誓/狂化档位入文案（战队成绩单自解释）
+    const mode = s.bossRush ? "Boss 连战" : s.seed === dailySeed() ? "每日妖潮" : "";
+    const pacts = [...s.pacts].map((id) => PACTS[id].name).join("·");
     const text = shareText({
       score: s.score, kills: s.kills, survivalTime: s.survivalTime, round: s.round,
       roleName: s.role.name, difficultyName: s.difficulty.name, seed: s.seed, cleared,
+      mode, pacts, rushTier: Math.floor(s.bossRushKills / 3),
     });
     try {
       const done = navigator.clipboard?.writeText(text);
