@@ -9,6 +9,7 @@ import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
+import { FOE_MECHS } from "../sim/foemechs";
 import { PACTS } from "../sim/pacts";
 import { shouldUseTouch } from "./touch";
 import { dailyTheme } from "../sim/daily";
@@ -107,8 +108,7 @@ export class HelpPanel {
       </table>`;
   }
 
-  /** 妖物图鉴（R15 讨伐计数，R27 金边）：三维 + 本局击杀 + 跨局累计；满百镀金行。 */
-  /** 妖物图鉴（R15 计数 / R27 金边 / R33 汇总行）：页首陈列收集进度一目了然。 */
+  /** 妖物图鉴（R15 计数 / R27 金边 / R33 汇总行 / R58 机制列）：三维 + 机制应对 + 讨伐数。 */
   private renderEnemyCodex(): void {
     const codex = this.sim.exec({ action: "codex" }).data as {
       run: Record<number, number>; total: Record<number, number>;
@@ -124,7 +124,11 @@ export class HelpPanel {
         const run = codex.run[id] ?? 0;
         const total = codex.total[id] ?? 0;
         const gold = total >= CODEX_GOLD_THRESHOLD;
-        return `<tr${gold ? ` class="codex-gold"` : ""}><td>${ENEMY_NAMES[id]}${gold ? `<i class="w-star">★</i>` : ""}</td><td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}</td><td>本局 ${run} · 累计 ${total}</td></tr>`;
+        const m = FOE_MECHS[id];
+        return `<tr${gold ? ` class="codex-gold"` : ""}><td>${ENEMY_NAMES[id]}${gold ? `<i class="w-star">★</i>` : ""}</td>` +
+          `<td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}<br>` +
+          `<span class="w-tags">${m.mech}</span><br><span class="w-fuse">应对：${m.counter}</span></td>` +
+          `<td>本局 ${run} · 累计 ${total}</td></tr>`;
       }).join("")}
     </table>`;
   }
