@@ -1597,8 +1597,14 @@ export class GameSim {
     else if (this.kills === 1000) this.emit("kill_legend", { count: 1000 });
     if (e.boss) {
       this.bossKills++;
-      // R47 妖王猎手：仅连战模式计入成就口径
-      if (this.bossRush) this.bossRushKills++;
+      // R47 妖王猎手：仅连战模式计入成就口径；R49 跨 3 档播报狂化
+      if (this.bossRush) {
+        this.bossRushKills++;
+        if (this.bossRushKills % 3 === 0) {
+          const tier = this.bossRushKills / 3;
+          this.emit("rush_escalate", { tier, mult: this.rushEscalationMult() });
+        }
+      }
     }
     else if (e.elite) this.eliteKills++;
     // R24 精英首杀播报（本局第一只精英，处决时刻的文本礼花）
@@ -2189,6 +2195,11 @@ export class GameSim {
     return { x: 22, y: 22 };
   }
 
+  /** 连战阶梯乘数（R49）：每讨伐 3 妖王 +15%，作用于后续妖王血伤。 */
+  rushEscalationMult(): number {
+    return 1 + 0.15 * Math.floor(this.bossRushKills / 3);
+  }
+
   private createEnemy(type: EnemyType, x: number, y: number, opts: SpawnOpts): Enemy {
     const stats = ENEMY_STATS[type];
     const mult = this.roundMult(CFG.Difficulty.SpawnScaleFactor);
@@ -2217,6 +2228,12 @@ export class GameSim {
       hp = Math.ceil(hp * CFG.Enemy.BossStatMult * 10);
       damage = Math.ceil(damage * CFG.Enemy.BossStatMult);
       speed *= CFG.Enemy.BossSpeedMult;
+      // R49 连战阶梯：末乘于妖王最终血伤（每讨伐 3 妖王 +15%，速度不动）
+      if (this.bossRush) {
+        const escal = this.rushEscalationMult();
+        hp = Math.ceil(hp * escal);
+        damage = Math.ceil(damage * escal);
+      }
       this.emit("boss_spawn", {});
     }
 
