@@ -4,6 +4,7 @@
 import { Application } from "pixi.js";
 import { GameSim, UPGRADE_STAT_NAMES, type ExecResult, type SimEvent } from "../sim/game";
 import { HITSTOP } from "../sim/hitstop";
+import { weatherEffectTip } from "../sim/weather";
 import { localStorageStorage } from "../sim/save";
 import { GameView } from "../render/view";
 import { InputManager } from "./input";
@@ -112,7 +113,8 @@ async function boot(): Promise<void> {
     else if (e.event === "fusion_offer") fusion.show();
     else if (e.event === "weather_changed") {
       const WNAMES: Record<string, string> = { Rain: "阴雨", Fog: "浓雾", BloodMoon: "血月升起" };
-      notify.push(WNAMES[d.type] ? `天气异变：${WNAMES[d.type]}` : "天色放晴");
+      // R54：天气播报带实际影响（数值表派生，玩家知道意味着什么）
+      notify.push(`${WNAMES[d.type] ? `天气异变：${WNAMES[d.type]}` : "天色放晴"}——${weatherEffectTip(sim.weather.state)}`);
       audio.play(d.type === "BloodMoon" ? "lightning" : "charm");
     }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }

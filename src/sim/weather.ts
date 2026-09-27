@@ -24,6 +24,20 @@ const WEATHER_TABLE: Record<WeatherType, Omit<WeatherState, "intensity">> = {
   BloodMoon: { type: "BloodMoon", enemySpeedMult: 1.15, playerSpeedMult: 1, eliteBonus: 0.1 },
 };
 
+/** 天气影响一句话（R54 纯函数可单测）：播报时告知玩家实际效果（数值表派生）。 */
+export function weatherEffectTip(state: WeatherState): string {
+  switch (state.type) {
+    case "Clear":
+      return "风平浪静";
+    case "Rain":
+      return "雨地湿滑：妖物迟缓 15%，你亦缓 8%";
+    case "Fog":
+      return `浓雾弥漫：视野收窄，精英更易现身（+${Math.round(state.eliteBonus * 100)}%）`;
+    case "BloodMoon":
+      return `血月当空：妖物迅捷 15%，精英频出（+${Math.round(state.eliteBonus * 100)}%）`;
+  }
+}
+
 export class WeatherSystem {
   state: WeatherState = { ...WEATHER_TABLE.Clear, intensity: "Light" };
   private timer = 0;
