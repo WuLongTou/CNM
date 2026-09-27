@@ -956,7 +956,12 @@ export class GameSim {
       this.lastWeatherType = this.weather.state.type;
       this.emit("weather_changed", { type: this.weather.state.type, intensity: this.weather.state.intensity });
     }
-    this.achievements.update({
+    this.achievements.update(this.buildAchievementState());
+  }
+
+  /** 成就判定状态快照（R48：tick 与结算复用同一口径，终局补授不漏）。 */
+  private buildAchievementState() {
+    return {
       kills: this.kills, survivalTime: this.survivalTime,
       bossKills: this.bossKills, totalKills: this.baseTotalKills + this.kills,
       // R12 系统成就口径（限额类用“已用”= 起步 - 剩余）
@@ -972,7 +977,7 @@ export class GameSim {
       fusedCount: FUSION_RECIPES.filter((r) => this.runFused.has(r.result) || (this.save.load()?.fused ?? []).includes(r.result)).length,
       fusedTotal: FUSION_RECIPES.length,
       ultimateRunCount: this.runUltimates.size,
-    });
+    };
   }
 
   /** 靠近祭坛触发融合报价（每座一次性；模态打开即暂停）。 */
@@ -1687,6 +1692,8 @@ export class GameSim {
   /** 局末结算存档（死亡/通关共用）：高分/累计击杀/局数/金币/成就；R5 点金放大金币；
    *  R10 难度放大金币；通关（cleared 非空）刷新最高通关难度，死亡不刷新。 */
   private finalizeRun(coinsMult: number, cleared: DifficultyId | null = null): number {
+    // R48 补授：终局与成就判定可能同 tick（第 5 妖王+玩家死亡），落盘前按最终状态重判
+    this.achievements.update(this.buildAchievementState());
     const prev = this.save.load() ?? defaultSave();
     const greed = 1 + (prev.metaGreed ?? 0) * META_SHOP.greed.step;
     const coins = Math.floor((this.score / 50 + this.kills) * coinsMult * greed * this.difficulty.coinMult);
