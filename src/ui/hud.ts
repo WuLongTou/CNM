@@ -419,6 +419,12 @@ export class Hud {
   }
 
   /** 战绩复盘行（R9；对标 VS 结算屏）：精英讨伐/最高连击/收集武器。 */
+  /** 连战战报头（R60 纯函数可单测）：非连战空串，连战显示讨伐妖王数与狂化档位。 */
+  static rushHead(bossRush: boolean, kills: number, tier: number): string {
+    if (!bossRush) return "";
+    return `讨伐妖王 ${kills} 只 · 狂化 ${tier} 档`;
+  }
+
   private debriefText(s: GameSim): string {
     // R42 天气回顾：驻留 ≥10s 的天气按时长降序陈列
     const entries = Object.entries(s.weatherTime)
@@ -436,7 +442,10 @@ export class Hud {
     const events = tally.length > 0
       ? ` · 异变${tally.map(([k, n]) => `${EN[k] ?? k}×${n}`).join(" / ")}`
       : "";
-    return `精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}`;
+    // R60 连战战报：讨伐妖王数与狂化档位置顶（连战模式的核心战绩）
+    const rush = Hud.rushHead(s.bossRush, s.bossRushKills, Math.floor(s.bossRushKills / 3));
+    const head = rush ? `${rush} · ` : "";
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
