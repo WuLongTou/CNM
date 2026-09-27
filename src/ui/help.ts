@@ -8,6 +8,7 @@ import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
+import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
 import { PACTS } from "../sim/pacts";
 import { shouldUseTouch } from "./touch";
 import { dailyTheme } from "../sim/daily";
@@ -18,7 +19,7 @@ export class HelpPanel {
   private bodyEl!: HTMLElement;
   visible = false;
 
-  private pages = ["操作", "妖物图鉴", "词缀图鉴", "武器图鉴", "成就", "机制"];
+  private pages = ["操作", "妖物图鉴", "词缀图鉴", "妖王图鉴", "武器图鉴", "成就", "机制"];
 
   constructor(private sim: GameSim) {
     this.el = document.createElement("div");
@@ -70,6 +71,7 @@ export class HelpPanel {
       case "操作": this.renderControls(); break;
       case "妖物图鉴": this.renderEnemyCodex(); break;
       case "词缀图鉴": this.renderAffixCodex(); break;
+      case "妖王图鉴": this.renderBossCodex(); break;
       case "武器图鉴": this.renderWeaponCodex(); break;
       case "成就": this.renderAchievements(); break;
       case "机制": this.renderMechanics(); break;
@@ -154,6 +156,18 @@ export class HelpPanel {
         `<span class="w-fuse">应对：${a.counter}</span></td></tr>`;
     });
     this.bodyEl.innerHTML = `<p class="sub">精英妖物头顶徽标一览（共 ${AFFIX_IDS.length} 种）</p>` +
+      `<table class="help-table">${rows.join("")}</table>`;
+  }
+
+  /** 妖王图鉴（R57）：五王轮换顺序 + 原生机制 + 应对，全部从 BOSSES 表派生。 */
+  private renderBossCodex(): void {
+    const rows = BOSSES.map((b, i) => {
+      return `<tr><td>${i + 1}. ${b.name}王</td>` +
+        `<td>${b.mech}<br><span class="w-fuse">应对：${b.counter}</span></td></tr>`;
+    });
+    const bar = BOSS_BARRAGE_INFO;
+    this.bodyEl.innerHTML =
+      `<p class="sub">妖王按轮换次序登场（每 5 阶一只，第 13 阶终幕）· 通用弹幕：每 ${bar.cd}s 放 ${bar.count[0]}~${bar.count[2]} 发环形弹</p>` +
       `<table class="help-table">${rows.join("")}</table>`;
   }
 

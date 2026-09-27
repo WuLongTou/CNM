@@ -22,6 +22,7 @@ import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 import { PACTS, PACT_IDS, type PactId } from "./pacts";
 import { AFFIX_IDS } from "./affixes";
+import { BOSSES } from "./bosses";
 import { dailyKey, dailySeed, dailyTheme } from "./daily";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
@@ -312,11 +313,9 @@ const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
 const GOBLIN = { hp: 30, fleeSpeed: 250, escapeSec: 15, pickupCount: 2 };
 /** 妖王环形弹幕：周期向四周放径向弹，阶段越高弹越密（M15）。 */
 export const BOSS_BARRAGE = { cd: 4.5, first: 3, dmgMult: 0.7, speed: 280, count: [9, 11, 13] };
-/** 妖王种族轮换（M19）：按出场次序循环，各带原生机制与外观——
- *  游魂王(基础) → 石魅王(厚重) → 铁傀王(护甲-25%) → 甲妖王(周期举盾) → 蛟王(蓄力冲撞)。 */
-export const BOSS_ROSTER: EnemyType[] = [
-  EnemyType.Basic, EnemyType.Tank, EnemyType.Mech, EnemyType.Knight, EnemyType.Dragon,
-];
+/** 妖王种族轮换（M19；R57 起从 BOSSES 表派生，机制文案与顺序同源）——
+ *  游魂王 → 石魅王 → 铁傀王 → 甲妖王 → 蛟王。 */
+export const BOSS_ROSTER: EnemyType[] = BOSSES.map((b) => b.type);
 /** 浮灯漂浮：摆动频率（rad/s）/ 垂直于追击方向的摆动速度幅值。 */
 const SHIP_FLOAT = { rate: 2.2, sway: 90 };
 const MAX_MINES = 6;
