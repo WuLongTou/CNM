@@ -314,6 +314,7 @@ export class Hud {
     const coins = Math.floor((s.score / 50 + s.kills) * 1.5);
     this.victoryStats.textContent =
       `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度` +
+      (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
       (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
     this.victoryDebrief.textContent = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
@@ -475,6 +476,7 @@ export class Hud {
       const coins = Math.floor(s.score / 50) + s.kills;
       this.gameoverStats.textContent =
         `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins} · 死于${s.deathCause ?? "妖潮"}` +
+        (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
         (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
       this.gameoverDebrief.textContent = this.debriefText(s);
       this.refreshMeta();
