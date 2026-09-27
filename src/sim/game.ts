@@ -1683,13 +1683,16 @@ export class GameSim {
         ? recordClear(prev.clears, this.role.id, cleared)
         : { ...(prev.clears ?? {}) },
       // R26 今日最佳：仅当日种子开局计分（输赢都计，同日取最高；跨天重新开榜）
+      // R40 破纪录横幅：当日种子且分数超过旧最佳（旧榜为空时首跑不播，避免每次开局都响）
       dailyBest: this.seed === dailySeed()
-        ? {
-          date: dailyKey(),
-          score: prev.dailyBest?.date === dailyKey()
-            ? Math.max(prev.dailyBest.score, this.score)
-            : this.score,
-        }
+        ? (() => {
+          const isNewDay = prev.dailyBest?.date !== dailyKey();
+          const oldScore = isNewDay ? 0 : (prev.dailyBest?.score ?? 0);
+          if (this.score > oldScore && oldScore > 0) {
+            this.emit("daily_record", { score: this.score, prev: oldScore });
+          }
+          return { date: dailyKey(), score: Math.max(oldScore, this.score) };
+        })()
         : (prev.dailyBest ?? { date: "", score: 0 }),
       // R30 藏珍：本局新获并入跨局（死亡也记——拥有过即是拥有过）
       armory: [...new Set([...(prev.armory ?? []), ...this.runArmory])],

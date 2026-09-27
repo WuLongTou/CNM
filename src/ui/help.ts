@@ -8,6 +8,7 @@ import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
 import { ACHIEVEMENTS } from "../sim/achievements";
 import { shouldUseTouch } from "./touch";
+import { dailyTheme } from "../sim/daily";
 
 export class HelpPanel {
   private el: HTMLElement;
@@ -182,6 +183,11 @@ export class HelpPanel {
     // R32 融合图鉴：实际炼成过的配方种数（页签内插值展示）
     const fused = new Set((this.sim.exec({ action: "fusions" }).data as { fused: string[] }).fused);
     const fusedCount = FUSION_RECIPES.filter((r) => fused.has(r.result)).length;
+    // R40 一周主题表（周日→周六，标注今天）
+    const week = ([0, 1, 2, 3, 4, 5, 6] as const).map((day) => {
+      const t = dailyTheme(new Date(2026, 8, 27 + day));
+      return `${["日", "一", "二", "三", "四", "五", "六"][day]}·${t.label}`;
+    }).join(" / ");
     this.bodyEl.innerHTML = `
       <table class="help-table">
         <tr><td>方向攻击</td><td>近战朝移动方向挥砍（±55° 扇形），锥内妖物自动吸附瞄准；出手带突进位移——朝哪走朝哪砍</td></tr>
@@ -205,6 +211,7 @@ export class HelpPanel {
         <tr><td>妖潮异变</td><td>开局 100 秒后每 130 秒突发事件轮转：妖群合围（环形快攻群）/ 精锐现身（近点精英）/ 宝藏显形（两侧宝箱）/ 宝妖游荡（追杀爆精英箱，15 秒后逃走），横幅预告</td></tr>
         <tr><td>永久升级</td><td>结算金币在陨落界面购买跨局成长：体魄（生命）/ 杀伐（伤害）/ 疾风（移速）/ 聚灵（拾取）/ 点金（金币）/ 回春（回复），价格 50×（等级+1）</td></tr>
         <tr><td>天气</td><td>雨减速、雾降能见、血月妖潮狂暴且精英频出</td></tr>
+        <tr><td>每日主题</td><td>${week}——当日种子开局天气偏向当天主题（欢迎页一键挑战今日）</td></tr>
       </table>`;
   }
 }
