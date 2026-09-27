@@ -123,7 +123,7 @@ export class Hud {
         <div class="pact-row" id="pact-row"></div>
         <p id="save-stats" class="sub"></p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
-        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-boss-rush" type="button">Boss 连战</button></p>
+        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-boss-rush" type="button">Boss 连战</button><span id="rush-best"></span></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
@@ -156,14 +156,17 @@ export class Hud {
   private refreshDailyRow(): void {
     const seedEl = this.welcome.querySelector<HTMLElement>("#daily-seed");
     const bestEl = this.welcome.querySelector<HTMLElement>("#daily-best");
-    if (!seedEl || !bestEl) return;
+    const rushEl = this.welcome.querySelector<HTMLElement>("#rush-best");
+    if (!seedEl || !bestEl || !rushEl) return;
     const theme = dailyTheme();
     seedEl.textContent = String(dailySeed());
     const d = this.sim.exec({ action: "meta" }).data as {
       dailyBest: { date: string; score: number };
+      rushBest: number;
     };
     bestEl.textContent =
       ` · ${theme.label}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
+    rushEl.textContent = d.rushBest > 0 ? ` · 连战最佳 ${d.rushBest}` : "";
   }
 
   /** 当前种子展示（R22；重开/新局后刷新）。 */

@@ -1714,6 +1714,14 @@ export class GameSim {
           return { date: dailyKey(), score: Math.max(oldScore, this.score) };
         })()
         : (prev.dailyBest ?? { date: "", score: 0 }),
+      // R45 连战最佳：rush 模式破纪录发事件（首跑不播）
+      rushBest: this.bossRush
+        ? (() => {
+          const old = prev.rushBest ?? 0;
+          if (this.score > old && old > 0) this.emit("rush_record", { score: this.score, prev: old });
+          return Math.max(old, this.score);
+        })()
+        : (prev.rushBest ?? 0),
       // R30 藏珍：本局新获并入跨局（死亡也记——拥有过即是拥有过）
       armory: [...new Set([...(prev.armory ?? []), ...this.runArmory])],
       // R35 终极图鉴：达过终极即永久点亮（死亡也记）
@@ -2328,6 +2336,7 @@ export class GameSim {
           clears: clearsTotal(d.clears),
           dailySeed: dailySeed(),
           dailyTheme: dailyTheme(),
+          rushBest: d.rushBest ?? 0,
           dailyBest: d.dailyBest ?? { date: "", score: 0 },
           // R5 商店列表（UI 按钮与自动化测试共用；顶层旧字段保留兼容）
           shop: kinds.map((k) => {

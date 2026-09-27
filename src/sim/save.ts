@@ -34,6 +34,8 @@ export interface SaveData {
   fused: string[];
   /** 终极图鉴（R35；达成过终极阶段的武器 defId，老存档缺字段默认 []）。 */
   ultimates: string[];
+  /** Boss 连战最佳分（R45；老存档缺字段默认 0）。 */
+  rushBest: number;
   /** 跨局持久成就 id。 */
   achievements: string[];
 }
@@ -54,6 +56,7 @@ export function defaultSave(): SaveData {
     armory: [],
     fused: [],
     ultimates: [],
+    rushBest: 0,
     achievements: [],
   };
 }

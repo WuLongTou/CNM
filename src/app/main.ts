@@ -158,6 +158,7 @@ async function boot(): Promise<void> {
     else if (e.event === "kill_milestone") { notify.push(`击杀 ${d.count}！`); audio.play("combo_3"); }
     else if (e.event === "kill_legend") { notify.push("千人斩！"); notify.banner("千人斩", "单局击杀 1000"); audio.play("combo_5"); }
     else if (e.event === "daily_record") { notify.banner("今日最佳刷新", `分数 ${d.score}`); audio.play("combo_5"); }
+    else if (e.event === "rush_record") { notify.banner("连战纪录刷新", `分数 ${d.score}`); audio.play("combo_5"); }
     else if (e.event === "game_over") { audio.play("player_die"); audio.stopBgm(); view.shake(18); }
   };
 
