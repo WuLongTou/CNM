@@ -18,6 +18,14 @@ export function dangerOpacity(hpRatio: number): number {
   return Math.min(1, (0.35 - Math.max(0, hpRatio)) / 0.35);
 }
 
+/** 连战档位标签（R50 纯函数可单测）：0 档不显示，≥1 档显示“狂化 N 档 ×倍率”。 */
+export function rushTierLabel(bossRush: boolean, killed: number, mult: number): string {
+  if (!bossRush) return "";
+  const tier = Math.floor(killed / 3);
+  if (tier <= 0) return "";
+  return `狂化 ${tier} 档 ×${mult.toFixed(2)}`;
+}
+
 /** 自定义种子解析（R22 纯函数可单测）：1~999999999 整数有效，否则 null（调用方回退随机）。 */
 export function parseSeed(raw: string): number | null {
   const t = raw.trim();
@@ -438,7 +446,10 @@ export class Hud {
     this.dangerEl.style.opacity = String(dangerOpacity(ratio));
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
     // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
-    this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶`;
+    // R50 连战档位：连战模式达到 1 档起在威胁阶后追加狂化徽标
+    const tierTag = rushTierLabel(s.bossRush, s.bossRushKills, s.rushEscalationMult());
+    this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶` +
+      (tierTag ? ` · ${tierTag}` : "");
     // R25 血誓公示：有立誓则难度后追加誓名
     const oath = [...s.pacts].map((id) => PACTS[id].name).join("·");
     this.difficultyText.textContent = oath ? `难度 ${s.difficulty.name}·${oath}` : `难度 ${s.difficulty.name}`;
