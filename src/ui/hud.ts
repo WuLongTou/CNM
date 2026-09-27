@@ -18,6 +18,21 @@ export function dangerOpacity(hpRatio: number): number {
   return Math.min(1, (0.35 - Math.max(0, hpRatio)) / 0.35);
 }
 
+/** 天气 HUD 标签（R55 纯函数可单测）：晴/无效果时简洁，异常天气附效果速记。 */
+export function weatherHudLabel(type: string, intensity: string): string {
+  const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
+  const name = WNAMES[type] ?? type;
+  const lv = intensity === "Moderate" ? "·烈" : "";
+  // 效果速记（与 R54 播报同源语义，HUD 极简版）
+  const effect: Record<string, string> = {
+    Rain: "妖缓你缓",
+    Fog: "视野窄·精英多",
+    BloodMoon: "妖迅·精英多",
+  };
+  const eff = effect[type];
+  return eff ? `天气 ${name}${lv}（${eff}）` : `天气 ${name}${lv}`;
+}
+
 /** 本局成就陈列行（R53 纯函数可单测）：无则空串，有则“本局成就 N 项：名 / 名”。 */
 export function runAchievementLine(names: string[]): string {
   if (names.length === 0) return "";
@@ -481,10 +496,9 @@ export class Hud {
     const oath = [...s.pacts].map((id) => PACTS[id].name).join("·");
     this.difficultyText.textContent = oath ? `难度 ${s.difficulty.name}·${oath}` : `难度 ${s.difficulty.name}`;
     this.roleText.textContent = `职业 ${s.role.name}`;
+    // R55 天气 HUD：异常天气附效果速记（R54 播报的常驻版）
     const w = s.weather.state;
-    const WNAMES: Record<string, string> = { Clear: "晴", Rain: "雨", Fog: "雾", BloodMoon: "血月" };
-    this.weatherText.textContent =
-      w.type === "Clear" ? "天气 晴" : `天气 ${WNAMES[w.type]}${w.intensity === "Moderate" ? "·烈" : ""}`;
+    this.weatherText.textContent = weatherHudLabel(w.type, w.intensity);
     this.scoreText.textContent = `分数 ${s.score}`;
     this.killsText.textContent = `击杀 ${s.kills}`;
     // R18 幕显示：R2 分幕结构此前 HUD 无感知，此处点名
