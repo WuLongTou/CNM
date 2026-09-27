@@ -433,6 +433,8 @@ export class GameSim {
   difficulty: DifficultyDef;
   /** 本局血誓（R25；欢迎页多选，start 后锁定；默认空集零影响）。 */
   pacts = new Set<PactId>();
+  /** Boss Rush 模式（R44）：无小怪压力、每回合连妖王、终幕提前。 */
+  readonly bossRush: boolean;
   /** 存档中的最高通关难度（R10 解锁判定用；-1 = 从未通关）。 */
   private maxDifficulty = -1;
   /** 是否首局（R11 新手教练用；存档局数为 0 即首局，中途 quit 不计局也算首局，无害）。 */
@@ -444,12 +446,14 @@ export class GameSim {
     roleId: string = DEFAULT_ROLE,
     difficultyId: number = DEFAULT_DIFFICULTY,
     pacts: string[] = [],
+    mode: "normal" | "boss_rush" = "normal",
   ) {
     this.seed = seed;
     this.rng = new Rng(seed);
     this.save = save;
     this.role = getRole(roleId);
     this.difficulty = getDifficulty(difficultyId);
+    this.bossRush = mode === "boss_rush";
     for (const id of pacts) if ((PACT_IDS as string[]).includes(id)) this.pacts.add(id as PactId);
     this.maxDifficulty = save.load()?.maxDifficulty ?? -1;
     const c = CFG.Player;
@@ -1126,17 +1130,25 @@ export class GameSim {
   private advanceRound(): void {
     this.round++;
     this.emit("threat_tier", { tier: this.round });
+    // R44 Boss Rush：终幕提前至第 6 阶（连妖王节奏紧凑）
+    const finalRound = this.bossRush ? 6 : CFG.Acts.FinalBossRound;
     // 终幕妖王：round 达到 FinalBossRound 时降临（击杀通关）
-    if (this.round >= CFG.Acts.FinalBossRound && !this.finalBossSpawned) {
+    if (this.round >= finalRound && !this.finalBossSpawned) {
       this.finalBossSpawned = true;
       this.spawnFinalBoss();
       this.scatterChests(1);
       return;
     }
-    if (this.round % CFG.Enemy.BossInterval === 0 && this.bossSpawnedForRound < this.round) {
+    // R44 Boss Rush：每阶一只妖王（轮换）；普通模式按 BossInterval 间隔
+    if ((this.bossRush || this.round % CFG.Enemy.BossInterval === 0) && this.bossSpawnedForRound < this.round) {
       this.bossSpawnedForRound = this.round;
       this.spawnEnemy({ type: BOSS_ROSTER[this.bossSpawnCount % BOSS_ROSTER.length], boss: true, near: "player" });
       this.bossSpawnCount++;
+    }
+    // R44 Boss Rush：无小怪压力与精英潮，纯妖王连战；宝箱照常散落补充
+    if (this.bossRush) {
+      this.scatterChests(1);
+      return;
     }
     // 精英潮：幕压力的分段跳变（R2 分幕节奏）
     const wave = CFG.Acts.EliteWaveCount[this.act];
@@ -2097,6 +2109,8 @@ export class GameSim {
 
   /** 怪潮供给：底噪（min 以下快速补）+ 持续供给（向 max 爬升的压迫感）。 */
   private maintainEnemies(dt: number): void {
+    // R44 Boss Rush：无基础刷怪压力，纯妖王连战
+    if (this.bossRush) return;
     this.spawnCd = Math.max(0, this.spawnCd - dt);
     const cap = this.actCap();
     if (this.enemies.length >= cap.max) return;
@@ -2414,7 +2428,15 @@ export class GameSim {
   }
 
   start(): Record<string, unknown> {
-    if (this.state === "WeaponSelection") this.state = "Combat";
+    if (this.state === "WeaponSelection") {
+      this.state = "Combat";
+      // R44 Boss Rush：开战即出第一只妖王（连战不等首个回合推进）
+      if (this.bossRush) {
+        this.bossSpawnedForRound = this.round;
+        this.spawnEnemy({ type: BOSS_ROSTER[this.bossSpawnCount % BOSS_ROSTER.length], boss: true, near: "player" });
+        this.bossSpawnCount++;
+      }
+    }
     return { started: true };
   }
 
@@ -2444,6 +2466,7 @@ export class GameSim {
       weapon: this.activeWeapon?.name ?? null,
       seed: this.seed,
       pacts: [...this.pacts],
+      boss_rush: this.bossRush,
       score_mult: this.pactScoreMult(),
       ultimateCount: new Set([...(this.save.load()?.ultimates ?? []), ...this.runUltimates]).size,
       role: this.role.id,

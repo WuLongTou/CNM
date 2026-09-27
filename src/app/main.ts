@@ -59,9 +59,14 @@ async function boot(): Promise<void> {
   await audio.init();
 
   // R22：欢迎页填了自定义种子则用该种子开局（可复现速通），否则沿用当前实例
+  // R44：Boss 连战开关 → 以 boss_rush 模式重建 sim（血誓/种子照常）
   const hud = new Hud(sim, () => {
     const seed = hud.pendingSeed();
-    if (seed !== null) restart(seed);
+    if (hud.pendingBossRush) {
+      hud.pendingBossRush = false;
+      restart(seed ?? undefined, "boss_rush");
+    }
+    else if (seed !== null) restart(seed);
     sim.start();
     audio.playBgm();
   }, () => restart());
@@ -221,14 +226,16 @@ async function boot(): Promise<void> {
   const joyBase = document.getElementById("joy-base");
   const touchBtns = document.getElementById("touch-btns");
 
-  function restart(seed?: number): void {
+  function restart(seed?: number, mode?: "normal" | "boss_rush"): void {
     // R18 记住上局选择：职业/难度沿用（同存档下锁天然成立，无需额外校验）；
-    // R22 自定义种子优先（输入框留值则连打同一种子；清空回随机）
+    // R22 自定义种子优先（输入框留值则连打同一种子；清空回随机）；
+    // R44 模式沿用（Boss 连战后 R 重开仍连战；普通开局回普通模式）
     const roleId = sim.role.id;
     const difficultyId = sim.difficulty.id;
+    const runMode: "normal" | "boss_rush" = mode ?? (sim.bossRush ? "boss_rush" : "normal");
     const runSeed = seed ?? hud.pendingSeed() ?? Date.now() % 100000;
     // R25 血誓沿用（同职业/难度）
-    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId, [...sim.pacts]);
+    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId, [...sim.pacts], runMode);
     wireSim();
     input.forceSim(sim);
     hud.resimulate(sim);

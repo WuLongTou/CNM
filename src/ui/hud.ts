@@ -123,7 +123,7 @@ export class Hud {
         <div class="pact-row" id="pact-row"></div>
         <p id="save-stats" class="sub"></p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
-        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button></p>
+        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-boss-rush" type="button">Boss 连战</button></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
@@ -139,9 +139,18 @@ export class Hud {
       // R26 一键挑战今日：填入当日种子后走正常开局流程（职业/难度/血誓选择照常）
       const input = this.welcome.querySelector<HTMLInputElement>("#seed-input");
       if (input) input.value = String(dailySeed());
+      this.pendingBossRush = false;
+      this.onStart();
+    });
+    this.welcome.querySelector("#btn-boss-rush")!.addEventListener("click", () => {
+      // R44 Boss 连战：一键进入妖王轮战（职业/难度/血誓照常，血誓加难结算更肥）
+      this.pendingBossRush = true;
       this.onStart();
     });
   }
+
+  /** Boss Rush 开关（R44；欢迎页一键，走正常 onStart 由装配层读此标记）。 */
+  pendingBossRush = false;
 
   /** 今日妖潮行（R26）：当日种子 + 同日最佳（跨天自动换榜）。 */
   private refreshDailyRow(): void {
