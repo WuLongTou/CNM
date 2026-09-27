@@ -14,9 +14,9 @@ function offerSim(seed = 111) {
 }
 
 describe("R12 系统成就", () => {
-  it("成就表 26 项（R32 炼金大师），id 唯一", () => {
-    expect(ACHIEVEMENTS.length).toBe(26);
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(26);
+  it("成就表 27 项（R38 终极收藏家），id 唯一", () => {
+    expect(ACHIEVEMENTS.length).toBe(27); // R38 终极收藏家
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(27);
   });
 
   it("变数：重抽一次即达成并广播", () => {

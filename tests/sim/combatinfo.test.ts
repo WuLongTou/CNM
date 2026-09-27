@@ -31,6 +31,6 @@ describe("R29 战斗信息补完", () => {
     }
     sim.tick();
     expect(sim.achievements.unlocked.has("slayer_1000")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(26); // R32 炼金大师
+    expect(ACHIEVEMENTS.length).toBe(27); // R38 终极收藏家
   });
 });

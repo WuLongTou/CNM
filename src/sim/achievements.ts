@@ -22,6 +22,8 @@ export interface AchievementState {
   /** R32：已炼成配方种数 / 配方总数。 */
   fusedCount: number;
   fusedTotal: number;
+  /** R38：本局达终极的不同武器数。 */
+  ultimateRunCount: number;
 }
 
 export interface AchievementDef {
@@ -66,6 +68,8 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "curator", name: "藏珍满架", desc: "集齐全部武器", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal },
   // R32 炼金大师走 tick 判定（六配方全炼成）
   { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal },
+  // R38 终极收藏家走 tick 判定（5 把不同武器达终极）
+  { id: "ultimate_hoarder", name: "终极收藏家", desc: "单局 5 把不同武器皆达终极", check: (s) => s.ultimateRunCount >= 5 },
 ];
 
 export class AchievementSystem {

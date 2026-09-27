@@ -39,7 +39,7 @@ describe("R32 融合图鉴", () => {
     (sim as unknown as { runFused: Set<string> }).runFused.add(ALL_RESULTS[ALL_RESULTS.length - 1]);
     sim.tick();
     expect(sim.achievements.unlocked.has("fusion_master")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(26);
+    expect(ACHIEVEMENTS.length).toBe(27); // R38 终极收藏家
   });
 
   it("死亡结算也入库；老存档缺字段兼容", () => {

@@ -587,6 +587,8 @@ export class GameSim {
     const owned = this.player.weapons.find((w) => w.defId === id);
     if (owned) {
       owned.ups++;
+      // R38 精炼也可能跨过终极阈值（终极图鉴照记）
+      if (stageTag(owned) === "ultimate") this.runUltimates.add(id);
       this.stats = this.recalc();
       this.emit("weapon_gained", { name: def.name, type: def.type });
       return owned;
@@ -955,6 +957,7 @@ export class GameSim {
       armoryTotal: Object.keys(WEAPON_DATA).length,
       fusedCount: FUSION_RECIPES.filter((r) => this.runFused.has(r.result) || (this.save.load()?.fused ?? []).includes(r.result)).length,
       fusedTotal: FUSION_RECIPES.length,
+      ultimateRunCount: this.runUltimates.size,
     });
   }
 
