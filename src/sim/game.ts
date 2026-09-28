@@ -2032,17 +2032,7 @@ export class GameSim {
       this.save.save({ ...after, mutatorClears: clears });
       if (Object.keys(clears).length >= 5) this.achievements.grant("mutator_all");
     }
-    // R99 每日挑战连胜：当日种子局终局时计（同日重复挑战不重复计；跨天断裂重置 1）
-    if (this.seed === dailySeed()) {
-      const after = this.save.load() ?? defaultSave();
-      const prevStreak = after.dailyStreak ?? { last: "", count: 0 };
-      if (prevStreak.last !== dailyKey()) {
-        const count = nextStreakCount(prevStreak.last, dailyKey(), prevStreak.count);
-        this.save.save({ ...after, dailyStreak: { last: dailyKey(), count } });
-        this.dailyStreakCount = count;
-        if (count >= 7) this.achievements.grant("daily_streak_7");
-      }
-    }
+    // R99/R113 连胜已在 start（参与即算）计入；终局此处不再重复
     // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
     const clears = (this.save.load() ?? defaultSave()).clears ?? {};
     if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");
@@ -2904,6 +2894,18 @@ export class GameSim {
   start(): Record<string, unknown> {
     if (this.state === "WeaponSelection") {
       this.state = "Combat";
+      // R113 连胜口径升级：参与即算——当日种子局开局就计（陨落不再断连胜；
+      // 同日重复开局不重复计，nextStreakCount 门控）
+      if (this.seed === dailySeed()) {
+        const d = this.save.load() ?? defaultSave();
+        const prevStreak = d.dailyStreak ?? { last: "", count: 0 };
+        if (prevStreak.last !== dailyKey()) {
+          const count = nextStreakCount(prevStreak.last, dailyKey(), prevStreak.count);
+          this.save.save({ ...d, dailyStreak: { last: dailyKey(), count } });
+          this.dailyStreakCount = count;
+          if (count >= 7) this.achievements.grant("daily_streak_7");
+        }
+      }
       // R44 Boss Rush：开战即出第一只妖王（连战不等首个回合推进）
       if (this.bossRush) {
         this.bossSpawnedForRound = this.round;

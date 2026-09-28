@@ -1,4 +1,4 @@
-// R99 每日挑战连胜：跨天断裂重置 / 同日不重复计 / 七日成就。
+// R99/R113 每日挑战连胜：参与即算（开局计）——陨落不断连胜；跨天断裂重置 / 同日不重复计 / 七日成就。
 
 import { describe, expect, it } from "vitest";
 import { GameSim } from "../../src/sim/game";
@@ -9,21 +9,24 @@ import { dailySeed, nextStreakCount } from "../../src/sim/daily";
 function dailyRun(seed = dailySeed()) {
   const sim = new GameSim(seed, memoryStorage());
   sim.exec({ action: "start" });
-  (sim as unknown as { onVictory(): number }).onVictory();
   return sim;
 }
 
 describe("R99 每日挑战连胜", () => {
-  it("当日种子局终局：连胜 +1", () => {
+  it("当日种子局开局：连胜 +1（参与即算）", () => {
     const sim = dailyRun();
     expect(sim.dailyStreakCount).toBe(1);
+  });
+
+  it("陨落不断连胜：开局已计，不因未通关回滚", () => {
+    const sim = dailyRun();
+    (sim as unknown as { finalizeRun(m: number, c: null): number }).finalizeRun(1, null); // 陨落结算
+    expect(sim.dailyStreakCount).toBe(1); // 不回滚
   });
 
   it("非当日局：不计连胜", () => {
     const sim = new GameSim(999, memoryStorage());
     sim.exec({ action: "start" });
-    sim.exec({ action: "set_pacts", args: { tiers: { blood: 1 } } });
-    (sim as unknown as { onVictory(): number }).onVictory();
     expect(sim.dailyStreakCount).toBe(0);
   });
 
