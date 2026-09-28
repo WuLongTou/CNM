@@ -281,7 +281,7 @@ async function boot(): Promise<void> {
     const runMode: "normal" | "boss_rush" = mode ?? (sim.bossRush ? "boss_rush" : "normal");
     const runSeed = seed ?? hud.pendingSeed() ?? Date.now() % 100000;
     // R25 血誓沿用（同职业/难度）
-    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId, [...sim.pacts], runMode);
+    sim = new GameSim(runSeed, localStorageStorage(), roleId, difficultyId, { ...sim.pactTiers }, runMode);
     wireSim();
     input.forceSim(sim);
     hud.resimulate(sim);

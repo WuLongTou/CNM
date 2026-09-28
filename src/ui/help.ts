@@ -10,7 +10,7 @@ import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
 import { FOE_MECHS } from "../sim/foemechs";
-import { PACTS } from "../sim/pacts";
+import { PACTS, pactLabel } from "../sim/pacts";
 import { shouldUseTouch } from "./touch";
 import { dailyTheme } from "../sim/daily";
 
@@ -230,7 +230,9 @@ export class HelpPanel {
       return `${["日", "一", "二", "三", "四", "五", "六"][day]}·${t.label}`;
     }).join(" / ");
     // R41 本局立誓状态（誓名连乘倍率；无誓显示未立誓）
-    const oath = [...this.sim.pacts].map((id) => PACTS[id].name).join("·");
+    const oath = [...this.sim.pacts]
+      .map((id) => pactLabel(PACTS[id].name, this.sim.pactTier(id)))
+      .join("·");
     const oathInfo = oath ? `（本局：${oath}，结算×${this.sim.pactScoreMult().toFixed(2)}）` : "（本局未立誓）";
     this.bodyEl.innerHTML = `
       <table class="help-table">

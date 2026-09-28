@@ -85,9 +85,9 @@ describe("R25 血誓契约", () => {
     expect(ACHIEVEMENTS.length).toBe(29); // R47 妖王猎手
   });
 
-  it("PACTS 表自洽：三誓名与文案乘数一致", () => {
-    expect(PACTS.blood.desc).toContain("+25%");
-    expect(PACTS.horde.desc).toContain("+30%");
-    expect(PACTS.frail.desc).toContain("+50%");
+  it("PACTS 表自洽：三誓名与文案乘数一致（R70 起一档数值即旧值）", () => {
+    expect(PACTS.blood.tiers[0].desc).toContain("+25%");
+    expect(PACTS.horde.tiers[0].desc).toContain("+30%");
+    expect(PACTS.frail.tiers[0].desc).toContain("+50%");
   });
 });

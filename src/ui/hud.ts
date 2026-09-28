@@ -4,11 +4,12 @@
 
 import type { GameSim } from "../sim/game";
 import { DIFFICULTIES } from "../sim/difficulty";
-import { PACTS, PACT_IDS, type PactId } from "../sim/pacts";
+import { PACTS, PACT_IDS, PACT_MAX_TIER, PACT_ROMAN, type PactId } from "../sim/pacts";
 import { dailyKey, dailySeed, dailyTheme } from "../sim/daily";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 import type { LifetimeStats } from "../sim/save";
+import { pactLabel } from "../sim/pacts";
 
 /** R64 生涯时长：<1 小时显示 N 分钟，否则 N.N 小时。 */
 export function formatLifetime(seconds: number): string {
@@ -267,7 +268,7 @@ export class Hud {
     this.refreshDiffRow();
   }
 
-  /** 欢迎页血誓多选（R25）：三誓芯片，点击翻转，无锁全开放。 */
+  /** 欢迎页血誓分级（R70 热量式）：三誓芯片，点击升档（0→1→2→3→0 循环），无锁全开放。 */
   private buildPactRow(): void {
     const wrap = this.welcome.querySelector<HTMLElement>("#pact-row")!;
     wrap.innerHTML = "";
@@ -277,12 +278,10 @@ export class Hud {
       b.type = "button";
       b.dataset.pact = id;
       b.className = "pact-btn";
-      b.innerHTML = `<b>${d.name}</b><i>${d.desc}</i>`;
+      b.innerHTML = `<b>${d.name}</b><i></i>`;
       b.addEventListener("click", () => {
-        const cur = new Set(this.sim.pacts);
-        if (cur.has(id)) cur.delete(id);
-        else cur.add(id);
-        this.sim.setPacts([...cur]);
+        const next = (this.sim.pactTier(id) + 1) % (PACT_MAX_TIER + 1);
+        this.sim.setPactTiers(next > 0 ? { [id]: next } : { [id]: 0 });
         this.refreshPactRow();
       });
       wrap.appendChild(b);
@@ -290,10 +289,16 @@ export class Hud {
     this.refreshPactRow();
   }
 
-  /** 按当前 sim 血誓高亮选中钮。 */
+  /** 按当前 sim 血誓档位重绘卡片（R70：名 + 罗马档徽 + 本档效果；未立誓灰显）。 */
   private refreshPactRow(): void {
-    this.welcome.querySelectorAll<HTMLElement>(".pact-btn").forEach((x) =>
-      x.classList.toggle("selected", this.sim.pacts.has(x.dataset.pact as PactId)));
+    this.welcome.querySelectorAll<HTMLElement>(".pact-btn").forEach((x) => {
+      const id = x.dataset.pact as PactId;
+      const tier = this.sim.pactTier(id);
+      const d = PACTS[id];
+      x.classList.toggle("selected", tier >= 1);
+      x.querySelector("b")!.textContent = tier >= 1 ? `${d.name}${PACT_ROMAN[tier]}` : d.name;
+      x.querySelector("i")!.textContent = tier >= 1 ? d.tiers[tier - 1].desc : "点击立誓 · 再点升档";
+    });
   }
 
   /** 按当前 sim 难度高亮选中钮。 */
@@ -483,7 +488,11 @@ export class Hud {
     const s = this.sim;
     // R52：挑战类型/血誓/狂化档位入文案（战队成绩单自解释）
     const mode = s.bossRush ? "Boss 连战" : s.seed === dailySeed() ? "每日妖潮" : "";
-    const pacts = [...s.pacts].map((id) => PACTS[id].name).join("·");
+    const pacts = Object.entries(s.pactTiers)
+      .filter(([, t]) => (t ?? 0) >= 1)
+      .sort((a, b) => PACT_IDS.indexOf(a[0] as PactId) - PACT_IDS.indexOf(b[0] as PactId))
+      .map(([id, t]) => pactLabel(PACTS[id as PactId].name, t ?? 0))
+      .join("·");
     const text = shareText({
       score: s.score, kills: s.kills, survivalTime: s.survivalTime, round: s.round,
       roleName: s.role.name, difficultyName: s.difficulty.name, seed: s.seed, cleared,
@@ -532,7 +541,11 @@ export class Hud {
     this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶` +
       (tierTag ? ` · ${tierTag}` : "");
     // R25 血誓公示：有立誓则难度后追加誓名
-    const oath = [...s.pacts].map((id) => PACTS[id].name).join("·");
+    const oath = Object.entries(s.pactTiers)
+      .filter(([, t]) => (t ?? 0) >= 1)
+      .sort((a, b) => PACT_IDS.indexOf(a[0] as PactId) - PACT_IDS.indexOf(b[0] as PactId))
+      .map(([id, t]) => pactLabel(PACTS[id as PactId].name, t ?? 0))
+      .join("·");
     this.difficultyText.textContent = oath ? `难度 ${s.difficulty.name}·${oath}` : `难度 ${s.difficulty.name}`;
     this.roleText.textContent = `职业 ${s.role.name}`;
     // R55 天气 HUD：异常天气附效果速记（R54 播报的常驻版）

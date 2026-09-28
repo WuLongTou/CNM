@@ -20,7 +20,7 @@ import { DEFAULT_DIFFICULTY, DIFFICULTIES, getDifficulty, type DifficultyDef, ty
 import { World } from "./world";
 import { HitStop, HITSTOP } from "./hitstop";
 import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
-import { PACTS, PACT_IDS, type PactId } from "./pacts";
+import { PACTS, PACT_IDS, PACT_MAX_TIER, isValidTier, type PactId } from "./pacts";
 import { AFFIX_IDS } from "./affixes";
 import { BOSSES } from "./bosses";
 import { dailyKey, dailySeed, dailyTheme } from "./daily";
@@ -482,7 +482,8 @@ export class GameSim {
   /** 当前难度（R10；欢迎页可换，start 后锁定）。 */
   difficulty: DifficultyDef;
   /** 本局血誓（R25；欢迎页多选，start 后锁定；默认空集零影响）。 */
-  pacts = new Set<PactId>();
+  /** 血誓档位（R70 热量式）：id → 1..3 档；未立誓无键。 */
+  pactTiers: Partial<Record<PactId, number>> = {};
   /** Boss Rush 模式（R44）：无小怪压力、每回合连妖王、终幕提前。 */
   readonly bossRush: boolean;
   /** 存档中的最高通关难度（R10 解锁判定用；-1 = 从未通关）。 */
@@ -495,7 +496,7 @@ export class GameSim {
     save: SaveStorage = { load: () => null, save: () => {} },
     roleId: string = DEFAULT_ROLE,
     difficultyId: number = DEFAULT_DIFFICULTY,
-    pacts: string[] = [],
+    pactTiers: string[] | Partial<Record<PactId, number>> = {},
     mode: "normal" | "boss_rush" = "normal",
   ) {
     this.seed = seed;
@@ -504,14 +505,22 @@ export class GameSim {
     this.role = getRole(roleId);
     this.difficulty = getDifficulty(difficultyId);
     this.bossRush = mode === "boss_rush";
-    for (const id of pacts) if ((PACT_IDS as string[]).includes(id)) this.pacts.add(id as PactId);
+    // R70 血誓分级：兼容两种入参——旧 string[]（各誓一级）/ 新档位表（钳制 1..3）；
+    // 未知 id 忽略（同旧行为）
+    if (Array.isArray(pactTiers)) {
+      for (const id of pactTiers) if ((PACT_IDS as string[]).includes(id)) this.pactTiers[id as PactId] = 1;
+    } else {
+      for (const [id, t] of Object.entries(pactTiers)) {
+        if ((PACT_IDS as string[]).includes(id) && isValidTier(t)) this.pactTiers[id as PactId] = t;
+      }
+    }
     this.maxDifficulty = save.load()?.maxDifficulty ?? -1;
     const c = CFG.Player;
     const prev = save.load();
     // 永久升级：血 +20/级、伤害 +10%/级（对齐 SaveManager 数值）；
     // R5：移速 +4%/级、拾取 +12%/级、金币 +10%/级、回复 +0.4/s/级；
-    // R25 脆体：生命上限打折（建角时一次结算）
-    const frail = this.pacts.has("frail") ? PACTS.frail.frailMult : 1;
+    // R25 脆体：生命上限打折（建角时一次结算；R70 按档位）
+    const frail = this.pactTier("frail") >= 1 ? PACTS.frail.tiers[this.pactTier("frail") - 1].frailMult : 1;
     const maxHp = Math.floor((c.MaxHealth + (prev?.metaHp ?? 0) * 20) * frail);
     const baseDamage = c.BaseDamage * (1 + (prev?.metaDmg ?? 0) * 0.1);
     const speed = c.BaseSpeed * (1 + (prev?.metaSpd ?? 0) * META_SHOP.spd.step);
@@ -715,7 +724,8 @@ export class GameSim {
     return { applied: true, difficulty: next.id, name: next.name };
   }
 
-  /** 切换血誓组合（R25）：仅开局前（欢迎页）允许；未知 id 整体拒绝（不静默吞）。 */
+  /** 切换血誓组合（R25）：仅开局前（欢迎页）允许；未知 id 整体拒绝（不静默吞）。
+   *  R70：ids 路径立誓即一级；档位走 setPactTiers。 */
   setPacts(ids: string[]): Record<string, unknown> {
     if (this.state !== "WeaponSelection") {
       return { applied: false, note: "仅开局前可立誓", pacts: [...this.pacts] };
@@ -724,21 +734,51 @@ export class GameSim {
     if (ids.some((id) => !known.includes(id))) {
       return { applied: false, note: "未知血誓", pacts: [...this.pacts] };
     }
-    this.pacts = new Set(ids as PactId[]);
+    return this.setPactTiers(Object.fromEntries(ids.map((id) => [id, 1])), true); // R25 替换语义
+  }
+
+  /** 设置血誓档位（R70 热量式）：档 0 = 撤誓；未知 id 忽略、档位钳制 1..3；
+   *  replace = 整组替换（setPacts 兼容路径用，R25 语义为替换组合）；
+   *  仅开局前允许；脆体改上限同步重算（满血）。 */
+  setPactTiers(tiers: Partial<Record<PactId, number>>, replace = false): Record<string, unknown> {
+    if (this.state !== "WeaponSelection") {
+      return { applied: false, note: "仅开局前可立誓", pacts: [...this.pacts] };
+    }
+    const next: Partial<Record<PactId, number>> = replace ? {} : { ...this.pactTiers };
+    for (const [id, t] of Object.entries(tiers)) {
+      if (!(PACT_IDS as string[]).includes(id)) continue; // 未知 id 静默忽略（与 pacts 协议对齐）
+      const tier = typeof t === "number" && Number.isInteger(t) ? t : 0;
+      if (tier <= 0) delete next[id as PactId];
+      else next[id as PactId] = Math.min(PACT_MAX_TIER, tier);
+    }
+    this.pactTiers = next;
     // 脆体改上限：建角已按旧组合结算，此处同步重算（满血）。
     const c = CFG.Player;
     const prev = this.save.load();
-    const frail = this.pacts.has("frail") ? PACTS.frail.frailMult : 1;
+    const frail = this.pactTier("frail") >= 1 ? PACTS.frail.tiers[this.pactTier("frail") - 1].frailMult : 1;
     this.player.maxHp = Math.floor((c.MaxHealth + (prev?.metaHp ?? 0) * 20) * frail);
     this.player.hp = this.player.maxHp;
-    this.emit("pacts_changed", { pacts: [...this.pacts] });
-    return { applied: true, pacts: [...this.pacts] };
+    this.emit("pacts_changed", { pacts: [...this.pacts], tiers: { ...this.pactTiers } });
+    return { applied: true, pacts: [...this.pacts], tiers: { ...this.pactTiers } };
   }
 
-  /** 结算分数乘数（R25；多誓连乘，无誓为 1）。 */
+  /** 已立誓 id 集合（R70 兼容视图：档位 ≥1；只读快照，勿改动）。 */
+  get pacts(): Set<PactId> {
+    return new Set(PACT_IDS.filter((id) => (this.pactTiers[id] ?? 0) >= 1));
+  }
+
+  /** 血誓档位 0-3（R70；未立誓为 0）。 */
+  pactTier(id: PactId): number {
+    return this.pactTiers[id] ?? 0;
+  }
+
+  /** 结算分数乘数（R25 多誓连乘；R70 按档位取乘数，无誓为 1）。 */
   pactScoreMult(): number {
     let m = 1;
-    for (const id of this.pacts) m *= PACTS[id].scoreMult;
+    for (const [id, t] of Object.entries(this.pactTiers)) {
+      if (t === undefined || t < 1) continue;
+      m *= PACTS[id as PactId].tiers[t - 1].scoreMult;
+    }
     return m;
   }
 
@@ -1848,7 +1888,7 @@ export class GameSim {
     if (this.difficulty.id >= 1) this.achievements.grant("demon_queller");
     if (this.difficulty.id >= 2) this.achievements.grant("warden");
     // R25 三重血誓通关（终局直授；tick 停摆走判定够不着）
-    if (this.pacts.size >= 3) this.achievements.grant("oathbound");
+    if (PACT_IDS.every((id) => this.pactTier(id) >= 1)) this.achievements.grant("oathbound"); // R70：任一档位即算立誓
     // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
     const clears = (this.save.load() ?? defaultSave()).clears ?? {};
     if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");
@@ -2328,7 +2368,7 @@ export class GameSim {
     this.spawnCd = this.enemies.length < cap.min ? 0.15 : cap.cd;
     this.spawnEnemy({ type: "random", near: "player" });
     // R25 人海：每次维持刷怪后 30% 概率多刷一只（上限约束照常）
-    if (this.pacts.has("horde") && this.rng.chance(PACTS.horde.spawnBonus)) {
+    if (this.pactTier("horde") >= 1 && this.rng.chance(PACTS.horde.tiers[this.pactTier("horde") - 1].spawnBonus)) {
       this.spawnEnemy({ type: "random", near: "player" });
     }
   }
@@ -2387,7 +2427,7 @@ export class GameSim {
     const mult = this.roundMult(CFG.Difficulty.SpawnScaleFactor);
     // R10 难度：妖物血伤同乘（速度不动，保证走位公平）；R25 血战：生命再 ×1.25
     const foe = this.difficulty.foeMult;
-    const blood = this.pacts.has("blood") ? PACTS.blood.hpMult : 1;
+    const blood = this.pactTier("blood") >= 1 ? PACTS.blood.tiers[this.pactTier("blood") - 1].hpMult : 1;
     let hp = Math.ceil(stats.hp * mult * foe * blood);
     let damage = Math.ceil(stats.dmg * mult * foe);
     let speed = stats.speed;
@@ -2616,6 +2656,10 @@ export class GameSim {
         };
       }
       case "set_pacts": {
+        // R70：兼容旧 ids 路径（各誓一级）；新调用传 tiers（id → 1..3，0=撤誓）
+        if (args.tiers && typeof args.tiers === "object" && !Array.isArray(args.tiers)) {
+          return this.setPactTiers(args.tiers as Partial<Record<PactId, number>>);
+        }
         const ids = Array.isArray(args.pacts) ? args.pacts.filter((x) => typeof x === "string") : [];
         return this.setPacts(ids);
       }
@@ -2699,6 +2743,7 @@ export class GameSim {
       weapon: this.activeWeapon?.name ?? null,
       seed: this.seed,
       pacts: [...this.pacts],
+      pact_tiers: { ...this.pactTiers }, // R70 档位（欢迎页/复盘展示）
       boss_rush: this.bossRush,
       run_achievements: this.runAchievements.map((a) => a.name),
       score_mult: this.pactScoreMult(),
