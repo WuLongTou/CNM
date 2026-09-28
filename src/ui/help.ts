@@ -5,7 +5,7 @@ import type { GameSim } from "../sim/game";
 import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
-import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
+import { WEAPON_DATA, FUSION_RECIPES, ASPECTS, ASCEND_AT } from "../sim/weapons";
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS, achievementProgress } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
@@ -197,8 +197,11 @@ export class HelpPanel {
           const fuse = fusionable.has(d.name) ? " · 可祭炼" : "";
           const ulti = ult.has(id) ? `<span class="w-ult">终极</span>` : "";
           const tags = this.weaponTags(d);
+          // R109 形态入鉴：形态名 + 描述 + 解锁条件（进阶）
+          const a = ASPECTS[id];
+          const aspText = a ? `<br><span class="w-fuse">形态贰·${a.name}（升 ${ASCEND_AT} 次解锁）：${a.desc}</span>` : "";
           return `<tr><td>${d.name}${ulti}<i class="w-star">${stars}</i></td>` +
-            `<td>[${TYPE_NAMES[d.type]}] ${d.desc}${tags ? `<br><span class="w-tags">${tags}</span>` : ""}${fuse ? `<span class="w-fuse">${fuse}</span>` : ""}</td></tr>`;
+            `<td>[${TYPE_NAMES[d.type]}] ${d.desc}${tags ? `<br><span class="w-tags">${tags}</span>` : ""}${fuse ? `<span class="w-fuse">${fuse}</span>` : ""}${aspText}</td></tr>`;
         }));
     this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;
   }
