@@ -100,6 +100,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "windfall", name: "香火盈门", desc: "单局香火收入达 800 通关", group: "征伐", check: () => false },
   { id: "emptyhands", name: "两手空空", desc: "不花一文香火通关", group: "征伐", check: () => false },
   { id: "three_buffs", name: "三花聚顶", desc: "单局集齐三系香火祝福并通关", group: "征伐", check: () => false },
+  // R134 秘密职业专属：鼓励游玩隐士/武圣
+  { id: "hermit_win", name: "隐世高人", desc: "以隐士通关一次", group: "征伐", check: () => false },
+  { id: "wusheng_win", name: "武德充沛", desc: "以武圣通关一次", group: "征伐", check: () => false },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", goal: { stat: "weaponCount", target: 6 } },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", goal: { stat: "goblinKills", target: 1 } },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", goal: { stat: "shopPurchases", target: 5 } },
@@ -127,6 +130,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
 /** R121 荣誉成就名集：结算屏/帮助页金字强调的单一事实源（R111 hud 集迁入域层，语义保持）。 */
 export const HONOR_ACHIEVEMENT_NAMES = new Set([
   "妖潮平定", "伏魔真君", "镇狱天师", "三英聚义", "九界平定", "历劫全域", "铁壁",
+  "隐世高人", "武德充沛",
 ]);
 
 export class AchievementSystem {

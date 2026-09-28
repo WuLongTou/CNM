@@ -12,7 +12,7 @@ const victory = (sim: GameSim) =>
 
 describe("R130 成就谱系第二轮", () => {
   it("表 36 项：三条新成就 check 型", () => {
-    expect(ACHIEVEMENTS).toHaveLength(37);
+    expect(ACHIEVEMENTS).toHaveLength(39);
     for (const id of ["bulwark", "windfall", "emptyhands"]) {
       const a = ACHIEVEMENTS.find((x) => x.id === id)!;
       expect(a.check).toBeTruthy();

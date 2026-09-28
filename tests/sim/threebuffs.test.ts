@@ -28,8 +28,8 @@ const buyKind = (sim: GameSim, kind: "dmg" | "asp" | "spd") => {
 };
 
 describe("R132 三花聚顶", () => {
-  it("成就表 37 项：三花聚顶 check 型", () => {
-    expect(ACHIEVEMENTS).toHaveLength(37);
+  it("成就表 39 项：三花聚顶 check 型", () => {
+    expect(ACHIEVEMENTS).toHaveLength(39);
     const a = ACHIEVEMENTS.find((x) => x.id === "three_buffs")!;
     expect(a.check).toBeTruthy();
   });

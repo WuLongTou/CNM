@@ -2036,6 +2036,9 @@ export class GameSim {
     if (this.runGoldSpent === 0) this.achievements.grant("emptyhands");
     // R132 三花聚顶：单局集齐三系祝福并通关
     if (this.buffsBought.size >= 3) this.achievements.grant("three_buffs");
+    // R134 秘密职业专属：鼓励游玩隐士/武圣
+    if (this.role.id === "hermit") this.achievements.grant("hermit_win");
+    if (this.role.id === "wusheng") this.achievements.grant("wusheng_win");
     // R74 每日变异通关收集：仅当日种子局计入（注入的变异在非每日局不生效也不计；
     // 五变异各通一次授「历劫全域」）
     const mut = this.mutator();
