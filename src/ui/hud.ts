@@ -626,15 +626,19 @@ export class Hud {
     // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
     // R50 连战档位：连战模式达到 1 档起在威胁阶后追加狂化徽标
     const tierTag = rushTierLabel(s.bossRush, s.bossRushKills, s.rushEscalationMult());
+    // R116 连战讨伐进度：本局已讨伐妖王数（rush 模式常显）
+    const rushTag = s.bossRush ? ` · 讨伐 ${s.bossRushKills}` : "";
     this.roundText.textContent = `威胁阶 ${s.round} · ${Math.ceil(s.secsToNextTier)}s 后进阶` +
-      (tierTag ? ` · ${tierTag}` : "");
+      (tierTag ? ` · ${tierTag}` : "") + rushTag;
     // R25 血誓公示：有立誓则难度后追加誓名
     const oath = Object.entries(s.pactTiers)
       .filter(([, t]) => (t ?? 0) >= 1)
       .sort((a, b) => PACT_IDS.indexOf(a[0] as PactId) - PACT_IDS.indexOf(b[0] as PactId))
       .map(([id, t]) => pactLabel(PACTS[id as PactId].name, t ?? 0))
       .join("·");
-    this.difficultyText.textContent = oath ? `难度 ${s.difficulty.name}·${oath}` : `难度 ${s.difficulty.name}`;
+    // R116 每日变异常显：当日种子局难度后追加变异名（局内目标提醒）
+    const mutTag = s.seed === dailySeed() ? ` · 变异${dailyMutator().name}` : "";
+    this.difficultyText.textContent = (oath ? `难度 ${s.difficulty.name}·${oath}` : `难度 ${s.difficulty.name}`) + mutTag;
     this.roleText.textContent = `职业 ${s.role.name}`;
     // R55 天气 HUD：异常天气附效果速记（R54 播报的常驻版）
     const w = s.weather.state;
