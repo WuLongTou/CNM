@@ -534,14 +534,17 @@ export class Hud {
     const gold = s.runGoldSpent > 0 || s.runGoldEarned > 0
       ? ` · 香火钱 +${s.runGoldEarned}/-${s.runGoldSpent}`
       : "";
-    // R90 祝福陈列：本局所购香火祝福（R89 稀有含档位标注）
-    const buffs = s.runBuffList.length > 0 ? ` · 祝福 ${s.runBuffList.join("、")}` : "";
+    // R90 祝福陈列：本局所购香火祝福（金字强调；R89 稀有含档位标注）
+    const buffs = s.runBuffList.length > 0
+      ? ` · <span class="ach-line">祝福 ${s.runBuffList.join("、")}</span>`
+      : "";
     // R60 连战战报：讨伐妖王数与狂化档位置顶（连战模式的核心战绩）
     const rush = Hud.rushHead(s.bossRush, s.bossRushKills, Math.floor(s.bossRushKills / 3));
     const head = rush ? `${rush} · ` : "";
-    // R88 最快讨伐：Boss Rush 分阶用时（次次直授的终极横幅；无击杀省略）
-    const fastest = s.bossRush && s.bossRushKillTimes.length > 0
-      ? ` · 最快讨伐 ${Math.min(...s.bossRushKillTimes).toFixed(0)}s`
+    // R88/R97 最快讨伐 + 平均：Boss Rush 分阶用时（speedrun 自我挑战）
+    const times = s.bossRushKillTimes;
+    const fastest = s.bossRush && times.length > 0
+      ? ` · 最快讨伐 ${Math.min(...times).toFixed(0)}s · 平均 ${(times.reduce((a, b) => a + b, 0) / times.length).toFixed(0)}s`
       : "";
     // R84 输出主力：伤害占比最高武器（R83 统计数据消费端）
     const main = Hud.mainWeaponLine(
