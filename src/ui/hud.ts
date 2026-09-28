@@ -374,10 +374,12 @@ export class Hud {
       card.type = "button";
       card.dataset.role = r.id;
       const open = this.sim.isRoleUnlocked(r.id);
-      card.className = open ? "role-card" : "role-card locked";
+      // R125 秘密职业（铁壁/九界解锁）暗金字卡面：视觉身份区分普通职业
+      const secret = r.id === "hermit" || r.id === "wusheng";
+      card.className = (open ? "role-card" : "role-card locked") + (secret ? " role-card-secret" : "");
       const hint = open ? null : this.sim.roleUnlockHint(r.id);
       card.innerHTML = `
-        <b>${r.name}${open ? "" : " 🔒"}</b>
+        <b>${secret ? `<span class="ach-honor">${r.name}</span>` : r.name}${open ? "" : " 🔒"}</b>
         <span class="rc-weapon">起手 ${WEAPON_DATA[r.startWeapon].name}</span>
         <span class="rc-passive">${r.passive}</span>
         <span class="rc-desc">${hint ? `${hint.name}：${hint.desc}` : r.desc}</span>`;
