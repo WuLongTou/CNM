@@ -8,8 +8,8 @@ import { makeWeapon, aspectDef, ASPECTS } from "../../src/sim/weapons";
 const IDS = ["zhanfu", "shuangdao", "changqiang", "jinfu", "zhongnu", "sandanqiang", "yingren", "duandao"];
 
 describe("R106 形态第二批", () => {
-  it("形态表 11 条（3+8）；每条 a/b 字段齐备且 desc 非空", () => {
-    expect(Object.keys(ASPECTS)).toHaveLength(11);
+  it("形态表全铺完（R107 起 26 条）；每条 desc 非空", () => {
+    expect(Object.keys(ASPECTS)).toHaveLength(26);
     for (const id of IDS) expect(ASPECTS[id].desc.length).toBeGreaterThan(4);
   });
 

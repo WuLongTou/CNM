@@ -135,7 +135,7 @@ export interface WeaponInstance {
 export const ASPECTS: Record<string, { name: string; desc: string; stats: Partial<WeaponDef> }> = {
   tiejian: { name: "影袭", desc: "弃稳求快：伤害降、攻速翻倍", stats: { dmg: 0.7, asp: 1.5 } },
   gongjian: { name: "连弩", desc: "速射化：伤害降、攻速升", stats: { dmg: 0.8, asp: 1.3 } },
-  dileifazhang: { name: "引雷", desc: "链状加深：弹速降、链 +1", stats: { asp: 0.8, chain: 1 } },
+  leidianfazhang: { name: "引雷", desc: "链状加深：弹速降、链 +1", stats: { asp: 0.8, chain: 1 } },
   // R106 第二批（8 把）
   zhanfu: { name: "旋风斧", desc: "溅射扩大：伤降、范围 +40", stats: { dmg: 1.3, splash: 100 } },
   shuangdao: { name: "血怒", desc: "噬血狂击：命中吸血 +6", stats: { dmg: 0.6, steal: 6 } },
@@ -145,6 +145,22 @@ export const ASPECTS: Record<string, { name: string; desc: string; stats: Partia
   sandanqiang: { name: "龙息", desc: "弹幕撒布：五发散射、单发更轻", stats: { dmg: 0.55, spread: 5 } },
   yingren: { name: "双影", desc: "影子分身：多目标 +1", stats: { multi: 3, dmg: 0.85 } },
   duandao: { name: "蚀骨", desc: "毒入骨髓：中毒翻倍", stats: { psn: 20 } },
+  // R107 第三批（14 把，全表铺完）
+  shuangya: { name: "凛冬", desc: "冰封概率翻倍、攻再降", stats: { freeze: 30, asp: 1.1 } },
+  dujian: { name: "瘟疫之矢", desc: "毒更深、攻速升", stats: { psn: 30, asp: 1.3 } },
+  sishenliandao: { name: "收割", desc: "暴击拉满、范围再扩", stats: { crit: 30, rng: 1.8 } },
+  xueyubi: { name: "血祭", desc: "吸血翻倍、攻速再升", stats: { steal: 20, asp: 1.6 } },
+  jijinu: { name: "穿云", desc: "射程极致、暴击再升", stats: { rng: 1.8, crit: 35 } },
+  guijinu: { name: "百步穿杨", desc: "追踪提速、伤升", stats: { dmg: 1.7, asp: 1.1 } },
+  huixuanbiao: { name: "裂空", desc: "穿透再深、伤升", stats: { pierce: 5, dmg: 1.2 } },
+  fazhang: { name: "秘法", desc: "弹速降、伤害升", stats: { dmg: 1.3, asp: 0.8 } },
+  huoqiufazhang: { name: "烈焰风暴", desc: "爆炸再扩、伤升", stats: { splash: 110, dmg: 1.6 } },
+  meihuofazhang: { name: "魅惑之焰", desc: "妖火翻倍、攻速升", stats: { psn: 30, asp: 1.4 } },
+  bingshuangfazhang: { name: "绝对零度", desc: "冰封概率翻倍、伤升", stats: { freeze: 40, dmg: 1.3 } },
+  sishenfazhang: { name: "亡者连雷", desc: "链式再深、暴击再升", stats: { chain: 4, crit: 30 } },
+  tiejili: { name: "荆棘阵", desc: "更大爆炸、毒附加", stats: { splash: 80, psn: 15 } },
+  jishulei: { name: "万雷天引", desc: "溅射极致、伤升", stats: { splash: 140, dmg: 1.6 } },
+  diyu_huolei: { name: "炼狱", desc: "毒火焚野：溅射再扩、毒再升", stats: { splash: 160, psn: 50 } },
 };
 
 /** R105 形态生效面板：aspect=1 时以形态表覆盖本形（未列字段继承）。 */
