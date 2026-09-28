@@ -462,6 +462,18 @@ export class Hud {
     return `讨伐妖王 ${kills} 只 · 狂化 ${tier} 档`;
   }
 
+  /** 输出主力行（R84 纯函数可单测）：伤害占比最高的武器（总额 0 或无名时空串）。 */
+  static mainWeaponLine(
+    weapons: Array<{ name: string; dmgDealt: number }>,
+    total: number,
+  ): string {
+    if (total <= 0 || weapons.length === 0) return "";
+    const top = [...weapons].sort((a, b) => b.dmgDealt - a.dmgDealt)[0];
+    if (!top || top.dmgDealt <= 0) return "";
+    const pct = Math.round((top.dmgDealt / total) * 100);
+    return `输出主力 ${top.name} ${pct}%`;
+  }
+
   private debriefText(s: GameSim): string {
     // R42 天气回顾：驻留 ≥10s 的天气按时长降序陈列
     const entries = Object.entries(s.weatherTime)
@@ -486,7 +498,13 @@ export class Hud {
     // R60 连战战报：讨伐妖王数与狂化档位置顶（连战模式的核心战绩）
     const rush = Hud.rushHead(s.bossRush, s.bossRushKills, Math.floor(s.bossRushKills / 3));
     const head = rush ? `${rush} · ` : "";
-    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}`;
+    // R84 输出主力：伤害占比最高武器（R83 统计数据消费端）
+    const main = Hud.mainWeaponLine(
+      s.player.weapons.map((w2) => ({ name: w2.name, dmgDealt: w2.dmgDealt })),
+      s.dmgDealtTotal,
+    );
+    const mainSeg = main ? ` · ${main}` : "";
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${mainSeg}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
