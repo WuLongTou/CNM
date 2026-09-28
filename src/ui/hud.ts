@@ -7,6 +7,7 @@ import { DIFFICULTIES } from "../sim/difficulty";
 import { PACTS, PACT_IDS, PACT_MAX_TIER, PACT_ROMAN, type PactId } from "../sim/pacts";
 import { dailyKey, dailySeed, dailyTheme, dailyMutator } from "../sim/daily";
 import { ROLES } from "../sim/roles";
+import { ACHIEVEMENTS } from "../sim/achievements";
 import { HONOR_ACHIEVEMENT_NAMES } from "../sim/achievements";
 import { WEAPON_DATA } from "../sim/weapons";
 import type { LifetimeStats } from "../sim/save";
@@ -411,9 +412,14 @@ export class Hud {
     const d = this.sim.exec({ action: "meta" }).data as {
       highScore: number; totalKills: number; games: number; clears: number;
       stats?: LifetimeStats;
+      ach_total?: number; ach_unlocked?: number; ach_last?: string | null;
     };
+    // R140 成就完成度 + 最近解锁名（留存面：完成度进度可见）
+    const achTag = d.ach_total
+      ? ` · 成就 ${d.ach_unlocked}/${d.ach_total}${d.ach_last ? ` · 最新 ${ACHIEVEMENTS.find((a) => a.id === d.ach_last)?.name ?? d.ach_last}` : ""}`
+      : "";
     el.textContent = d.games > 0
-      ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局 · 制霸 ${d.clears}/9`
+      ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局 · 制霸 ${d.clears}/9${achTag}`
       : "初入山林 · 祝武运昌隆";
     if (life) life.textContent = d.games > 0 && d.stats ? lifetimeLine(d.stats) : "";
   }

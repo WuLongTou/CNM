@@ -2796,6 +2796,9 @@ export class GameSim {
           dailyTheme: dailyTheme(),
           rushBest: d.rushBest ?? 0,
           daily_rush_best: d.dailyRushBest?.date === dailyKey() ? d.dailyRushBest.score : 0, // R112 当日有效
+          ach_total: ACHIEVEMENTS.length, // R140 成就完成度（欢迎页常显）
+          ach_unlocked: this.achievements.unlocked.size,
+          ach_last: [...this.achievements.unlocked].slice(-1)[0] ?? null, // 最近解锁 id
           dailyBest: d.dailyBest ?? { date: "", score: 0 },
           // R64 生涯统计（欢迎页陈列；测试与 UI 共用同一口径）
           stats: d.stats ?? defaultStats(),
