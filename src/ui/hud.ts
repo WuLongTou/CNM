@@ -7,6 +7,7 @@ import { DIFFICULTIES } from "../sim/difficulty";
 import { PACTS, PACT_IDS, PACT_MAX_TIER, PACT_ROMAN, type PactId } from "../sim/pacts";
 import { dailyKey, dailySeed, dailyTheme, dailyMutator } from "../sim/daily";
 import { ROLES } from "../sim/roles";
+import { HONOR_ACHIEVEMENT_NAMES } from "../sim/achievements";
 import { WEAPON_DATA } from "../sim/weapons";
 import type { LifetimeStats } from "../sim/save";
 import { pactLabel } from "../sim/pacts";
@@ -56,8 +57,8 @@ export function weatherHudLabel(type: string, intensity: string): string {
   return eff ? `天气 ${name}${lv}（${eff}）` : `天气 ${name}${lv}`;
 }
 
-/** R111 荣誉成就集：终局直授的高难荣誉（结算屏金字强调）。 */
-const HONOR_ACHIEVEMENTS = new Set(["妖潮平定", "伏魔真君", "镇狱天师", "三英聚义", "九界平定", "铁壁", "历劫全域"]);
+/** R121 荣誉集迁域层（achievements.ts 单一事实源）。 */
+const HONOR_ACHIEVEMENTS = HONOR_ACHIEVEMENT_NAMES;
 
 /** 本局成就陈列行（R53 纯函数可单测）：无则空串，有则“本局成就 N 项：名 / 名”；R111 荣誉金字。 */
 export function runAchievementLine(names: string[]): string {

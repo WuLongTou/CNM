@@ -119,6 +119,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "boss_hunter", name: "妖王猎手", desc: "Boss 连战中讨伐 5 只妖王", group: "征伐", goal: { stat: "bossRushKills", target: 5 } },
 ];
 
+/** R121 荣誉成就名集：结算屏/帮助页金字强调的单一事实源（R111 hud 集迁入域层，语义保持）。 */
+export const HONOR_ACHIEVEMENT_NAMES = new Set([
+  "妖潮平定", "伏魔真君", "镇狱天师", "三英聚义", "九界平定", "历劫全域", "铁壁",
+]);
+
 export class AchievementSystem {
   /** 已达成（本进程内，含跨局持久集合初始化）。 */
   unlocked = new Set<string>();

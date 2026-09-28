@@ -6,7 +6,7 @@ import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES, ASPECTS, ASCEND_AT } from "../sim/weapons";
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS, achievementProgress } from "../sim/achievements";
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS, achievementProgress, HONOR_ACHIEVEMENT_NAMES } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
 import { FOE_MECHS } from "../sim/foemechs";
@@ -244,7 +244,11 @@ export class HelpPanel {
         const bar = prog
           ? `<span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>`
           : "";
-        return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
+        // R121 荣誉金字：与结算屏同源（HONOR_ACHIEVEMENT_NAMES 单一事实源）
+        const nameCell = HONOR_ACHIEVEMENT_NAMES.has(a.name)
+          ? `<span class="ach-honor">${a.name}</span>`
+          : a.name;
+        return `<tr class="${done ? "ach-done" : ""}"><td>${nameCell}</td>` +
           `<td>${a.desc}${progText}${bar} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
       }).join("");
       return `<p class="sub ach-group">${g} ${got}/${list.length}</p><table class="help-table">${rows}</table>`;
