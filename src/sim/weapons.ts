@@ -136,6 +136,15 @@ export const ASPECTS: Record<string, { name: string; desc: string; stats: Partia
   tiejian: { name: "影袭", desc: "弃稳求快：伤害降、攻速翻倍", stats: { dmg: 0.7, asp: 1.5 } },
   gongjian: { name: "连弩", desc: "速射化：伤害降、攻速升", stats: { dmg: 0.8, asp: 1.3 } },
   dileifazhang: { name: "引雷", desc: "链状加深：弹速降、链 +1", stats: { asp: 0.8, chain: 1 } },
+  // R106 第二批（8 把）
+  zhanfu: { name: "旋风斧", desc: "溅射扩大：伤降、范围 +40", stats: { dmg: 1.3, splash: 100 } },
+  shuangdao: { name: "血怒", desc: "噬血狂击：命中吸血 +6", stats: { dmg: 0.6, steal: 6 } },
+  changqiang: { name: "突贯", desc: "极致突刺：射程 +50、目标 +1", stats: { rng: 2.2, multi: 3 } },
+  jinfu: { name: "破城", desc: "崩地重击：溅射再扩、伤再升", stats: { dmg: 2.6, splash: 130 } },
+  zhongnu: { name: "床弩", desc: "贯穿一串：穿透 +2、速再降", stats: { pierce: 2, asp: 0.45 } },
+  sandanqiang: { name: "龙息", desc: "弹幕撒布：五发散射、单发更轻", stats: { dmg: 0.55, spread: 5 } },
+  yingren: { name: "双影", desc: "影子分身：多目标 +1", stats: { multi: 3, dmg: 0.85 } },
+  duandao: { name: "蚀骨", desc: "毒入骨髓：中毒翻倍", stats: { psn: 20 } },
 };
 
 /** R105 形态生效面板：aspect=1 时以形态表覆盖本形（未列字段继承）。 */
