@@ -2121,6 +2121,14 @@ export class GameSim {
           return Math.max(old, this.score);
         })()
         : (prev.rushBest ?? 0),
+      // R112 连战每日最佳：rush + 当日种子（跨天重开榜，同日取最高）
+      dailyRushBest: this.bossRush && this.seed === dailySeed()
+        ? (() => {
+          const isNewDay = prev.dailyRushBest?.date !== dailyKey();
+          const old = isNewDay ? 0 : (prev.dailyRushBest?.score ?? 0);
+          return { date: dailyKey(), score: Math.max(old, this.score) };
+        })()
+        : (prev.dailyRushBest ?? { date: "", score: 0 }),
       // R64 生涯统计：金币按每次实发累加；其余按局口径只计一次（无尽二次结算防重）
       stats: (() => {
         const ps = prev.stats ?? defaultStats();
@@ -2777,6 +2785,7 @@ export class GameSim {
           dailySeed: dailySeed(),
           dailyTheme: dailyTheme(),
           rushBest: d.rushBest ?? 0,
+          daily_rush_best: d.dailyRushBest?.date === dailyKey() ? d.dailyRushBest.score : 0, // R112 当日有效
           dailyBest: d.dailyBest ?? { date: "", score: 0 },
           // R64 生涯统计（欢迎页陈列；测试与 UI 共用同一口径）
           stats: d.stats ?? defaultStats(),
@@ -2945,6 +2954,10 @@ export class GameSim {
       })(), // R99 连胜天数（当日有效）
       run_history: this.save.load()?.runHistory ?? [], // R102 本地战绩
       damage_taken_run: this.damageTakenRun, // R110 无伤口径
+      daily_rush_best: (() => {
+        const d = this.save.load();
+        return d?.dailyRushBest?.date === dailyKey() ? d.dailyRushBest.score : 0;
+      })(), // R112 连战每日最佳（当日有效）
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

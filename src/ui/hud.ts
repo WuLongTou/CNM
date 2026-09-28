@@ -274,6 +274,7 @@ export class Hud {
     const d = this.sim.exec({ action: "meta" }).data as {
       dailyBest: { date: string; score: number };
       rushBest: number;
+      daily_rush_best?: number;
       mutatorClears?: Record<string, number>;
       daily_streak?: number;
     };
@@ -283,7 +284,8 @@ export class Hud {
     const streak = d.daily_streak ?? 0;
     bestEl.textContent =
       ` · ${theme.label} · 变异${mut.name} · 历劫 ${done}/5${streak > 0 ? ` · 🔥${streak}` : ""}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
-    rushEl.textContent = d.rushBest > 0 ? ` · 连战最佳 ${d.rushBest}` : "";
+    const dailyRush = (d.daily_rush_best ?? 0) > 0 ? ` · 今日连战 ${d.daily_rush_best}` : "";
+    rushEl.textContent = d.rushBest > 0 ? ` · 连战最佳 ${d.rushBest}${dailyRush}` : dailyRush.replace(" · ", " · ");
   }
 
   /** 当前种子展示（R22；重开/新局后刷新）。 */
