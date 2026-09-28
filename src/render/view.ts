@@ -407,6 +407,7 @@ export class GameView {
     this.renderPickups(sim);
     this.renderHealOrbs(sim);
     this.renderChests(sim);
+    this.renderShrines(sim);
     this.renderTerrain(sim);
     this.renderWeather(sim);
     this.renderBossBar(sim);
@@ -891,6 +892,21 @@ export class GameView {
         .stroke({ width: 2.5, color: INK });
       g.moveTo(c.x - 13, c.y - 3).lineTo(c.x + 13, c.y - 3).stroke({ width: 1.8, color: INK, alpha: 0.7 });
       g.circle(c.x, c.y - 2, 2.4).fill(BLOOD);
+    }
+  }
+
+  /** 香火龛（R65）：简笔龛台——纸金小龛 + 顶檐 + 血红香火点（区别于宝箱方箱）。 */
+  private shrineGfx = new Graphics();
+  private renderShrines(sim: GameSim): void {
+    const g = this.shrineGfx;
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    g.clear();
+    for (const s of sim.shrines) {
+      g.rect(s.x - 11, s.y - 14, 22, 20).fill({ color: 0xe8d5a8, alpha: 0.95 })
+        .stroke({ width: 2.5, color: INK });
+      g.moveTo(s.x - 14, s.y - 14).lineTo(s.x + 14, s.y - 14).stroke({ width: 3, color: INK });
+      g.circle(s.x, s.y - 4, 3).fill(BLOOD);
+      g.moveTo(s.x - 6, s.y + 6).lineTo(s.x + 6, s.y + 6).stroke({ width: 2, color: INK, alpha: 0.7 });
     }
   }
 

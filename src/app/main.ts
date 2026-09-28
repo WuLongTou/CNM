@@ -18,6 +18,7 @@ import { FusionPanel } from "../ui/fusion";
 import { HelpPanel } from "../ui/help";
 import { PauseMenu } from "../ui/pausemenu";
 import { UpgradePanel } from "../ui/upgrade";
+import { ShopPanel } from "../ui/shop";
 import { MiniMap } from "../ui/minimap";
 import { Notify } from "../ui/notify";
 import { TouchControls, shouldUseTouch } from "../ui/touch";
@@ -90,6 +91,7 @@ async function boot(): Promise<void> {
   const crafting = new CraftingPanel(sim);
   const fusion = new FusionPanel(sim);
   const upgrade = new UpgradePanel(sim);
+  const shop = new ShopPanel(sim);
   const help = new HelpPanel(sim);
   const pauseMenu = new PauseMenu(sim, audio, settings, () => {
     saveVisualSettings(localStorage, settings);
@@ -139,6 +141,10 @@ async function boot(): Promise<void> {
     else if (e.event === "final_boss") { notify.banner("终幕妖王", "讨伐成功即平定妖潮"); view.shake(14); audio.play("lightning"); }
     else if (e.event === "elite_wave") { notify.push("精英潮来袭！"); audio.play("charm"); }
     else if (e.event === "threat_tier") { notify.push(`威胁阶 ${d.tier} · 妖潮渐强`); audio.play("charm"); }
+    else if (e.event === "shrine_spawn") { notify.push("山野间浮起香火龛 · 走近以香火钱换机缘"); audio.play("charm"); }
+    else if (e.event === "shop_offer") shop.show();
+    else if (e.event === "shop_bought") { notify.push(`香火换得：${d.name}（-${d.price} 文）`); audio.play("charm"); }
+    else if (e.event === "shop_denied") { notify.push(`香火不足（需 ${d.price} · 现有 ${d.coins}）`); audio.play("player_hurt", { vol: 0.3 }); }
     else if (e.event === "map_event") {
       const k = (e.data as { kind?: string }).kind;
       const label = k === "surge" ? "妖群合围" : k === "hunt" ? "精锐现身" : k === "goblin" ? "宝妖游荡" : "宝藏显形";
@@ -188,13 +194,14 @@ async function boot(): Promise<void> {
   // 模态互斥由各面板内部暂停处理。
   // UI 动作提取为 uiActions 供键盘与触屏按钮排共用（触屏无键盘，同一套互斥语义）。
   const anyModalOpen = () =>
-    upgrade.visible || equipment.visible || crafting.visible || fusion.visible || help.visible || pauseMenu.visible;
+    upgrade.visible || shop.visible || equipment.visible || crafting.visible || fusion.visible || help.visible || pauseMenu.visible;
   // 仅关闭可见面板：不可见面板 toggle(false) 也会改 sim.paused，会破坏升级报价的暂停态
   const closeAllModals = () => {
     if (equipment.visible) equipment.toggle(false);
     if (crafting.visible) crafting.toggle(false);
     if (help.visible) help.toggle(false);
     if (pauseMenu.visible) pauseMenu.toggle(false);
+    if (shop.visible) shop.close();
   };
   const uiActions = {
     toggleHelp(): void {
@@ -228,6 +235,7 @@ async function boot(): Promise<void> {
   };
   const onKey = (e: KeyboardEvent) => {
     if (upgrade.onKey(e)) return;
+    if (shop.onKey(e)) return;
     if (fusion.onKey(e)) return;
     if (help.onKey(e)) return;
     if (e.code === "KeyH") uiActions.toggleHelp();
@@ -274,6 +282,7 @@ async function boot(): Promise<void> {
     help.resimulate(sim);
     fusion.resimulate(sim);
     pauseMenu.resimulate(sim);
+    shop.resimulate(sim);
     coach.resimulate(sim);
     input.clearExternal();
   }
@@ -358,6 +367,7 @@ async function boot(): Promise<void> {
     if (crafting.visible) crafting.refresh();
     fusion.update();
     upgrade.update();
+    shop.update();
     coach.update();
     // R19 触屏层级：非战斗藏整棵触屏 UI；模态打开时藏摇杆/击/冲（留 UI 按钮排解暂停）
     if (touchRoot) touchRoot.classList.toggle("hidden", sim.state !== "Combat");

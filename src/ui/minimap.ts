@@ -63,6 +63,15 @@ export class MiniMap {
         g.fillRect(c.x * sx - 1.5, c.y * sy - 1.5, 3, 3);
       }
     }
+    // R65 香火龛：纸金圆点（区别于宝箱方块与符箓菱形，远寻可辨）
+    g.fillStyle = "#e8d5a8";
+    g.strokeStyle = "#332e29";
+    for (const s of sim.shrines) {
+      g.beginPath();
+      g.arc(s.x * sx, s.y * sy, 2.6, 0, Math.PI * 2);
+      g.fill();
+      g.stroke();
+    }
     // R20 回春丹：绿十字点（与符箓/宝箱三者可辨）
     g.fillStyle = "#6ab04c";
     for (const o of sim.healOrbs) {

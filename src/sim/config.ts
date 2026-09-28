@@ -26,6 +26,22 @@ export const CFG = {
     MaxBonus: 0.5,
   },
 
+  // R65 局内金币与香火龛：金币为局内流通币（击杀入账），香火龛定期浮现可消费
+  Shop: {
+    FirstDelaySec: 75, // 首龛浮现时间
+    IntervalSec: 90, // 后续补龛间隔（场上无龛才补）
+    Range: 46, // 贴近触发半径
+    KillGold: 1, // 普通妖金币
+    EliteGold: 5, // 精英金币
+    BossGold: 20, // 妖王金币
+    GoblinGold: 15, // 宝妖金币
+    PriceWeapon: 80, // 武器槽基价（稀有度≥2）
+    PriceUpgrade: 60, // 符箓槽基价
+    PriceHeal: 40, // 调息槽基价
+    HealAmount: 40, // 调息回复量
+    EscalateMult: 1.35, // 每次购买后全场基价倍乘（通胀逼取舍）
+  },
+
   // M14 操作与战斗：冲刺斩 / 完美闪避（妖时）
   Combat: {
     DashStrikeDmgMult: 1.5,      // 冲刺中攻击：全武器伤害倍率

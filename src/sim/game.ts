@@ -192,6 +192,27 @@ export interface UpgradeOffer {
   statName: string;
 }
 
+/** 香火龛商品槽（R65）：武器 / 符箓 / 调息三选一，开龛时定格。 */
+export interface ShopSlot {
+  kind: "weapon" | "upgrade" | "heal";
+  /** 本龛定格价（开龛时按基价×通胀倍乘取整）。 */
+  price: number;
+  /** 卡面名（武器名 / 符箓·词条 / 调息回复）。 */
+  label: string;
+  /** weapon 槽：发放的武器定义 id（giveWeapon 重复自动精炼）。 */
+  weaponDefId?: string;
+  /** upgrade 槽：应用的武器与词条。 */
+  weaponIdx?: number;
+  stat?: UpgradeStat;
+}
+
+/** 香火龛（R65）：场上可交互实体，贴近开报价。 */
+export interface Shrine {
+  id: number;
+  x: number;
+  y: number;
+}
+
 export interface SimEvent {
   event: string;
   data: Record<string, unknown>;
@@ -339,6 +360,10 @@ export class GameSim {
   enemyProjectiles: EnemyProjectile[] = [];
   mines: Mine[] = [];
   chests: Chest[] = [];
+  /** 香火龛（R65）：场上至多一尊，购罄即散。 */
+  shrines: Shrine[] = [];
+  /** 局内金币（R65）：击杀入账，香火龛消费（与结算金币两轨）。 */
+  coins = 0;
   inventory = new Inventory();
   terrain: World;
   weather: WeatherSystem;
@@ -356,6 +381,15 @@ export class GameSim {
   deathCause: string | null = null;
   /** 生涯统计已计入标志（R64；Victory→无尽→陨落二次 finalizeRun 时按局口径防重）。 */
   private statsCounted = false;
+  // ── R65 香火龛商店 ──
+  /** 补龛倒计时（首龛 FirstDelaySec，此后 IntervalSec 且场上无龛才补）。 */
+  private shrineTimer: number = CFG.Shop.FirstDelaySec;
+  /** 开龛报价（非 null 时模态暂停；三槽开龛定格）。 */
+  shopOffer: ShopSlot[] | null = null;
+  /** 贴近防重触发闩：离开半径才复位（Esc 关报价后需走开再回）。 */
+  private shopLatch = true;
+  /** 通胀倍乘：每次购买 ×EscalateMult，作用于后续开龛基价（全局取舍压力）。 */
+  private shopPriceMult = 1;
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
   /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
@@ -921,6 +955,89 @@ export class GameSim {
     if (this.chests.every((c) => c.opened)) this.scatterChests(2);
   }
 
+  // ── 香火龛商店（R65）─────────────────────────────────
+
+  /** 补龛与贴近检测：定期浮现（场上无龛才补），玩家贴近开报价；离开半径复位防重闩。 */
+  private updateShrines(dt: number): void {
+    this.shrineTimer -= dt;
+    if (this.shrineTimer <= 0) {
+      this.shrineTimer = CFG.Shop.IntervalSec;
+      if (this.shrines.length === 0 && !this.shopOffer) {
+        const p = this.resolveSpawnPos("random");
+        this.shrines.push({ id: this.nextId++, x: p.x, y: p.y });
+        this.emit("shrine_spawn", { x: p.x, y: p.y });
+      }
+    }
+    if (this.shopOffer) return; // 报价开着时不再检测（模态暂停，玩家动不了）
+    const near = this.shrines.some(
+      (s) => (s.x - this.player.x) ** 2 + (s.y - this.player.y) ** 2 <= CFG.Shop.Range ** 2);
+    if (near && !this.shopLatch) this.openShop();
+    else if (!near) this.shopLatch = false;
+  }
+
+  /** 生成三槽报价：武器（稀有度≥2 加权池，同精英箱口径）/ 随机符箓 / 调息；价格按通胀倍乘定格。 */
+  private makeShopSlots(): ShopSlot[] {
+    const price = (base: number) => Math.floor(base * this.shopPriceMult);
+    const defId = this.rollEliteWeaponDef();
+    const ws = this.player.weapons;
+    const w = ws.length > 0 ? ws[this.rng.int(0, ws.length - 1)] : null;
+    const stats = w ? validStats(w.type) : [];
+    const stat = stats.length > 0 ? stats[this.rng.int(0, stats.length - 1)] : null;
+    return [
+      { kind: "weapon", price: price(CFG.Shop.PriceWeapon), label: WEAPON_DATA[defId].name, weaponDefId: defId },
+      ...(w && stat
+        ? [{ kind: "upgrade" as const, price: price(CFG.Shop.PriceUpgrade),
+            label: `符箓·${UPGRADE_STAT_NAMES[stat]}（${w.name}）`, weaponIdx: ws.indexOf(w), stat }]
+        : []),
+      { kind: "heal", price: price(CFG.Shop.PriceHeal), label: `调息回复 ${CFG.Shop.HealAmount} 生命` },
+    ];
+  }
+
+  /** 贴近开龛：模态暂停 + 发报价事件（武器栏为空时缺符箓槽，至少两槽可买）。 */
+  private openShop(): void {
+    this.shopOffer = this.makeShopSlots();
+    this.shopLatch = true;
+    this.paused = true;
+    this.emit("shop_offer", { slots: this.shopOffer, coins: this.coins });
+  }
+
+  /** Esc/按钮关闭报价：不消费龛，走开再回可重开（闩在离开半径时复位）。 */
+  closeShop(): void {
+    if (!this.shopOffer) return;
+    this.shopOffer = null;
+    this.paused = false;
+    this.emit("shop_closed", {});
+  }
+
+  /** 购买槽位：扣金币 → 发放效果 → 龛散（一龛一购）→ 全场基价通胀；余额不足拒并播报。 */
+  buyShop(index: number): Record<string, unknown> {
+    if (!this.shopOffer) return { handled: false, note: "无进行中的报价" };
+    const slot = this.shopOffer[index];
+    if (!slot) return { handled: false, note: "无效选项", slots: this.shopOffer };
+    if (this.coins < slot.price) {
+      this.emit("shop_denied", { label: slot.label, price: slot.price, coins: this.coins });
+      return { handled: false, note: "香火不足", slots: this.shopOffer };
+    }
+    this.coins -= slot.price;
+    let name = slot.label;
+    if (slot.kind === "weapon") {
+      name = this.giveWeapon(slot.weaponDefId).name;
+    } else if (slot.kind === "upgrade") {
+      name = String(this.applyUpgrade(slot.weaponIdx!, slot.stat!).name);
+    } else {
+      const healed = Math.min(CFG.Shop.HealAmount, this.player.maxHp - this.player.hp);
+      this.player.hp += healed;
+      name = `调息回复 ${healed} 生命`;
+    }
+    this.shopPriceMult *= CFG.Shop.EscalateMult;
+    this.shopOffer = null;
+    this.paused = false;
+    this.shrines = []; // 一龛一购：龛随购买消散
+    this.shopLatch = true;
+    this.emit("shop_bought", { kind: slot.kind, name, price: slot.price, coins: this.coins });
+    return { handled: true, name, coins: this.coins };
+  }
+
   // ── 主循环 ──────────────────────────────────────────────
 
   /** 固定步长推进（app 层累加器保证 60Hz；测试可直接连续调用）。 */
@@ -950,6 +1067,7 @@ export class GameSim {
     }
     this.updateMines(dt);
     this.updateChests();
+    this.updateShrines(dt);
     this.updatePickups();
     this.updateHealOrbs();
     this.updateAltars();
@@ -1625,6 +1743,8 @@ export class GameSim {
     }
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
+    // R65 局内金币：普通 1 / 精英 5 / 妖王 20 / 宝妖 15（香火龛流通币，与结算金币两轨）
+    this.coins += e.boss ? CFG.Shop.BossGold : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold;
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
     // explosive 词缀：死亡自爆（逼玩家杀完就走位，勿贴脸输出）
     if (e.affix === "explosive") {
@@ -2473,6 +2593,13 @@ export class GameSim {
         p.y = Math.min(this.world.h - 22, Math.max(22, y));
         return { teleported: true, pos: { x: p.x, y: p.y } };
       }
+      case "shop_buy": {
+        return this.buyShop(typeof args.index === "number" ? args.index : -1);
+      }
+      case "shop_close": {
+        this.closeShop();
+        return { closed: true };
+      }
       case "continue": {
         // 通关后继续无尽讨伐
         if (this.state !== "Victory") return { continued: false };
@@ -2524,6 +2651,8 @@ export class GameSim {
       round: this.round,
       score: this.score,
       kills: this.kills,
+      coins: this.coins, // R65 局内金币（香火龛流通币）
+      shop_open: this.shopOffer !== null,
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

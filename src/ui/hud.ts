@@ -536,6 +536,9 @@ export class Hud {
     this.weatherText.textContent = weatherHudLabel(w.type, w.intensity);
     this.scoreText.textContent = `分数 ${s.score}`;
     this.killsText.textContent = `击杀 ${s.kills}`;
+    // R65 局内金币：香火龛流通币（结算金币另计，两轨展示防混淆）
+    const coinsEl = this.root.querySelector<HTMLElement>("#coins");
+    if (coinsEl) coinsEl.textContent = `金币 ${s.coins}`;
     // R18 幕显示：R2 分幕结构此前 HUD 无感知，此处点名
     this.timeText.textContent = `存活 ${s.survivalTime.toFixed(0)}s · 第${s.act + 1}幕`;
     this.weaponText.textContent = s.activeWeapon
