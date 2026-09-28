@@ -57,6 +57,8 @@ export interface Enemy {
   facing: number;
   /** 中毒（dps / 剩余秒）。 */
   psnDps: number; psnT: number; psnTick: number;
+  /** R94 毒源武器实例（伤害统计归因）。 */
+  psnSrcW?: WeaponInstance;
   /** 冰缓剩余秒（速度 ×0.4）。 */
   frzT: number;
   /** 隐煞：当前隐身中 / 隐身-显形周期计时秒。 */
@@ -1856,6 +1858,7 @@ export class GameSim {
       e.psnDps = 3 + dmg * 0.1;
       e.psnT = POISON_DURATION;
       e.psnTick = 0;
+      e.psnSrcW = w; // R94 毒伤归因来源武器
     }
     if (fx.freeze > 0 && this.rng.chance(fx.freeze / 100)) {
       e.frzT = FREEZE_DURATION;
@@ -2119,7 +2122,7 @@ export class GameSim {
         e.psnTick += dt;
         if (e.psnTick >= 1) {
           e.psnTick -= 1;
-          this.dealDamage(e, e.psnDps);
+          this.dealDamage(e, e.psnDps, e.psnSrcW);
           if (e.hp <= 0) continue;
         }
       }
