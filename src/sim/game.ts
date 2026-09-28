@@ -1096,6 +1096,26 @@ export class GameSim {
     this.emit("shop_closed", {});
   }
 
+  /** 当前刷新报价成本（R78；shop.ts 按钮渲染用）。 */
+  shopRerollCost(): number {
+    return Math.floor(CFG.Shop.PriceReroll * this.shopPriceMult);
+  }
+
+  /** 刷新报价（R78）：花金币重 roll 三槽（不消费龛、不触发通胀——只有购买才通胀）。
+   *  价格随通胀倍乘；余额不足拒并播报。 */
+  rerollShop(): Record<string, unknown> {
+    if (!this.shopOffer) return { handled: false, note: "无进行中的报价" };
+    const cost = Math.floor(CFG.Shop.PriceReroll * this.shopPriceMult);
+    if (this.coins < cost) {
+      this.emit("shop_denied", { label: "刷新报价", price: cost, coins: this.coins });
+      return { handled: false, note: "香火不足", cost };
+    }
+    this.coins -= cost;
+    this.shopOffer = this.makeShopSlots();
+    this.emit("shop_offer", { slots: this.shopOffer, coins: this.coins, rerolled: true });
+    return { handled: true, coins: this.coins, slots: this.shopOffer };
+  }
+
   /** 购买槽位：扣金币 → 发放效果 → 龛散（一龛一购）→ 全场基价通胀；余额不足拒并播报。 */
   buyShop(index: number): Record<string, unknown> {
     if (!this.shopOffer) return { handled: false, note: "无进行中的报价" };
@@ -2752,6 +2772,9 @@ export class GameSim {
       case "shop_close": {
         this.closeShop();
         return { closed: true };
+      }
+      case "shop_reroll": {
+        return this.rerollShop();
       }
       case "continue": {
         // 通关后继续无尽讨伐

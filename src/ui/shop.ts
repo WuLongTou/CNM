@@ -17,6 +17,7 @@ export class ShopPanel {
   readonly el: HTMLElement;
   private cardsEl!: HTMLElement;
   private goldEl!: HTMLElement;
+  private actionsEl!: HTMLElement;
   visible = false;
 
   constructor(private sim: GameSim) {
@@ -25,13 +26,15 @@ export class ShopPanel {
     this.el.innerHTML = `
       <div class="panel panel-wide">
         <h2>香火龛</h2>
-        <p class="sub">以香火钱换机缘（1 / 2 / 3 购买 · Esc 离开；每笔购买后全龛涨价）</p>
+        <p class="sub">以香火钱换机缘（1 / 2 / 3 购买 · R 刷新 · Esc 离开；每笔购买后全龛涨价）</p>
         <p class="sub" id="shop-gold"></p>
         <div id="shop-cards" class="upgrade-cards"></div>
+        <div id="shop-actions"></div>
       </div>`;
     document.getElementById("ui-root")!.appendChild(this.el);
     this.cardsEl = this.el.querySelector("#shop-cards")!;
     this.goldEl = this.el.querySelector("#shop-gold")!;
+    this.actionsEl = this.el.querySelector("#shop-actions")!;
   }
 
   /** 重开一局时替换绑定的 sim 实例（新实例无残留报价）。 */
@@ -50,12 +53,24 @@ export class ShopPanel {
 
   private render(): void {
     const slots = this.sim.shopOffer ?? [];
+    const rerollCost = this.sim.shopRerollCost();
     this.goldEl.textContent = `香火钱 ${this.sim.coins}`;
     this.cardsEl.innerHTML = slots
       .map((s, i) => this.cardHtml(s, i))
       .join("");
     this.cardsEl.querySelectorAll(".upgrade-card[data-idx]").forEach((c) =>
       c.addEventListener("click", () => this.buy(Number((c as HTMLElement).dataset.idx))));
+    this.actionsEl.innerHTML = `<button type="button" class="upgrade-action" data-act="reroll"${this.sim.coins < rerollCost ? " disabled" : ""}>刷新报价 · ${rerollCost} 文<i>R</i></button>`;
+    this.actionsEl.querySelectorAll("button[data-act]").forEach((b) => {
+      b.addEventListener("click", () => { if ((b as HTMLElement).dataset.act === "reroll") this.reroll(); });
+    });
+  }
+
+  /** 刷新报价（R78）：花金币重 roll 三槽（龛体保留、不触发通胀）。 */
+  private reroll(): void {
+    const r = this.sim.exec({ action: "shop_reroll" });
+    const data = r.data as { handled?: boolean } | undefined;
+    if (r.ok && data?.handled) this.render();
   }
 
   private cardHtml(s: ShopSlot, i: number): string {
@@ -100,6 +115,7 @@ export class ShopPanel {
     if (e.code === "Digit2" || e.code === "Numpad2") { this.buy(1); return true; }
     if (e.code === "Digit3" || e.code === "Numpad3") { this.buy(2); return true; }
     if (e.code === "Escape") { this.close(); return true; }
+    if (e.code === "KeyR") { this.reroll(); return true; }
     return true; // 模态独占：吞掉其余按键（游戏键已由 sim.tick 门控清零）
   }
 }
