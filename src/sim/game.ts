@@ -1889,6 +1889,8 @@ export class GameSim {
     if (this.difficulty.id >= 2) this.achievements.grant("warden");
     // R25 三重血誓通关（终局直授；tick 停摆走判定够不着）
     if (PACT_IDS.every((id) => this.pactTier(id) >= 1)) this.achievements.grant("oathbound"); // R70：任一档位即算立誓
+    // R71 三誓满档通关（热量式最高目标；终局直授同上）
+    if (PACT_IDS.every((id) => this.pactTier(id) === PACT_MAX_TIER)) this.achievements.grant("heat_max");
     // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
     const clears = (this.save.load() ?? defaultSave()).clears ?? {};
     if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");

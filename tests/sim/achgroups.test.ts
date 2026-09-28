@@ -8,14 +8,14 @@ describe("R51 成就分组", () => {
     }
   });
 
-  it("四条线皆有成员且总数为 29", () => {
+  it("四条线皆有成员且总数为 30", () => {
     const counts = ACHIEVEMENT_GROUPS.map((g) => ACHIEVEMENTS.filter((a) => a.group === g).length);
     for (const n of counts) expect(n).toBeGreaterThan(0);
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(29);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(30);
   });
 
   it("组内 id 唯一，组名非空", () => {
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(29);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(30);
     for (const g of ACHIEVEMENT_GROUPS) expect(g.length).toBeGreaterThan(0);
   });
 });

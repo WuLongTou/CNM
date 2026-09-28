@@ -62,6 +62,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "combo_100", name: "百连斩", desc: "单局最高连击 100", group: "技艺", check: (s) => s.maxCombo >= 100 },
   // R25 三重血誓由 onVictory 直接 grant
   { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", group: "征伐", check: () => false },
+  { id: "heat_max", name: "炼狱修罗", desc: "三誓满档（各三级）通关一次", group: "征伐", check: () => false },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", check: (s) => s.weaponCount >= 6 },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", check: (s) => s.goblinKills >= 1 },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", check: (s) => s.shopPurchases >= 5 },
