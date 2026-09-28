@@ -1439,7 +1439,10 @@ export class GameSim {
 
   private advanceRound(): void {
     this.round++;
-    this.emit("threat_tier", { tier: this.round });
+    // R117 越阶奖励：妖潮渐凶的同时补一笔香火（+8×新阶数），风险回报节奏
+    const bonus = 8 * this.round;
+    this.coins += bonus;
+    this.emit("threat_tier", { tier: this.round, bonus });
     // R44 Boss Rush：终幕提前至第 6 阶（连妖王节奏紧凑）
     const finalRound = this.bossRush ? 6 : CFG.Acts.FinalBossRound;
     // 终幕妖王：round 达到 FinalBossRound 时降临（击杀通关）

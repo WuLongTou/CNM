@@ -157,7 +157,7 @@ async function boot(): Promise<void> {
     else if (e.event === "boss_spawn") { notify.push("妖王现世！"); view.shake(10); audio.play("lightning"); rumble.play("boss"); }
     else if (e.event === "final_boss") { notify.banner("终幕妖王", "讨伐成功即平定妖潮"); view.shake(14); audio.play("lightning"); }
     else if (e.event === "elite_wave") { notify.push("精英潮来袭！"); audio.play("charm"); }
-    else if (e.event === "threat_tier") { notify.push(`威胁阶 ${d.tier} · 妖潮渐强`); audio.play("charm"); }
+    else if (e.event === "threat_tier") { notify.push(`威胁阶 ${d.tier} · 越阶香火 +${d.bonus}`); audio.play("charm", { vol: 0.4 }); }
     else if (e.event === "shrine_spawn") { notify.push("山野间浮起香火龛 · 走近以香火钱换机缘"); audio.play("charm"); }
     else if (e.event === "shop_offer") shop.show();
     else if (e.event === "shop_bought") { notify.push(`香火换得：${d.name}（-${d.price} 文）`); audio.play("charm"); }
