@@ -284,8 +284,11 @@ export class Hud {
     const mut = dailyMutator();
     const done = Object.keys(d.mutatorClears ?? {}).length;
     const streak = d.daily_streak ?? 0;
+    const tmr = new Date();
+    tmr.setDate(tmr.getDate() + 1);
     bestEl.textContent =
-      ` · ${theme.label} · 变异${mut.name} · 历劫 ${done}/5${streak > 0 ? ` · 🔥${streak}` : ""}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
+      ` · ${theme.label} · 变异${mut.name} · 历劫 ${done}/5${streak > 0 ? ` · 🔥${streak}` : ""}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "") +
+      `（明日：${dailyMutator(tmr).name}）`;
     const dailyRush = (d.daily_rush_best ?? 0) > 0 ? ` · 今日连战 ${d.daily_rush_best}` : "";
     rushEl.textContent = d.rushBest > 0 ? ` · 连战最佳 ${d.rushBest}${dailyRush}` : dailyRush.replace(" · ", " · ");
   }
