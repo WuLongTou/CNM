@@ -34,7 +34,7 @@ describe("R31 进阶教练", () => {
   });
 
   it("四条全为限时且时长 8 秒、文案齐备", () => {
-    expect(TRANSIENT_TIPS.size).toBe(4);
+    expect(TRANSIENT_TIPS.size).toBe(6); // R114 +2（形态解锁/香火龛首见）
     expect(TRANSIENT_MS).toBe(8000);
     for (const id of TRANSIENT_TIPS) {
       expect(COACH_TEXTS[id].desktop.length).toBeGreaterThan(0);

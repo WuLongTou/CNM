@@ -5,11 +5,13 @@
 // 提示条为非模态（pointer-events 继承 root 的 none），绝不拦截输入。
 
 import type { GameSim, SimEvent } from "../sim/game";
+import { aspectUnlocked, ASPECTS } from "../sim/weapons";
 import { shouldUseTouch } from "./touch";
 
 export type CoachTipId =
   | "move_attack" | "pickup" | "dash"
-  | "elite_chest" | "fusion" | "boss" | "arsenal_full";
+  | "elite_chest" | "fusion" | "boss" | "arsenal_full"
+  | "aspect_unlocked" | "shrine_first";
 
 export interface CoachSnapshot {
   isFirstRun: boolean;
@@ -22,11 +24,15 @@ export interface CoachSnapshot {
   altarNear?: boolean;
   bossActive?: boolean;
   weaponCount?: number;
+  /** R114：有武器达进阶（形态可切）/ 场上浮起香火龛。 */
+  aspectReady?: boolean;
+  shrineSeen?: boolean;
 }
 
-/** 进阶提示集合（R31：展示 8 秒即消退，老手每局最多见四行，不做事件追踪）。 */
+/** 进阶提示集合（R31/R114：展示 8 秒即消退，老手每局最多见几行，不做事件追踪）。 */
 export const TRANSIENT_TIPS: ReadonlySet<CoachTipId> = new Set([
   "elite_chest", "fusion", "boss", "arsenal_full",
+  "aspect_unlocked", "shrine_first",
 ]);
 /** 进阶提示展示时长毫秒。 */
 export const TRANSIENT_MS = 8000;
@@ -43,6 +49,9 @@ export function coachTrigger(s: CoachSnapshot, done: Set<CoachTipId>): CoachTipI
   if (!done.has("fusion") && (s.altarNear ?? false) && (s.weaponCount ?? 0) >= 2) return "fusion";
   if (!done.has("boss") && (s.bossActive ?? false)) return "boss";
   if (!done.has("arsenal_full") && (s.weaponCount ?? 0) >= 5) return "arsenal_full";
+  // R114 新手上路两条（系统发现型，transient 8s）
+  if (!done.has("aspect_unlocked") && (s.aspectReady ?? false)) return "aspect_unlocked";
+  if (!done.has("shrine_first") && (s.shrineSeen ?? false)) return "shrine_first";
   return null;
 }
 
@@ -75,6 +84,14 @@ export const COACH_TEXTS: Record<CoachTipId, { desktop: string; touch: string }>
   arsenal_full: {
     desktop: "六械齐备： I 打开行囊可替换升级最少的武器",
     touch: "六械齐备：可在行囊替换武器",
+  },
+  aspect_unlocked: {
+    desktop: "武器已进阶：I 打开行囊，点「形态」按钮切换形态贰",
+    touch: "武器已进阶：行囊内可切换形态贰",
+  },
+  shrine_first: {
+    desktop: "香火龛（金点）浮现：走近用香火钱换武器与祝福",
+    touch: "香火龛（金点）浮现：走近可用香火钱",
   },
 };
 
@@ -136,6 +153,9 @@ export class Coach {
       altarNear: this.altarNear(s),
       bossActive: s.enemies.some((e) => e.boss),
       weaponCount: s.player.weapons.length,
+      // R114 新手上下文
+      aspectReady: s.player.weapons.some((w) => aspectUnlocked(w) && ASPECTS[w.defId]),
+      shrineSeen: s.shrines.length > 0,
     }, this.done);
     // R31 进阶提示限时：先于去重判定结算（同一提示持续在场也要到期消退）
     if (tip !== null && TRANSIENT_TIPS.has(tip)) {
