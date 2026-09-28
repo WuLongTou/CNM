@@ -295,6 +295,10 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R67 音量分离：暂停菜单拆 音乐/音效 双滑杆（audio 层双 GainNode 各自独立持久化
       zhanyaolu_music / zhanyaolu_sfx；老单键 zhanyaolu_volume 迁移一次——音效取原值、
       音乐取 ×0.4，听感不变），对标 Dead Cells / Celeste 设置面板标配
+- [x] R68 音频自动播放策略修复：AudioContext 在 boot 无手势期创建即为 suspended
+      （Chrome 等策略），此前全仓无 resume → 真机 BGM/音效全程静音。现 pointerdown/
+      keydown 首手势即唤醒（幂等），__CNM__.audioState 探针可验（suspended→running），
+      对标 web 游戏通用"首次交互激活声音"处理
 - [x] M22 贴图全量重绘（v2 填充式马克笔风）：gen-sketch.mjs 重写绘制系统——
       每个身体部位为 Catmull-Rom 平滑闭合色块 + 炭描边（取代 v1 纯线条火柴），
       Q 版大头比例、哑光纸感配色、眼睛带白高光、脚下落影；14 妖物 + 3 职业

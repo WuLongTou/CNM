@@ -122,4 +122,18 @@ export class AudioManager {
     if (this.sfxGain) this.sfxGain.gain.value = this.sfxVolume;
     localStorage.setItem(KEY_SFX, String(this.sfxVolume));
   }
+
+  /** 手势唤醒（R68 浏览器自动播放策略）：ctx 在 boot 无手势期创建会被置为
+   *  suspended，必须在用户手势内 resume，否则 BGM/音效全程静音。
+   *  运行中调用是无害空操作（幂等），首手势后每次手势重复调用安全。 */
+  resume(): void {
+    if (this.ctx && this.ctx.state === "suspended") {
+      this.ctx.resume().catch(() => { /* 唤醒失败静默（自动播放策略极端环境） */ });
+    }
+  }
+
+  /** 当前 AudioContext 状态（none = ctx 未初始化；调试探针 __CNM__.audioState）。 */
+  get state(): string {
+    return this.ctx?.state ?? "none";
+  }
 }

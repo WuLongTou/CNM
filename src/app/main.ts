@@ -43,6 +43,8 @@ declare global {
       sim: GameSim;
       /** 当前渲染帧率（ticker 滚动平均；上限 TARGET_FPS=60）。 */
       fps: number;
+      /** R68 音频上下文状态（suspended/running/none；自动播放策略探针）。 */
+      audioState: string;
     };
   }
 }
@@ -246,6 +248,13 @@ async function boot(): Promise<void> {
   };
   window.addEventListener("keydown", onKey);
 
+  // R68 浏览器自动播放策略：AudioContext 在 boot（无手势期）创建即为 suspended，
+  // 必须在用户手势内 resume，否则 BGM/音效全程静音。pointerdown/keydown 任一首
+  // 手势即唤醒（幂等，运行中重复调用无害）。
+  const wakeAudio = () => audio.resume();
+  window.addEventListener("pointerdown", wakeAudio);
+  window.addEventListener("keydown", wakeAudio);
+
   // R62 手柄：Start 键走键盘 Esc 同一暂停路由；连接/断开播报（轮询不依赖事件，
   // 事件只做 UI 通知——业内惯例：拔插手柄不中断对局）
   input.onStartButton = () => uiActions.togglePause();
@@ -339,6 +348,7 @@ async function boot(): Promise<void> {
     },
     get sim() { return sim; },
     get fps() { return Math.round(app.ticker.FPS); },
+    get audioState() { return audio.state; },
   };
 
   // 主循环：固定 60Hz 步长累加器（确定性），命中停顿按墙钟缩放 dt，渲染每帧读最新状态。
