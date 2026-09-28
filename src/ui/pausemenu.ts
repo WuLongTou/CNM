@@ -1,4 +1,5 @@
-// 暂停菜单（Esc）+ 设置（音量）。模态暂停；Esc 优先级低于融合/帮助面板（main 层路由）。
+// 暂停菜单（Esc）+ 设置（音量 + R61 表现三开关：震屏/伤害数字/顿帧）。
+// 模态暂停；Esc 优先级低于融合/帮助面板（main 层路由）。
 // R37：打开时聚合五条收藏线进度（制霸/藏珍/终极/融合/图鉴金边），目标一目了然。
 
 import type { GameSim } from "../sim/game";
@@ -6,6 +7,7 @@ import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { FUSION_RECIPES, WEAPON_DATA } from "../sim/weapons";
 import { ENEMY_NAMES } from "../sim/config";
 import type { AudioManager } from "../app/audio";
+import type { VisualSettings } from "../app/settings";
 
 export class PauseMenu {
   private el: HTMLElement;
@@ -13,7 +15,14 @@ export class PauseMenu {
   /** 装配层接线：走正常 restart()（保留血誓/种子/战绩），替代旧整页刷新（R36）。 */
   onRestart: (() => void) | null = null;
 
-  constructor(private sim: GameSim, private audio: AudioManager) {
+  constructor(
+    private sim: GameSim,
+    private audio: AudioManager,
+    /** R61 表现设置（app 层持有对象引用，这里原位改写 + 变更回调）。 */
+    private settings: VisualSettings,
+    /** R61 设置变更回调（app 层负责持久化与 view 同步）。 */
+    private onSettingsChange: () => void,
+  ) {
     this.el = document.createElement("div");
     this.el.className = "overlay hidden";
     this.el.innerHTML = `
@@ -25,6 +34,12 @@ export class PauseMenu {
           <input id="vol" type="range" min="0" max="100" step="5" />
           <span id="vol-num"></span>
         </label>
+        <div class="set-row" role="group" aria-label="表现设置">
+          <span class="set-title">表现</span>
+          <button id="set-shake" type="button"></button>
+          <button id="set-dmg" type="button"></button>
+          <button id="set-hit" type="button"></button>
+        </div>
         <button id="btn-resume" type="button">继续（Esc）</button>
         <button id="btn-pause-restart" type="button">重新开始</button>
       </div>`;
@@ -37,6 +52,26 @@ export class PauseMenu {
       this.audio.setVolume(Number(vol.value) / 100);
       num.textContent = vol.value;
     });
+    // R61 表现设置三开关：鼠标点按切换（不占用任何键位，符合模态硬约束）；
+    // 只改写共享 settings 对象并回调，持久化与 view 同步由 app 层做。
+    const wireToggle = (id: string, key: keyof VisualSettings, label: string) => {
+      const btn = this.el.querySelector<HTMLButtonElement>(`#${id}`)!;
+      const paint = () => {
+        const on = this.settings[key];
+        btn.textContent = `${label}·${on ? "开" : "关"}`;
+        btn.setAttribute("aria-pressed", String(on));
+        btn.classList.toggle("off", !on);
+      };
+      paint();
+      btn.addEventListener("click", () => {
+        this.settings[key] = !this.settings[key];
+        paint();
+        this.onSettingsChange();
+      });
+    };
+    wireToggle("set-shake", "shake", "震屏");
+    wireToggle("set-dmg", "damageNumbers", "数字");
+    wireToggle("set-hit", "hitstop", "顿帧");
     this.el.querySelector("#btn-resume")!.addEventListener("click", () => this.toggle(false));
     this.el.querySelector("#btn-pause-restart")!.addEventListener("click", () => {
       this.toggle(false);

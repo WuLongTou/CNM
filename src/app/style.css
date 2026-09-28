@@ -275,6 +275,16 @@ canvas { position: absolute; z-index: 0; }
 
 /* ── 暂停面板 ── */
 .vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #6b6154; font-size: 14px; }
+/* R61 表现设置三开关：纸签小按钮排，关=灰隐线稿 */
+.set-row { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 14px; }
+.set-row .set-title { color: #8a8175; font-size: 13px; letter-spacing: 0.2em; }
+.set-row button {
+  cursor: pointer; font-size: 12px; padding: 3px 10px; color: #332e29;
+  background: #e6dcc4; border: 1.5px solid #6b6154; border-radius: 3px 5px 3px 4px;
+}
+.set-row button:hover { background: #d94a3a; color: #f5eede; border-color: #332e29; }
+.set-row button.off { color: #b8ab90; background: transparent; border-style: dashed; text-decoration: line-through; }
+.set-row button.off:hover { color: #f5eede; }
 
 
 /* ── 触屏控件（仅触屏设备/或 ?touch=1 时由 JS 挂载）── */

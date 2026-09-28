@@ -6,6 +6,7 @@ import { GameSim, UPGRADE_STAT_NAMES, type ExecResult, type SimEvent } from "../
 import { HITSTOP } from "../sim/hitstop";
 import { weatherEffectTip } from "../sim/weather";
 import { localStorageStorage } from "../sim/save";
+import { loadVisualSettings, saveVisualSettings } from "./settings";
 import { GameView } from "../render/view";
 import { InputManager } from "./input";
 import { AudioManager } from "./audio";
@@ -52,12 +53,16 @@ async function boot(): Promise<void> {
   document.getElementById("app")!.prepend(app.canvas);
 
   let sim = new GameSim(Date.now() % 100000, localStorageStorage());
+  // R61 表现设置：独立于游戏存档的 UI 偏好（localStorage），装配时同步给消费端
+  const settings = loadVisualSettings(localStorage);
   const view = new GameView();
   const input = new InputManager(sim);
   const audio = new AudioManager();
   await view.init(app);
   view.attachFx();
   await audio.init();
+  view.shakeEnabled = settings.shake;
+  view.damageNumbersEnabled = settings.damageNumbers;
 
   // R22：欢迎页填了自定义种子则用该种子开局（可复现速通），否则沿用当前实例
   // R44：Boss 连战开关 → 以 boss_rush 模式重建 sim（血誓/种子照常）
@@ -78,7 +83,11 @@ async function boot(): Promise<void> {
   const fusion = new FusionPanel(sim);
   const upgrade = new UpgradePanel(sim);
   const help = new HelpPanel(sim);
-  const pauseMenu = new PauseMenu(sim, audio);
+  const pauseMenu = new PauseMenu(sim, audio, settings, () => {
+    saveVisualSettings(localStorage, settings);
+    view.shakeEnabled = settings.shake;
+    view.damageNumbersEnabled = settings.damageNumbers;
+  });
   // R36：暂停菜单重开走正常 restart()（保留血誓/自定义种子）
   pauseMenu.onRestart = () => restart();
   const minimap = new MiniMap(() => sim);
@@ -316,12 +325,14 @@ async function boot(): Promise<void> {
     last = now;
     acc += frameMs / 1000;
     while (acc >= FIXED_DT) {
-      const scale = sim.hitStop.scale(FIXED_DT * 1000);
+      // R61 表现设置：关闭顿帧时凝固无消费方（逻辑与渲染都全速推进）
+      const scale = settings.hitstop ? sim.hitStop.scale(FIXED_DT * 1000) : 1;
       input.sample();
       sim.tick(FIXED_DT * scale);
       acc -= FIXED_DT;
     }
-    const dtSec = (app.ticker.deltaMS / 1000) * (sim.hitStop.active ? HITSTOP.FrozenScale : 1);
+    const dtSec = (app.ticker.deltaMS / 1000) *
+      (sim.hitStop.active && settings.hitstop ? HITSTOP.FrozenScale : 1);
     view.render(sim, dtSec);
     hud.update();
     minimap.setCamera(view.getCamera().x, view.getCamera().y, view.getCamera().w, view.getCamera().h);

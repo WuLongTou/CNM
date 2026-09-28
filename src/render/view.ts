@@ -979,8 +979,9 @@ export class GameView {
     this.worldLayer.addChild(this.fxLayer);
   }
 
-  /** 触发震屏（强度≈像素幅度）。 */
+  /** 触发震屏（强度≈像素幅度）；表现设置关闭时静默跳过（R61）。 */
   shake(power: number): void {
+    if (!this.shakeEnabled) return;
     this.shakePower = Math.max(this.shakePower, power);
   }
 
@@ -993,6 +994,7 @@ export class GameView {
   /** 伤害数字：世界上浮淡出（暴击更大；白纸上炭红字 + 纸白描边可读）。
    *  R1：出生带缩放 pop（暴击弹得更高），打击的视觉锚点。 */
   spawnDamageNumber(x: number, y: number, dmg: number, crit: boolean): void {
+    if (!this.damageNumbersEnabled) return; // R61 表现设置：关闭飘字
     if (this.damageTexts.length > 24) return; // 上限节流
     const t = new Text({ text: String(dmg), style: {
       fontFamily: "system-ui", fontSize: crit ? 26 : 17, fontWeight: "700",
@@ -1035,6 +1037,10 @@ export class GameView {
   private altarGfx = new Graphics();
   /** 震屏强度（指数衰减，对齐 CameraShakeDecay 16）。 */
   private shakePower = 0;
+  /** R61 表现设置：false 时命中/击杀不再震屏（无障碍，偏好由 app 层装配）。 */
+  shakeEnabled = true;
+  /** R61 表现设置：false 时不再生成伤害数字飘字。 */
+  damageNumbersEnabled = true;
   private damageTexts: Array<{ t: Text; life: number; age: number; popFrom: number }> = [];
 
   /** 障碍与祭坛：速写本线稿风（淡彩填充 + 炭描边），每帧低开销重绘。 */
