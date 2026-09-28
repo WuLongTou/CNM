@@ -498,6 +498,10 @@ export class GameView {
     g.clear();
     g.rect(x, y, W, H).fill({ color: PAPER, alpha: 0.92 });
     g.rect(x + 2, y + 2, (W - 4) * ratio, H - 4).fill(BLOOD);
+    // R98 阶段刻度：66%/33% 狂暴线常显（铅笔灰虚位），预告"快到狂暴点了"
+    g.moveTo(x + W * 0.34, y + 1).lineTo(x + W * 0.34, y + H - 1)
+      .moveTo(x + W * 0.66, y + 1).lineTo(x + W * 0.66, y + H - 1)
+      .stroke({ width: 1.5, color: INK, alpha: 0.4 });
     if (boss.bossPhase >= 1) {
       // 阶段 2+：填充上两道裂纹，宣告狂暴
       g.moveTo(x + W * 0.38, y).lineTo(x + W * 0.34, y + H)
