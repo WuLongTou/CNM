@@ -16,6 +16,8 @@ export interface AchievementState {
   goblinKills: number;
   /** R66 散财消灾：单局香火龛购买次数。 */
   shopPurchases: number;
+  /** R74 历劫全域：每日变异通关次数表（id → 次数）。 */
+  mutatorClears?: Record<string, number>;
   /** R27：图鉴金边种类数（单类跨局累计满百）。 */
   codexGold: number;
   /** R30：藏珍拥有数 / 武器总数。 */
@@ -63,6 +65,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // R25 三重血誓由 onVictory 直接 grant
   { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", group: "征伐", check: () => false },
   { id: "heat_max", name: "炼狱修罗", desc: "三誓满档（各三级）通关一次", group: "征伐", check: () => false },
+  { id: "mutator_all", name: "历劫全域", desc: "五种每日变异各通关一次", group: "征伐", check: (s) => Object.keys(s.mutatorClears ?? {}).length >= 5 },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", check: (s) => s.weaponCount >= 6 },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", check: (s) => s.goblinKills >= 1 },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", check: (s) => s.shopPurchases >= 5 },

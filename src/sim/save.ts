@@ -36,6 +36,8 @@ export interface SaveData {
   ultimates: string[];
   /** Boss 连战最佳分（R45；老存档缺字段默认 0）。 */
   rushBest: number;
+  /** 每日变异通关次数（R74；变异 id → 通关数，老存档缺字段默认 {}）。 */
+  mutatorClears: Record<string, number>;
   /** 生涯统计（R64；老存档缺字段逐项回退默认）。 */
   stats: LifetimeStats;
   /** 跨局持久成就 id。 */
@@ -74,6 +76,7 @@ export function normalizeSave(parsed: Partial<SaveData> | null): SaveData {
   return {
     ...d,
     ...parsed,
+    mutatorClears: { ...(parsed.mutatorClears ?? {}) },
     stats: { ...d.stats, ...(parsed.stats ?? {}) },
   };
 }
@@ -95,6 +98,7 @@ export function defaultSave(): SaveData {
     fused: [],
     ultimates: [],
     rushBest: 0,
+    mutatorClears: {},
     stats: defaultStats(),
     achievements: [],
   };

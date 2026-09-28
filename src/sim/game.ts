@@ -1188,6 +1188,7 @@ export class GameSim {
       banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
       goblinKills: this.goblinKills,
       shopPurchases: this.shopPurchases, // R66 散财消灾口径
+      mutatorClears: this.save.load()?.mutatorClears ?? {}, // R74 历劫全域口径
       codexGold: countGold(this.baseCodex, this.killCounts),
       bossRushKills: this.bossRush ? this.bossRushKills : 0,
       armoryCount: new Set([...this.baseArmory, ...this.runArmory]).size,
@@ -1923,6 +1924,16 @@ export class GameSim {
     if (PACT_IDS.every((id) => this.pactTier(id) >= 1)) this.achievements.grant("oathbound"); // R70：任一档位即算立誓
     // R71 三誓满档通关（热量式最高目标；终局直授同上）
     if (PACT_IDS.every((id) => this.pactTier(id) === PACT_MAX_TIER)) this.achievements.grant("heat_max");
+    // R74 每日变异通关收集：仅当日种子局计入（注入的变异在非每日局不生效也不计；
+    // 五变异各通一次授「历劫全域」）
+    const mut = this.mutator();
+    if (mut && this.seed === dailySeed()) {
+      const after = this.save.load() ?? defaultSave();
+      const clears = { ...(after.mutatorClears ?? {}) };
+      clears[mut.id] = (clears[mut.id] ?? 0) + 1;
+      this.save.save({ ...after, mutatorClears: clears });
+      if (Object.keys(clears).length >= 5) this.achievements.grant("mutator_all");
+    }
     // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
     const clears = (this.save.load() ?? defaultSave()).clears ?? {};
     if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");
@@ -1973,6 +1984,8 @@ export class GameSim {
           return { date: dailyKey(), score: Math.max(oldScore, this.score) };
         })()
         : (prev.dailyBest ?? { date: "", score: 0 }),
+      // R74 每日变异通关收集：finalize 全量覆写存档，透传既有计数
+      mutatorClears: prev.mutatorClears ?? {},
       // R45 连战最佳：rush 模式破纪录发事件（首跑不播）
       rushBest: this.bossRush
         ? (() => {
@@ -2783,6 +2796,7 @@ export class GameSim {
       coins: this.coins, // R65 局内金币（香火龛流通币）
       shop_open: this.shopOffer !== null,
       mutator: this.mutator()?.id ?? null, // R73 当日变异 id（非每日局为 null）
+      mutator_clears: this.save.load()?.mutatorClears ?? {}, // R74 历劫进度
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

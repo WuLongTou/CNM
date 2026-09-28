@@ -33,7 +33,7 @@ describe("R27 图鉴金边", () => {
     sim2.exec({ action: "start" });
     sim2.tick();
     expect(sim2.achievements.unlocked.has("naturalist")).toBe(false);
-    expect(ACHIEVEMENTS.length).toBe(30); // R47 妖王猎手
+    expect(ACHIEVEMENTS.length).toBe(31); // R47 妖王猎手
   });
 
   it("本局击杀补足最后一块拼图", () => {

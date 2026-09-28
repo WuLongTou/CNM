@@ -227,11 +227,13 @@ export class Hud {
     const d = this.sim.exec({ action: "meta" }).data as {
       dailyBest: { date: string; score: number };
       rushBest: number;
+      mutatorClears?: Record<string, number>;
     };
-    // R73 每日变异：同日同变异（欢迎页一眼可辨今天怎么打）
+    // R73 每日变异：同日同变异（欢迎页一眼可辨今天怎么打）；R74 历劫进度 x/5
     const mut = dailyMutator();
+    const done = Object.keys(d.mutatorClears ?? {}).length;
     bestEl.textContent =
-      ` · ${theme.label} · 变异${mut.name}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
+      ` · ${theme.label} · 变异${mut.name} · 历劫 ${done}/5` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
     rushEl.textContent = d.rushBest > 0 ? ` · 连战最佳 ${d.rushBest}` : "";
   }
 
