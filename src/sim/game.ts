@@ -384,7 +384,9 @@ export class GameSim {
   /** 生涯统计已计入标志（R64；Victory→无尽→陨落二次 finalizeRun 时按局口径防重）。 */
   private statsCounted = false;
   // ── R65 香火龛商店 ──
-  /** 补龛倒计时（首龛 FirstDelaySec，此后 IntervalSec 且场上无龛才补）。 */
+  /** 补龛倒计时（首龛 FirstDelaySec，此后 IntervalSec 且场上无龛才补；
+   *  R75 Boss Rush 节奏快一倍：45s 首龛 / 60s 补龛）。 */
+  // R75 Boss Rush 专属龛节奏：45s 首龛 / 60s 补龛（纯妖王局节奏快一倍）
   private shrineTimer: number = CFG.Shop.FirstDelaySec;
   /** 开龛报价（非 null 时模态暂停；三槽开龛定格）。 */
   shopOffer: ShopSlot[] | null = null;
@@ -513,6 +515,8 @@ export class GameSim {
     this.role = getRole(roleId);
     this.difficulty = getDifficulty(difficultyId);
     this.bossRush = mode === "boss_rush";
+    // R75 Boss Rush 龛节奏：纯妖王局节奏快一倍（覆盖字段默认的普通模式首龛时刻）
+    if (this.bossRush) this.shrineTimer = CFG.Shop.RushFirstDelaySec;
     // R70 血誓分级：兼容两种入参——旧 string[]（各誓一级）/ 新档位表（钳制 1..3）；
     // 未知 id 忽略（同旧行为）
     if (Array.isArray(pactTiers)) {
@@ -1030,7 +1034,7 @@ export class GameSim {
   private updateShrines(dt: number): void {
     this.shrineTimer -= dt;
     if (this.shrineTimer <= 0) {
-      this.shrineTimer = CFG.Shop.IntervalSec;
+      this.shrineTimer = this.bossRush ? CFG.Shop.RushIntervalSec : CFG.Shop.IntervalSec;
       if (this.shrines.length === 0 && !this.shopOffer) {
         const p = this.resolveSpawnPos("random");
         this.shrines.push({ id: this.nextId++, x: p.x, y: p.y });
@@ -1852,7 +1856,9 @@ export class GameSim {
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     // R65 局内金币：普通 1 / 精英 5 / 妖王 20 / 宝妖 15（香火龛流通币，与结算金币两轨）
-    const gold = (e.boss ? CFG.Shop.BossGold : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold)
+    const gold = (e.boss
+      ? (this.bossRush ? CFG.Shop.BossGoldRush : CFG.Shop.BossGold) // R75 纯妖王局金币加成
+      : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold)
       * (this.mutator()?.id === "gold" ? 2 : 1); // R73 每日变异「财神附身」
     this.coins += gold;
     this.runGoldEarned += gold;
@@ -2797,6 +2803,7 @@ export class GameSim {
       shop_open: this.shopOffer !== null,
       mutator: this.mutator()?.id ?? null, // R73 当日变异 id（非每日局为 null）
       mutator_clears: this.save.load()?.mutatorClears ?? {}, // R74 历劫进度
+      boss_kills: this.bossKills,
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

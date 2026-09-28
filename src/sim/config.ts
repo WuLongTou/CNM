@@ -34,6 +34,9 @@ export const CFG = {
     KillGold: 1, // 普通妖金币
     EliteGold: 5, // 精英金币
     BossGold: 20, // 妖王金币
+    BossGoldRush: 30, // R75 Boss Rush 妖王金币（6 王 180 金全槽可达）
+    RushFirstDelaySec: 45, // R75 Boss Rush 首龛时刻（纯妖王局节奏快一倍）
+    RushIntervalSec: 60, // R75 Boss Rush 补龛间隔
     GoblinGold: 15, // 宝妖金币
     PriceWeapon: 80, // 武器槽基价（稀有度≥2）
     PriceUpgrade: 60, // 符箓槽基价

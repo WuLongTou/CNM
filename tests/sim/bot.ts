@@ -11,12 +11,18 @@ export interface BotResult {
   seed: number; ticks: number; time: number; state: string;
   kills: number; score: number; round: number; act: number;
   maxCombo: number; eliteKills: number; weapon: string; cause: string | null;
+  coins: number; bosses: number; // R75 Boss Rush 经济曲线度量
+}
+
+export interface BotOptions {
+  /** Boss Rush 模式（R75）：纯妖王连战，经济曲线度量用。 */
+  bossRush?: boolean;
 }
 
 /** 跑一整局（终局或 tick 上限即停；报价无脑选首项、融合一律拒绝，保证不卡模态）。 */
-export function runBot(seed: number, policy: BotPolicy, maxTicks = 60 * 720): BotResult {
+export function runBot(seed: number, policy: BotPolicy, maxTicks = 60 * 720, opts: BotOptions = {}): BotResult {
   const save = memoryStorage();
-  const sim = new GameSim(seed, save);
+  const sim = new GameSim(seed, save, "sword", 0, {}, opts.bossRush ? "boss_rush" : "normal");
   sim.exec({ action: "start" });
   const cx = sim.world.w / 2, cy = sim.world.h / 2;
   let tick = 0;
@@ -30,11 +36,13 @@ export function runBot(seed: number, policy: BotPolicy, maxTicks = 60 * 720): Bo
   const s = sim.status() as unknown as {
     kills: number; score: number; round: number; act: number;
     max_combo: number; elite_kills: number; weapon: string; death_cause: string | null;
+    coins: number; boss_kills: number;
   };
   return {
     seed, ticks: tick, time: Math.floor(tick / 60), state: sim.state,
     kills: s.kills, score: s.score, round: s.round, act: s.act,
     maxCombo: s.max_combo, eliteKills: s.elite_kills, weapon: s.weapon, cause: s.death_cause,
+    coins: s.coins, bosses: s.boss_kills,
   };
 }
 
