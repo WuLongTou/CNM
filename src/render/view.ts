@@ -498,10 +498,13 @@ export class GameView {
     g.clear();
     g.rect(x, y, W, H).fill({ color: PAPER, alpha: 0.92 });
     g.rect(x + 2, y + 2, (W - 4) * ratio, H - 4).fill(BLOOD);
-    // R98 阶段刻度：66%/33% 狂暴线常显（铅笔灰虚位），预告"快到狂暴点了"
+    // R98 阶段刻度：66%/33% 狂暴线常显（铅笔灰虚位）；R103 临近（5% 内）转血红高亮
+    const near66 = ratio <= 0.71 && ratio > 0.60;
+    const near33 = ratio <= 0.38 && ratio > 0.27;
     g.moveTo(x + W * 0.34, y + 1).lineTo(x + W * 0.34, y + H - 1)
-      .moveTo(x + W * 0.66, y + 1).lineTo(x + W * 0.66, y + H - 1)
-      .stroke({ width: 1.5, color: INK, alpha: 0.4 });
+      .stroke({ width: near66 ? 2.5 : 1.5, color: near66 ? BLOOD : INK, alpha: near66 ? 1 : 0.4 });
+    g.moveTo(x + W * 0.66, y + 1).lineTo(x + W * 0.66, y + H - 1)
+      .stroke({ width: near33 ? 2.5 : 1.5, color: near33 ? BLOOD : INK, alpha: near33 ? 1 : 0.4 });
     if (boss.bossPhase >= 1) {
       // 阶段 2+：填充上两道裂纹，宣告狂暴
       g.moveTo(x + W * 0.38, y).lineTo(x + W * 0.34, y + H)
@@ -518,7 +521,9 @@ export class GameView {
       this.app.stage.addChild(this.bossNameText);
     }
     // R29 血量百分比（随时知道还剩多少）
-    this.bossNameText.text = `妖王 · ${ENEMY_NAMES[boss.type] ?? "???"}${boss.bossPhase > 0 ? ` · 狂暴 ${boss.bossPhase + 1} 阶` : ""} · ${Math.ceil(ratio * 100)}%`;
+    // R103 阶段圆点：● 已过/当前阶段 ○ 未达（3 阶制）
+    const pips = [0, 1, 2].map((i) => (i <= boss.bossPhase ? "●" : "○")).join("");
+    this.bossNameText.text = `妖王 · ${ENEMY_NAMES[boss.type] ?? "???"}${boss.bossPhase > 0 ? ` · 狂暴 ${boss.bossPhase + 1} 阶` : ""} · ${pips} · ${Math.ceil(ratio * 100)}%`;
     this.bossNameText.position.set(sw / 2, y + H + 4);
   }
 
