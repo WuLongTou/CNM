@@ -145,7 +145,8 @@ export class Hud {
     hud.innerHTML = `
       <div class="hp-wrap"><div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
         <span id="hp-text"></span>
-        <span id="dash-dot" title="冲刺就绪">⚡</span></div>
+        <span id="dash-dot" title="冲刺就绪">⚡</span>
+        <span id="flawless-badge" class="hidden" title="无伤挑战进行中">无伤</span></div>
       <div class="stats">
         <span id="round"></span><span id="difficulty"></span><span id="role"></span><span id="weather"></span><span id="score"></span>
         <span id="kills"></span><span id="time"></span>
@@ -623,6 +624,12 @@ export class Hud {
     // R16 濒危红边：血量越低红边越重（只读 sim，不拦截输入）
     this.dangerEl.style.opacity = String(dangerOpacity(ratio));
     this.hpText.textContent = `${Math.ceil(s.player.hp)} / ${s.player.maxHp}`;
+    // R120 无伤挑战徽章：开局 10s 宽限后仍 0 伤则常显「无伤」金字，破功即隐（铁壁挑战进行时反馈）
+    const flawlessBadge = this.root.querySelector<HTMLElement>("#flawless-badge");
+    if (flawlessBadge) {
+      const alive = s.state === "Combat" && s.damageTakenRun === 0 && s.survivalTime >= 10;
+      flawlessBadge.classList.toggle("hidden", !alive);
+    }
     // R9 威胁预告：下一阶倒计时（终幕后无尽讨伐同样进阶，倒计时持续有效）
     // R50 连战档位：连战模式达到 1 档起在威胁阶后追加狂化徽标
     const tierTag = rushTierLabel(s.bossRush, s.bossRushKills, s.rushEscalationMult());

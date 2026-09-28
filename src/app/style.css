@@ -281,6 +281,9 @@ canvas { position: absolute; z-index: 0; }
 /* R111 荣誉成就金字（结算屏成就行：铁壁/三英聚义等终局直授荣誉） */
 .ach-honor { color: #a8842c; font-weight: 700; }
 
+/* R120 无伤挑战徽章：金字小徽章挂血条尾（破功 hidden 即隐） */
+#flawless-badge { color: #a8842c; font-weight: 700; font-size: 12px; }
+
 /* R90 稀有祝福金字卡面：标题与价格转金（普通卡不动） */
 .shop-card-rare b, .shop-card-rare .uc-stat { color: #a8842c; }
 
