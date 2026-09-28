@@ -27,7 +27,7 @@ export interface GamepadRead {
 export const GAMEPAD_DEADZONE = 0.25;
 
 /** 标准布局按钮下标（W3C Gamepad "standard" mapping）。 */
-export const GP_BTN = { A: 0, B: 1, RB: 5, RT: 7, Start: 9, DUp: 12, DDown: 13, DLeft: 14, DRight: 15 } as const;
+export const GP_BTN = { A: 0, B: 1, Y: 3, RB: 5, RT: 7, Start: 9, DUp: 12, DDown: 13, DLeft: 14, DRight: 15 } as const;
 
 function pressed(pad: GamepadSnapshot, i: number): boolean {
   return pad.buttons[i]?.pressed === true;
@@ -43,7 +43,9 @@ export function stickWithDeadzone(x: number, y: number): { x: number; y: number 
 
 const NO_PAD: GamepadRead = { connected: false, moveX: 0, moveY: 0, attack: false, dash: false, start: false };
 
-/** 菜单导航边沿读数（R76：dpad/A/B 每次按下触发一次）。 */
+const NO_MENU: MenuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false };
+
+/** 菜单导航边沿读数（R76：dpad/A/B 每次按下触发一次；R79 加 Y 刷新）。 */
 export interface MenuEdges {
   up: boolean;
   down: boolean;
@@ -51,9 +53,9 @@ export interface MenuEdges {
   right: boolean;
   confirm: boolean;
   back: boolean;
+  /** R79 Y 键：商店面板内=刷新报价。 */
+  reroll: boolean;
 }
-
-const NO_MENU: MenuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false };
 
 export class GamepadInput {
   private prevDash = false;
@@ -75,12 +77,12 @@ export class GamepadInput {
     } catch {
       // 怪异环境（getGamepads 抛错）按未连接处理，绝不影响键盘/触屏输入
       this.prevDash = this.prevStart = false;
-      this.menuEdges = { ...NO_MENU };
+      this.menuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false };
       return NO_PAD;
     }
     if (!pad) {
       this.prevDash = this.prevStart = false;
-      this.menuEdges = { ...NO_MENU };
+      this.menuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false };
       return NO_PAD;
     }
     const stick = stickWithDeadzone(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
@@ -100,6 +102,7 @@ export class GamepadInput {
       right: pressed(pad, GP_BTN.DRight),
       confirm: pressed(pad, GP_BTN.A),
       back: pressed(pad, GP_BTN.B),
+      reroll: pressed(pad, GP_BTN.Y),
     };
     this.menuEdges = {
       up: menuNow.up && !this.prevMenu.up,
@@ -108,6 +111,7 @@ export class GamepadInput {
       right: menuNow.right && !this.prevMenu.right,
       confirm: menuNow.confirm && !this.prevMenu.confirm,
       back: menuNow.back && !this.prevMenu.back,
+      reroll: menuNow.reroll && !this.prevMenu.reroll,
     };
     this.prevMenu = menuNow;
     const read: GamepadRead = {

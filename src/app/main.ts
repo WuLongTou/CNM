@@ -398,6 +398,8 @@ async function boot(): Promise<void> {
       if (menu.back) {
         if (shop.visible) shop.close();
         else if (pauseMenu.visible) pauseMenu.toggle(false);
+      } else if (menu.reroll && shop.visible) {
+        shop.reroll(); // R79 手柄 Y 刷新报价
       } else if (container) {
         padNav.handle(menu);
       }

@@ -66,8 +66,9 @@ export class ShopPanel {
     });
   }
 
-  /** 刷新报价（R78）：花金币重 roll 三槽（龛体保留、不触发通胀）。 */
-  private reroll(): void {
+  /** 刷新报价（R78/R79）：花金币重 roll 三槽（龛体保留、不触发通胀）。
+   *  公开供手柄 Y 键路由。 */
+  reroll(): void {
     const r = this.sim.exec({ action: "shop_reroll" });
     const data = r.data as { handled?: boolean } | undefined;
     if (r.ok && data?.handled) this.render();
@@ -115,7 +116,7 @@ export class ShopPanel {
     if (e.code === "Digit2" || e.code === "Numpad2") { this.buy(1); return true; }
     if (e.code === "Digit3" || e.code === "Numpad3") { this.buy(2); return true; }
     if (e.code === "Escape") { this.close(); return true; }
-    if (e.code === "KeyR") { this.reroll(); return true; }
+    if (e.code === "KeyR") { this.reroll(); return true; } // 手柄 Y 同效（main 层路由）
     return true; // 模态独占：吞掉其余按键（游戏键已由 sim.tick 门控清零）
   }
 }
