@@ -82,7 +82,7 @@ describe("R25 血誓契约", () => {
     expect(sim.setPacts([]).applied).toBe(false);
     (sim as unknown as { onVictory(): number }).onVictory();
     expect(sim.achievements.unlocked.has("oathbound")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(33); // R47 妖王猎手
+    expect(ACHIEVEMENTS.length).toBe(36); // R47 妖王猎手
   });
 
   it("PACTS 表自洽：三誓名与文案乘数一致（R70 起一档数值即旧值）", () => {

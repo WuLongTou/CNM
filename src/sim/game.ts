@@ -2030,6 +2030,10 @@ export class GameSim {
     if (PACT_IDS.every((id) => this.pactTier(id) === PACT_MAX_TIER)) this.achievements.grant("heat_max");
     // R110 无伤通关「铁壁」（终局直授；tick 停摆走判定够不着）
     if (this.damageTakenRun === 0) this.achievements.grant("flawless");
+    // R130 成就谱系第二轮：承伤/香火收入/零消费 通关挑战（同口径数据直授）
+    if (this.damageTakenRun <= 200) this.achievements.grant("bulwark");
+    if (this.runGoldEarned >= 800) this.achievements.grant("windfall");
+    if (this.runGoldSpent === 0) this.achievements.grant("emptyhands");
     // R74 每日变异通关收集：仅当日种子局计入（注入的变异在非每日局不生效也不计；
     // 五变异各通一次授「历劫全域」）
     const mut = this.mutator();

@@ -95,6 +95,10 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "mutator_all", name: "历劫全域", desc: "五种每日变异各通关一次", group: "征伐", check: (s) => Object.keys(s.mutatorClears ?? {}).length >= 5, progress: (s) => ({ cur: Object.keys(s.mutatorClears ?? {}).length, target: 5 }) },
   { id: "daily_streak_7", name: "七日不辍", desc: "每日挑战连续 7 天", group: "征伐", goal: { stat: "dailyStreakCount", target: 7 } },
   { id: "flawless", name: "铁壁", desc: "不承受任何伤害通关一次", group: "征伐", check: () => false },
+  // R130 成就谱系第二轮：现有统计数据的中间档通关挑战（onVictory 直授）
+  { id: "bulwark", name: "铜墙铁壁", desc: "承伤不超过 200 通关一次", group: "征伐", check: () => false },
+  { id: "windfall", name: "香火盈门", desc: "单局香火收入达 800 通关", group: "征伐", check: () => false },
+  { id: "emptyhands", name: "两手空空", desc: "不花一文香火通关", group: "征伐", check: () => false },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", goal: { stat: "weaponCount", target: 6 } },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", goal: { stat: "goblinKills", target: 1 } },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", goal: { stat: "shopPurchases", target: 5 } },
