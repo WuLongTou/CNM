@@ -1546,6 +1546,7 @@ export class GameSim {
       chain: (def.chain ?? 0) + bonusOf(w, "chain"),
       pierce: (def.pierce ?? 0) + bonusOf(w, "pierce"),
       homing: (def.homing ?? false) || w.type === "Magic",
+      steal: def.steal ?? 0, // R77 命中吸血（近战链路生效）
     };
     // 攻击方向：瞄准方向为基准；吸附锥（±AimCone）内最近妖物自动修正——走砍/站桩都能命中
     let ang = p.aimAng;
@@ -1661,7 +1662,7 @@ export class GameSim {
 
   private hitEnemy(
     e: Enemy, r: { dmg: number; crit: boolean }, ux = 0, uy = 0,
-    fx: { splash: number; psn: number; freeze: number } = { splash: 0, psn: 0, freeze: 0 },
+    fx: { splash: number; psn: number; freeze: number; steal?: number } = { splash: 0, psn: 0, freeze: 0 },
   ): void {
     const p = this.player;
     this.hitStop.trigger(HITSTOP.HitMs);
@@ -1766,7 +1767,7 @@ export class GameSim {
    *  近战取玩家→妖物方向）；缺省时按命中点→目标方向兜底。 */
   private applyHit(
     x: number, y: number, e: Enemy, dmg: number,
-    fx: { splash: number; psn: number; freeze: number },
+    fx: { splash: number; psn: number; freeze: number; steal?: number },
     ux?: number, uy?: number,
   ): void {
     // 甲妖举盾：完全免疫伤害与异常状态
@@ -1780,6 +1781,10 @@ export class GameSim {
     if (ix !== 0 || iy !== 0) this.impact(e, ix, iy);
     this.hitStop.trigger(HITSTOP.HitMs);
     this.dealDamage(e, dmg);
+    // R77 命中吸血：甲妖举盾免疫时不可吸血（早退在先），回复不超上限
+    if (fx.steal && fx.steal > 0) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.steal);
+    }
     if (fx.psn > 0 && this.rng.chance(fx.psn / 100)) {
       e.psnDps = 3 + dmg * 0.1;
       e.psnT = POISON_DURATION;

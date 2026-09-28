@@ -2,7 +2,7 @@
 // EffectCatalog（dmg 伤害乘数、asp 攻速乘数、rng 范围乘数、hp 每击血代价、
 // psn 中毒概率%、crit 暴击率加成%、multi 近战/弹道目标数、splash 溅射半径、
 // chain 链式弹射次数、freeze 冰缓概率%、homing 追踪）。
-// 23 件代表性武器覆盖全部机制，表驱动可按同结构扩至 C# 版全量 63 件。
+// 24 件代表性武器覆盖全部机制，表驱动可按同结构扩至 C# 版全量 63 件。
 
 export type AttackType = "Melee" | "Ranged" | "Magic" | "Mine";
 
@@ -29,6 +29,8 @@ export interface WeaponDef {
   spread?: number;
   /** 弹道穿透数。 */
   pierce?: number;
+  /** 每击吸血量（近战命中回复生命，R77；不超上限）。 */
+  steal?: number;
 }
 
 export const WEAPON_DATA: Record<string, WeaponDef> = {
@@ -41,6 +43,7 @@ export const WEAPON_DATA: Record<string, WeaponDef> = {
   changqiang: { name: "长枪", desc: "长距离突刺多目标", type: "Melee", tier: 3, rarity: 3, prereq: "巨斧", dmg: 1.4, asp: 0.9, rng: 1.5, multi: 2 },
   sishenliandao: { name: "死神镰刀", desc: "收割成片妖物", type: "Melee", tier: 4, rarity: 4, prereq: "长枪", dmg: 2.0, asp: 0.8, rng: 1.6, multi: 3, crit: 15 },
   yingren: { name: "影刃", desc: "极速且易暴击", type: "Melee", tier: 3, rarity: 3, prereq: "淬毒短刀", dmg: 1.0, asp: 1.6, crit: 20 },
+  xueyubi: { name: "血玉匕", desc: "极速短刃，命中吸血", type: "Melee", tier: 3, rarity: 3, prereq: "影刃", dmg: 0.9, asp: 1.4, rng: 0.85, steal: 10 },
   // ═══ 远程（直线弹道） ═══
   gongjian: { name: "弓箭", desc: "可靠的远程武器", type: "Ranged", tier: 1, rarity: 1 },
   zhongnu: { name: "重弩", desc: "沉重的单发重击", type: "Ranged", tier: 2, rarity: 2, prereq: "弓箭", dmg: 1.6, asp: 0.6 },
