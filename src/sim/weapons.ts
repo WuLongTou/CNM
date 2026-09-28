@@ -111,6 +111,8 @@ export const FUSION_RECIPES: Array<{ a: string; b: string; result: string }> = [
   { a: "双刀", b: "冰霜法杖", result: "yingren" },
   { a: "重弩", b: "淬毒短刀", result: "jijinu" },
   { a: "死神镰刀", b: "死神法杖", result: "sishenliandao" },
+  { a: "淬毒短刀", b: "冰霜法杖", result: "shuangya" },
+  { a: "弓箭", b: "魅火法杖", result: "dujian" },
 ];
 
 export interface WeaponInstance {
