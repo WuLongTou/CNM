@@ -213,9 +213,15 @@ export class HelpPanel {
         const done = unlocked.has(a.id);
         // R81 进度显示：阈值型未达成成就展示 cur/target（retention 钩子）
         const prog = done ? null : achievementProgress(a, this.sim.achievementState());
-        const progText = prog ? `（${prog.cur >= prog.target ? prog.target : prog.cur}/${prog.target}）` : "";
+        const pct = prog ? Math.min(100, Math.round((prog.cur / prog.target) * 100)) : 0;
+        // R87 进度条视觉化：纸风 mini 条（血红填充 + 铅笔灰底），文字保留
+        const cur = prog ? Math.floor(prog.cur) : 0; // 存活秒为浮点累加：展示取整
+        const progText = prog ? `（${cur >= prog.target ? prog.target : cur}/${prog.target}）` : "";
+        const bar = prog
+          ? `<span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>`
+          : "";
         return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
-          `<td>${a.desc}${progText} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
+          `<td>${a.desc}${progText}${bar} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
       }).join("");
       return `<p class="sub ach-group">${g} ${got}/${list.length}</p><table class="help-table">${rows}</table>`;
     });
