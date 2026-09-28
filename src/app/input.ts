@@ -7,6 +7,7 @@
 // 硬约束：非战斗态输入由 sim.tick 门控清零，键盘层无需重复判断。
 
 import type { GameSim, InputState } from "../sim/game";
+import { GamepadInput } from "./gamepad";
 
 /** 触屏控件状态源（TouchControls 满足此结构，解耦 ui 层类型）。 */
 export interface TouchInputSource {
@@ -21,6 +22,10 @@ export class InputManager {
   /** 外部注入的持续输入（debug API），与键盘叠加。 */
   private external: Partial<InputState> = {};
   private pulseDash = false;
+  /** R62 手柄第四输入源（每帧轮询 Gamepad API，无手柄时为全零读数）。 */
+  private gamepad = new GamepadInput(() => navigator.getGamepads?.());
+  /** R62 手柄 Start 键（main 层接暂停切换，与键盘 Esc 同路由）。 */
+  onStartButton: (() => void) | null = null;
   private disposers: Array<() => void> = [];
 
   constructor(private sim: GameSim, private touch: TouchInputSource | null = null) {
@@ -64,7 +69,7 @@ export class InputManager {
     this.external = {};
   }
 
-  /** 每帧合成：键盘 + 触屏 + 外部叠加，写入 sim.input。 */
+  /** 每帧合成：键盘 + 触屏 + 手柄 + 外部叠加，写入 sim.input。 */
   sample(): void {
     const k = this.keys;
     let x = 0, y = 0;
@@ -73,15 +78,18 @@ export class InputManager {
     if (k.has("KeyW") || k.has("ArrowUp")) y -= 1;
     if (k.has("KeyS") || k.has("ArrowDown")) y += 1;
     const touch = this.touch;
+    const gp = this.gamepad.poll();
+    if (gp.start) this.onStartButton?.();
     const attack = k.has("Space")
       || (touch?.attack ?? false)
-      || (this.external.attack ?? false);
+      || (this.external.attack ?? false)
+      || gp.attack;
     if (touch?.consumeDash()) this.pulseDash = true;
     this.sim.input = {
-      moveX: Math.min(1, Math.max(-1, x + (touch?.moveX ?? 0) + (this.external.moveX ?? 0))),
-      moveY: Math.min(1, Math.max(-1, y + (touch?.moveY ?? 0) + (this.external.moveY ?? 0))),
+      moveX: Math.min(1, Math.max(-1, x + (touch?.moveX ?? 0) + (this.external.moveX ?? 0) + gp.moveX)),
+      moveY: Math.min(1, Math.max(-1, y + (touch?.moveY ?? 0) + (this.external.moveY ?? 0) + gp.moveY)),
       attack,
-      dash: this.pulseDash,
+      dash: this.pulseDash || gp.dash,
       cycleTarget: false,
     };
     this.pulseDash = false;

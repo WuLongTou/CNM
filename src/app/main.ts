@@ -229,6 +229,13 @@ async function boot(): Promise<void> {
   };
   window.addEventListener("keydown", onKey);
 
+  // R62 手柄：Start 键走键盘 Esc 同一暂停路由；连接/断开播报（轮询不依赖事件，
+  // 事件只做 UI 通知——业内惯例：拔插手柄不中断对局）
+  input.onStartButton = () => uiActions.togglePause();
+  window.addEventListener("gamepadconnected", () =>
+    notify.push("手柄已连接：左摇杆移动 · A 攻击 · RB/RT 冲刺 · Start 暂停"));
+  window.addEventListener("gamepaddisconnected", () => notify.push("手柄已断开"));
+
   // 触屏适配：触屏设备（或 ?touch=1）挂载虚拟摇杆/攻击冲刺/UI 按钮排
   if (shouldUseTouch()) {
     input.setTouchSource(new TouchControls(uiActions));
