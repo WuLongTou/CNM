@@ -26,10 +26,6 @@ describe("R38 终极收藏家", () => {
     ultimateOf(sim.player.weapons.length - 1);
     sim.tick();
     expect(sim.achievements.unlocked.has("ultimate_hoarder")).toBe(true);
-<<<<<<< HEAD
-    expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
-=======
     expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 });

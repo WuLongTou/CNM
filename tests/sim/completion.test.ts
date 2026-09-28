@@ -81,10 +81,6 @@ describe("R21 制霸矩阵", () => {
     const sim = new GameSim(211, save);
     const meta = sim.exec({ action: "meta" }).data as { clears: number };
     expect(meta.clears).toBe(3);
-<<<<<<< HEAD
-    expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
-=======
     expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 });

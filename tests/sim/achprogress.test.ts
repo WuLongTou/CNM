@@ -25,13 +25,8 @@ const state = (over: Partial<AchievementState> = {}): AchievementState => ({
 });
 
 describe("R81 成就进度", () => {
-<<<<<<< HEAD
-  it("数据表：39 项、goal 与 check 恰二选一", () => {
-    expect(ACHIEVEMENTS).toHaveLength(39);
-=======
   it("数据表：42 项、goal 与 check 恰二选一", () => {
     expect(ACHIEVEMENTS).toHaveLength(42);
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
     for (const a of ACHIEVEMENTS) {
       expect(!!a.goal !== !!a.check).toBe(true); // 恰一
       if (a.goal) expect(a.goal.target).toBeGreaterThan(0);

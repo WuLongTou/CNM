@@ -20,11 +20,7 @@ describe("R47 妖王猎手", () => {
     sim.tick();
     expect(sim.achievements.unlocked.has("boss_hunter")).toBe(true);
     expect(sim.bossRushKills).toBe(5);
-<<<<<<< HEAD
-    expect(ACHIEVEMENTS.length).toBe(39);
-=======
     expect(ACHIEVEMENTS.length).toBe(42);
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 
   it("普通模式讨伐妖王不计入", () => {

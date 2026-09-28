@@ -31,10 +31,6 @@ describe("R29 战斗信息补完", () => {
     }
     sim.tick();
     expect(sim.achievements.unlocked.has("slayer_1000")).toBe(true);
-<<<<<<< HEAD
-    expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
-=======
     expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 });

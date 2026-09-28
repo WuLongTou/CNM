@@ -33,11 +33,7 @@ describe("R27 图鉴金边", () => {
     sim2.exec({ action: "start" });
     sim2.tick();
     expect(sim2.achievements.unlocked.has("naturalist")).toBe(false);
-<<<<<<< HEAD
-    expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
-=======
     expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 
   it("本局击杀补足最后一块拼图", () => {

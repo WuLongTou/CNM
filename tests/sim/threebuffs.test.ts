@@ -28,13 +28,8 @@ const buyKind = (sim: GameSim, kind: "dmg" | "asp" | "spd") => {
 };
 
 describe("R132 三花聚顶", () => {
-<<<<<<< HEAD
-  it("成就表 39 项：三花聚顶 check 型", () => {
-    expect(ACHIEVEMENTS).toHaveLength(39);
-=======
   it("成就表 42 项：三花聚顶 check 型", () => {
     expect(ACHIEVEMENTS).toHaveLength(42);
->>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
     const a = ACHIEVEMENTS.find((x) => x.id === "three_buffs")!;
     expect(a.check).toBeTruthy();
   });
