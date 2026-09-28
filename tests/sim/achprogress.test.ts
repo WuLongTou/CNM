@@ -20,12 +20,13 @@ const state = (over: Partial<AchievementState> = {}): AchievementState => ({
   maxCombo: 0, weaponCount: 0, rerollsUsed: 0, banishesUsed: 0, goblinKills: 0,
   shopPurchases: 0, codexGold: 0, armoryCount: 0, armoryTotal: 0,
   fusedCount: 0, fusedTotal: 0, ultimateRunCount: 0, bossRushKills: 0,
+  dailyStreakCount: 0,
   ...over,
 });
 
 describe("R81 成就进度", () => {
-  it("数据表：31 项、goal 与 check 恰二选一", () => {
-    expect(ACHIEVEMENTS).toHaveLength(31);
+  it("数据表：32 项、goal 与 check 恰二选一", () => {
+    expect(ACHIEVEMENTS).toHaveLength(32);
     for (const a of ACHIEVEMENTS) {
       expect(!!a.goal !== !!a.check).toBe(true); // 恰一
       if (a.goal) expect(a.goal.target).toBeGreaterThan(0);

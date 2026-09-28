@@ -14,9 +14,9 @@ function offerSim(seed = 111) {
 }
 
 describe("R12 系统成就", () => {
-  it("成就表 31 项（R47 妖王猎手），id 唯一", () => {
-    expect(ACHIEVEMENTS.length).toBe(31); // R47 妖王猎手
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(31);
+  it("成就表 32 项（R47 妖王猎手），id 唯一", () => {
+    expect(ACHIEVEMENTS.length).toBe(32); // R47 妖王猎手
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(32);
   });
 
   it("变数：重抽一次即达成并广播", () => {

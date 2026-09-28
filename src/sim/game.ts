@@ -23,7 +23,7 @@ import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 import { PACTS, PACT_IDS, PACT_MAX_TIER, isValidTier, type PactId } from "./pacts";
 import { AFFIX_IDS } from "./affixes";
 import { BOSSES } from "./bosses";
-import { dailyKey, dailySeed, dailyTheme, dailyMutator, DAILY_MUTATORS, type DailyMutator } from "./daily";
+import { dailyKey, dailySeed, dailyTheme, dailyMutator, nextStreakCount, DAILY_MUTATORS, type DailyMutator } from "./daily";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
@@ -364,6 +364,8 @@ export class GameSim {
   kills = 0;
   /** R83 战斗统计：全部来源累计伤害（含毒 DoT 等未归因来源）。 */
   dmgDealtTotal = 0;
+  /** R99 本局结算后的每日连胜天数（欢迎页/status 展示）。 */
+  dailyStreakCount = 0;
   survivalTime = 0;
   /** 模态面板暂停（装备/帮助等打开时由 UI 层置位；tick 冻结）。 */
   paused = false;
@@ -1253,6 +1255,10 @@ export class GameSim {
       goblinKills: this.goblinKills,
       shopPurchases: this.shopPurchases, // R66 散财消灾口径
       mutatorClears: this.save.load()?.mutatorClears ?? {}, // R74 历劫全域口径
+      dailyStreakCount: (() => {
+        const d = this.save.load();
+        return d?.dailyStreak?.last === dailyKey() ? d.dailyStreak.count : 0;
+      })(), // R99 连胜（当日有效口径）
       codexGold: countGold(this.baseCodex, this.killCounts),
       bossRushKills: this.bossRush ? this.bossRushKills : 0,
       armoryCount: new Set([...this.baseArmory, ...this.runArmory]).size,
@@ -2021,6 +2027,17 @@ export class GameSim {
       this.save.save({ ...after, mutatorClears: clears });
       if (Object.keys(clears).length >= 5) this.achievements.grant("mutator_all");
     }
+    // R99 每日挑战连胜：当日种子局终局时计（同日重复挑战不重复计；跨天断裂重置 1）
+    if (this.seed === dailySeed()) {
+      const after = this.save.load() ?? defaultSave();
+      const prevStreak = after.dailyStreak ?? { last: "", count: 0 };
+      if (prevStreak.last !== dailyKey()) {
+        const count = nextStreakCount(prevStreak.last, dailyKey(), prevStreak.count);
+        this.save.save({ ...after, dailyStreak: { last: dailyKey(), count } });
+        this.dailyStreakCount = count;
+        if (count >= 7) this.achievements.grant("daily_streak_7");
+      }
+    }
     // R21 制霸成就（按落盘后的记录判定；终局后 tick 停摆，只能直授）
     const clears = (this.save.load() ?? defaultSave()).clears ?? {};
     if (Object.keys(clears).length >= 3) this.achievements.grant("three_heroes");
@@ -2073,6 +2090,8 @@ export class GameSim {
         : (prev.dailyBest ?? { date: "", score: 0 }),
       // R74 每日变异通关收集：finalize 全量覆写存档，透传既有计数
       mutatorClears: prev.mutatorClears ?? {},
+      // R99 每日挑战连胜：透传既有连胜（onVictory 侧按日更新）
+      dailyStreak: prev.dailyStreak ?? { last: "", count: 0 },
       // R45 连战最佳：rush 模式破纪录发事件（首跑不播）
       rushBest: this.bossRush
         ? (() => {
@@ -2890,6 +2909,10 @@ export class GameSim {
       boss_kills: this.bossKills,
       rush_fastest: this.bossRushKillTimes.length > 0 ? Math.min(...this.bossRushKillTimes) : null, // R88 最快讨伐秒
       dmg_dealt_total: this.dmgDealtTotal, // R83 战斗统计
+      daily_streak: (() => {
+        const d = this.save.load();
+        return d?.dailyStreak?.last === dailyKey() ? d.dailyStreak.count : 0;
+      })(), // R99 连胜天数（当日有效）
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

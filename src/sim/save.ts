@@ -38,6 +38,8 @@ export interface SaveData {
   rushBest: number;
   /** 每日变异通关次数（R74；变异 id → 通关数，老存档缺字段默认 {}）。 */
   mutatorClears: Record<string, number>;
+  /** R99 每日挑战连胜：最后挑战日期键 + 连续天数（跨天断裂重置 1）。 */
+  dailyStreak: { last: string; count: number };
   /** 生涯统计（R64；老存档缺字段逐项回退默认）。 */
   stats: LifetimeStats;
   /** 跨局持久成就 id。 */
@@ -77,6 +79,7 @@ export function normalizeSave(parsed: Partial<SaveData> | null): SaveData {
     ...d,
     ...parsed,
     mutatorClears: { ...(parsed.mutatorClears ?? {}) },
+    dailyStreak: { last: "", count: 0, ...(parsed.dailyStreak ?? {}) },
     stats: { ...d.stats, ...(parsed.stats ?? {}) },
   };
 }
@@ -99,6 +102,7 @@ export function defaultSave(): SaveData {
     ultimates: [],
     rushBest: 0,
     mutatorClears: {},
+    dailyStreak: { last: "", count: 0 },
     stats: defaultStats(),
     achievements: [],
   };

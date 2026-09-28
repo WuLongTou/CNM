@@ -18,6 +18,8 @@ export interface AchievementState {
   shopPurchases: number;
   /** R74 历劫全域：每日变异通关次数表（id → 次数）。 */
   mutatorClears?: Record<string, number>;
+  /** R99 每日挑战连胜天数。 */
+  dailyStreakCount: number;
   /** R27：图鉴金边种类数（单类跨局累计满百）。 */
   codexGold: number;
   /** R30：藏珍拥有数 / 武器总数。 */
@@ -50,6 +52,7 @@ export type NumberStateKey =
   | "banishesUsed"
   | "goblinKills"
   | "shopPurchases"
+  | "dailyStreakCount"
   | "codexGold"
   | "armoryCount"
   | "fusedCount"
@@ -90,6 +93,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", group: "征伐", check: () => false },
   { id: "heat_max", name: "炼狱修罗", desc: "三誓满档（各三级）通关一次", group: "征伐", check: () => false },
   { id: "mutator_all", name: "历劫全域", desc: "五种每日变异各通关一次", group: "征伐", check: (s) => Object.keys(s.mutatorClears ?? {}).length >= 5, progress: (s) => ({ cur: Object.keys(s.mutatorClears ?? {}).length, target: 5 }) },
+  { id: "daily_streak_7", name: "七日不辍", desc: "每日挑战连续 7 天", group: "征伐", goal: { stat: "dailyStreakCount", target: 7 } },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", goal: { stat: "weaponCount", target: 6 } },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", goal: { stat: "goblinKills", target: 1 } },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", goal: { stat: "shopPurchases", target: 5 } },

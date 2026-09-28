@@ -52,6 +52,15 @@ export const DAILY_MUTATORS: DailyMutator[] = [
   { id: "tough", name: "妖坚如铁", desc: "妖物生命 +30%" },
 ];
 
+/** R99 连胜计算：同日不变；昨天有记录则 +1；断裂重置 1。 */
+export function nextStreakCount(lastKey: string, todayKey: string, prevCount: number): number {
+  if (lastKey === todayKey) return prevCount;
+  const d = new Date(todayKey.replace(/-/g, "/"));
+  d.setDate(d.getDate() - 1);
+  const yKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return lastKey === yKey ? prevCount + 1 : 1;
+}
+
 /** 当日变异（R73）：日期键多项式散列 → 池索引（同日稳定，五日轮全覆）。 */
 export function dailyMutator(d = new Date()): DailyMutator {
   const key = dailyKey(d);
