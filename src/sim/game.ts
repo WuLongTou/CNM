@@ -1148,6 +1148,7 @@ export class GameSim {
       return { handled: false, note: "香火不足", cost };
     }
     this.coins -= cost;
+    this.runGoldSpent += cost; // R119 香火账本：重抽花费与购买同轨
     this.shopOffer = this.makeShopSlots();
     this.emit("shop_offer", { slots: this.shopOffer, coins: this.coins, rerolled: true });
     return { handled: true, coins: this.coins, slots: this.shopOffer };
