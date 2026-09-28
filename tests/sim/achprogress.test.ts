@@ -6,7 +6,6 @@ import { memoryStorage } from "../../src/sim/save";
 import {
   ACHIEVEMENTS,
   achievementProgress,
-  type AchievementDef,
   type AchievementState,
 } from "../../src/sim/achievements";
 
@@ -16,7 +15,7 @@ const byId = (id: string) => {
   return a;
 };
 
-const state = (over: Partial<AchievementState>): AchievementState => ({
+const state = (over: Partial<AchievementState> = {}): AchievementState => ({
   kills: 0, survivalTime: 0, bossKills: 0, totalKills: 0, eliteKills: 0,
   maxCombo: 0, weaponCount: 0, rerollsUsed: 0, banishesUsed: 0, goblinKills: 0,
   shopPurchases: 0, codexGold: 0, armoryCount: 0, armoryTotal: 0,

@@ -66,6 +66,8 @@ export interface AchievementDef {
   goal?: { stat: NumberStateKey; target: number };
   /** 复合型判定（通关直授/守卫型等）；goal 与 check 二选一。 */
   check?: (s: AchievementState) => boolean;
+  /** R82 复合型进度（cur/target；数据齐全的复合成就提供，帮助页展示）。 */
+  progress?: (s: AchievementState) => { cur: number; target: number };
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -87,7 +89,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // R25 三重血誓由 onVictory 直接 grant
   { id: "oathbound", name: "三重血誓", desc: "立下全部三重血誓并通关", group: "征伐", check: () => false },
   { id: "heat_max", name: "炼狱修罗", desc: "三誓满档（各三级）通关一次", group: "征伐", check: () => false },
-  { id: "mutator_all", name: "历劫全域", desc: "五种每日变异各通关一次", group: "征伐", check: (s) => Object.keys(s.mutatorClears ?? {}).length >= 5 },
+  { id: "mutator_all", name: "历劫全域", desc: "五种每日变异各通关一次", group: "征伐", check: (s) => Object.keys(s.mutatorClears ?? {}).length >= 5, progress: (s) => ({ cur: Object.keys(s.mutatorClears ?? {}).length, target: 5 }) },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", goal: { stat: "weaponCount", target: 6 } },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", goal: { stat: "goblinKills", target: 1 } },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", goal: { stat: "shopPurchases", target: 5 } },
@@ -103,9 +105,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   // R29 千人斩走 tick 判定（单局击杀数）
   { id: "slayer_1000", name: "千人斩", desc: "单局击杀 1000", group: "征伐", goal: { stat: "kills", target: 1000 } },
   // R30 藏珍满架走 tick 判定（拥有数追平总数）
-  { id: "curator", name: "藏珍满架", desc: "集齐全部武器", group: "收藏", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal },
+  { id: "curator", name: "藏珍满架", desc: "集齐全部武器", group: "收藏", check: (s) => s.armoryTotal > 0 && s.armoryCount >= s.armoryTotal, progress: (s) => ({ cur: s.armoryCount, target: s.armoryTotal }) },
   // R32 炼金大师走 tick 判定（六配方全炼成）
-  { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", group: "收藏", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal },
+  { id: "fusion_master", name: "炼金大师", desc: "集齐全部祭坛融合配方", group: "收藏", check: (s) => s.fusedTotal > 0 && s.fusedCount >= s.fusedTotal, progress: (s) => ({ cur: s.fusedCount, target: s.fusedTotal }) },
   // R38 终极收藏家走 tick 判定（5 把不同武器达终极）
   { id: "ultimate_hoarder", name: "终极收藏家", desc: "单局 5 把不同武器皆达终极", group: "技艺", goal: { stat: "ultimateRunCount", target: 5 } },
   // R47 妖王猎手走 tick 判定（Boss 连战 5 妖王专属）
@@ -146,8 +148,9 @@ export class AchievementSystem {
 
 export interface AchievementProgress { cur: number; target: number }
 
-/** 成就进度（R81）：阈值型返回 cur/target，复合型返回 null（帮助页据此显示）。 */
+/** 成就进度（R81/R82）：复合型走 progress，阈值型走 goal，其余 null（帮助页据此显示）。 */
 export function achievementProgress(a: AchievementDef, s: AchievementState): AchievementProgress | null {
+  if (a.progress) return a.progress(s);
   if (!a.goal) return null;
   return { cur: s[a.goal.stat] as number, target: a.goal.target };
 }
