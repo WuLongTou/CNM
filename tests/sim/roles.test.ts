@@ -21,7 +21,7 @@ describe("R3 开局职业", () => {
     expect(sim.player.weapons[0].defId).toBe("tiejian");
   });
 
-  it("三职业起手武器各就位", () => {
+  it("职业起手武器各就位（秘密职业见 secretroles2 专项）", () => {
     expect(newSim(7, "archer").player.weapons[0].defId).toBe("gongjian");
     expect(newSim(7, "mage").player.weapons[0].defId).toBe("fazhang");
     // 表驱动：ROLES 声明的起手武器必须是已知武器 id
@@ -115,8 +115,8 @@ describe("R3 开局职业", () => {
       list: Array<{ id: string; name: string; passive: string; weapon: string }>;
     };
     expect(roles.current).toBe("sword");
-    expect(roles.list).toHaveLength(4); // R123 +隐士
-    expect(roles.list.map((r) => r.id)).toEqual(["sword", "archer", "mage", "hermit"]);
+    expect(roles.list).toHaveLength(5); // R123/R124 +隐士+武圣
+    expect(roles.list.map((r) => r.id)).toEqual(["sword", "archer", "mage", "hermit", "wusheng"]);
     for (const r of roles.list) {
       expect(r.passive.length).toBeGreaterThan(0);
       expect(r.weapon.length).toBeGreaterThan(0);

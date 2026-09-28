@@ -3,7 +3,7 @@
 // 被动量级 ≈ 1 级符箓词条（dmg +0.15 / asp +0.1 / rng +0.12），不碾压局内成长线。
 // 玩家外观无需新增资产：M13 起外观随武器类型切换，职业决定起手武器即决定外观。
 
-export type RoleId = "sword" | "archer" | "mage" | "hermit";
+export type RoleId = "sword" | "archer" | "mage" | "hermit" | "wusheng";
 
 export interface RoleDef {
   id: RoleId;
@@ -50,9 +50,16 @@ export const ROLES: Record<RoleId, RoleDef> = {
   // R123 秘密职业：无伤大师的孤注一掷（铁壁解锁；高风险高回报玻璃大炮）
   hermit: {
     id: "hermit", name: "隐士", desc: "无伤大师的孤注一掷",
-    passive: "伤害 +30% · 拾取半径 +30% · 攻速 -10%", startWeapon: "leidianfazhang",
+    passive: "伤害 +30% · 拾取半径 +30% · 攻速 -10% · 起手引雷形态", startWeapon: "leidianfazhang",
     dmgMult: 1.3, aspdMult: 0.9, rangeMult: 1, dashCdMult: 1, pickMult: 1.3,
     unlockAchievement: "flawless",
+  },
+  // R124 第二秘密职业：全职业制霸的宗师（九界平定解锁；全维 +10% 无短板）
+  wusheng: {
+    id: "wusheng", name: "武圣", desc: "制霸九界的宗师",
+    passive: "全维 +10%：伤害/攻速/范围/拾取", startWeapon: "sishenliandao",
+    dmgMult: 1.1, aspdMult: 1.1, rangeMult: 1.1, dashCdMult: 1, pickMult: 1.1,
+    unlockAchievement: "nine_realms",
   },
 };
 

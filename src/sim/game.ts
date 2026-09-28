@@ -2912,6 +2912,11 @@ export class GameSim {
           if (count >= 7) this.achievements.grant("daily_streak_7");
         }
       }
+      // R124 隐士特权：起手雷杖自带引雷形态（跳过进阶门槛——荣誉即特权）
+      if (this.role.id === "hermit") {
+        const sw = this.player.weapons[0];
+        if (sw && sw.defId === "leidianfazhang") sw.aspect = 1;
+      }
       // R44 Boss Rush：开战即出第一只妖王（连战不等首个回合推进）
       if (this.bossRush) {
         this.bossSpawnedForRound = this.round;

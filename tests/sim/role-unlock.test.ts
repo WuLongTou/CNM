@@ -87,7 +87,7 @@ describe("R6 职业解锁", () => {
         unlock: { name: string; desc: string } | null;
       }>;
     };
-    expect(roles.list).toHaveLength(4); // R123 +隐士
+    expect(roles.list).toHaveLength(5); // R123/R124 +隐士+武圣
     const byId = Object.fromEntries(roles.list.map((r) => [r.id, r]));
     expect(byId.sword).toMatchObject({ unlocked: true, unlock: null });
     expect(byId.archer.unlocked).toBe(false);
