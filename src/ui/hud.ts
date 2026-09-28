@@ -195,7 +195,7 @@ export class Hud {
           <span id="backup-hint" class="backup-hint"></span>
         </p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
-        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-boss-rush" type="button">Boss 连战</button><span id="rush-best"></span></p>
+        <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-daily-rush" type="button">挑战连战</button> <button id="btn-boss-rush" type="button">Boss 连战</button><span id="rush-best"></span></p>
         <button id="btn-start" type="button">开始游戏</button>
         <p class="hint">WASD 移动 · 空格 攻击 · Shift 冲刺</p>
       </div>`;
@@ -216,6 +216,13 @@ export class Hud {
     });
     this.welcome.querySelector("#btn-boss-rush")!.addEventListener("click", () => {
       // R44 Boss 连战：一键进入妖王轮战（职业/难度/血誓照常，血誓加难结算更肥）
+      this.pendingBossRush = true;
+      this.onStart();
+    });
+    this.welcome.querySelector("#btn-daily-rush")!.addEventListener("click", () => {
+      // R93 挑战今日·连战：当日种子 + Boss Rush（每日变异照常生效，rushBest 独立榜）
+      const input = this.welcome.querySelector<HTMLInputElement>("#seed-input");
+      if (input) input.value = String(dailySeed());
       this.pendingBossRush = true;
       this.onStart();
     });
@@ -549,7 +556,8 @@ export class Hud {
   private shareRun(cleared: boolean): void {
     const s = this.sim;
     // R52：挑战类型/血誓/狂化档位入文案（战队成绩单自解释）
-    const mode = s.bossRush ? "Boss 连战" : s.seed === dailySeed() ? "每日妖潮" : "";
+    const daily = s.seed === dailySeed();
+    const mode = s.bossRush ? "Boss 连战" : daily ? `每日妖潮·${dailyMutator().name}` : "";
     const pacts = Object.entries(s.pactTiers)
       .filter(([, t]) => (t ?? 0) >= 1)
       .sort((a, b) => PACT_IDS.indexOf(a[0] as PactId) - PACT_IDS.indexOf(b[0] as PactId))
