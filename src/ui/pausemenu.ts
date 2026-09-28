@@ -39,6 +39,7 @@ export class PauseMenu {
           <button id="set-shake" type="button"></button>
           <button id="set-dmg" type="button"></button>
           <button id="set-hit" type="button"></button>
+          <button id="set-rumble" type="button"></button>
         </div>
         <button id="btn-resume" type="button">继续（Esc）</button>
         <button id="btn-pause-restart" type="button">重新开始</button>
@@ -72,6 +73,7 @@ export class PauseMenu {
     wireToggle("set-shake", "shake", "震屏");
     wireToggle("set-dmg", "damageNumbers", "数字");
     wireToggle("set-hit", "hitstop", "顿帧");
+    wireToggle("set-rumble", "rumble", "震动");
     this.el.querySelector("#btn-resume")!.addEventListener("click", () => this.toggle(false));
     this.el.querySelector("#btn-pause-restart")!.addEventListener("click", () => {
       this.toggle(false);

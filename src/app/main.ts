@@ -7,6 +7,7 @@ import { HITSTOP } from "../sim/hitstop";
 import { weatherEffectTip } from "../sim/weather";
 import { localStorageStorage } from "../sim/save";
 import { loadVisualSettings, saveVisualSettings } from "./settings";
+import { RumbleManager, type RumbleActuator } from "./rumble";
 import { GameView } from "../render/view";
 import { InputManager } from "./input";
 import { AudioManager } from "./audio";
@@ -63,6 +64,13 @@ async function boot(): Promise<void> {
   await audio.init();
   view.shakeEnabled = settings.shake;
   view.damageNumbersEnabled = settings.damageNumbers;
+  // R63 手柄震动：执行器结构化适配取自当前手柄（Chromium 扩展属性，lib 无类型）；
+  // 开关走 R61 表现偏好（enabled 闭包实时读），无手柄/失败静默
+  type PadWithRumble = { vibrationActuator?: RumbleActuator };
+  const rumble = new RumbleManager(
+    () => (navigator.getGamepads?.()[0] as unknown as PadWithRumble | undefined)?.vibrationActuator,
+    () => settings.rumble,
+  );
 
   // R22：欢迎页填了自定义种子则用该种子开局（可复现速通），否则沿用当前实例
   // R44：Boss 连战开关 → 以 boss_rush 模式重建 sim（血誓/种子照常）
@@ -127,7 +135,7 @@ async function boot(): Promise<void> {
       audio.play(d.type === "BloodMoon" ? "lightning" : "charm");
     }
     else if (e.event === "boss_phase") { notify.push(`妖王狂暴！阶段 ${d.phase}`); view.shake(14); }
-    else if (e.event === "boss_spawn") { notify.push("妖王现世！"); view.shake(10); audio.play("lightning"); }
+    else if (e.event === "boss_spawn") { notify.push("妖王现世！"); view.shake(10); audio.play("lightning"); rumble.play("boss"); }
     else if (e.event === "final_boss") { notify.banner("终幕妖王", "讨伐成功即平定妖潮"); view.shake(14); audio.play("lightning"); }
     else if (e.event === "elite_wave") { notify.push("精英潮来袭！"); audio.play("charm"); }
     else if (e.event === "threat_tier") { notify.push(`威胁阶 ${d.tier} · 妖潮渐强`); audio.play("charm"); }
@@ -155,6 +163,7 @@ async function boot(): Promise<void> {
     else if (e.event === "perfect_dodge") {
       view.spawnBurst(Number(d.x), Number(d.y), 0xa8741a);
       view.shake(4);
+      rumble.play("dodge");
       audio.play("combo_5");
       notify.push("完美闪避！妖物迟滞 · 妖力凝聚");
     }
@@ -291,8 +300,9 @@ async function boot(): Promise<void> {
     sim.onKill.push((_type, elite, boss) => {
       audio.play("enemy_die");
       view.shake(boss ? 12 : elite ? 8 : 4);
+      rumble.play("kill"); // 节流在 RumbleManager 内（割草不常转）
     });
-    sim.onPlayerHurt.push(() => audio.play("player_hurt"));
+    sim.onPlayerHurt.push(() => { audio.play("player_hurt"); rumble.play("hurt"); });
     sim.onDashStrike.push((x, y) => { view.shake(3); view.spawnBurst(x, y, 0x6b6154); });
     sim.onPerfectDodge.push((x, y) => view.spawnRipple(x, y));
     sim.onEvent(handleEvent);

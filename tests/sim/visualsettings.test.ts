@@ -22,7 +22,7 @@ function memStorage(initial: Record<string, string> = {}): KVStorage & { store: 
 
 describe("VisualSettings 偏好", () => {
   it("默认全开（表现不打折，无障碍按需关闭）", () => {
-    expect(defaultVisualSettings()).toEqual({ shake: true, damageNumbers: true, hitstop: true });
+    expect(defaultVisualSettings()).toEqual({ shake: true, damageNumbers: true, hitstop: true, rumble: true });
   });
 
   it("无存储 / 空 key 时返回默认", () => {
@@ -34,9 +34,9 @@ describe("VisualSettings 偏好", () => {
     expect(loadVisualSettings(s)).toEqual(defaultVisualSettings());
   });
 
-  it("部分字段缺失时缺省回默认、已有值保留", () => {
+  it("部分字段缺失时缺省回默认、已有值保留（R63 老存档缺 rumble 亦回默认开）", () => {
     const s = memStorage({ [VISUAL_SETTINGS_KEY]: JSON.stringify({ shake: false }) });
-    expect(loadVisualSettings(s)).toEqual({ shake: false, damageNumbers: true, hitstop: true });
+    expect(loadVisualSettings(s)).toEqual({ shake: false, damageNumbers: true, hitstop: true, rumble: true });
   });
 
   it("字段类型不对（如字符串）按缺省处理", () => {
@@ -46,7 +46,7 @@ describe("VisualSettings 偏好", () => {
 
   it("保存后读取往返一致（关→存→读保持关）", () => {
     const s = memStorage();
-    const v = { shake: false, damageNumbers: false, hitstop: false };
+    const v = { shake: false, damageNumbers: false, hitstop: false, rumble: false };
     saveVisualSettings(s, v);
     expect(loadVisualSettings(s)).toEqual(v);
     expect(JSON.parse(s.store[VISUAL_SETTINGS_KEY]!)).toEqual(v);
@@ -54,8 +54,8 @@ describe("VisualSettings 偏好", () => {
 
   it("多次写覆盖旧值（最后一次生效）", () => {
     const s = memStorage();
-    saveVisualSettings(s, { shake: false, damageNumbers: true, hitstop: true });
-    saveVisualSettings(s, { shake: true, damageNumbers: false, hitstop: true });
-    expect(loadVisualSettings(s)).toEqual({ shake: true, damageNumbers: false, hitstop: true });
+    saveVisualSettings(s, { shake: false, damageNumbers: true, hitstop: true, rumble: true });
+    saveVisualSettings(s, { shake: true, damageNumbers: false, hitstop: true, rumble: false });
+    expect(loadVisualSettings(s)).toEqual({ shake: true, damageNumbers: false, hitstop: true, rumble: false });
   });
 });

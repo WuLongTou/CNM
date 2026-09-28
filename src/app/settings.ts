@@ -16,12 +16,14 @@ export interface VisualSettings {
   damageNumbers: boolean;
   /** 命中停顿（打击感凝固）。 */
   hitstop: boolean;
+  /** R63 手柄震动反馈（受击/击杀/妖王现身/完美闪避）。 */
+  rumble: boolean;
 }
 
 export const VISUAL_SETTINGS_KEY = "zhanyaolu_settings";
 
 export function defaultVisualSettings(): VisualSettings {
-  return { shake: true, damageNumbers: true, hitstop: true };
+  return { shake: true, damageNumbers: true, hitstop: true, rumble: true };
 }
 
 /** 读取偏好：损坏 JSON / 缺字段 / 类型不对一律回退默认（老用户与异常数据零迁移成本）。 */
@@ -35,6 +37,7 @@ export function loadVisualSettings(storage: KVStorage): VisualSettings {
       shake: typeof parsed.shake === "boolean" ? parsed.shake : d.shake,
       damageNumbers: typeof parsed.damageNumbers === "boolean" ? parsed.damageNumbers : d.damageNumbers,
       hitstop: typeof parsed.hitstop === "boolean" ? parsed.hitstop : d.hitstop,
+      rumble: typeof parsed.rumble === "boolean" ? parsed.rumble : d.rumble,
     };
   } catch {
     return d;
