@@ -275,6 +275,9 @@ canvas { position: absolute; z-index: 0; }
 
 /* ── 暂停面板 ── */
 .vol-row { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 14px; color: #6b6154; font-size: 14px; }
+/* R76 手柄菜单焦点环：dpad 移动 / A 确认时的高亮描边 */
+.pad-focus { outline: 3px dashed #c0392b !important; outline-offset: 2px; }
+
 /* R61 表现设置三开关：纸签小按钮排，关=灰隐线稿 */
 .set-row { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 14px; }
 .set-row .set-title { color: #8a8175; font-size: 13px; letter-spacing: 0.2em; }

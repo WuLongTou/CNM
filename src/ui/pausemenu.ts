@@ -10,7 +10,8 @@ import type { AudioManager } from "../app/audio";
 import type { VisualSettings } from "../app/settings";
 
 export class PauseMenu {
-  private el: HTMLElement;
+  /** 面板根元素（R76 手柄菜单导航的容器）。 */
+  readonly el: HTMLElement;
   visible = false;
   /** 装配层接线：走正常 restart()（保留血誓/种子/战绩），替代旧整页刷新（R36）。 */
   onRestart: (() => void) | null = null;

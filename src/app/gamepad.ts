@@ -27,7 +27,7 @@ export interface GamepadRead {
 export const GAMEPAD_DEADZONE = 0.25;
 
 /** 标准布局按钮下标（W3C Gamepad "standard" mapping）。 */
-export const GP_BTN = { A: 0, RB: 5, RT: 7, Start: 9, DUp: 12, DDown: 13, DLeft: 14, DRight: 15 } as const;
+export const GP_BTN = { A: 0, B: 1, RB: 5, RT: 7, Start: 9, DUp: 12, DDown: 13, DLeft: 14, DRight: 15 } as const;
 
 function pressed(pad: GamepadSnapshot, i: number): boolean {
   return pad.buttons[i]?.pressed === true;
@@ -43,11 +43,30 @@ export function stickWithDeadzone(x: number, y: number): { x: number; y: number 
 
 const NO_PAD: GamepadRead = { connected: false, moveX: 0, moveY: 0, attack: false, dash: false, start: false };
 
+/** 菜单导航边沿读数（R76：dpad/A/B 每次按下触发一次）。 */
+export interface MenuEdges {
+  up: boolean;
+  down: boolean;
+  left: boolean;
+  right: boolean;
+  confirm: boolean;
+  back: boolean;
+}
+
+const NO_MENU: MenuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false };
+
 export class GamepadInput {
   private prevDash = false;
   private prevStart = false;
+  private prevMenu: MenuEdges = { ...NO_MENU };
+  private menuEdges: MenuEdges = { ...NO_MENU };
 
   constructor(private getPads: () => readonly (GamepadSnapshot | null)[] | undefined) {}
+
+  /** 本帧菜单边沿（先 poll 再读；R76 手柄菜单导航）。 */
+  menuRead(): MenuEdges {
+    return this.menuEdges;
+  }
 
   poll(): GamepadRead {
     let pad: GamepadSnapshot | null | undefined;
@@ -56,10 +75,12 @@ export class GamepadInput {
     } catch {
       // 怪异环境（getGamepads 抛错）按未连接处理，绝不影响键盘/触屏输入
       this.prevDash = this.prevStart = false;
+      this.menuEdges = { ...NO_MENU };
       return NO_PAD;
     }
     if (!pad) {
       this.prevDash = this.prevStart = false;
+      this.menuEdges = { ...NO_MENU };
       return NO_PAD;
     }
     const stick = stickWithDeadzone(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
@@ -71,6 +92,24 @@ export class GamepadInput {
     if (pressed(pad, GP_BTN.DDown)) y += 1;
     const dash = pressed(pad, GP_BTN.RB) || pressed(pad, GP_BTN.RT);
     const start = pressed(pad, GP_BTN.Start);
+    // R76 菜单边沿同步记录（dpad/A/B），menuRead() 消费
+    const menuNow: MenuEdges = {
+      up: pressed(pad, GP_BTN.DUp),
+      down: pressed(pad, GP_BTN.DDown),
+      left: pressed(pad, GP_BTN.DLeft),
+      right: pressed(pad, GP_BTN.DRight),
+      confirm: pressed(pad, GP_BTN.A),
+      back: pressed(pad, GP_BTN.B),
+    };
+    this.menuEdges = {
+      up: menuNow.up && !this.prevMenu.up,
+      down: menuNow.down && !this.prevMenu.down,
+      left: menuNow.left && !this.prevMenu.left,
+      right: menuNow.right && !this.prevMenu.right,
+      confirm: menuNow.confirm && !this.prevMenu.confirm,
+      back: menuNow.back && !this.prevMenu.back,
+    };
+    this.prevMenu = menuNow;
     const read: GamepadRead = {
       connected: true,
       moveX: Math.min(1, Math.max(-1, x)),

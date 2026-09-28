@@ -19,6 +19,7 @@ import { HelpPanel } from "../ui/help";
 import { PauseMenu } from "../ui/pausemenu";
 import { UpgradePanel } from "../ui/upgrade";
 import { ShopPanel } from "../ui/shop";
+import { PadMenuNav } from "../ui/padnav";
 import { MiniMap } from "../ui/minimap";
 import { Notify } from "../ui/notify";
 import { TouchControls, shouldUseTouch } from "../ui/touch";
@@ -94,6 +95,7 @@ async function boot(): Promise<void> {
   const fusion = new FusionPanel(sim);
   const upgrade = new UpgradePanel(sim);
   const shop = new ShopPanel(sim);
+  const padNav = new PadMenuNav();
   const help = new HelpPanel(sim);
   const pauseMenu = new PauseMenu(sim, audio, settings, () => {
     saveVisualSettings(localStorage, settings);
@@ -384,6 +386,24 @@ async function boot(): Promise<void> {
     const modal = anyModalOpen();
     if (joyBase) joyBase.classList.toggle("hidden", modal);
     if (touchBtns) touchBtns.classList.toggle("hidden", modal);
+    // R76 手柄菜单导航：模态开着时 dpad/摇杆移动焦点、A 确认、B 关闭
+    // （高频三面板：暂停/升级/商店；升级面板不可取消故 B 无效）
+    if (modal) {
+      const container = pauseMenu.visible ? pauseMenu.el
+        : upgrade.visible ? upgrade.el
+        : shop.visible ? shop.el
+        : null;
+      padNav.sync(container);
+      const menu = input.menuRead();
+      if (menu.back) {
+        if (shop.visible) shop.close();
+        else if (pauseMenu.visible) pauseMenu.toggle(false);
+      } else if (container) {
+        padNav.handle(menu);
+      }
+    } else {
+      padNav.detach();
+    }
   });
 
   // 启动完成：移除 boot 文案

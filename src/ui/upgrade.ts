@@ -9,7 +9,8 @@ import type { GameSim, UpgradeOffer } from "../sim/game";
 import { CFG } from "../sim/config";
 
 export class UpgradePanel {
-  private el: HTMLElement;
+  /** 面板根元素（R76 手柄菜单导航的容器）。 */
+  readonly el: HTMLElement;
   private cardsEl!: HTMLElement;
   private actionsEl!: HTMLElement;
   visible = false;

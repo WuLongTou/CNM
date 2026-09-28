@@ -55,6 +55,11 @@ export class InputManager {
     if (args.dash === true) this.pulseDash = true;
   }
 
+  /** 本帧手柄菜单边沿（R76 手柄菜单导航；先 sample 再读）。 */
+  menuRead() {
+    return this.gamepad.menuRead();
+  }
+
   /** 注入触屏状态源（装配层在 UI 面板创建后挂载）。 */
   setTouchSource(touch: TouchInputSource): void {
     this.touch = touch;

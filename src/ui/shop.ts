@@ -13,7 +13,8 @@ const KIND_TAG: Record<ShopSlot["kind"], string> = {
 };
 
 export class ShopPanel {
-  private el: HTMLElement;
+  /** 面板根元素（R76 手柄菜单导航的容器）。 */
+  readonly el: HTMLElement;
   private cardsEl!: HTMLElement;
   private goldEl!: HTMLElement;
   visible = false;
