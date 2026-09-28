@@ -278,6 +278,9 @@ canvas { position: absolute; z-index: 0; }
 /* R76 手柄菜单焦点环：dpad 移动 / A 确认时的高亮描边 */
 .pad-focus { outline: 3px dashed #c0392b !important; outline-offset: 2px; }
 
+/* R111 荣誉成就金字（结算屏成就行：铁壁/三英聚义等终局直授荣誉） */
+.ach-honor { color: #a8842c; font-weight: 700; }
+
 /* R90 稀有祝福金字卡面：标题与价格转金（普通卡不动） */
 .shop-card-rare b, .shop-card-rare .uc-stat { color: #a8842c; }
 
