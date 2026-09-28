@@ -2,7 +2,7 @@
 // EffectCatalog（dmg 伤害乘数、asp 攻速乘数、rng 范围乘数、hp 每击血代价、
 // psn 中毒概率%、crit 暴击率加成%、multi 近战/弹道目标数、splash 溅射半径、
 // chain 链式弹射次数、freeze 冰缓概率%、homing 追踪）。
-// 24 件代表性武器覆盖全部机制，表驱动可按同结构扩至 C# 版全量 63 件。
+// 26 件代表性武器覆盖全部机制，表驱动可按同结构扩至 C# 版全量 63 件。
 
 export type AttackType = "Melee" | "Ranged" | "Magic" | "Mine";
 
@@ -39,6 +39,7 @@ export const WEAPON_DATA: Record<string, WeaponDef> = {
   zhanfu: { name: "战斧", desc: "高伤害低攻速，溅射", type: "Melee", tier: 2, rarity: 2, prereq: "铁剑", dmg: 1.5, asp: 0.7, splash: 60 },
   shuangdao: { name: "双刀", desc: "高攻速多目标", type: "Melee", tier: 2, rarity: 2, prereq: "铁剑", dmg: 0.7, asp: 1.5, multi: 2 },
   duandao: { name: "淬毒短刀", desc: "近战带毒持续伤害", type: "Melee", tier: 2, rarity: 2, prereq: "双刀", dmg: 0.8, asp: 1.4, psn: 10, multi: 2 },
+  shuangya: { name: "霜牙", desc: "近战冰缓妖物", type: "Melee", tier: 2, rarity: 2, prereq: "淬毒短刀", dmg: 0.9, asp: 1.2, freeze: 15 },
   jinfu: { name: "巨斧", desc: "极高的单发伤害", type: "Melee", tier: 3, rarity: 3, prereq: "战斧", dmg: 2.2, asp: 0.5, splash: 80 },
   changqiang: { name: "长枪", desc: "长距离突刺多目标", type: "Melee", tier: 3, rarity: 3, prereq: "巨斧", dmg: 1.4, asp: 0.9, rng: 1.5, multi: 2 },
   sishenliandao: { name: "死神镰刀", desc: "收割成片妖物", type: "Melee", tier: 4, rarity: 4, prereq: "长枪", dmg: 2.0, asp: 0.8, rng: 1.6, multi: 3, crit: 15 },
@@ -47,6 +48,7 @@ export const WEAPON_DATA: Record<string, WeaponDef> = {
   // ═══ 远程（直线弹道） ═══
   gongjian: { name: "弓箭", desc: "可靠的远程武器", type: "Ranged", tier: 1, rarity: 1 },
   zhongnu: { name: "重弩", desc: "沉重的单发重击", type: "Ranged", tier: 2, rarity: 2, prereq: "弓箭", dmg: 1.6, asp: 0.6 },
+  dujian: { name: "毒箭", desc: "远程带毒持续伤害", type: "Ranged", tier: 2, rarity: 2, prereq: "弓箭", dmg: 0.7, asp: 1.1, psn: 20 },
   sandanqiang: { name: "散弹枪", desc: "一次三发散射", type: "Ranged", tier: 2, rarity: 2, prereq: "弓箭", dmg: 0.6, asp: 1.2, spread: 3 },
   jijinu: { name: "狙击弩", desc: "超远射程与暴击", type: "Ranged", tier: 3, rarity: 3, prereq: "重弩", dmg: 2.5, asp: 0.5, rng: 1.4, crit: 25 },
   guijinu: { name: "轨迹弩", desc: "箭矢自动追踪妖物", type: "Ranged", tier: 3, rarity: 3, prereq: "重弩", dmg: 1.3, asp: 0.9, homing: true },
