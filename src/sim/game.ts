@@ -384,6 +384,9 @@ export class GameSim {
   bossKills = 0;
   /** Boss 连战中讨伐的妖王数（R47 妖王猎手成就口径；普通模式恒 0）。 */
   bossRushKills = 0;
+  /** R88 分阶用时：Boss Rush 每只妖王的讨伐用时（存活秒，结算陈列最快讨伐）。 */
+  bossRushKillTimes: number[] = [];
+  private lastBossKillAt = 0;
   /** 本局新达成的成就（R53 结算陈列；不含开局前已解锁的）。 */
   runAchievements: Array<{ id: string; name: string; desc: string }> = [];
   /** 本局宝妖讨伐数（R14；成就口径）。 */
@@ -1909,6 +1912,9 @@ export class GameSim {
       // R47 妖王猎手：仅连战模式计入成就口径；R49 跨 3 档播报狂化
       if (this.bossRush) {
         this.bossRushKills++;
+        // R88 分阶用时：自上一妖王讨伐（或开局）的存活秒（结算陈列最快讨伐）
+        this.bossRushKillTimes.push(this.survivalTime - this.lastBossKillAt);
+        this.lastBossKillAt = this.survivalTime;
         if (this.bossRushKills % 3 === 0) {
           const tier = this.bossRushKills / 3;
           this.emit("rush_escalate", { tier, mult: this.rushEscalationMult() });
@@ -2879,6 +2885,7 @@ export class GameSim {
       mutator: this.mutator()?.id ?? null, // R73 当日变异 id（非每日局为 null）
       mutator_clears: this.save.load()?.mutatorClears ?? {}, // R74 历劫进度
       boss_kills: this.bossKills,
+      rush_fastest: this.bossRushKillTimes.length > 0 ? Math.min(...this.bossRushKillTimes) : null, // R88 最快讨伐秒
       dmg_dealt_total: this.dmgDealtTotal, // R83 战斗统计
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",

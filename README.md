@@ -326,6 +326,9 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R88 Boss Rush 分阶用时：每妖王讨伐用时记录（自上一王/开局的存活秒），
+      连战结算陈列 最快讨伐 Xs（speedrun 式自我挑战）；status 回报 rush_fastest；
+      普通模式不记录；3 条测试（二王累进/最快/普通不计）
 - [x] R86 存档导出/导入：欢迎页 备份行 导出 JSON 下载 / 导入文件校验覆写
       （normalizeSave 兜底损坏与缺字段）——web 存档易失（清缓存即丢）的保险；
       GameSim.exportSave/importSave + 3 条测试（往返一致/兜底）

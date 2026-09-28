@@ -532,13 +532,17 @@ export class Hud {
     // R60 连战战报：讨伐妖王数与狂化档位置顶（连战模式的核心战绩）
     const rush = Hud.rushHead(s.bossRush, s.bossRushKills, Math.floor(s.bossRushKills / 3));
     const head = rush ? `${rush} · ` : "";
+    // R88 最快讨伐：Boss Rush 分阶用时（次次直授的终极横幅；无击杀省略）
+    const fastest = s.bossRush && s.bossRushKillTimes.length > 0
+      ? ` · 最快讨伐 ${Math.min(...s.bossRushKillTimes).toFixed(0)}s`
+      : "";
     // R84 输出主力：伤害占比最高武器（R83 统计数据消费端）
     const main = Hud.mainWeaponLine(
       s.player.weapons.map((w2) => ({ name: w2.name, dmgDealt: w2.dmgDealt })),
       s.dmgDealtTotal,
     );
     const mainSeg = main ? ` · ${main}` : "";
-    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${buffs}${mainSeg}`;
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${fastest}${buffs}${mainSeg}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
