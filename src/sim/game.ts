@@ -194,7 +194,7 @@ export interface UpgradeOffer {
 
 /** 香火龛商品槽（R65）：武器 / 符箓 / 调息三选一，开龛时定格。 */
 export interface ShopSlot {
-  kind: "weapon" | "upgrade" | "heal";
+  kind: "weapon" | "upgrade" | "heal" | "buff";
   /** 本龛定格价（开龛时按基价×通胀倍乘取整）。 */
   price: number;
   /** 卡面名（武器名 / 符箓·词条 / 调息回复）。 */
@@ -390,6 +390,14 @@ export class GameSim {
   private shopLatch = true;
   /** 通胀倍乘：每次购买 ×EscalateMult，作用于后续开龛基价（全局取舍压力）。 */
   private shopPriceMult = 1;
+  /** 香火祝福（R66）：本局全局伤害加成（购买即叠加，每局限购一次）。 */
+  shopBuff = 0;
+  private shopBuffBought = false;
+  /** R66 复盘口径：单局购买次数（成就「散财消灾」）。 */
+  shopPurchases = 0;
+  /** R66 复盘口径：单局香火钱收入/支出。 */
+  runGoldEarned = 0;
+  runGoldSpent = 0;
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
   /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
@@ -990,6 +998,10 @@ export class GameSim {
             label: `符箓·${UPGRADE_STAT_NAMES[stat]}（${w.name}）`, weaponIdx: ws.indexOf(w), stat }]
         : []),
       { kind: "heal", price: price(CFG.Shop.PriceHeal), label: `调息回复 ${CFG.Shop.HealAmount} 生命` },
+      ...(this.shopBuffBought
+        ? []
+        : [{ kind: "buff" as const, price: price(CFG.Shop.PriceBuff),
+            label: `香火祝福 · 本局伤害 +${Math.round(CFG.Shop.BuffDmgBonus * 100)}%` }]),
     ];
   }
 
@@ -1019,11 +1031,17 @@ export class GameSim {
       return { handled: false, note: "香火不足", slots: this.shopOffer };
     }
     this.coins -= slot.price;
+    this.runGoldSpent += slot.price;
+    this.shopPurchases++;
     let name = slot.label;
     if (slot.kind === "weapon") {
       name = this.giveWeapon(slot.weaponDefId).name;
     } else if (slot.kind === "upgrade") {
       name = String(this.applyUpgrade(slot.weaponIdx!, slot.stat!).name);
+    } else if (slot.kind === "buff") {
+      this.shopBuff += CFG.Shop.BuffDmgBonus;
+      this.shopBuffBought = true;
+      name = "香火祝福 · 本局伤害提升";
     } else {
       const healed = Math.min(CFG.Shop.HealAmount, this.player.maxHp - this.player.hp);
       this.player.hp += healed;
@@ -1095,6 +1113,7 @@ export class GameSim {
       rerollsUsed: CFG.Upgrade.RerollsPerRun - this.rerollsLeft,
       banishesUsed: CFG.Upgrade.BanishesPerRun - this.banishesLeft,
       goblinKills: this.goblinKills,
+      shopPurchases: this.shopPurchases, // R66 散财消灾口径
       codexGold: countGold(this.baseCodex, this.killCounts),
       bossRushKills: this.bossRush ? this.bossRushKills : 0,
       armoryCount: new Set([...this.baseArmory, ...this.runArmory]).size,
@@ -1415,7 +1434,9 @@ export class GameSim {
     const p = this.player;
     const def = WEAPON_DATA[w.defId];
     const mult = stageMult(w);
-    const effDmg = (def.dmg ?? 1) * mult * (1 + bonusOf(w, "dmg"));
+    // R66 香火祝福：本局全局伤害加成（齐射/弹道/地雷全部流经此 effDmg 单点）
+    const effDmg = (def.dmg ?? 1) * mult * (1 + bonusOf(w, "dmg"))
+      * (1 + this.shopBuff);
     const effAsp = (def.asp ?? 1) * (1 + bonusOf(w, "asp"));
     const effRng = (def.rng ?? 1) * (1 + bonusOf(w, "rng"));
     const hpCost = Math.abs(def.hp ?? 0);
@@ -1744,7 +1765,9 @@ export class GameSim {
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     // R65 局内金币：普通 1 / 精英 5 / 妖王 20 / 宝妖 15（香火龛流通币，与结算金币两轨）
-    this.coins += e.boss ? CFG.Shop.BossGold : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold;
+    const gold = e.boss ? CFG.Shop.BossGold : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold;
+    this.coins += gold;
+    this.runGoldEarned += gold;
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
     // explosive 词缀：死亡自爆（逼玩家杀完就走位，勿贴脸输出）
     if (e.affix === "explosive") {

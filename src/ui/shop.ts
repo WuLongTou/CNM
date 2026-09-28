@@ -9,6 +9,7 @@ const KIND_TAG: Record<ShopSlot["kind"], string> = {
   weapon: "请武",
   upgrade: "铭箓",
   heal: "调息",
+  buff: "祝福",
 };
 
 export class ShopPanel {

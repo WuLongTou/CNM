@@ -127,7 +127,10 @@ describe("R65 购买", () => {
     sim.buyShop(sim.shopOffer!.findIndex((s) => s.kind === "heal"));
     openShopAt(sim);
     for (const s of sim.shopOffer!) {
-      const base = s.kind === "weapon" ? CFG.Shop.PriceWeapon : s.kind === "upgrade" ? CFG.Shop.PriceUpgrade : CFG.Shop.PriceHeal;
+      const base = s.kind === "weapon" ? CFG.Shop.PriceWeapon
+        : s.kind === "upgrade" ? CFG.Shop.PriceUpgrade
+        : s.kind === "buff" ? CFG.Shop.PriceBuff
+        : CFG.Shop.PriceHeal;
       expect(s.price).toBe(Math.floor(base * CFG.Shop.EscalateMult));
     }
   });
@@ -141,5 +144,78 @@ describe("R65 购买", () => {
     const r = sim.exec({ action: "shop_buy", args: { index: idx } });
     expect((r.data as { handled: boolean }).handled).toBe(true);
     expect(sim.status().coins).toBe(500 - CFG.Shop.PriceHeal);
+  });
+});
+
+describe("R66 香火祝福与复盘", () => {
+  /** 清场钉满血木桩，单次挥刀记录伤害（铁剑无暴击无散布，连击清零后确定）。 */
+  function swingDamageOnce(sim: GameSim): number {
+    sim.exec({ action: "spawn", args: { type: "游魂", count: 1, near: "player" } });
+    const e = sim.enemies[sim.enemies.length - 1]!;
+    sim.enemies = [e];
+    e.hp = 1e9;
+    e.x = sim.player.x + 24;
+    e.y = sim.player.y;
+    sim.player.combo = 0;
+    (sim as unknown as { focusTimer: number }).focusTimer = 0;
+    const dmg: number[] = [];
+    const cb = (_x: number, _y: number, d: number) => dmg.push(d);
+    sim.onDamage.push(cb);
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    for (let i = 0; i < 120 && dmg.length === 0; i++) sim.tick(1 / 60);
+    sim.input = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
+    sim.onDamage.pop();
+    expect(dmg.length).toBeGreaterThan(0);
+    return dmg[0]!;
+  }
+
+  it("祝福槽：购买后全局伤害 ×1.15（同条件对照挥刀）", () => {
+    const sim = new GameSim(660, memoryStorage());
+    sim.exec({ action: "start" });
+    const d1 = swingDamageOnce(sim);
+    sim.coins = 9999;
+    openShopAt(sim);
+    const bIdx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
+    expect(bIdx).toBeGreaterThanOrEqual(0);
+    expect(sim.buyShop(bIdx).handled).toBe(true);
+    expect(sim.shopBuff).toBeCloseTo(CFG.Shop.BuffDmgBonus);
+    const d2 = swingDamageOnce(sim);
+    // 伤害事件为取整整数：祝福后 = round(基准 × 1.15)
+    expect(d2).toBe(Math.round(d1 * (1 + CFG.Shop.BuffDmgBonus)));
+  });
+
+  it("祝福限购一次：购买后报价不再出现祝福槽", () => {
+    const sim = new GameSim(661, memoryStorage());
+    sim.exec({ action: "start" });
+    sim.coins = 9999;
+    openShopAt(sim);
+    sim.buyShop(sim.shopOffer!.findIndex((s) => s.kind === "buff"));
+    openShopAt(sim);
+    expect(sim.shopOffer!.findIndex((s) => s.kind === "buff")).toBe(-1);
+  });
+
+  it("散财消灾：单局购买 5 次解锁成就", () => {
+    const sim = new GameSim(662, memoryStorage());
+    sim.exec({ action: "start" });
+    sim.coins = 99999;
+    for (let n = 0; n < 5; n++) {
+      openShopAt(sim);
+      const heal = sim.shopOffer!.findIndex((s) => s.kind === "heal");
+      expect(sim.buyShop(heal).handled).toBe(true);
+    }
+    sim.tick(1 / 60); // 成就判定随 tick 跑
+    expect(sim.achievements.unlocked.has("incense_5")).toBe(true);
+    expect(sim.shopPurchases).toBe(5);
+  });
+
+  it("复盘口径：单局香火钱收入/支出累计", () => {
+    const sim = new GameSim(663, memoryStorage());
+    sim.exec({ action: "start" });
+    sim.coins = 999;
+    killOne(sim, {});
+    expect(sim.runGoldEarned).toBe(CFG.Shop.KillGold);
+    openShopAt(sim);
+    sim.buyShop(sim.shopOffer!.findIndex((s) => s.kind === "heal"));
+    expect(sim.runGoldSpent).toBe(CFG.Shop.PriceHeal);
   });
 });

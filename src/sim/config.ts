@@ -39,6 +39,8 @@ export const CFG = {
     PriceUpgrade: 60, // 符箓槽基价
     PriceHeal: 40, // 调息槽基价
     HealAmount: 40, // 调息回复量
+    PriceBuff: 120, // 香火祝福槽基价（R66）
+    BuffDmgBonus: 0.15, // 香火祝福：本局全局伤害加成（R66，每局一次）
     EscalateMult: 1.35, // 每次购买后全场基价倍乘（通胀逼取舍）
   },
 

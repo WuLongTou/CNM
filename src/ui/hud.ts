@@ -468,10 +468,14 @@ export class Hud {
     const events = tally.length > 0
       ? ` · 异变${tally.map(([k, n]) => `${EN[k] ?? k}×${n}`).join(" / ")}`
       : "";
+    // R66 香火钱复盘：本局局内经济收支（有收支才陈列，零花销不占行宽）
+    const gold = s.runGoldSpent > 0 || s.runGoldEarned > 0
+      ? ` · 香火钱 +${s.runGoldEarned}/-${s.runGoldSpent}`
+      : "";
     // R60 连战战报：讨伐妖王数与狂化档位置顶（连战模式的核心战绩）
     const rush = Hud.rushHead(s.bossRush, s.bossRushKills, Math.floor(s.bossRushKills / 3));
     const head = rush ? `${rush} · ` : "";
-    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}`;
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
