@@ -123,7 +123,7 @@ test.describe("触屏上下文（手机视口）", () => {
     // 逐字竖排的坏味道：卡片被内容撑到 3 倍高以上；阈值 400 留足字体差异余量
     const heights = await page.locator(".role-card").evaluateAll((els) =>
       els.map((el) => el.getBoundingClientRect().height));
-    expect(heights.length).toBe(3);
+    expect(heights.length).toBe(5); // R123/R124 五职业（剑修/弓手/术士/隐士/武圣）
     for (const h of heights) expect(h).toBeLessThan(400);
   });
 
@@ -138,8 +138,8 @@ test.describe("触屏上下文（手机视口）", () => {
     await page.evaluate(() => {
       window.__CNM__.sim.pickups.push({ id: 1, x: window.__CNM__.sim.player.x + 5, y: window.__CNM__.sim.player.y });
     });
-    await page.waitForSelector(".upgrade-card");
-    const scrollable = await page.locator(".upgrade-cards").evaluate((el) => {
+    await page.waitForSelector("#upgrade-cards .upgrade-card");
+    const scrollable = await page.locator("#upgrade-cards").evaluate((el) => {
       const panel = el.closest(".panel-wide") as HTMLElement;
       const cs = getComputedStyle(panel);
       return cs.maxHeight !== "none" && cs.overflowY === "auto";

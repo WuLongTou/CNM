@@ -105,17 +105,21 @@ test("帮助手账：武器图鉴收录全部武器，成就页展示达成状�
   await page.click("#btn-start");
   await page.keyboard.press("KeyH");
   await expect(page.locator(".help-panel")).toBeVisible();
-  // 武器图鉴：24 件武器全收录，含稀有度星级与祭炼标注
-  await page.click('.help-tabs button[data-page="2"]');
-  await expect(page.locator(".help-panel h2")).toBeVisible();
+  // 武器图鉴：26 件武器全收录，含稀有度星级与祭炼标注（按名字点 tab，防索引漂移）
+  const clickTab = async (name: string) => {
+    await page.click(`.help-tabs button:has-text("${name}")`);
+    await expect(page.locator(".help-panel h2")).toBeVisible();
+  };
+  await clickTab("武器图鉴");
   const rows = await page.locator("#help-body .help-table tr").count();
-  expect(rows).toBe(23); // 武器表实际 23 件（近战8/远程6/魔法6/地雷3）
+  expect(rows).toBe(26); // R95/R106 后武器表 26 件
   await expect(page.locator("#help-body .w-star").first()).toBeVisible();
   await expect(page.locator("#help-body .w-fuse").first()).toBeVisible();
-  // 成就页：7 项成就与达成状态
-  await page.click('.help-tabs button[data-page="3"]');
-  const achRows = await page.locator("#help-body .help-table tr").count();
-  expect(achRows).toBe(7);
+  // 成就页：42 项分四组（四张表，各含表头行）
+  await clickTab("成就");
+  const achRows = await page.locator("#help-body .help-table").count();
+  expect(achRows).toBe(4);
+  await expect(page.locator("#help-body .ach-honor").first()).toBeVisible(); // R121 荣誉金字
   // 左方向键循环切页（成就 → 武器图鉴）
   await page.keyboard.press("ArrowLeft");
   await page.waitForFunction(() => {
