@@ -6,7 +6,7 @@ import { Rng } from "./rng";
 import {
   CFG, ENEMY_NAMES, ENEMY_SCORE, ENEMY_STATS, SPAWN_TABLE, EnemyType,
 } from "./config";
-import { defaultSave, type SaveData, type SaveStorage } from "./save";
+import { defaultSave, defaultStats, type SaveData, type SaveStorage } from "./save";
 import {
   WEAPON_DATA, stageMult, stageTag, UPGRADE_POOL, UPGRADE_STEP, validStats, bonusOf, makeWeapon,
   FUSION_RECIPES,
@@ -354,6 +354,8 @@ export class GameSim {
   killCounts: Record<number, number> = {};
   /** 本局死因（R16；致死伤害来源文案，未阵亡为 null）。 */
   deathCause: string | null = null;
+  /** 生涯统计已计入标志（R64；Victory→无尽→陨落二次 finalizeRun 时按局口径防重）。 */
+  private statsCounted = false;
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
   /** 本局最高连击（R9 战绩复盘；命中即刷新，衰减不回落）。 */
@@ -1747,6 +1749,23 @@ export class GameSim {
           return Math.max(old, this.score);
         })()
         : (prev.rushBest ?? 0),
+      // R64 生涯统计：金币按每次实发累加；其余按局口径只计一次（无尽二次结算防重）
+      stats: (() => {
+        const ps = prev.stats ?? defaultStats();
+        const coinsEarned = ps.coinsEarned + coins;
+        if (this.statsCounted) return { ...ps, coinsEarned };
+        this.statsCounted = true;
+        return {
+          ...ps,
+          coinsEarned,
+          timeAlive: ps.timeAlive + this.survivalTime,
+          gamesByRole: { ...ps.gamesByRole, [this.role.id]: (ps.gamesByRole[this.role.id] ?? 0) + 1 },
+          maxKills: Math.max(ps.maxKills, this.kills),
+          maxCombo: Math.max(ps.maxCombo, this.maxCombo),
+          totalElites: ps.totalElites + this.eliteKills,
+          totalBosses: ps.totalBosses + this.bossKills,
+        };
+      })(),
       // R30 藏珍：本局新获并入跨局（死亡也记——拥有过即是拥有过）
       armory: [...new Set([...(prev.armory ?? []), ...this.runArmory])],
       // R35 终极图鉴：达过终极即永久点亮（死亡也记）
@@ -2374,6 +2393,8 @@ export class GameSim {
           dailyTheme: dailyTheme(),
           rushBest: d.rushBest ?? 0,
           dailyBest: d.dailyBest ?? { date: "", score: 0 },
+          // R64 生涯统计（欢迎页陈列；测试与 UI 共用同一口径）
+          stats: d.stats ?? defaultStats(),
           // R5 商店列表（UI 按钮与自动化测试共用；顶层旧字段保留兼容）
           shop: kinds.map((k) => {
             const def = META_SHOP[k];

@@ -36,8 +36,46 @@ export interface SaveData {
   ultimates: string[];
   /** Boss 连战最佳分（R45；老存档缺字段默认 0）。 */
   rushBest: number;
+  /** 生涯统计（R64；老存档缺字段逐项回退默认）。 */
+  stats: LifetimeStats;
   /** 跨局持久成就 id。 */
   achievements: string[];
+}
+
+/** 生涯统计（R64）：Hades 式主菜单生涯陈列的持久底座。 */
+export interface LifetimeStats {
+  /** 总存活秒。 */
+  timeAlive: number;
+  /** 累计获得金币（结算口径，含加成；无尽二次结算按实发累加）。 */
+  coinsEarned: number;
+  /** 职业 id → 局数（最爱职业）。 */
+  gamesByRole: Record<string, number>;
+  /** 单局最高击杀。 */
+  maxKills: number;
+  /** 生涯最高连击。 */
+  maxCombo: number;
+  /** 累计精英讨伐。 */
+  totalElites: number;
+  /** 累计妖王讨伐。 */
+  totalBosses: number;
+}
+
+export function defaultStats(): LifetimeStats {
+  return {
+    timeAlive: 0, coinsEarned: 0, gamesByRole: {},
+    maxKills: 0, maxCombo: 0, totalElites: 0, totalBosses: 0,
+  };
+}
+
+/** 存档归一化：顶层缺字段与嵌套 stats 逐项回退默认（老存档/半新存档零迁移成本）。 */
+export function normalizeSave(parsed: Partial<SaveData> | null): SaveData {
+  const d = defaultSave();
+  if (!parsed) return d;
+  return {
+    ...d,
+    ...parsed,
+    stats: { ...d.stats, ...(parsed.stats ?? {}) },
+  };
 }
 
 export interface SaveStorage {
@@ -57,6 +95,7 @@ export function defaultSave(): SaveData {
     fused: [],
     ultimates: [],
     rushBest: 0,
+    stats: defaultStats(),
     achievements: [],
   };
 }
@@ -77,7 +116,7 @@ export function localStorageStorage(key = "zhanyaolu_save"): SaveStorage {
     load() {
       try {
         const raw = localStorage.getItem(key);
-        return raw ? { ...defaultSave(), ...(JSON.parse(raw) as SaveData) } : null;
+        return raw ? normalizeSave(JSON.parse(raw) as Partial<SaveData>) : null;
       } catch {
         return null;
       }

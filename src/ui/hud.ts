@@ -8,6 +8,28 @@ import { PACTS, PACT_IDS, type PactId } from "../sim/pacts";
 import { dailyKey, dailySeed, dailyTheme } from "../sim/daily";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
+import type { LifetimeStats } from "../sim/save";
+
+/** R64 生涯时长：<1 小时显示 N 分钟，否则 N.N 小时。 */
+export function formatLifetime(seconds: number): string {
+  if (seconds < 3600) return `${Math.max(1, Math.floor(seconds / 60))} 分钟`;
+  return `${(seconds / 3600).toFixed(1)} 小时`;
+}
+
+/** R64 欢迎页生涯陈列行（纯函数，vitest 直测）。 */
+export function lifetimeLine(s: LifetimeStats): string {
+  let fav = "";
+  let favN = 0;
+  for (const [id, n] of Object.entries(s.gamesByRole)) {
+    if (n > favN) {
+      favN = n;
+      fav = ROLES[id as keyof typeof ROLES]?.name ?? id;
+    }
+  }
+  return `生涯 · 存活 ${formatLifetime(s.timeAlive)} · 金币 ${s.coinsEarned} · 最高连击 ${s.maxCombo}`
+    + ` · 单局击杀 ${s.maxKills} · 精英 ${s.totalElites} · 妖王 ${s.totalBosses}`
+    + (favN > 0 ? ` · 最爱 ${fav}（${favN} 局）` : "");
+}
 
 /** 永久升级商店条目（meta 协议 shop 列表项）。 */
 interface MetaShopItem { kind: string; name: string; desc: string; level: number; price: number; }
@@ -162,6 +184,7 @@ export class Hud {
         <div class="diff-row" id="diff-row"></div>
         <div class="pact-row" id="pact-row"></div>
         <p id="save-stats" class="sub"></p>
+        <p id="save-life" class="sub"></p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
         <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-boss-rush" type="button">Boss 连战</button><span id="rush-best"></span></p>
         <button id="btn-start" type="button">开始游戏</button>
@@ -313,16 +336,19 @@ export class Hud {
       c.classList.toggle("selected", c.dataset.role === cur));
   }
 
-  /** 欢迎页历史战绩（最高分/总击杀/局数），零局时显示引言。 */
+  /** 欢迎页历史战绩（最高分/总击杀/局数 + R64 生涯行），零局时显示引言。 */
   private refreshSaveStats(): void {
     const el = this.welcome.querySelector<HTMLElement>("#save-stats");
     if (!el) return;
+    const life = this.welcome.querySelector<HTMLElement>("#save-life");
     const d = this.sim.exec({ action: "meta" }).data as {
       highScore: number; totalKills: number; games: number; clears: number;
+      stats?: LifetimeStats;
     };
     el.textContent = d.games > 0
       ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局 · 制霸 ${d.clears}/9`
       : "初入山林 · 祝武运昌隆";
+    if (life) life.textContent = d.games > 0 && d.stats ? lifetimeLine(d.stats) : "";
   }
 
   private buildVictory(): void {
