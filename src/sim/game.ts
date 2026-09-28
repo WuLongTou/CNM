@@ -418,6 +418,8 @@ export class GameSim {
   shopBuff = 0;
   /** R72 攻速祝福（购买时乘入出手冷却）。 */
   shopBuffAsp = 0;
+  /** R127 移速祝福累计（乘法叠加的并行加法口径——预览/复盘展示用）。 */
+  shopBuffSpd = 0;
   /** R90 复盘陈列：本局所购祝福列表（label 去前缀；买过才有）。 */
   runBuffList: string[] = [];
   /** R72 已购祝福系别（三系各限购一次）。 */
@@ -1176,7 +1178,7 @@ export class GameSim {
       const rareMult = slot.buffRare ? CFG.Shop.BuffRareMult : 1; // R89 稀有档效果 ×2
       if (k === "dmg") this.shopBuff += CFG.Shop.BuffDmgBonus * rareMult;
       else if (k === "asp") this.shopBuffAsp += CFG.Shop.BuffAspBonus * rareMult;
-      else this.player.speed *= 1 + CFG.Shop.BuffSpdBonus * rareMult;
+      else { this.shopBuffSpd += CFG.Shop.BuffSpdBonus * rareMult; this.player.speed *= 1 + CFG.Shop.BuffSpdBonus * rareMult; }
       this.buffsBought.add(k);
       this.runBuffList.push(slot.label.replace("香火祝福 · ", ""));
       name = slot.label.replace("香火祝福 · ", "香火祝福生效 · ");

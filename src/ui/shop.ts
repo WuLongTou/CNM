@@ -81,10 +81,11 @@ export class ShopPanel {
     const rareCls = s.buffRare ? " shop-card-rare" : "";
     // R126 祝福购买预览：当前累计 → 购后累计（dmg/asp 可精确计算；spd 为乘法叠加不展示）
     let preview = "";
-    if (s.kind === "buff" && s.buffKind && s.buffKind !== "spd") {
-      const cur = s.buffKind === "dmg" ? this.sim.shopBuff : this.sim.shopBuffAsp;
+    if (s.kind === "buff" && s.buffKind) {
+      const base = s.buffKind === "dmg" ? CFG.Shop.BuffDmgBonus : s.buffKind === "asp" ? CFG.Shop.BuffAspBonus : CFG.Shop.BuffSpdBonus;
+      const cur = s.buffKind === "dmg" ? this.sim.shopBuff : s.buffKind === "asp" ? this.sim.shopBuffAsp : this.sim.shopBuffSpd;
       const rareMult = s.buffRare ? 2 : 1;
-      const after = cur + (s.buffKind === "dmg" ? CFG.Shop.BuffDmgBonus : CFG.Shop.BuffAspBonus) * rareMult;
+      const after = cur + base * rareMult;
       preview = `<span class="uc-preview">（当前 ${Math.round(cur * 100)}% → 购后 ${Math.round(after * 100)}%）</span>`;
     }
     return `<div class="upgrade-card shop-card${rareCls}" data-idx="${i}" role="button" tabindex="0"${afford ? "" : ' style="opacity:0.55"'}>
