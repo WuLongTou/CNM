@@ -4,6 +4,7 @@
 // 数字键与 Esc 均为既有 UI 键，不占用游戏键位（符合模态硬约束）。
 
 import type { GameSim, ShopSlot } from "../sim/game";
+import { CFG } from "../sim/config";
 
 const KIND_TAG: Record<ShopSlot["kind"], string> = {
   weapon: "请武",
@@ -78,10 +79,19 @@ export class ShopPanel {
     const afford = this.sim.coins >= s.price;
     // R90 稀有祝福金字卡面（buffRare 仅祝福槽有）
     const rareCls = s.buffRare ? " shop-card-rare" : "";
+    // R126 祝福购买预览：当前累计 → 购后累计（dmg/asp 可精确计算；spd 为乘法叠加不展示）
+    let preview = "";
+    if (s.kind === "buff" && s.buffKind && s.buffKind !== "spd") {
+      const cur = s.buffKind === "dmg" ? this.sim.shopBuff : this.sim.shopBuffAsp;
+      const rareMult = s.buffRare ? 2 : 1;
+      const after = cur + (s.buffKind === "dmg" ? CFG.Shop.BuffDmgBonus : CFG.Shop.BuffAspBonus) * rareMult;
+      preview = `<span class="uc-preview">（当前 ${Math.round(cur * 100)}% → 购后 ${Math.round(after * 100)}%）</span>`;
+    }
     return `<div class="upgrade-card shop-card${rareCls}" data-idx="${i}" role="button" tabindex="0"${afford ? "" : ' style="opacity:0.55"'}>
       <span class="uc-key">${i + 1}</span>
       <b>${s.label}</b>
       <span class="uc-stat">${KIND_TAG[s.kind]} · ${s.price} 文${afford ? "" : "（香火不足）"}</span>
+      ${preview}
     </div>`;
   }
 
