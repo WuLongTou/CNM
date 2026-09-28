@@ -6,6 +6,7 @@
 // （符合 UI 快捷键硬约束）。
 
 import type { GameSim, UpgradeOffer } from "../sim/game";
+import { bonusOf, UPGRADE_STEP } from "../sim/weapons";
 import { CFG } from "../sim/config";
 
 export class UpgradePanel {
@@ -71,13 +72,26 @@ export class UpgradePanel {
     });
   }
 
+  // R101 数值预览：当前值→新值（乘数类 ×1.15→×1.30；计数/百分比 n→n+1）
+  private previewText(o: UpgradeOffer): string {
+    const w = this.sim.player.weapons[o.weaponIdx];
+    if (!w) return "";
+    const cur = bonusOf(w, o.stat);
+    const step = UPGRADE_STEP[o.stat] ?? 0;
+    if (["dmg", "asp", "rng"].includes(o.stat)) {
+      const c = Math.round((1 + cur) * 100), n = Math.round((1 + cur + step) * 100);
+      return `(${c}% → ${n}%)`;
+    }
+    return `(${cur} → ${cur + step})`;
+  }
+
   // R7 卡片改为 div 包裹（button 不可嵌套）：整卡点击=选择，右下小按钮=放逐
   private cardHtml(o: UpgradeOffer, i: number): string {
     const bq = this.sim.banishesLeft;
     return `<div class="upgrade-card" data-idx="${i}" role="button" tabindex="0">
       <span class="uc-key">${i + 1}</span>
       <b>${o.weaponName}</b>
-      <span class="uc-stat">${o.statName} +</span>
+      <span class="uc-stat">${o.statName} + <i class="uc-preview">${this.previewText(o)}</i></span>
       <button type="button" class="uc-banish" data-banish="${i}"${bq <= 0 ? " disabled" : ""}
         title="放逐此组合（本局不再出现，每局 ${CFG.Upgrade.BanishesPerRun} 次）">放逐<i>${i + 4}</i></button>
     </div>`;
