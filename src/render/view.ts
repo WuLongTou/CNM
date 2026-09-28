@@ -436,6 +436,12 @@ export class GameView {
         color: e.boss ? BLOOD : e.goblin ? 0xffd94d : 0x9a6a10,
       });
     }
+    // R88 香火龛指引：限时消费机会优先展示（纸金圆点 + INK 描边，同小地图语义）
+    for (const sh of sim.shrines) {
+      const s = this.worldToScreen(sh.x, sh.y);
+      if (s.x > -20 && s.x < W + 20 && s.y > -20 && s.y < H + 20) continue;
+      cands.unshift({ d: -1, sx: s.x, sy: s.y, color: 0xe8d5a8 });
+    }
     cands.sort((a, b) => a.d - b.d);
     for (const c of cands.slice(0, 6)) {
       const ang = Math.atan2(c.sy - H / 2, c.sx - W / 2);

@@ -331,6 +331,8 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
       GameSim.exportSave/importSave + 3 条测试（往返一致/兜底）
 - [x] R84 输出主力陈列：结算复盘追加 伤害占比最高武器（R83 统计数据消费端，
       mainWeaponLine 纯函数；总额 0 或零伤省略）；3 条测试
+- [x] R88 香火龛屏外指引：来袭标箭头纳入香火龛（纸金色、优先级最前——限时
+      消费机会），随机远处浮现的龛不再被错过
 - [x] R83 武器伤害统计：dealDamage 累计 dmgDealtTotal 与武器实例归因
       （近战 hitEnemy/弹道 srcWeapon/地雷 srcWeapon/溅射链式透传；甲妖举盾免伤
       不计数、毒 DoT 只计总计）；装备面板每武器显示 伤害 与占比；4 条测试
