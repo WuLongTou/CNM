@@ -5,7 +5,8 @@ import type { GameSim } from "../sim/game";
 import { RECIPES } from "../sim/recipes";
 
 export class CraftingPanel {
-  private el: HTMLElement;
+  /** R122 手柄 pad nav 容器（面板根）。 */
+  readonly el: HTMLElement;
   private listEl!: HTMLElement;
   private invEl!: HTMLElement;
   visible = false;

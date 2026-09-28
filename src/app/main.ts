@@ -411,14 +411,22 @@ async function boot(): Promise<void> {
       const container = pauseMenu.visible ? pauseMenu.el
         : upgrade.visible ? upgrade.el
         : shop.visible ? shop.el
+        : equipment.visible ? equipment.el
+        : crafting.visible ? crafting.el
         : null;
       padNav.sync(container);
       const menu = input.menuRead();
       if (menu.back) {
         if (shop.visible) shop.close();
+        else if (equipment.visible) equipment.toggle(false);
+        else if (crafting.visible) crafting.toggle(false);
         else if (pauseMenu.visible) pauseMenu.toggle(false);
       } else if (menu.reroll && shop.visible) {
         shop.reroll(); // R79 手柄 Y 刷新报价
+      } else if (menu.equip) {
+        equipment.toggle(); // R122 手柄 X 开合装备面板
+      } else if (menu.reroll && !shop.visible) {
+        crafting.toggle(); // R122 手柄 Y（非商店时）开合合成
       } else if (container) {
         padNav.handle(menu);
       }

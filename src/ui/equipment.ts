@@ -5,7 +5,8 @@ import type { GameSim } from "../sim/game";
 import { stageTag, aspectUnlocked, ASPECTS } from "../sim/weapons";
 
 export class EquipmentPanel {
-  private el: HTMLElement;
+  /** R122 手柄 pad nav 容器（面板根）。 */
+  readonly el: HTMLElement;
   private listEl!: HTMLElement;
   private statsEl!: HTMLElement;
   visible = false;
