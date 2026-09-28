@@ -151,6 +151,8 @@ export interface Projectile {
   pierce: number;
   hitIds: Set<number>;
   homing: boolean;
+  /** R83 归因：来源武器实例（伤害统计）。 */
+  srcWeapon?: WeaponInstance;
   splash: number;
   psn: number;
   freeze: number;
@@ -162,6 +164,8 @@ export interface Mine {
   x: number; y: number;
   dmg: number; splash: number; psn: number;
   arm: number;
+  /** R83 归因：来源武器实例（伤害统计）。 */
+  srcWeapon?: WeaponInstance;
 }
 
 export interface Chest {
@@ -351,6 +355,8 @@ export class GameSim {
   round = 1;
   score = 0;
   kills = 0;
+  /** R83 战斗统计：全部来源累计伤害（含毒 DoT 等未归因来源）。 */
+  dmgDealtTotal = 0;
   survivalTime = 0;
   /** 模态面板暂停（装备/帮助等打开时由 UI 层置位；tick 冻结）。 */
   paused = false;
@@ -1603,7 +1609,7 @@ export class GameSim {
         const r = this.rollDamage(effDmg, critC);
         if (dashing) r.dmg *= strike;
         const d = Math.hypot(e.x - p.x, e.y - p.y) || 1;
-        this.hitEnemy(e, r, (e.x - p.x) / d, (e.y - p.y) / d, fxW);
+        this.hitEnemy(e, r, (e.x - p.x) / d, (e.y - p.y) / d, fxW, w);
       }
       this.harvestInRange(range);
     } else if (w.type === "Ranged") {
@@ -1612,13 +1618,13 @@ export class GameSim {
       const n = Math.max(1, (def.spread ?? 1) + bonusOf(w, "multi")) + (dashing ? 1 : 0);
       for (let i = 0; i < n; i++) {
         const a2 = baseAng + (i - (n - 1) / 2) * 0.21; // ±12° 散射
-        this.fireProjectile(a2, 500, range * 1.2, effDmg, critC, strike, fxW);
+        this.fireProjectile(a2, 500, range * 1.2, effDmg, critC, strike, fxW, w);
       }
     } else if (w.type === "Magic") {
       const target = this.nearestEnemies(p.x, p.y, 600 * effRng * this.role.rangeMult, 1)[0];
       const angM = target ? Math.atan2(target.y - p.y, target.x - p.x) : ang;
-      this.fireProjectile(angM, 300, 5, effDmg, critC, strike, fxW);
-      if (dashing) this.fireProjectile(angM + 0.35, 300, 5, effDmg, critC, strike, fxW);
+      this.fireProjectile(angM, 300, 5, effDmg, critC, strike, fxW, w);
+      if (dashing) this.fireProjectile(angM + 0.35, 300, 5, effDmg, critC, strike, fxW, w);
     } else {
       // Mine：原地布雷（FIFO 上限）；冲刺斩溅射 1.5×
       if (this.mines.length >= MAX_MINES) this.mines.shift();
@@ -1628,6 +1634,7 @@ export class GameSim {
         splash: Math.max(60, fxW.splash) * (dashing ? strike : 1),
         psn: fxW.psn,
         arm: 0.4,
+        srcWeapon: w,
       });
     }
     if (hpCost > 0) p.hp = Math.max(1, p.hp - hpCost);
@@ -1672,6 +1679,7 @@ export class GameSim {
     ang: number, speed: number, life: number,
     dmgMult: number, critChance: number, strike: number,
     fx: { splash: number; psn: number; freeze: number; chain: number; pierce: number; homing: boolean },
+    srcWeapon?: WeaponInstance,
   ): void {
     const r = this.rollDamage(dmgMult, critChance);
     this.projectiles.push({
@@ -1682,12 +1690,14 @@ export class GameSim {
       life, pierce: fx.pierce, hitIds: new Set(),
       homing: fx.homing,
       splash: fx.splash, psn: fx.psn, freeze: fx.freeze, chain: fx.chain,
+      srcWeapon,
     });
   }
 
   private hitEnemy(
     e: Enemy, r: { dmg: number; crit: boolean }, ux = 0, uy = 0,
     fx: { splash: number; psn: number; freeze: number; steal?: number } = { splash: 0, psn: 0, freeze: 0 },
+    w?: WeaponInstance,
   ): void {
     const p = this.player;
     this.hitStop.trigger(HITSTOP.HitMs);
@@ -1702,7 +1712,7 @@ export class GameSim {
     }
     this.notifyDamage(e.x, e.y, r.dmg, r.crit);
     if (r.crit) this.hitStop.trigger(HITSTOP.CritMs);
-    this.applyHit(e.x, e.y, e, r.dmg, fx, ux, uy);
+    this.applyHit(e.x, e.y, e, r.dmg, fx, ux, uy, w);
   }
 
   /** 伤害数字回调（暴击给更大字号）。 */
@@ -1738,8 +1748,8 @@ export class GameSim {
           pr.hitIds.add(e.id);
           const sp = Math.hypot(pr.vx, pr.vy) || 1;
           this.applyHit(pr.x, pr.y, e, pr.dmg,
-            { splash: pr.splash, psn: pr.psn, freeze: pr.freeze }, pr.vx / sp, pr.vy / sp);
-          if (pr.chain > 0) this.chainFrom(e, pr.dmg * 0.8, pr.chain, pr.psn, pr.freeze, new Set([e.id]));
+            { splash: pr.splash, psn: pr.psn, freeze: pr.freeze }, pr.vx / sp, pr.vy / sp, pr.srcWeapon);
+          if (pr.chain > 0) this.chainFrom(e, pr.dmg * 0.8, pr.chain, pr.psn, pr.freeze, new Set([e.id]), pr.srcWeapon);
           if (pr.pierce > 0) pr.pierce--;
           else continue outer;
         }
@@ -1750,14 +1760,14 @@ export class GameSim {
   }
 
   /** 链式弹射：从命中目标逐个弹向附近其他妖物，伤害衰减 0.8（ChainDamageDecay）。 */
-  private chainFrom(src: Enemy, dmg: number, chains: number, psn: number, freeze: number, visited: Set<number>): void {
+  private chainFrom(src: Enemy, dmg: number, chains: number, psn: number, freeze: number, visited: Set<number>, w?: WeaponInstance): void {
     let cur = src;
     let d = dmg;
     while (chains-- > 0) {
       const next = this.nearestEnemies(cur.x, cur.y, CHAIN_RANGE, 1, visited)[0];
       if (!next) break;
       visited.add(next.id);
-      this.applyHit(next.x, next.y, next, d, { splash: 0, psn, freeze });
+      this.applyHit(next.x, next.y, next, d, { splash: 0, psn, freeze }, undefined, undefined, w);
       d *= 0.8;
       cur = next;
     }
@@ -1771,7 +1781,7 @@ export class GameSim {
       const trigger = this.enemies.find(
         (e) => (e.x - m.x) ** 2 + (e.y - m.y) ** 2 <= MINE_TRIGGER_RANGE ** 2);
       if (trigger) {
-        this.applyHit(m.x, m.y, trigger, m.dmg, { splash: m.splash, psn: m.psn, freeze: 0 });
+        this.applyHit(m.x, m.y, trigger, m.dmg, { splash: m.splash, psn: m.psn, freeze: 0 }, undefined, undefined, m.srcWeapon);
       } else {
         alive.push(m);
       }
@@ -1793,7 +1803,7 @@ export class GameSim {
   private applyHit(
     x: number, y: number, e: Enemy, dmg: number,
     fx: { splash: number; psn: number; freeze: number; steal?: number },
-    ux?: number, uy?: number,
+    ux?: number, uy?: number, w?: WeaponInstance,
   ): void {
     // 甲妖举盾：完全免疫伤害与异常状态
     if (e.type === EnemyType.Knight && e.blockT > 0) return;
@@ -1805,7 +1815,7 @@ export class GameSim {
     }
     if (ix !== 0 || iy !== 0) this.impact(e, ix, iy);
     this.hitStop.trigger(HITSTOP.HitMs);
-    this.dealDamage(e, dmg);
+    this.dealDamage(e, dmg, w);
     // R77 命中吸血：甲妖举盾免疫时不可吸血（早退在先），回复不超上限
     if (fx.steal && fx.steal > 0) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + fx.steal);
@@ -1820,7 +1830,7 @@ export class GameSim {
     }
     if (fx.splash > 0) {
       for (const o of this.nearestEnemies(x, y, fx.splash, 99)) {
-        if (o.id !== e.id) this.dealDamage(o, dmg * 0.5); // SplashDamageMult
+        if (o.id !== e.id) this.dealDamage(o, dmg * 0.5, w); // SplashDamageMult
       }
     }
   }
@@ -1841,7 +1851,7 @@ export class GameSim {
     }
   }
 
-  private dealDamage(e: Enemy, damage: number): void {
+  private dealDamage(e: Enemy, damage: number, w?: WeaponInstance): void {
     // 甲妖举盾：完全免伤（applyHit 侧还负责免异常状态）
     if (e.type === EnemyType.Knight && e.blockT > 0) return;
     // 铁傀装甲：常驻受伤减免（不吃暴击例外，所有来源一致）
@@ -1852,6 +1862,9 @@ export class GameSim {
       damage -= absorbed;
     }
     e.hp -= damage;
+    // R83 战斗统计：减免后实际伤害（护盾吸收不计）；毒 DoT 等无武器来源只计总计
+    this.dmgDealtTotal += damage;
+    if (w) w.dmgDealt += damage;
     e.hitFlash = 0.16;
     if (e.hp <= 0) this.onEnemyKilled(e);
   }
@@ -2837,6 +2850,7 @@ export class GameSim {
       mutator: this.mutator()?.id ?? null, // R73 当日变异 id（非每日局为 null）
       mutator_clears: this.save.load()?.mutatorClears ?? {}, // R74 历劫进度
       boss_kills: this.bossKills,
+      dmg_dealt_total: this.dmgDealtTotal, // R83 战斗统计
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

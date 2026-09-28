@@ -54,9 +54,13 @@ export class EquipmentPanel {
       const stage = stageTag(w);
       const stageLabel = stage === "ultimate" ? "【终极】" : stage === "ascended" ? "【进阶】" : "";
       const active = i === s.player.weapons.length - 1;
+      // R83 战斗统计：本武器累计伤害与占比（总额 0 时省略）
+      const share = s.dmgDealtTotal > 0
+        ? `<em>伤害 ${Math.round(w.dmgDealt)}（${Math.round((w.dmgDealt / s.dmgDealtTotal) * 100)}%）</em>`
+        : "";
       return `<div class="eq-item ${active ? "active" : ""}">
         <b>${w.name}</b>${stageLabel}<i>${w.type}${active ? " · 当前" : ""}</i>
-        <em>升 ${w.ups} 次</em></div>`;
+        <em>升 ${w.ups} 次</em>${share}</div>`;
     }).join("") || `<div class="eq-item"><i>空手（徒手近战）</i></div>`;
   }
 }

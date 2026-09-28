@@ -121,12 +121,14 @@ export interface WeaponInstance {
   bonus: Partial<Record<UpgradeStat, number>>;
   /** 独立出手冷却（R2 齐射：每把武器各自计时，同时出手）。 */
   cd: number;
+  /** R83 战斗统计：本件武器累计造成的伤害（makeWeapon 初始 0，重开随实例重建）。 */
+  dmgDealt: number;
 }
 
 /** 构造一件武器实例（bonus 空、冷却就绪）。 */
 export function makeWeapon(defId: string): WeaponInstance {
   const def = WEAPON_DATA[defId];
-  return { defId, name: def.name, type: def.type, ups: 0, bonus: {}, cd: 0 };
+  return { defId, name: def.name, type: def.type, ups: 0, bonus: {}, cd: 0, dmgDealt: 0 };
 }
 
 /** 读词条累计值（缺省 0）。 */
