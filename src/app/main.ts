@@ -126,6 +126,7 @@ async function boot(): Promise<void> {
     eventBuffer.push(e);
     const d = e.data as Record<string, string>;
     if (e.event === "weapon_gained") { notify.push(`获得武器：${d.name}`); audio.play("weapon_select"); }
+    else if (e.event === "aspect_switched") { notify.push(`形态切换：${d.name}`); audio.play("weapon_select", { pitch: 1.3 }); }
     else if (e.event === "chest_opened") {
       const elite = (e.data as { elite?: boolean }).elite === true;
       notify.push(elite ? `精英宝箱开启：${d.weapon}（+符箓）` : `宝箱开启：${d.weapon}`);
