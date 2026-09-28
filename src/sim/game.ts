@@ -1444,7 +1444,8 @@ export class GameSim {
     this.round++;
     // R117 越阶奖励：妖潮渐凶的同时补一笔香火（+8×新阶数），风险回报节奏
     // R118 计入香火钱复盘口径（runGoldEarned 与击杀入账同轨）
-    const bonus = 8 * this.round;
+    // R138 受「财神附身」金币 ×2 加成（与击杀入账口径一致）
+    const bonus = 8 * this.round * (this.mutator()?.id === "gold" ? 2 : 1);
     this.coins += bonus;
     this.runGoldEarned += bonus;
     this.emit("threat_tier", { tier: this.round, bonus });
