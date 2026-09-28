@@ -278,6 +278,9 @@ canvas { position: absolute; z-index: 0; }
 /* R76 手柄菜单焦点环：dpad 移动 / A 确认时的高亮描边 */
 .pad-focus { outline: 3px dashed #c0392b !important; outline-offset: 2px; }
 
+/* R90 稀有祝福金字卡面：标题与价格转金（普通卡不动） */
+.shop-card-rare b, .shop-card-rare .uc-stat { color: #a8842c; }
+
 /* R87 成就进度条：纸风 mini 条（血红填充 + 铅笔灰底），table 内随行宽 */
 .ach-bar {
   display: inline-block; vertical-align: middle; width: 72px; height: 7px;

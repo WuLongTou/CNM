@@ -76,7 +76,9 @@ export class ShopPanel {
 
   private cardHtml(s: ShopSlot, i: number): string {
     const afford = this.sim.coins >= s.price;
-    return `<div class="upgrade-card shop-card" data-idx="${i}" role="button" tabindex="0"${afford ? "" : ' style="opacity:0.55"'}>
+    // R90 稀有祝福金字卡面（buffRare 仅祝福槽有）
+    const rareCls = s.buffRare ? " shop-card-rare" : "";
+    return `<div class="upgrade-card shop-card${rareCls}" data-idx="${i}" role="button" tabindex="0"${afford ? "" : ' style="opacity:0.55"'}>
       <span class="uc-key">${i + 1}</span>
       <b>${s.label}</b>
       <span class="uc-stat">${KIND_TAG[s.kind]} · ${s.price} 文${afford ? "" : "（香火不足）"}</span>

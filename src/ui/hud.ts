@@ -527,6 +527,8 @@ export class Hud {
     const gold = s.runGoldSpent > 0 || s.runGoldEarned > 0
       ? ` · 香火钱 +${s.runGoldEarned}/-${s.runGoldSpent}`
       : "";
+    // R90 祝福陈列：本局所购香火祝福（R89 稀有含档位标注）
+    const buffs = s.runBuffList.length > 0 ? ` · 祝福 ${s.runBuffList.join("、")}` : "";
     // R60 连战战报：讨伐妖王数与狂化档位置顶（连战模式的核心战绩）
     const rush = Hud.rushHead(s.bossRush, s.bossRushKills, Math.floor(s.bossRushKills / 3));
     const head = rush ? `${rush} · ` : "";
@@ -536,7 +538,7 @@ export class Hud {
       s.dmgDealtTotal,
     );
     const mainSeg = main ? ` · ${main}` : "";
-    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${mainSeg}`;
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${buffs}${mainSeg}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */

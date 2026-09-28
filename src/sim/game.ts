@@ -409,6 +409,8 @@ export class GameSim {
   shopBuff = 0;
   /** R72 攻速祝福（购买时乘入出手冷却）。 */
   shopBuffAsp = 0;
+  /** R90 复盘陈列：本局所购祝福列表（label 去前缀；买过才有）。 */
+  runBuffList: string[] = [];
   /** R72 已购祝福系别（三系各限购一次）。 */
   private buffsBought = new Set<"dmg" | "asp" | "spd">();
   /** R66 复盘口径：单局购买次数（成就「散财消灾」）。 */
@@ -1166,6 +1168,7 @@ export class GameSim {
       else if (k === "asp") this.shopBuffAsp += CFG.Shop.BuffAspBonus * rareMult;
       else this.player.speed *= 1 + CFG.Shop.BuffSpdBonus * rareMult;
       this.buffsBought.add(k);
+      this.runBuffList.push(slot.label.replace("香火祝福 · ", ""));
       name = slot.label.replace("香火祝福 · ", "香火祝福生效 · ");
     } else {
       const healed = Math.min(CFG.Shop.HealAmount, this.player.maxHp - this.player.hp);
