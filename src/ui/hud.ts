@@ -117,6 +117,8 @@ export class Hud {
   onEndless: (() => void) | null = null;
   /** 分享复制结果反馈（R22；装配层接 notify）。 */
   onShareCopy: ((ok: boolean) => void) | null = null;
+  /** R100 结算屏截图（main 层注入 Pixi extract；下载 PNG）。 */
+  onShareShot: (() => void) | null = null;
 
   constructor(private sim: GameSim, private onStart: () => void, private onRestart: () => void) {
     this.root = document.createElement("div");
@@ -417,6 +419,7 @@ export class Hud {
         <button id="btn-endless" type="button">继续讨伐（无尽）</button>
         <button id="btn-victory-restart" type="button">再来一局</button>
         <button id="btn-victory-share" type="button">复制战绩</button>
+        <button id="btn-victory-shot" type="button">截图分享</button>
         <p class="hint">按 R 再来一局</p>
       </div>`;
     this.root.appendChild(this.victory);
@@ -427,6 +430,8 @@ export class Hud {
     this.victory.querySelector("#btn-endless")!.addEventListener("click", () => this.onEndless?.());
     this.victory.querySelector("#btn-victory-restart")!.addEventListener("click", () => this.onRestart());
     this.victory.querySelector("#btn-victory-share")!.addEventListener("click", () => this.shareRun(true));
+    this.victory.querySelector("#btn-victory-shot")!.addEventListener("click", () => this.onShareShot?.());
+    this.victory.querySelector("#btn-victory-shot")!.addEventListener("click", () => this.onShareShot?.());
   }
 
   private refreshVictory(): void {
@@ -455,6 +460,7 @@ export class Hud {
         <p id="meta-coins" class="sub"></p>
         <button id="btn-restart" type="button">再来一局</button>
         <button id="btn-gameover-share" type="button">复制战绩</button>
+        <button id="btn-gameover-shot" type="button">截图分享</button>
         <p class="hint">按 R 再来一局</p>
       </div>`;
     this.root.appendChild(this.gameover);
@@ -463,6 +469,7 @@ export class Hud {
     this.gameoverAchievements = this.gameover.querySelector("#gameover-achievements")!;
     this.gameover.querySelector("#btn-restart")!.addEventListener("click", () => this.onRestart());
     this.gameover.querySelector("#btn-gameover-share")!.addEventListener("click", () => this.shareRun(false));
+    this.gameover.querySelector("#btn-gameover-shot")!.addEventListener("click", () => this.onShareShot?.());
   }
 
   private fetchMeta(): { coins: number; shop: MetaShopItem[] } {

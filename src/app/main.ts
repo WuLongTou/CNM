@@ -40,6 +40,8 @@ declare global {
       ready: boolean;
       /** 当前画面快照（Pixi extract，JPEG dataURL；scale 为分辨率系数）。 */
       shot: (scale?: number) => string;
+      /** R100 结算屏截图（JPEG dataURL；hud 截图分享按钮用）。 */
+      capture: () => string;
       /** 直接访问 sim 实例（Playwright evaluate 深度断言用）。 */
       sim: GameSim;
       /** 当前渲染帧率（ticker 滚动平均；上限 TARGET_FPS=60）。 */
@@ -89,6 +91,16 @@ async function boot(): Promise<void> {
     audio.playBgm();
   }, () => restart());
   hud.onEndless = () => { sim.exec({ action: "continue" }); audio.playBgm(); notify.push("无尽讨伐 · 妖潮再起"); };
+  // R100 结算屏截图分享：Pixi extract 全屏 JPEG → PNG 下载（share-shot 回调）
+  hud.onShareShot = () => {
+    const canvas = app.renderer.extract.canvas({ target: app.stage, resolution: 1 }) as HTMLCanvasElement;
+    const url = canvas.toDataURL("image/jpeg", 0.85);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `zhanyaolu-${Date.now()}.jpg`;
+    a.click();
+    notify.push("战斗截图已保存");
+  };
   hud.onShareCopy = (ok) => notify.push(ok ? "战绩已复制，去跟同道切磋吧" : "复制失败（浏览器未授权剪贴板）");
   const equipment = new EquipmentPanel(sim);
   const crafting = new CraftingPanel(sim);
@@ -347,6 +359,11 @@ async function boot(): Promise<void> {
     shot(scale = 0.4) {
       const canvas = app.renderer.extract.canvas({ target: app.stage, resolution: scale }) as HTMLCanvasElement;
       return canvas.toDataURL("image/jpeg", 0.7);
+    },
+    /** R100 结算屏截图分享（hud 复用；JPEG dataURL）。 */
+    capture: () => {
+      const canvas = app.renderer.extract.canvas({ target: app.stage, resolution: 1 }) as HTMLCanvasElement;
+      return canvas.toDataURL("image/jpeg", 0.85);
     },
     get sim() { return sim; },
     get fps() { return Math.round(app.ticker.FPS); },
