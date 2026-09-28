@@ -17,12 +17,19 @@ export interface BotResult {
 export interface BotOptions {
   /** Boss Rush 模式（R75）：纯妖王连战，经济曲线度量用。 */
   bossRush?: boolean;
+  /** R131 职业覆盖（默认剑修）；秘密职业需预解锁成就。 */
+  role?: "sword" | "archer" | "mage" | "hermit" | "wusheng";
+  /** R131 预解锁成就 id（秘密职业构造门控用）。 */
+  achievements?: string[];
 }
 
 /** 跑一整局（终局或 tick 上限即停；报价无脑选首项、融合一律拒绝，保证不卡模态）。 */
 export function runBot(seed: number, policy: BotPolicy, maxTicks = 60 * 720, opts: BotOptions = {}): BotResult {
   const save = memoryStorage();
-  const sim = new GameSim(seed, save, "sword", 0, {}, opts.bossRush ? "boss_rush" : "normal");
+  if (opts.achievements?.length) {
+    save.save({ ...save.load()!, achievements: opts.achievements });
+  }
+  const sim = new GameSim(seed, save, opts.role ?? "sword", 0, {}, opts.bossRush ? "boss_rush" : "normal");
   sim.exec({ action: "start" });
   const cx = sim.world.w / 2, cy = sim.world.h / 2;
   let tick = 0;
