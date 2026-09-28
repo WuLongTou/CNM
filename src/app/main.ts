@@ -260,6 +260,7 @@ async function boot(): Promise<void> {
     else if (e.code === "KeyC") uiActions.openEquipment();
     else if (e.code === "KeyI") uiActions.openCrafting();
     else if (e.code === "KeyR") uiActions.quickRestart();
+    else if (e.code === "KeyM") { const muted = audio.toggleMute(); notify.push(muted ? "已静音（M 恢复）" : "声音已恢复"); }
   };
   window.addEventListener("keydown", onKey);
 

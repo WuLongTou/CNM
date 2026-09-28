@@ -123,6 +123,26 @@ export class AudioManager {
     localStorage.setItem(KEY_SFX, String(this.sfxVolume));
   }
 
+  /** R115 一键静音（M 键）：记忆此前双音量再归零；再按恢复。持久化静音标志。 */
+  toggleMute(): boolean {
+    const KEY_MUTE = "zhanyaolu_muted";
+    if (localStorage.getItem(KEY_MUTE) === "1") {
+      localStorage.removeItem(KEY_MUTE);
+      this.setMusicVolume(Number(localStorage.getItem(KEY_MUSIC) ?? 0.5));
+      this.setSfxVolume(Number(localStorage.getItem(KEY_SFX) ?? 0.5));
+      return false; // 已取消静音
+    }
+    localStorage.setItem(KEY_MUTE, "1");
+    this.setMusicVolume(0);
+    this.setSfxVolume(0);
+    return true; // 已静音
+  }
+
+  /** 当前是否处于静音（R115；设置面板滑杆回显用）。 */
+  get muted(): boolean {
+    return localStorage.getItem("zhanyaolu_muted") === "1";
+  }
+
   /** 手势唤醒（R68 浏览器自动播放策略）：ctx 在 boot 无手势期创建会被置为
    *  suspended，必须在用户手势内 resume，否则 BGM/音效全程静音。
    *  运行中调用是无害空操作（幂等），首手势后每次手势重复调用安全。 */

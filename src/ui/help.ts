@@ -97,6 +97,7 @@ export class HelpPanel {
         ["香火龛", "定期浮现 · 走近以金币换机缘（1/2/3 购买 · Esc 离开）"],
         ["装备 / 合成", "C / I"],
         ["帮助 / 暂停", "H / Esc"],
+        ["静音", "M（再按恢复）"],
       ];
     this.bodyEl.innerHTML = `
       <table class="help-table">
