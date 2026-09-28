@@ -30,9 +30,13 @@ export class PauseMenu {
         <h2>暂停</h2>
         <p class="sub" id="pause-stats"></p>
         <p class="sub" id="pause-collection"></p>
-        <label class="vol-row">音量
-          <input id="vol" type="range" min="0" max="100" step="5" />
-          <span id="vol-num"></span>
+        <label class="vol-row">音乐
+          <input id="vol-music" type="range" min="0" max="100" step="5" />
+          <span id="vol-music-num"></span>
+        </label>
+        <label class="vol-row">音效
+          <input id="vol-sfx" type="range" min="0" max="100" step="5" />
+          <span id="vol-sfx-num"></span>
         </label>
         <div class="set-row" role="group" aria-label="表现设置">
           <span class="set-title">表现</span>
@@ -45,14 +49,19 @@ export class PauseMenu {
         <button id="btn-pause-restart" type="button">重新开始</button>
       </div>`;
     document.getElementById("ui-root")!.appendChild(this.el);
-    const vol = this.el.querySelector("#vol") as HTMLInputElement;
-    const num = this.el.querySelector("#vol-num") as HTMLElement;
-    vol.value = String(Math.round(this.audio.volume * 100));
-    num.textContent = vol.value;
-    vol.addEventListener("input", () => {
-      this.audio.setVolume(Number(vol.value) / 100);
-      num.textContent = vol.value;
-    });
+    // R67 音乐/音效双滑杆：各自独立持久化（audio 层 setMusicVolume/setSfxVolume）
+    const wireVol = (inputId: string, numId: string, get: () => number, set: (v: number) => void) => {
+      const input = this.el.querySelector<HTMLInputElement>(`#${inputId}`)!;
+      const num = this.el.querySelector<HTMLElement>(`#${numId}`)!;
+      input.value = String(Math.round(get() * 100));
+      num.textContent = input.value;
+      input.addEventListener("input", () => {
+        set(Number(input.value) / 100);
+        num.textContent = input.value;
+      });
+    };
+    wireVol("vol-music", "vol-music-num", () => this.audio.musicVolume, (v) => this.audio.setMusicVolume(v));
+    wireVol("vol-sfx", "vol-sfx-num", () => this.audio.sfxVolume, (v) => this.audio.setSfxVolume(v));
     // R61 表现设置三开关：鼠标点按切换（不占用任何键位，符合模态硬约束）；
     // 只改写共享 settings 对象并回调，持久化与 view 同步由 app 层做。
     const wireToggle = (id: string, key: keyof VisualSettings, label: string) => {
