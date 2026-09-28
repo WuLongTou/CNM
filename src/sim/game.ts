@@ -213,6 +213,8 @@ export interface ShopSlot {
   stat?: UpgradeStat;
   /** buff 槽：祝福系别（R72 三系各限购一次）。 */
   buffKind?: "dmg" | "asp" | "spd";
+  /** R89 稀有档：稀有祝福效果 ×2、价格 ×2.5（约 40% 出率）。 */
+  buffRare?: boolean;
 }
 
 /** 香火龛（R65）：场上可交互实体，贴近开报价。 */
@@ -1085,16 +1087,21 @@ export class GameSim {
         : []),
       { kind: "heal", price: price(CFG.Shop.PriceHeal), label: `调息回复 ${CFG.Shop.HealAmount} 生命` },
       ...(() => {
-        // R72 三系祝福随机出一系（各限购一次，购过的不再出现）
+        // R72 三系祝福随机出一系（各限购一次，购过的不再出现）；
+        // R89 稀有分层：约 40% 出稀有档（效果 ×BuffRareMult、价格 ×BuffRarePriceMult）
         const pool = (["dmg", "asp", "spd"] as const).filter((k) => !this.buffsBought.has(k));
         if (pool.length === 0) return [];
         const k = pool[this.rng.int(0, pool.length - 1)];
-        const label = k === "dmg"
-          ? `香火祝福 · 本局伤害 +${Math.round(CFG.Shop.BuffDmgBonus * 100)}%`
-          : k === "asp"
-            ? `香火祝福 · 本局攻速 +${Math.round(CFG.Shop.BuffAspBonus * 100)}%`
-            : `香火祝福 · 本局移速 +${Math.round(CFG.Shop.BuffSpdBonus * 100)}%`;
-        return [{ kind: "buff" as const, price: price(CFG.Shop.PriceBuff), label, buffKind: k }];
+        const rare = this.rng.chance(0.4);
+        const mult = rare ? CFG.Shop.BuffRareMult : 1;
+        const base = k === "dmg" ? CFG.Shop.BuffDmgBonus : k === "asp" ? CFG.Shop.BuffAspBonus : CFG.Shop.BuffSpdBonus;
+        const pct = Math.round(base * mult * 100);
+        const label = `香火祝福 · 本局${k === "dmg" ? "伤害" : k === "asp" ? "攻速" : "移速"} +${pct}%${rare ? "（稀有）" : ""}`;
+        return [{
+          kind: "buff" as const,
+          price: price(Math.floor(CFG.Shop.PriceBuff * (rare ? CFG.Shop.BuffRarePriceMult : 1))),
+          label, buffKind: k, buffRare: rare,
+        }];
       })(),
     ];
   }
@@ -1154,9 +1161,10 @@ export class GameSim {
       name = String(this.applyUpgrade(slot.weaponIdx!, slot.stat!).name);
     } else if (slot.kind === "buff") {
       const k = slot.buffKind ?? "dmg";
-      if (k === "dmg") this.shopBuff += CFG.Shop.BuffDmgBonus;
-      else if (k === "asp") this.shopBuffAsp += CFG.Shop.BuffAspBonus;
-      else this.player.speed *= 1 + CFG.Shop.BuffSpdBonus;
+      const rareMult = slot.buffRare ? CFG.Shop.BuffRareMult : 1; // R89 稀有档效果 ×2
+      if (k === "dmg") this.shopBuff += CFG.Shop.BuffDmgBonus * rareMult;
+      else if (k === "asp") this.shopBuffAsp += CFG.Shop.BuffAspBonus * rareMult;
+      else this.player.speed *= 1 + CFG.Shop.BuffSpdBonus * rareMult;
       this.buffsBought.add(k);
       name = slot.label.replace("香火祝福 · ", "香火祝福生效 · ");
     } else {

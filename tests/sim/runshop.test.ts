@@ -244,7 +244,7 @@ describe("R69 庙会开市", () => {
   }
   const baseOf = (kind: string) => kind === "weapon" ? CFG.Shop.PriceWeapon
     : kind === "upgrade" ? CFG.Shop.PriceUpgrade
-    : kind === "buff" ? CFG.Shop.PriceBuff
+    : kind === "buff" ? Math.floor(CFG.Shop.PriceBuff * CFG.Shop.BuffRarePriceMult) // R89：祝福槽可能出稀有档（120×2.5=300）
     : CFG.Shop.PriceHeal;
 
   it("轮转第 5 事件为庙会：tally 计数，窗口内开龛半价", () => {
@@ -255,7 +255,9 @@ describe("R69 庙会开市", () => {
     expect((sim as unknown as { marketTimer: number }).marketTimer).toBeGreaterThan(0);
     openShopAt(sim);
     for (const s of sim.shopOffer!) {
-      expect(s.price).toBe(Math.floor(baseOf(s.kind) * CFG.Events.MarketDiscount));
+      // R89：祝福槽基价按自身稀有档（普通 120 / 稀有 300）
+      const base = s.kind === "buff" ? (s.buffRare ? CFG.Shop.PriceBuff * CFG.Shop.BuffRarePriceMult : CFG.Shop.PriceBuff) : baseOf(s.kind);
+      expect(s.price).toBe(Math.floor(base * CFG.Events.MarketDiscount));
     }
   });
 

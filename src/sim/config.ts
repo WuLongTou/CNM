@@ -42,11 +42,13 @@ export const CFG = {
     PriceUpgrade: 60, // 符箓槽基价
     PriceHeal: 40, // 调息槽基价
     HealAmount: 40, // 调息回复量
-    PriceBuff: 120, // 香火祝福槽基价（R66）
+    PriceBuff: 120, // 香火祝福槽基价·普通档（R66；R89 稀有档 ×2.5）
     PriceReroll: 20, // R78 刷新报价基价（随通胀倍乘）
-    BuffDmgBonus: 0.15, // 香火祝福：本局全局伤害加成（R66，每局一次）
-    BuffAspBonus: 0.12, // 香火祝福：本局攻速加成（R72 三系化，各限一次）
-    BuffSpdBonus: 0.08, // 香火祝福：本局移速加成（R72 三系化，各限一次）
+    BuffDmgBonus: 0.15, // 香火祝福·普通：本局全局伤害加成（R66，每局一次）
+    BuffAspBonus: 0.12, // 香火祝福·普通：本局攻速加成（R72 三系化，各限一次）
+    BuffSpdBonus: 0.08, // 香火祝福·普通：本局移速加成（R72 三系化，各限一次）
+    BuffRareMult: 2, // R89 稀有档：效果 ×2、价格 ×2.5（约 40% 出率）
+    BuffRarePriceMult: 2.5,
     EscalateMult: 1.35, // 每次购买后全场基价倍乘（通胀逼取舍）
   },
 
