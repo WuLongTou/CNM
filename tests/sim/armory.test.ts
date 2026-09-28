@@ -41,6 +41,6 @@ describe("R30 武器藏珍", () => {
     sim.giveWeapon(ALL_WEAPONS[ALL_WEAPONS.length - 1]);
     sim.tick();
     expect(sim.achievements.unlocked.has("curator")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(32); // R47 妖王猎手
+    expect(ACHIEVEMENTS.length).toBe(33); // R47 妖王猎手
   });
 });

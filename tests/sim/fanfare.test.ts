@@ -39,7 +39,7 @@ describe("R24 处决播报", () => {
     punch(sim, 100);
     sim.tick();
     expect(sim.achievements.unlocked.has("combo_100")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(32); // R47 妖王猎手
+    expect(ACHIEVEMENTS.length).toBe(33); // R47 妖王猎手
   });
 
   it("精英首杀播报一次；妖王不算", () => {

@@ -326,6 +326,9 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R110 无伤通关成就「铁壁」（第 33 项）：hurtPlayer 累计 damageTakenRun
+      （妖物来源，自伤 hpCost/无敌帧/完美闪避不计）；onVictory 直授（0 伤通关）；
+      status 回报 damage_taken_run；4 条测试
 - [x] R109 武器图鉴形态入鉴：持有武器行追加 形态贰·名（升 3 次解锁）：描述
       ——知识可查阅性闭环（纯渲染轮）
 - [x] R108 形态切换反馈：aspect_switched 路由 通知条+weapon_select 高 pitch

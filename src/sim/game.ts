@@ -366,6 +366,8 @@ export class GameSim {
   dmgDealtTotal = 0;
   /** R99 本局结算后的每日连胜天数（欢迎页/status 展示）。 */
   dailyStreakCount = 0;
+  /** R110 本局承受的妖物来源伤害（无伤通关成就口径）。 */
+  damageTakenRun = 0;
   survivalTime = 0;
   /** 模态面板暂停（装备/帮助等打开时由 UI 层置位；tick 冻结）。 */
   paused = false;
@@ -1578,6 +1580,7 @@ export class GameSim {
     const p = this.player;
     if (p.dead || this.tryPerfectDodge() || p.invincible > 0) return false;
     p.hp -= dmg;
+    this.damageTakenRun += dmg; // R110 无伤统计（妖物来源，自伤 hpCost 不计）
     p.invincible = CFG.Player.InvincibleDuration;
     for (const cb of this.onPlayerHurt) cb(p.hp);
     if (p.hp <= 0) {
@@ -2017,6 +2020,8 @@ export class GameSim {
     if (PACT_IDS.every((id) => this.pactTier(id) >= 1)) this.achievements.grant("oathbound"); // R70：任一档位即算立誓
     // R71 三誓满档通关（热量式最高目标；终局直授同上）
     if (PACT_IDS.every((id) => this.pactTier(id) === PACT_MAX_TIER)) this.achievements.grant("heat_max");
+    // R110 无伤通关「铁壁」（终局直授；tick 停摆走判定够不着）
+    if (this.damageTakenRun === 0) this.achievements.grant("flawless");
     // R74 每日变异通关收集：仅当日种子局计入（注入的变异在非每日局不生效也不计；
     // 五变异各通一次授「历劫全域」）
     const mut = this.mutator();
@@ -2939,6 +2944,7 @@ export class GameSim {
         return d?.dailyStreak?.last === dailyKey() ? d.dailyStreak.count : 0;
       })(), // R99 连胜天数（当日有效）
       run_history: this.save.load()?.runHistory ?? [], // R102 本地战绩
+      damage_taken_run: this.damageTakenRun, // R110 无伤口径
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

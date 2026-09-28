@@ -25,8 +25,8 @@ const state = (over: Partial<AchievementState> = {}): AchievementState => ({
 });
 
 describe("R81 成就进度", () => {
-  it("数据表：32 项、goal 与 check 恰二选一", () => {
-    expect(ACHIEVEMENTS).toHaveLength(32);
+  it("数据表：33 项、goal 与 check 恰二选一", () => {
+    expect(ACHIEVEMENTS).toHaveLength(33);
     for (const a of ACHIEVEMENTS) {
       expect(!!a.goal !== !!a.check).toBe(true); // 恰一
       if (a.goal) expect(a.goal.target).toBeGreaterThan(0);
