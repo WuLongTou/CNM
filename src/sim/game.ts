@@ -9,7 +9,7 @@ import {
 import { defaultSave, defaultStats, normalizeSave, type SaveData, type SaveStorage } from "./save";
 import {
   WEAPON_DATA, stageMult, stageTag, UPGRADE_POOL, UPGRADE_STEP, validStats, bonusOf, makeWeapon,
-  FUSION_RECIPES,
+  FUSION_RECIPES, aspectDef, aspectUnlocked, ASPECTS,
   type AttackType, type UpgradeStat, type WeaponInstance,
 } from "./weapons";
 import { Inventory, type Material } from "./inventory";
@@ -654,7 +654,7 @@ export class GameSim {
     };
     const ws = this.player.weapons;
     ws.forEach((w, i) => {
-      const def = WEAPON_DATA[w.defId];
+      const def = aspectDef(w);
       const mult = stageMult(w);
       const effDmg = (def.dmg ?? 1) * mult * (1 + bonusOf(w, "dmg"));
       const effAsp = (def.asp ?? 1) * (1 + bonusOf(w, "asp"));
@@ -1593,7 +1593,7 @@ export class GameSim {
    *  扇形判定 + 出手突进；远程/魔法保持自动索敌。 */
   private fireWeapon(w: WeaponInstance): void {
     const p = this.player;
-    const def = WEAPON_DATA[w.defId];
+    const def = aspectDef(w);
     const mult = stageMult(w);
     // R66 香火祝福：本局全局伤害加成（齐射/弹道/地雷全部流经此 effDmg 单点）
     const effDmg = (def.dmg ?? 1) * mult * (1 + bonusOf(w, "dmg"))
@@ -2911,6 +2911,15 @@ export class GameSim {
   }
 
   // ── 观测快照 ────────────────────────────────────────────
+
+  /** R105 形态切换：进阶（ups≥3）解锁；切返回是否生效（门控拒绝/无形态表 false）。 */
+  toggleAspect(idx: number): boolean {
+    const w = this.player.weapons[idx];
+    if (!w || !aspectUnlocked(w) || !ASPECTS[w.defId]) return false;
+    w.aspect = w.aspect === 1 ? 0 : 1;
+    this.emit("aspect_switched", { name: aspectDef(w).name });
+    return true;
+  }
 
   status(): Record<string, unknown> {
     return {

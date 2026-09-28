@@ -2,7 +2,7 @@
 // 快捷键约束：仅用 C（toggle_equipment 游戏键）开合，面板内纯鼠标操作。
 
 import type { GameSim } from "../sim/game";
-import { stageTag } from "../sim/weapons";
+import { stageTag, aspectUnlocked, ASPECTS } from "../sim/weapons";
 
 export class EquipmentPanel {
   private el: HTMLElement;
@@ -22,6 +22,14 @@ export class EquipmentPanel {
       </div>`;
     document.getElementById("ui-root")!.appendChild(this.el);
     this.listEl = this.el.querySelector("#eq-list")!;
+    // R105 形态切换：事件委托（卡片列表重绘不重复绑定）
+    this.listEl.addEventListener("click", (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>(".eq-aspect");
+      if (!btn) return;
+      const idx = Number(btn.dataset.idx);
+      this.sim.toggleAspect(idx);
+      this.refresh();
+    });
     this.statsEl = this.el.querySelector("#eq-stats")!;
     this.el.addEventListener("click", () => this.toggle(false));
   }
@@ -58,9 +66,13 @@ export class EquipmentPanel {
       const share = s.dmgDealtTotal > 0
         ? `<em>伤害 ${Math.round(w.dmgDealt)}（${Math.round((w.dmgDealt / s.dmgDealtTotal) * 100)}%）</em>`
         : "";
+      // R105 形态切换：进阶解锁且有形态表的武器显示按钮（事件委托 bind 一次）
+      const aspectBtn = aspectUnlocked(w) && ASPECTS[w.defId]
+        ? `<button type="button" class="eq-aspect" data-idx="${i}">形态：${w.aspect === 1 ? ASPECTS[w.defId].name : "本形"}</button>`
+        : "";
       return `<div class="eq-item ${active ? "active" : ""}">
         <b>${w.name}</b>${stageLabel}<i>${w.type}${active ? " · 当前" : ""}</i>
-        <em>升 ${w.ups} 次</em>${share}</div>`;
+        <em>升 ${w.ups} 次</em>${aspectBtn}${share}</div>`;
     }).join("") || `<div class="eq-item"><i>空手（徒手近战）</i></div>`;
   }
 }

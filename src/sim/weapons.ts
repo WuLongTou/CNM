@@ -127,12 +127,34 @@ export interface WeaponInstance {
   cd: number;
   /** R83 战斗统计：本件武器累计造成的伤害（makeWeapon 初始 0，重开随实例重建）。 */
   dmgDealt: number;
+  /** R105 形态（Hades aspects）：0=本形 1=形态贰（进阶解锁切换）。 */
+  aspect: number;
+}
+
+/** R105 形态表：进阶（ups≥3）解锁形态贰——alt 数值覆盖（未列字段继承本形）。 */
+export const ASPECTS: Record<string, { name: string; desc: string; stats: Partial<WeaponDef> }> = {
+  tiejian: { name: "影袭", desc: "弃稳求快：伤害降、攻速翻倍", stats: { dmg: 0.7, asp: 1.5 } },
+  gongjian: { name: "连弩", desc: "速射化：伤害降、攻速升", stats: { dmg: 0.8, asp: 1.3 } },
+  dileifazhang: { name: "引雷", desc: "链状加深：弹速降、链 +1", stats: { asp: 0.8, chain: 1 } },
+};
+
+/** R105 形态生效面板：aspect=1 时以形态表覆盖本形（未列字段继承）。 */
+export function aspectDef(w: WeaponInstance): WeaponDef {
+  const base = WEAPON_DATA[w.defId];
+  const asp = ASPECTS[w.defId];
+  if (w.aspect !== 1 || !asp) return base;
+  return { ...base, ...asp.stats, name: base.name + "·" + asp.name };
+}
+
+/** R105 形态切换门控：进阶（ups≥ASCEND_AT）解锁。 */
+export function aspectUnlocked(w: WeaponInstance): boolean {
+  return w.ups >= ASCEND_AT;
 }
 
 /** 构造一件武器实例（bonus 空、冷却就绪）。 */
 export function makeWeapon(defId: string): WeaponInstance {
   const def = WEAPON_DATA[defId];
-  return { defId, name: def.name, type: def.type, ups: 0, bonus: {}, cd: 0, dmgDealt: 0 };
+  return { defId, name: def.name, type: def.type, ups: 0, bonus: {}, cd: 0, dmgDealt: 0, aspect: 0 };
 }
 
 /** 读词条累计值（缺省 0）。 */
