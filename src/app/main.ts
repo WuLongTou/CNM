@@ -403,6 +403,13 @@ async function boot(): Promise<void> {
       } else if (container) {
         padNav.handle(menu);
       }
+    } else if (sim.state === "GameOver" || sim.state === "Victory") {
+      // R80 结算屏手柄「再来一局」：dpad 移动焦点、A 点击（quickRestart 语义同 R 键）
+      const panel = sim.state === "GameOver" ? hud.gameover : hud.victory;
+      padNav.sync(panel);
+      const menu = input.menuRead();
+      if (menu.confirm) padNav.handle(menu); // A 点击焦点按钮（再来一局）
+      else if (menu.up || menu.down || menu.left || menu.right) padNav.handle(menu);
     } else {
       padNav.detach();
     }

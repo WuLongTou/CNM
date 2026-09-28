@@ -160,9 +160,11 @@ export class Hud {
   }
 
   private welcome!: HTMLElement;
-  private gameover!: HTMLElement;
   private gameoverStats!: HTMLElement;
-  private victory!: HTMLElement;
+  /** 结算屏根（R80 手柄「再来一局」导航容器；buildGameOver 懒构建赋值）。 */
+  gameover!: HTMLElement;
+  /** 胜利结算屏根（R80 手柄「再来一局」导航容器；buildVictory 懒构建赋值）。 */
+  victory!: HTMLElement;
   private victoryStats!: HTMLElement;
   private victoryDebrief!: HTMLElement;
   private victoryCoins!: HTMLElement;
