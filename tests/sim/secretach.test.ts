@@ -14,8 +14,13 @@ const victory = (sim: GameSim) =>
   (sim as unknown as { onVictory(): number }).onVictory();
 
 describe("R134 秘密职业专属成就", () => {
+<<<<<<< HEAD
   it("表 39 项：hermit_win/wusheng_win check 型且入荣誉集", () => {
     expect(ACHIEVEMENTS).toHaveLength(39);
+=======
+  it("表 42 项：hermit_win/wusheng_win check 型且入荣誉集", () => {
+    expect(ACHIEVEMENTS).toHaveLength(42);
+>>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
     for (const id of ["hermit_win", "wusheng_win"]) {
       const a = ACHIEVEMENTS.find((x) => x.id === id)!;
       expect(a.check).toBeTruthy();

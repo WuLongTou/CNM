@@ -33,8 +33,13 @@ describe("R110 无伤通关「铁壁」", () => {
     expect(sim.achievements.unlocked.has("flawless")).toBe(false);
   });
 
+<<<<<<< HEAD
   it("成就表 39 项：铁壁 check 型（终局直授）", () => {
     expect(ACHIEVEMENTS).toHaveLength(39);
+=======
+  it("成就表 42 项：铁壁 check 型（终局直授）", () => {
+    expect(ACHIEVEMENTS).toHaveLength(42);
+>>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
     const a = ACHIEVEMENTS.find((x) => x.id === "flawless")!;
     expect(a.check).toBeTruthy();
     expect(a.goal).toBeUndefined();

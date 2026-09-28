@@ -39,7 +39,11 @@ describe("R32 融合图鉴", () => {
     (sim as unknown as { runFused: Set<string> }).runFused.add(ALL_RESULTS[ALL_RESULTS.length - 1]);
     sim.tick();
     expect(sim.achievements.unlocked.has("fusion_master")).toBe(true);
+<<<<<<< HEAD
     expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
+=======
+    expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
+>>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 
   it("死亡结算也入库；老存档缺字段兼容", () => {

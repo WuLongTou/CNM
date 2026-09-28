@@ -39,7 +39,11 @@ describe("R24 处决播报", () => {
     punch(sim, 100);
     sim.tick();
     expect(sim.achievements.unlocked.has("combo_100")).toBe(true);
+<<<<<<< HEAD
     expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
+=======
+    expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
+>>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 
   it("精英首杀播报一次；妖王不算", () => {

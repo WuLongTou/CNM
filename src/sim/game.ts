@@ -2034,6 +2034,8 @@ export class GameSim {
     if (this.damageTakenRun <= 200) this.achievements.grant("bulwark");
     if (this.runGoldEarned >= 800) this.achievements.grant("windfall");
     if (this.runGoldSpent === 0) this.achievements.grant("emptyhands");
+    // R135 满级宗师：持终极阶段武器通关（stageTag ultimate 口径）
+    if (this.player.weapons.some((w) => stageTag(w) === "ultimate")) this.achievements.grant("ultmaster");
     // R132 三花聚顶：单局集齐三系祝福并通关
     if (this.buffsBought.size >= 3) this.achievements.grant("three_buffs");
     // R134 秘密职业专属：鼓励游玩隐士/武圣

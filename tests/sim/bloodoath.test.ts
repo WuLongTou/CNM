@@ -82,7 +82,11 @@ describe("R25 血誓契约", () => {
     expect(sim.setPacts([]).applied).toBe(false);
     (sim as unknown as { onVictory(): number }).onVictory();
     expect(sim.achievements.unlocked.has("oathbound")).toBe(true);
+<<<<<<< HEAD
     expect(ACHIEVEMENTS.length).toBe(39); // R47 妖王猎手
+=======
+    expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
+>>>>>>> 5a48984 (新增(游戏性): R135 成就谱系第三轮——万妖斩/雷劫余威/满级宗师)
   });
 
   it("PACTS 表自洽：三誓名与文案乘数一致（R70 起一档数值即旧值）", () => {
