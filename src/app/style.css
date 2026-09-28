@@ -278,6 +278,12 @@ canvas { position: absolute; z-index: 0; }
 /* R76 手柄菜单焦点环：dpad 移动 / A 确认时的高亮描边 */
 .pad-focus { outline: 3px dashed #c0392b !important; outline-offset: 2px; }
 
+/* R86 存档备份行：小按钮 + 反馈提示（铅笔灰，不与主按钮抢眼） */
+.backup-row { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.backup-row button { font-size: 12px; padding: 3px 10px; color: #332e29; background: #e6dcc4; border: 1.5px solid #6b6154; border-radius: 3px 5px 3px 4px; cursor: pointer; }
+.backup-row button:hover { background: #d94a3a; color: #f5eede; border-color: #332e29; }
+.backup-hint { color: #8a8175; font-size: 12px; }
+
 /* R61 表现设置三开关：纸签小按钮排，关=灰隐线稿 */
 .set-row { display: flex; align-items: center; gap: 8px; justify-content: center; margin-bottom: 14px; }
 .set-row .set-title { color: #8a8175; font-size: 13px; letter-spacing: 0.2em; }

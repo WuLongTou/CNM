@@ -326,6 +326,9 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R86 存档导出/导入：欢迎页 备份行 导出 JSON 下载 / 导入文件校验覆写
+      （normalizeSave 兜底损坏与缺字段）——web 存档易失（清缓存即丢）的保险；
+      GameSim.exportSave/importSave + 3 条测试（往返一致/兜底）
 - [x] R84 输出主力陈列：结算复盘追加 伤害占比最高武器（R83 统计数据消费端，
       mainWeaponLine 纯函数；总额 0 或零伤省略）；3 条测试
 - [x] R83 武器伤害统计：dealDamage 累计 dmgDealtTotal 与武器实例归因

@@ -6,7 +6,7 @@ import { Rng } from "./rng";
 import {
   CFG, ENEMY_NAMES, ENEMY_SCORE, ENEMY_STATS, SPAWN_TABLE, EnemyType,
 } from "./config";
-import { defaultSave, defaultStats, type SaveData, type SaveStorage } from "./save";
+import { defaultSave, defaultStats, normalizeSave, type SaveData, type SaveStorage } from "./save";
 import {
   WEAPON_DATA, stageMult, stageTag, UPGRADE_POOL, UPGRADE_STEP, validStats, bonusOf, makeWeapon,
   FUSION_RECIPES,
@@ -460,6 +460,16 @@ export class GameSim {
 
   private rng: Rng;
   private save: SaveStorage;
+
+  /** R86 存档导出：当前存档快照（欢迎页备份按钮用）。 */
+  exportSave(): SaveData {
+    return this.save.load() ?? defaultSave();
+  }
+
+  /** R86 存档导入：归一化校验后覆写本地存档（损坏/未知字段由 normalizeSave 兜底）。 */
+  importSave(data: Partial<SaveData>): void {
+    this.save.save(normalizeSave(data));
+  }
   private nextId = 1;
   private spawnCd = 0;
   roundTimer = 0;

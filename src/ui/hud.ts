@@ -188,6 +188,12 @@ export class Hud {
         <div class="pact-row" id="pact-row"></div>
         <p id="save-stats" class="sub"></p>
         <p id="save-life" class="sub"></p>
+        <p class="sub backup-row">
+          <button id="btn-export-save" type="button">导出存档</button>
+          <button id="btn-import-save" type="button">导入存档</button>
+          <input id="import-save-file" type="file" accept=".json,application/json" hidden />
+          <span id="backup-hint" class="backup-hint"></span>
+        </p>
         <p class="sub seed-row">种子 <span id="seed-now"></span> · 自定 <input id="seed-input" type="text" inputmode="numeric" placeholder="留空随机" />（填入则下局用该种子，可复现）</p>
         <p class="sub daily-row">今日妖潮 · 种子 <span id="daily-seed"></span><span id="daily-best"></span> <button id="btn-daily" type="button">挑战今日</button> <button id="btn-boss-rush" type="button">Boss 连战</button><span id="rush-best"></span></p>
         <button id="btn-start" type="button">开始游戏</button>
@@ -212,6 +218,32 @@ export class Hud {
       // R44 Boss 连战：一键进入妖王轮战（职业/难度/血誓照常，血誓加难结算更肥）
       this.pendingBossRush = true;
       this.onStart();
+    });
+    // R86 存档备份：导出下载 JSON / 导入文件校验覆写（web 存档易失的保险）
+    const hint = this.welcome.querySelector<HTMLElement>("#backup-hint")!;
+    this.welcome.querySelector("#btn-export-save")!.addEventListener("click", () => {
+      const json = JSON.stringify(this.sim.exportSave());
+      const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `zhanyaolu-save-${dailyKey()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      hint.textContent = "存档已下载";
+    });
+    const fileInput = this.welcome.querySelector<HTMLInputElement>("#import-save-file")!;
+    this.welcome.querySelector("#btn-import-save")!.addEventListener("click", () => fileInput.click());
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files?.[0];
+      if (!f) return;
+      f.text()
+        .then((t) => this.sim.importSave(JSON.parse(t)))
+        .then(() => {
+          hint.textContent = "存档已导入";
+          this.refreshSaveStats();
+        })
+        .catch(() => { hint.textContent = "导入失败：文件不是有效存档"; });
+      fileInput.value = "";
     });
   }
 
