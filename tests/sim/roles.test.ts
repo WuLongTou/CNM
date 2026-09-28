@@ -115,8 +115,8 @@ describe("R3 开局职业", () => {
       list: Array<{ id: string; name: string; passive: string; weapon: string }>;
     };
     expect(roles.current).toBe("sword");
-    expect(roles.list).toHaveLength(3);
-    expect(roles.list.map((r) => r.id)).toEqual(["sword", "archer", "mage"]);
+    expect(roles.list).toHaveLength(4); // R123 +隐士
+    expect(roles.list.map((r) => r.id)).toEqual(["sword", "archer", "mage", "hermit"]);
     for (const r of roles.list) {
       expect(r.passive.length).toBeGreaterThan(0);
       expect(r.weapon.length).toBeGreaterThan(0);

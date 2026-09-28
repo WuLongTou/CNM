@@ -3,7 +3,7 @@
 // 被动量级 ≈ 1 级符箓词条（dmg +0.15 / asp +0.1 / rng +0.12），不碾压局内成长线。
 // 玩家外观无需新增资产：M13 起外观随武器类型切换，职业决定起手武器即决定外观。
 
-export type RoleId = "sword" | "archer" | "mage";
+export type RoleId = "sword" | "archer" | "mage" | "hermit";
 
 export interface RoleDef {
   id: RoleId;
@@ -46,6 +46,13 @@ export const ROLES: Record<RoleId, RoleDef> = {
     passive: "范围 +20% · 拾取半径 +50%", startWeapon: "fazhang",
     dmgMult: 1, aspdMult: 1, rangeMult: 1.2, dashCdMult: 1, pickMult: 1.5,
     unlockAchievement: "boss_slayer",
+  },
+  // R123 秘密职业：无伤大师的孤注一掷（铁壁解锁；高风险高回报玻璃大炮）
+  hermit: {
+    id: "hermit", name: "隐士", desc: "无伤大师的孤注一掷",
+    passive: "伤害 +30% · 拾取半径 +30% · 攻速 -10%", startWeapon: "leidianfazhang",
+    dmgMult: 1.3, aspdMult: 0.9, rangeMult: 1, dashCdMult: 1, pickMult: 1.3,
+    unlockAchievement: "flawless",
   },
 };
 
