@@ -33,8 +33,8 @@ describe("R110 无伤通关「铁壁」", () => {
     expect(sim.achievements.unlocked.has("flawless")).toBe(false);
   });
 
-  it("成就表 36 项：铁壁 check 型（终局直授）", () => {
-    expect(ACHIEVEMENTS).toHaveLength(36);
+  it("成就表 37 项：铁壁 check 型（终局直授）", () => {
+    expect(ACHIEVEMENTS).toHaveLength(37);
     const a = ACHIEVEMENTS.find((x) => x.id === "flawless")!;
     expect(a.check).toBeTruthy();
     expect(a.goal).toBeUndefined();

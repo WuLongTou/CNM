@@ -422,8 +422,8 @@ export class GameSim {
   shopBuffSpd = 0;
   /** R90 复盘陈列：本局所购祝福列表（label 去前缀；买过才有）。 */
   runBuffList: string[] = [];
-  /** R72 已购祝福系别（三系各限购一次）。 */
-  private buffsBought = new Set<"dmg" | "asp" | "spd">();
+  /** R72 已购祝福系别（三系各限购一次）；R132 公开只读（三花聚顶判定用）。 */
+  readonly buffsBought = new Set<"dmg" | "asp" | "spd">();
   /** R66 复盘口径：单局购买次数（成就「散财消灾」）。 */
   shopPurchases = 0;
   /** R66 复盘口径：单局香火钱收入/支出。 */
@@ -2034,6 +2034,8 @@ export class GameSim {
     if (this.damageTakenRun <= 200) this.achievements.grant("bulwark");
     if (this.runGoldEarned >= 800) this.achievements.grant("windfall");
     if (this.runGoldSpent === 0) this.achievements.grant("emptyhands");
+    // R132 三花聚顶：单局集齐三系祝福并通关
+    if (this.buffsBought.size >= 3) this.achievements.grant("three_buffs");
     // R74 每日变异通关收集：仅当日种子局计入（注入的变异在非每日局不生效也不计；
     // 五变异各通一次授「历劫全域」）
     const mut = this.mutator();

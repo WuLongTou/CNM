@@ -99,6 +99,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "bulwark", name: "铜墙铁壁", desc: "承伤不超过 200 通关一次", group: "征伐", check: () => false },
   { id: "windfall", name: "香火盈门", desc: "单局香火收入达 800 通关", group: "征伐", check: () => false },
   { id: "emptyhands", name: "两手空空", desc: "不花一文香火通关", group: "征伐", check: () => false },
+  { id: "three_buffs", name: "三花聚顶", desc: "单局集齐三系香火祝福并通关", group: "征伐", check: () => false },
   { id: "arsenal", name: "六械齐备", desc: "单局集齐 6 件武器", group: "技艺", goal: { stat: "weaponCount", target: 6 } },
   { id: "goblin_slayer", name: "宝中取宝", desc: "讨伐一只宝妖", group: "技艺", goal: { stat: "goblinKills", target: 1 } },
   { id: "incense_5", name: "散财消灾", desc: "单局在香火龛消费 5 次", group: "技艺", goal: { stat: "shopPurchases", target: 5 } },
