@@ -6,7 +6,7 @@ import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES } from "../sim/weapons";
-import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS } from "../sim/achievements";
+import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS, achievementProgress } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
 import { FOE_MECHS } from "../sim/foemechs";
@@ -211,8 +211,11 @@ export class HelpPanel {
       const got = list.filter((a) => unlocked.has(a.id)).length;
       const rows = list.map((a) => {
         const done = unlocked.has(a.id);
+        // R81 进度显示：阈值型未达成成就展示 cur/target（retention 钩子）
+        const prog = done ? null : achievementProgress(a, this.sim.achievementState());
+        const progText = prog ? `（${prog.cur >= prog.target ? prog.target : prog.cur}/${prog.target}）` : "";
         return `<tr class="${done ? "ach-done" : ""}"><td>${a.name}</td>` +
-          `<td>${a.desc} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
+          `<td>${a.desc}${progText} — ${done ? "✓ 已达成" : "未达成"}</td></tr>`;
       }).join("");
       return `<p class="sub ach-group">${g} ${got}/${list.length}</p><table class="help-table">${rows}</table>`;
     });

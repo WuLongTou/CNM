@@ -1201,6 +1201,11 @@ export class GameSim {
   }
 
   /** 成就判定状态快照（R48：tick 与结算复用同一口径，终局补授不漏）。 */
+  /** 成就判定状态快照（R81 公开包装：帮助页进度显示用）。 */
+  achievementState() {
+    return this.buildAchievementState();
+  }
+
   private buildAchievementState() {
     return {
       kills: this.kills, survivalTime: this.survivalTime,
