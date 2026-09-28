@@ -5,7 +5,7 @@
 import type { GameSim } from "../sim/game";
 import { DIFFICULTIES } from "../sim/difficulty";
 import { PACTS, PACT_IDS, PACT_MAX_TIER, PACT_ROMAN, type PactId } from "../sim/pacts";
-import { dailyKey, dailySeed, dailyTheme } from "../sim/daily";
+import { dailyKey, dailySeed, dailyTheme, dailyMutator } from "../sim/daily";
 import { ROLES } from "../sim/roles";
 import { WEAPON_DATA } from "../sim/weapons";
 import type { LifetimeStats } from "../sim/save";
@@ -228,8 +228,10 @@ export class Hud {
       dailyBest: { date: string; score: number };
       rushBest: number;
     };
+    // R73 每日变异：同日同变异（欢迎页一眼可辨今天怎么打）
+    const mut = dailyMutator();
     bestEl.textContent =
-      ` · ${theme.label}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
+      ` · ${theme.label} · 变异${mut.name}` + (d.dailyBest?.date === dailyKey() ? ` · 今日最佳 ${d.dailyBest.score}` : "");
     rushEl.textContent = d.rushBest > 0 ? ` · 连战最佳 ${d.rushBest}` : "";
   }
 

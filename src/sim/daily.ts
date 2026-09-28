@@ -36,3 +36,26 @@ export function dailyTheme(d = new Date()): DailyTheme {
   };
   return map[d.getDay()];
 }
+
+export interface DailyMutator {
+  id: string;
+  name: string;
+  desc: string;
+}
+
+/** 每日变异池（R73）：五日轮全覆，由日期键稳定派生（同日同变异）。 */
+export const DAILY_MUTATORS: DailyMutator[] = [
+  { id: "elite", name: "精锐频出", desc: "精英出现率大增 · 掉宝更多" },
+  { id: "gold", name: "财神附身", desc: "局内金币收入 ×2" },
+  { id: "swift", name: "妖行如风", desc: "妖物移速 +15%" },
+  { id: "dense", name: "妖潮汹涌", desc: "妖潮密度上限 +6" },
+  { id: "tough", name: "妖坚如铁", desc: "妖物生命 +30%" },
+];
+
+/** 当日变异（R73）：日期键多项式散列 → 池索引（同日稳定，五日轮全覆）。 */
+export function dailyMutator(d = new Date()): DailyMutator {
+  const key = dailyKey(d);
+  let h = 0;
+  for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return DAILY_MUTATORS[h % DAILY_MUTATORS.length];
+}

@@ -23,7 +23,7 @@ import { DEFAULT_ROLE, getRole, ROLES, type RoleDef } from "./roles";
 import { PACTS, PACT_IDS, PACT_MAX_TIER, isValidTier, type PactId } from "./pacts";
 import { AFFIX_IDS } from "./affixes";
 import { BOSSES } from "./bosses";
-import { dailyKey, dailySeed, dailyTheme } from "./daily";
+import { dailyKey, dailySeed, dailyTheme, dailyMutator, DAILY_MUTATORS, type DailyMutator } from "./daily";
 
 export type GameState = "WeaponSelection" | "Combat" | "Victory" | "GameOver";
 
@@ -503,8 +503,11 @@ export class GameSim {
     difficultyId: number = DEFAULT_DIFFICULTY,
     pactTiers: string[] | Partial<Record<PactId, number>> = {},
     mode: "normal" | "boss_rush" = "normal",
+    /** R73 每日变异注入（测试用）：undefined = 自动派生（当日种子才生效）。 */
+    dailyMutatorId?: string,
   ) {
     this.seed = seed;
+    this.mutatorId = dailyMutatorId;
     this.rng = new Rng(seed);
     this.save = save;
     this.role = getRole(roleId);
@@ -776,6 +779,17 @@ export class GameSim {
   pactTier(id: PactId): number {
     return this.pactTiers[id] ?? 0;
   }
+
+  /** 当日变异（R73）：仅当日种子开局生效（每日妖潮同题不同味的修正词）；
+   *  构造器注入 dailyMutatorId 时以注入为准（测试/未来回放用）。 */
+  private mutator(): DailyMutator | null {
+    if (this.mutatorId !== undefined) {
+      return DAILY_MUTATORS.find((m) => m.id === this.mutatorId) ?? null;
+    }
+    return this.seed === dailySeed() ? dailyMutator() : null;
+  }
+
+  private readonly mutatorId: string | undefined;
 
   /** 结算分数乘数（R25 多誓连乘；R70 按档位取乘数，无誓为 1）。 */
   pactScoreMult(): number {
@@ -1837,7 +1851,8 @@ export class GameSim {
     // 击杀凝固（对齐 HitStop*Ms）：普通 70 / 精英 110 / 妖王 220
     this.hitStop.trigger(e.boss ? HITSTOP.BossKillMs : e.elite ? HITSTOP.EliteKillMs : HITSTOP.KillMs);
     // R65 局内金币：普通 1 / 精英 5 / 妖王 20 / 宝妖 15（香火龛流通币，与结算金币两轨）
-    const gold = e.boss ? CFG.Shop.BossGold : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold;
+    const gold = (e.boss ? CFG.Shop.BossGold : e.elite ? CFG.Shop.EliteGold : e.goblin ? CFG.Shop.GoblinGold : CFG.Shop.KillGold)
+      * (this.mutator()?.id === "gold" ? 2 : 1); // R73 每日变异「财神附身」
     this.coins += gold;
     this.runGoldEarned += gold;
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
@@ -2368,6 +2383,13 @@ export class GameSim {
   }
 
   private actCap(): { max: number; min: number; cd: number } {
+    const cap = this.actCapBase();
+    // R73 每日变异「妖潮汹涌」：维持刷怪数上限 +6（维持/出手两处消费方一致）
+    if (this.mutator()?.id === "dense") cap.max += 6;
+    return cap;
+  }
+
+  private actCapBase(): { max: number; min: number; cd: number } {
     const a = this.act;
     return {
       max: CFG.Acts.MaxEnemies[a],
@@ -2382,6 +2404,8 @@ export class GameSim {
     if (this.bossRush) return;
     this.spawnCd = Math.max(0, this.spawnCd - dt);
     const cap = this.actCap();
+    // R73 每日变异「妖潮汹涌」：维持上限 +6
+    if (this.mutator()?.id === "dense") cap.max += 6;
     if (this.enemies.length >= cap.max) return;
     if (this.spawnCd > 0) return;
     this.spawnCd = this.enemies.length < cap.min ? 0.15 : cap.cd;
@@ -2449,14 +2473,18 @@ export class GameSim {
     const blood = this.pactTier("blood") >= 1 ? PACTS.blood.tiers[this.pactTier("blood") - 1].hpMult : 1;
     let hp = Math.ceil(stats.hp * mult * foe * blood);
     let damage = Math.ceil(stats.dmg * mult * foe);
-    let speed = stats.speed;
+    // R73 每日变异「妖行如风」/「妖坚如铁」
+    let speed = stats.speed * (this.mutator()?.id === "swift" ? 1.15 : 1);
+    if (this.mutator()?.id === "tough") hp = Math.ceil(hp * 1.3);
     let elite = opts.elite ?? false;
     let boss = opts.boss ?? false;
 
     if (!elite && !boss) {
+      // R73 每日变异「精锐频出」：基础概率 +0.25（上限钳制照常）
+      const eliteMut = this.mutator()?.id === "elite" ? 0.25 : 0;
       elite = this.rng.chance(Math.min(
         CFG.Enemy.EliteChanceBase + CFG.Enemy.EliteChancePerRound * (this.round - 1)
-          + this.weather.state.eliteBonus,
+          + this.weather.state.eliteBonus + eliteMut,
         CFG.Enemy.EliteChanceMax,
       ));
     }
@@ -2754,6 +2782,7 @@ export class GameSim {
       kills: this.kills,
       coins: this.coins, // R65 局内金币（香火龛流通币）
       shop_open: this.shopOffer !== null,
+      mutator: this.mutator()?.id ?? null, // R73 当日变异 id（非每日局为 null）
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,
