@@ -149,7 +149,7 @@ async function boot(): Promise<void> {
     else if (e.event === "shop_denied") { notify.push(`香火不足（需 ${d.price} · 现有 ${d.coins}）`); audio.play("player_hurt", { vol: 0.3 }); }
     else if (e.event === "map_event") {
       const k = (e.data as { kind?: string }).kind;
-      const label = k === "surge" ? "妖群合围" : k === "hunt" ? "精锐现身" : k === "goblin" ? "宝妖游荡" : "宝藏显形";
+      const label = k === "surge" ? "妖群合围" : k === "hunt" ? "精锐现身" : k === "goblin" ? "宝妖游荡" : k === "market" ? "庙会开市 · 香龛半价" : "宝藏显形";
       notify.banner("妖潮异变", label);
       notify.push(`妖潮异变：${label}`);
       audio.play(k === "cache" ? "charm" : "lightning");

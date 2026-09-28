@@ -110,6 +110,8 @@ export const CFG = {
     SurgeBase: 6,   // 围猎基数（+ 2×幕数）
     SurgeRadius: 500, // 围猎环半径 px
     CacheCount: 2,  // 宝藏显形宝箱数
+    MarketDurationSec: 25, // R69 庙会开市时长（香龛半价窗口）
+    MarketDiscount: 0.5, // R69 庙会折扣（与通胀倍乘叠乘，开龛时定格）
   },
 
   // R4/R7 升级 agency：三选一的重抽/跳过/放逐（对标 Vampire Survivors 的

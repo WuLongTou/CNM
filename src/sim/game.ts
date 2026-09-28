@@ -453,6 +453,8 @@ export class GameSim {
   eventCount = 0;
   /** 各异变事件触发次数（R43 复盘回顾用）。 */
   eventTally: Record<string, number> = {};
+  /** R69 庙会开市剩余秒（>0 期间香龛基价半价，开龛时定格）。 */
+  private marketTimer = 0;
   private bossSpawnedForRound = 0;
   /** 已出场的妖王总数（BOSS_ROSTER 轮换索引）。 */
   private bossSpawnCount = 0;
@@ -985,7 +987,9 @@ export class GameSim {
 
   /** 生成三槽报价：武器（稀有度≥2 加权池，同精英箱口径）/ 随机符箓 / 调息；价格按通胀倍乘定格。 */
   private makeShopSlots(): ShopSlot[] {
-    const price = (base: number) => Math.floor(base * this.shopPriceMult);
+    // R69 庙会窗口：基价半价与通胀倍乘叠乘（价格在开龛时定格）
+    const discount = this.marketTimer > 0 ? CFG.Events.MarketDiscount : 1;
+    const price = (base: number) => Math.floor(base * this.shopPriceMult * discount);
     const defId = this.rollEliteWeaponDef();
     const ws = this.player.weapons;
     const w = ws.length > 0 ? ws[this.rng.int(0, ws.length - 1)] : null;
@@ -1215,12 +1219,15 @@ export class GameSim {
     return { bought: true, kind, level: level + 1, coins: next.coins, price: metaPrice(level + 1) };
   }
 
-  /** 妖潮异变调度（R13 三事件；R14 起四事件轮转：围猎/精锐/宝藏/宝妖），紧张与释放交替。 */
+  /** 妖潮异变调度（R13 三事件；R14 起四事件轮转；R69 加庙会：围猎/精锐/宝藏/宝妖/庙会），
+   *  紧张与释放交替。 */
   private updateEvents(dt: number): void {
+    // R69 庙会窗口衰减（半价随窗口结束失效，已开报价不受影响——开龛定格语义）
+    if (this.marketTimer > 0) this.marketTimer -= dt;
     this.eventTimer -= dt;
     if (this.eventTimer > 0) return;
     this.eventTimer += CFG.Events.Interval;
-    const kinds = ["surge", "hunt", "cache", "goblin"] as const;
+    const kinds = ["surge", "hunt", "cache", "goblin", "market"] as const;
     const kind = kinds[this.eventCount % kinds.length];
     this.eventCount++;
     // R43 异变回顾：按事件种类计数（结算复盘陈列）
@@ -1228,7 +1235,15 @@ export class GameSim {
     if (kind === "surge") this.eventSurge();
     else if (kind === "hunt") this.eventHunt();
     else if (kind === "cache") this.eventCache();
+    else if (kind === "market") this.eventMarket();
     else this.eventGoblin();
+  }
+
+  /** 庙会开市（R69）：窗口期内香火龛基价半价（与通胀倍乘叠乘，开龛时定格）——
+   *  高价槽位（武器/祝福）在窗口内变得可及，制造"等不等庙会"的节奏决策。 */
+  private eventMarket(): void {
+    this.marketTimer = CFG.Events.MarketDurationSec;
+    this.emit("map_event", { kind: "market", count: 1 });
   }
 
   /** 宝妖游荡（R14 Diablo 式 loot goblin）：复用魅影外形，只逃不打；

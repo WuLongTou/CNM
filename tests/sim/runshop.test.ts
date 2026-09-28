@@ -219,3 +219,44 @@ describe("R66 香火祝福与复盘", () => {
     expect(sim.runGoldSpent).toBe(CFG.Shop.PriceHeal);
   });
 });
+
+describe("R69 庙会开市", () => {
+  /** 把异变轮转拨到 market（kinds 第 5 位）并在下一 tick 触发。 */
+  function triggerMarket(sim: GameSim): void {
+    const s = sim as unknown as { eventTimer: number; eventCount: number };
+    s.eventCount = 4;
+    s.eventTimer = 0.01;
+    sim.tick(1 / 60);
+  }
+  const baseOf = (kind: string) => kind === "weapon" ? CFG.Shop.PriceWeapon
+    : kind === "upgrade" ? CFG.Shop.PriceUpgrade
+    : kind === "buff" ? CFG.Shop.PriceBuff
+    : CFG.Shop.PriceHeal;
+
+  it("轮转第 5 事件为庙会：tally 计数，窗口内开龛半价", () => {
+    const sim = new GameSim(664, memoryStorage());
+    sim.exec({ action: "start" });
+    triggerMarket(sim);
+    expect(sim.eventTally.market).toBe(1);
+    expect((sim as unknown as { marketTimer: number }).marketTimer).toBeGreaterThan(0);
+    openShopAt(sim);
+    for (const s of sim.shopOffer!) {
+      expect(s.price).toBe(Math.floor(baseOf(s.kind) * CFG.Events.MarketDiscount));
+    }
+  });
+
+  it("窗口结束后恢复原价（开龛定格语义：先开的报价不追溯）", () => {
+    const sim = new GameSim(665, memoryStorage());
+    sim.exec({ action: "start" });
+    triggerMarket(sim);
+    // 直接耗尽窗口（不开龛，tick 正常推进）
+    const s = sim as unknown as { marketTimer: number };
+    s.marketTimer = 0.01;
+    sim.tick(1 / 60);
+    sim.tick(1 / 60);
+    openShopAt(sim);
+    for (const sl of sim.shopOffer!) {
+      expect(sl.price).toBe(baseOf(sl.kind));
+    }
+  });
+});

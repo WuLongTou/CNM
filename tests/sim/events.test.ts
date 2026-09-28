@@ -80,14 +80,14 @@ describe("R13 妖潮异变", () => {
     expect(closed.slice(-2).every((c) => !c.elite)).toBe(true);
   });
 
-  it("五发回到围猎（R14 起四事件轮转循环）", () => {
+  it("五发庙会开市，六发回到围猎（R69 起五事件轮转循环）", () => {
     const sim = readySim();
     saturate(sim);
     const kinds: string[] = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 6; i++) {
       arm(sim); sim.tick();
       kinds.push((lastEvent(sim)?.data as { kind: string }).kind);
     }
-    expect(kinds).toEqual(["surge", "hunt", "cache", "goblin", "surge"]);
+    expect(kinds).toEqual(["surge", "hunt", "cache", "goblin", "market", "surge"]);
   });
 });

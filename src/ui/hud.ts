@@ -461,7 +461,7 @@ export class Hud {
       ? ` · 历${entries.map(([type, t]) => `${WN[type] ?? type} ${Math.round(t)}s`).join(" / ")}`
       : "";
     // R43 异变回顾：触发过的异变按次数降序陈列
-    const EN: Record<string, string> = { surge: "合围", hunt: "精锐", cache: "宝藏", goblin: "宝妖" };
+    const EN: Record<string, string> = { surge: "合围", hunt: "精锐", cache: "宝藏", goblin: "宝妖", market: "庙会" };
     const tally = Object.entries(s.eventTally)
       .filter(([, n]) => n > 0)
       .sort((a, b) => b[1] - a[1]);
