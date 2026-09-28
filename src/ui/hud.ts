@@ -56,10 +56,14 @@ export function weatherHudLabel(type: string, intensity: string): string {
   return eff ? `天气 ${name}${lv}（${eff}）` : `天气 ${name}${lv}`;
 }
 
-/** 本局成就陈列行（R53 纯函数可单测）：无则空串，有则“本局成就 N 项：名 / 名”。 */
+/** R111 荣誉成就集：终局直授的高难荣誉（结算屏金字强调）。 */
+const HONOR_ACHIEVEMENTS = new Set(["妖潮平定", "伏魔真君", "镇狱天师", "三英聚义", "九界平定", "铁壁", "历劫全域"]);
+
+/** 本局成就陈列行（R53 纯函数可单测）：无则空串，有则“本局成就 N 项：名 / 名”；R111 荣誉金字。 */
 export function runAchievementLine(names: string[]): string {
   if (names.length === 0) return "";
-  return `本局成就 ${names.length} 项：${names.join(" / ")}`;
+  const parts = names.map((n) => (HONOR_ACHIEVEMENTS.has(n) ? `<span class="ach-honor">${n}</span>` : n));
+  return `本局成就 ${names.length} 项：${parts.join(" / ")}`;
 }
 
 /** 连战档位标签（R50 纯函数可单测）：0 档不显示，≥1 档显示“狂化 N 档 ×倍率”。 */
@@ -444,7 +448,7 @@ export class Hud {
     this.victoryDebrief.textContent = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
     // R53 本局成就陈列（R48 补授后结算已含终局同 tick 的成就）
-    this.victoryAchievements.textContent = runAchievementLine(s.runAchievements.map((a) => a.name));
+    this.victoryAchievements.innerHTML = runAchievementLine(s.runAchievements.map((a) => a.name)); // R111 荣誉金字（内容为内部成就名，无用户输入）
   }
 
   private buildGameOver(): void {
@@ -668,7 +672,7 @@ export class Hud {
         (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
         (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
       this.gameoverDebrief.textContent = this.debriefText(s);
-      this.gameoverAchievements.textContent = runAchievementLine(s.runAchievements.map((a) => a.name));
+      this.gameoverAchievements.innerHTML = runAchievementLine(s.runAchievements.map((a) => a.name)); // R111 荣誉金字
       this.refreshMeta();
     }
   }

@@ -326,6 +326,9 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R111 荣誉成就金字：结算屏成就行 荣誉名（妖潮平定/伏魔真君/镇狱天师/
+      三英聚义/九界平定/铁壁/历劫全域）金字强调（消费点 textContent→innerHTML，
+      内容为内部成就名无用户输入）；1 条新增测试
 - [x] R110 无伤通关成就「铁壁」（第 33 项）：hurtPlayer 累计 damageTakenRun
       （妖物来源，自伤 hpCost/无敌帧/完美闪避不计）；onVictory 直授（0 伤通关）；
       status 回报 damage_taken_run；4 条测试

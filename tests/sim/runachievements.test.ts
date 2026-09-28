@@ -10,6 +10,14 @@ describe("R53 本局成就陈列", () => {
     expect(runAchievementLine(["初试锋芒", "斩妖大将"])).toBe("本局成就 2 项：初试锋芒 / 斩妖大将");
   });
 
+  it("R111 荣誉金字：铁壁/九界平定 包 span，普通名不包", () => {
+    expect(runAchievementLine(["铁壁"])).toBe('本局成就 1 项：<span class="ach-honor">铁壁</span>');
+    const t = runAchievementLine(["铁壁", "初试锋芒"]);
+    expect(t).toContain('<span class="ach-honor">铁壁</span>');
+    expect(t).toContain("初试锋芒");
+    expect(t).not.toContain('ach-honor">初试锋芒');
+  });
+
   it("本局达成入列；开局前已解锁的不入列", () => {
     const save = memoryStorage();
     save.save({ ...defaultSave(), achievements: ["first_blood"] });
