@@ -2092,6 +2092,22 @@ export class GameSim {
       mutatorClears: prev.mutatorClears ?? {},
       // R99 每日挑战连胜：透传既有连胜（onVictory 侧按日更新）
       dailyStreak: prev.dailyStreak ?? { last: "", count: 0 },
+      // R102 本地战绩历史：终局统一推入（胜/负都记，最近 10 局，新的在前）
+      runHistory: [
+        {
+          score: this.score,
+          kills: this.kills,
+          survivalTime: Math.round(this.survivalTime),
+          round: this.round,
+          roleName: this.role.name,
+          difficultyName: this.difficulty.name,
+          mode: this.bossRush ? "Boss 连战" : this.seed === dailySeed() ? "每日妖潮" : "",
+          seed: this.seed,
+          date: dailyKey(),
+          cleared: cleared !== null,
+        },
+        ...(prev.runHistory ?? []),
+      ].slice(0, 10),
       // R45 连战最佳：rush 模式破纪录发事件（首跑不播）
       rushBest: this.bossRush
         ? (() => {
@@ -2913,6 +2929,7 @@ export class GameSim {
         const d = this.save.load();
         return d?.dailyStreak?.last === dailyKey() ? d.dailyStreak.count : 0;
       })(), // R99 连胜天数（当日有效）
+      run_history: this.save.load()?.runHistory ?? [], // R102 本地战绩
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
       player_hp: this.player.hp,

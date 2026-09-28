@@ -40,10 +40,26 @@ export interface SaveData {
   mutatorClears: Record<string, number>;
   /** R99 每日挑战连胜：最后挑战日期键 + 连续天数（跨天断裂重置 1）。 */
   dailyStreak: { last: string; count: number };
+  /** R102 本地战绩历史：最近 10 局（新的在前）。 */
+  runHistory: RunRecord[];
   /** 生涯统计（R64；老存档缺字段逐项回退默认）。 */
   stats: LifetimeStats;
   /** 跨局持久成就 id。 */
   achievements: string[];
+}
+
+/** R102 单局战绩（帮助页「战绩」tab 陈列）。 */
+export interface RunRecord {
+  score: number;
+  kills: number;
+  survivalTime: number;
+  round: number;
+  roleName: string;
+  difficultyName: string;
+  mode: string;
+  seed: number;
+  date: string;
+  cleared: boolean;
 }
 
 /** 生涯统计（R64）：Hades 式主菜单生涯陈列的持久底座。 */
@@ -80,6 +96,7 @@ export function normalizeSave(parsed: Partial<SaveData> | null): SaveData {
     ...parsed,
     mutatorClears: { ...(parsed.mutatorClears ?? {}) },
     dailyStreak: { last: "", count: 0, ...(parsed.dailyStreak ?? {}) },
+    runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 10) : [],
     stats: { ...d.stats, ...(parsed.stats ?? {}) },
   };
 }
@@ -103,6 +120,7 @@ export function defaultSave(): SaveData {
     rushBest: 0,
     mutatorClears: {},
     dailyStreak: { last: "", count: 0 },
+    runHistory: [],
     stats: defaultStats(),
     achievements: [],
   };

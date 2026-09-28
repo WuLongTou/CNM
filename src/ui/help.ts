@@ -20,7 +20,7 @@ export class HelpPanel {
   private bodyEl!: HTMLElement;
   visible = false;
 
-  private pages = ["操作", "妖物图鉴", "词缀图鉴", "妖王图鉴", "武器图鉴", "成就", "机制"];
+  private pages = ["操作", "战绩", "妖物图鉴", "词缀图鉴", "妖王图鉴", "武器图鉴", "成就", "机制"];
 
   constructor(private sim: GameSim) {
     this.el = document.createElement("div");
@@ -70,6 +70,7 @@ export class HelpPanel {
       b.classList.toggle("active", i === this.page));
     switch (this.pages[this.page]) {
       case "操作": this.renderControls(); break;
+    case "战绩": this.renderRunHistory(); break;
       case "妖物图鉴": this.renderEnemyCodex(); break;
       case "词缀图鉴": this.renderAffixCodex(); break;
       case "妖王图鉴": this.renderBossCodex(); break;
@@ -203,6 +204,25 @@ export class HelpPanel {
   }
 
   /** 成就页（R51 分组）：按四条线分组渲染，每组标注该组进度。 */
+  /** R102 本地战绩：最近 10 局（分数/击杀/用时/角色难度/模式/种子），新的在前。 */
+  private renderRunHistory(): void {
+    const d = this.sim.status() as unknown as {
+      run_history?: Array<{ score: number; kills: number; survivalTime: number; round: number; roleName: string; difficultyName: string; mode: string; seed: number; date: string; cleared: boolean }>;
+    };
+    const list = d.run_history ?? [];
+    if (list.length === 0) {
+      this.bodyEl.innerHTML = `<p class="sub">暂无战绩——完成一局后这里会留下记录。</p>`;
+      return;
+    }
+    const rows = list.map((r) =>
+      `<tr><td>${r.score}</td><td>${r.kills}</td><td>${r.survivalTime}s</td>` +
+      `<td>${r.roleName}/${r.difficultyName}${r.mode ? ` · ${r.mode}` : ""}${r.cleared ? " · 通关" : ""}</td>` +
+      `<td>${r.seed}</td><td>${r.date}</td></tr>`).join("");
+    this.bodyEl.innerHTML =
+      `<p class="sub">最近 ${list.length} 局（本机）</p>` +
+      `<table class="help-table"><tr><th>分数</th><th>击杀</th><th>用时</th><th>职业/难度</th><th>种子</th><th>日期</th></tr>${rows}</table>`;
+  }
+
   private renderAchievements(): void {
     const unlocked = this.sim.achievements.unlocked;
     const total = ACHIEVEMENTS.filter((a) => unlocked.has(a.id)).length;
