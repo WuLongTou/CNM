@@ -21,6 +21,9 @@ export interface GamepadRead {
   readonly dash: boolean;
   /** Start 本帧新按下（main 层接暂停切换）。 */
   readonly start: boolean;
+  /** R85 右摇杆瞄准（twin-stick）：径向死区归零后的方向向量；回中为 undefined。 */
+  readonly aimX?: number;
+  readonly aimY?: number;
 }
 
 /** 左摇杆径向死区（0-1）：低于此半径视为回中，防摇杆漂移误移动。 */
@@ -86,6 +89,7 @@ export class GamepadInput {
       return NO_PAD;
     }
     const stick = stickWithDeadzone(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
+    const aim = stickWithDeadzone(pad.axes[2] ?? 0, pad.axes[3] ?? 0);
     let x = stick.x;
     let y = stick.y;
     if (pressed(pad, GP_BTN.DLeft)) x -= 1;
@@ -121,6 +125,8 @@ export class GamepadInput {
       attack: pressed(pad, GP_BTN.A),
       dash: dash && !this.prevDash, // 边沿：按住不重复触发冲刺
       start: start && !this.prevStart,
+      aimX: aim.x === 0 ? undefined : aim.x,
+      aimY: aim.x === 0 && aim.y === 0 ? undefined : aim.y,
     };
     this.prevDash = dash;
     this.prevStart = start;

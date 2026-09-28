@@ -96,6 +96,9 @@ export class InputManager {
       attack,
       dash: this.pulseDash || gp.dash,
       cycleTarget: false,
+      ...(gp.aimX !== undefined && gp.aimY !== undefined
+        ? { aimX: gp.aimX, aimY: gp.aimY }
+        : {}),
     };
     this.pulseDash = false;
   }

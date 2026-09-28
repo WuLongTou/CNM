@@ -34,6 +34,9 @@ export interface InputState {
   /** 单帧脉冲：tick 消费后自动清零（对齐 PlayerInput 的 QueueExternalDash）。 */
   dash: boolean;
   cycleTarget: boolean;
+  /** R85 手柄右摇杆瞄准（twin-stick）：激活时覆盖移动方向瞄准。 */
+  aimX?: number;
+  aimY?: number;
 }
 
 export interface Enemy {
@@ -1478,6 +1481,11 @@ export class GameSim {
     if (len > 1) { vx /= len; vy /= len; }
     // 移动方向即瞄准方向（方向性近战的输入语义：朝哪走朝哪砍）
     if (len > 0.01) p.aimAng = Math.atan2(vy, vx);
+    // R85 手柄右摇杆瞄准（twin-stick）：激活时覆盖移动瞄准——边跑边打任意方向
+    if (this.input.aimX !== undefined && this.input.aimY !== undefined) {
+      const al = Math.hypot(this.input.aimX, this.input.aimY);
+      if (al > 0.01) p.aimAng = Math.atan2(this.input.aimY, this.input.aimX);
+    }
     const mult = p.dashTimer > 0 ? c.DashSpeedMult : 1;
     const w = this.weather.state.playerSpeedMult;
     // 攻击突进：出手位移叠加在移动上（地形分离照常约束）
