@@ -162,18 +162,24 @@ describe("R66 香火祝福与复盘", () => {
     const cb = (_x: number, _y: number, d: number) => dmg.push(d);
     sim.onDamage.push(cb);
     sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
-    for (let i = 0; i < 120 && dmg.length === 0; i++) sim.tick(1 / 60);
+    for (let i = 0; i < 120 && dmg.length === 0; i++) {
+      e.x = sim.player.x + 24; // 每 tick 重钉在前方：分离力会把重叠目标推到背后
+      e.y = sim.player.y;
+      sim.tick(1 / 60);
+    }
     sim.input = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
     sim.onDamage.pop();
     expect(dmg.length).toBeGreaterThan(0);
     return dmg[0]!;
   }
 
-  it("祝福槽：购买后全局伤害 ×1.15（同条件对照挥刀）", () => {
+  it("祝福槽（伤害系）：购买后全局伤害 ×1.15（同条件对照挥刀）", () => {
     const sim = new GameSim(660, memoryStorage());
     sim.exec({ action: "start" });
     const d1 = swingDamageOnce(sim);
     sim.coins = 9999;
+    // 锁池只出伤害系（R72 三系随机：排除另两系后必出 dmg）
+    (sim as unknown as { buffsBought: Set<string> }).buffsBought = new Set(["asp", "spd"]);
     openShopAt(sim);
     const bIdx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
     expect(bIdx).toBeGreaterThanOrEqual(0);
@@ -184,14 +190,22 @@ describe("R66 香火祝福与复盘", () => {
     expect(d2).toBe(Math.round(d1 * (1 + CFG.Shop.BuffDmgBonus)));
   });
 
-  it("祝福限购一次：购买后报价不再出现祝福槽", () => {
+  it("R72 三系祝福：各限购一次，系别购后不再出现，全购后祝福槽消失", () => {
     const sim = new GameSim(661, memoryStorage());
     sim.exec({ action: "start" });
-    sim.coins = 9999;
+    sim.coins = 99999;
+    const boughtKinds: string[] = [];
+    for (let round = 0; round < 3; round++) {
+      openShopAt(sim);
+      const idx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
+      expect(idx).toBeGreaterThanOrEqual(0); // 还有未购系别：祝福槽必在
+      const kind = sim.shopOffer![idx]!.buffKind!;
+      expect(boughtKinds).not.toContain(kind); // 已购系别不再出现
+      expect(sim.buyShop(idx).handled).toBe(true);
+      boughtKinds.push(kind);
+    }
     openShopAt(sim);
-    sim.buyShop(sim.shopOffer!.findIndex((s) => s.kind === "buff"));
-    openShopAt(sim);
-    expect(sim.shopOffer!.findIndex((s) => s.kind === "buff")).toBe(-1);
+    expect(sim.shopOffer!.findIndex((s) => s.kind === "buff")).toBe(-1); // 三系购罄：祝福槽消失
   });
 
   it("散财消灾：单局购买 5 次解锁成就", () => {
@@ -258,5 +272,50 @@ describe("R69 庙会开市", () => {
     for (const sl of sim.shopOffer!) {
       expect(sl.price).toBe(baseOf(sl.kind));
     }
+  });
+});
+
+describe("R72 祝福三系化", () => {
+  it("攻速祝福：固定窗口挥刀数增加", () => {
+    const sim = new GameSim(666, memoryStorage());
+    sim.exec({ action: "start" });
+    let swings = 0;
+    sim.onAttack.push(() => swings++);
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    for (let i = 0; i < 240; i++) { sim.enemies.length = 0; sim.tick(1 / 60); }
+    const s1 = swings;
+    sim.coins = 9999;
+    (sim as unknown as { buffsBought: Set<string> }).buffsBought = new Set(["dmg", "spd"]);
+    openShopAt(sim);
+    const idx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
+    expect(sim.shopOffer![idx]!.buffKind).toBe("asp");
+    expect(sim.buyShop(idx).handled).toBe(true);
+    swings = 0;
+    sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
+    for (let i = 0; i < 240; i++) { sim.enemies.length = 0; sim.tick(1 / 60); }
+    sim.input = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
+    expect(swings).toBeGreaterThan(s1); // +12% 攻速：同窗挥刀更多（挥刀节奏无随机）
+  });
+
+  it("移速祝福：同窗位移增加", () => {
+    const sim = new GameSim(667, memoryStorage());
+    sim.exec({ action: "start" });
+    sim.input = { moveX: 1, moveY: 0, attack: false, dash: false, cycleTarget: false };
+    const x0 = sim.player.x;
+    for (let i = 0; i < 60; i++) { sim.enemies.length = 0; sim.tick(1 / 60); }
+    const d1 = sim.player.x - x0;
+    sim.coins = 9999;
+    sim.input = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
+    (sim as unknown as { buffsBought: Set<string> }).buffsBought = new Set(["dmg", "asp"]);
+    openShopAt(sim);
+    const idx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
+    expect(sim.shopOffer![idx]!.buffKind).toBe("spd");
+    expect(sim.buyShop(idx).handled).toBe(true);
+    sim.input = { moveX: 1, moveY: 0, attack: false, dash: false, cycleTarget: false };
+    const x1 = sim.player.x;
+    for (let i = 0; i < 60; i++) { sim.enemies.length = 0; sim.tick(1 / 60); }
+    sim.input = { moveX: 0, moveY: 0, attack: false, dash: false, cycleTarget: false };
+    const d2 = sim.player.x - x1;
+    expect(d2).toBeGreaterThan(d1); // +8% 移速：同窗位移更远
   });
 });

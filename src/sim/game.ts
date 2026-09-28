@@ -204,6 +204,8 @@ export interface ShopSlot {
   /** upgrade 槽：应用的武器与词条。 */
   weaponIdx?: number;
   stat?: UpgradeStat;
+  /** buff 槽：祝福系别（R72 三系各限购一次）。 */
+  buffKind?: "dmg" | "asp" | "spd";
 }
 
 /** 香火龛（R65）：场上可交互实体，贴近开报价。 */
@@ -392,7 +394,10 @@ export class GameSim {
   private shopPriceMult = 1;
   /** 香火祝福（R66）：本局全局伤害加成（购买即叠加，每局限购一次）。 */
   shopBuff = 0;
-  private shopBuffBought = false;
+  /** R72 攻速祝福（购买时乘入出手冷却）。 */
+  shopBuffAsp = 0;
+  /** R72 已购祝福系别（三系各限购一次）。 */
+  private buffsBought = new Set<"dmg" | "asp" | "spd">();
   /** R66 复盘口径：单局购买次数（成就「散财消灾」）。 */
   shopPurchases = 0;
   /** R66 复盘口径：单局香火钱收入/支出。 */
@@ -1042,10 +1047,18 @@ export class GameSim {
             label: `符箓·${UPGRADE_STAT_NAMES[stat]}（${w.name}）`, weaponIdx: ws.indexOf(w), stat }]
         : []),
       { kind: "heal", price: price(CFG.Shop.PriceHeal), label: `调息回复 ${CFG.Shop.HealAmount} 生命` },
-      ...(this.shopBuffBought
-        ? []
-        : [{ kind: "buff" as const, price: price(CFG.Shop.PriceBuff),
-            label: `香火祝福 · 本局伤害 +${Math.round(CFG.Shop.BuffDmgBonus * 100)}%` }]),
+      ...(() => {
+        // R72 三系祝福随机出一系（各限购一次，购过的不再出现）
+        const pool = (["dmg", "asp", "spd"] as const).filter((k) => !this.buffsBought.has(k));
+        if (pool.length === 0) return [];
+        const k = pool[this.rng.int(0, pool.length - 1)];
+        const label = k === "dmg"
+          ? `香火祝福 · 本局伤害 +${Math.round(CFG.Shop.BuffDmgBonus * 100)}%`
+          : k === "asp"
+            ? `香火祝福 · 本局攻速 +${Math.round(CFG.Shop.BuffAspBonus * 100)}%`
+            : `香火祝福 · 本局移速 +${Math.round(CFG.Shop.BuffSpdBonus * 100)}%`;
+        return [{ kind: "buff" as const, price: price(CFG.Shop.PriceBuff), label, buffKind: k }];
+      })(),
     ];
   }
 
@@ -1083,9 +1096,12 @@ export class GameSim {
     } else if (slot.kind === "upgrade") {
       name = String(this.applyUpgrade(slot.weaponIdx!, slot.stat!).name);
     } else if (slot.kind === "buff") {
-      this.shopBuff += CFG.Shop.BuffDmgBonus;
-      this.shopBuffBought = true;
-      name = "香火祝福 · 本局伤害提升";
+      const k = slot.buffKind ?? "dmg";
+      if (k === "dmg") this.shopBuff += CFG.Shop.BuffDmgBonus;
+      else if (k === "asp") this.shopBuffAsp += CFG.Shop.BuffAspBonus;
+      else this.player.speed *= 1 + CFG.Shop.BuffSpdBonus;
+      this.buffsBought.add(k);
+      name = slot.label.replace("香火祝福 · ", "香火祝福生效 · ");
     } else {
       const healed = Math.min(CFG.Shop.HealAmount, this.player.maxHp - this.player.hp);
       this.player.hp += healed;
@@ -1496,7 +1512,8 @@ export class GameSim {
     const effRng = (def.rng ?? 1) * (1 + bonusOf(w, "rng"));
     const hpCost = Math.abs(def.hp ?? 0);
     if (p.hp <= hpCost) return; // _CanPayHealthCost：不能一击自杀
-    w.cd = CFG.Player.BaseAttackCooldown / Math.max(0.2, effAsp * this.role.aspdMult);
+    // R72 攻速祝福：冷却额外除以 (1 + 祝福加成)
+    w.cd = CFG.Player.BaseAttackCooldown / Math.max(0.2, effAsp * this.role.aspdMult * (1 + this.shopBuffAsp));
     const critC = (def.crit ?? 0) + bonusOf(w, "crit");
     const dashing = p.dashTimer > 0;
     const strike = dashing ? CFG.Combat.DashStrikeDmgMult : 1;
