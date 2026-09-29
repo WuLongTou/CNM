@@ -18,6 +18,8 @@ async function driveJoystick(
       bubbles: true, pointerType: "touch", isPrimary: true,
     });
   }
+  // R165 稳定等待：派发后等 RAF 采样到 poll（重载下 tick 边界竞态会漏采导致 flake）
+  await page.waitForTimeout(120);
 }
 
 test.describe("桌面上下文：不挂载触屏控件", () => {
@@ -49,6 +51,8 @@ test.describe("触屏上下文（手机视口）", () => {
     await page.waitForFunction(() => window.__CNM__?.ready === true);
     await page.click("#btn-start");
     await page.waitForFunction(() => window.__CNM__.exec({ action: "status" }).data?.state === "Combat");
+    // R165 挂载等待：触屏层异步追加，boundingBox 不自动等待
+    await expect(page.locator("#joy-base")).toBeVisible();
     await driveJoystick(page, [
       { type: "pointerdown", dx: 0, dy: 0 },
       { type: "pointermove", dx: -58, dy: 0 },
@@ -63,6 +67,8 @@ test.describe("触屏上下文（手机视口）", () => {
     await page.goto("/");
     await page.waitForFunction(() => window.__CNM__?.ready === true);
     await page.click("#btn-start");
+    // R165 挂载等待：触屏层异步追加，boundingBox 不自动等待
+    await expect(page.locator("#joy-base")).toBeVisible();
     // 轻触（位移 < 18% 半径）输出应保持 0
     await driveJoystick(page, [
       { type: "pointerdown", dx: 0, dy: 0 },

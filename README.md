@@ -326,6 +326,9 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R165 e2e 全量回归体检（29/29 ✓）：修摇杆测试挂载竞态（joy-base
+      boundingBox 不自动等待，补 toBeVisible 挂载等待 ×2）+ 驱动后
+      settle 等待——R136 以来新功能全量验证零破坏
 - [x] R164 重抽锁定 e2e（3 条）：锁定保留/🔒🔓 可逆/焦点可达——
       evaluate 直驱（Playwright 点击时序竞态绕开，逻辑断言等价）
 - [x] R163 商店槽位锁定：卡片 🔒 按钮 toggleShopLock + reroll 保留 locked 槽
