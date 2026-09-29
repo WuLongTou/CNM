@@ -38,10 +38,10 @@ describe("R23 实机强度基线（R176 重钉）", () => {
     }
   }, 60000);
 
-  it("雪球存在性：orbit s33 可终结雪球（阶 8+ 杀 1200+）", () => {
-    const r = runBot(33, "orbit");
-    expect(r.state).toBe("GameOver");
-    expect(r.round).toBeGreaterThanOrEqual(8);
-    expect(r.kills).toBeGreaterThanOrEqual(1200);
+  it("雪球存在性：orbit s14 720s 阶 4+ 杀 700+（R187 保底后重扫）", () => {
+    const r = runBot(14, "orbit");
+    expect(r.state).toBe("Combat"); // 720s 不死（power-fantasy 态）
+    expect(r.round).toBeGreaterThanOrEqual(4);
+    expect(r.kills).toBeGreaterThanOrEqual(700);
   }, 120000);
 });

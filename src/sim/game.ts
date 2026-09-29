@@ -374,6 +374,8 @@ export class GameSim {
   damageTakenRun = 0;
   /** R159 本局是否破最高分（结算屏「新纪录」徽章）。 */
   newRecord = false;
+  /** R187 保底计数：距上次符箓掉落的杀敌数（≥40 普通妖必掉）。 */
+  killsSinceTalisman = 0;
   /** R166 未破纪录时距历史最高分的差值（结算屏差距提示）。 */
   recordGap = 0;
   survivalTime = 0;
@@ -2036,16 +2038,21 @@ export class GameSim {
       this.emit("goblin_slayed", { x: e.x, y: e.y });
     }
     // 升级符箓掉落：普通低概率 / 精英高概率 / 妖王必掉 3 枚
+    // R187 保底：40 杀无符箓 → 普通妖必掉玩家脚边一枚（升级 cadence 保障）
+    this.killsSinceTalisman++;
+    const pity = this.killsSinceTalisman >= 40 && !e.boss && !e.elite && this.player.weapons.length > 0;
     const rate = e.boss ? UPGRADE_DROP.boss : e.elite ? UPGRADE_DROP.elite : UPGRADE_DROP.normal;
-    if (this.rng.chance(rate)) {
+    if (pity || this.rng.chance(rate)) {
       const n = e.boss ? 3 : 1;
       for (let i = 0; i < n; i++) {
         this.pickups.push({
           id: this.nextId++,
-          x: e.x + this.rng.range(-30, 30),
-          y: e.y + this.rng.range(-30, 30),
+          // 保底掉落钉在玩家脚边（拾取半径内必收），概率掉落仍落妖物处
+          x: pity ? this.player.x + this.rng.range(-12, 12) : e.x + this.rng.range(-30, 30),
+          y: pity ? this.player.y + this.rng.range(-12, 12) : e.y + this.rng.range(-30, 30),
         });
       }
+      this.killsSinceTalisman = 0; // 任何符箓掉落都重置保底计数
     }
     // R20 回春丹掉落：妖王必掉 1 枚，精英/普通按概率（局内即时续航，不开模态）
     if (e.boss || this.rng.chance(e.elite ? HEAL_DROP.elite : HEAL_DROP.normal)) {
