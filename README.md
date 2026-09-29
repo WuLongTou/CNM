@@ -326,6 +326,8 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R186 模态出场动画：.panel 弹入 0.18s（display none→flex 重布局
+      自动重播，暂停/升级/商店/结算/帮助全模态通用）——实机 ✓
 - [x] R185 妖王凝固接线：boss_spawn/boss_phase 触发 BossSpawnMs/
       BossPhaseMs（R61 定义的层次档首次全用上）+ scale 钳制修复
       （过冲负值残留）；2 条测试

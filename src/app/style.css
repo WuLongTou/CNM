@@ -45,6 +45,14 @@ canvas { position: absolute; z-index: 0; }
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   background: rgba(232, 222, 200, 0.6);
 }
+/* R186 模态出场：display none→flex 重布局时弹入动画自动重播（暂停/升级/商店/结算通用） */
+.panel {
+  animation: panel-pop 0.18s ease-out;
+}
+@keyframes panel-pop {
+  0% { transform: scale(0.92) translateY(10px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
 .panel {
   background: #f5eede; color: #332e29; border: 2.5px solid #332e29;
   border-radius: 10px 14px 9px 15px;   /* 微不规则圆角 → 手绘纸片感 */
