@@ -2148,6 +2148,13 @@ export class GameSim {
           return { date: dailyKey(), score: Math.max(oldScore, this.score) };
         })()
         : (prev.dailyBest ?? { date: "", score: 0 }),
+      // R174 每日挑战周历：普通每日局记入（同日保留最佳，cap 28 天）
+      dailyHistory: (() => {
+        if (this.bossRush || this.seed !== dailySeed()) return prev.dailyHistory ?? [];
+        const rest = (prev.dailyHistory ?? []).filter((h) => h.date !== dailyKey());
+        const oldBest = (prev.dailyHistory ?? []).find((h) => h.date === dailyKey())?.score ?? 0;
+        return [{ date: dailyKey(), score: Math.max(oldBest, this.score) }, ...rest].slice(0, 28);
+      })(),
       // R74 每日变异通关收集：finalize 全量覆写存档，透传既有计数
       mutatorClears: prev.mutatorClears ?? {},
       // R99 每日挑战连胜：透传既有连胜（onVictory 侧按日更新）
@@ -2860,6 +2867,7 @@ export class GameSim {
             const sd = this.save.load();
             return sd?.dailyStreak?.last === dailyKey() ? sd.dailyStreak.count : 0;
           })(), // R161 连胜
+          daily_history: d.dailyHistory ?? [], // R174 周历
           codex_seen: Object.values(d.codex ?? {}).filter((n) => (n as number) > 0).length, // R161 图鉴点亮
           codex_gold: Object.values(d.codex ?? {}).filter((n) => (n as number) >= 100).length, // R161 图鉴镀金
           dailyBest: d.dailyBest ?? { date: "", score: 0 },

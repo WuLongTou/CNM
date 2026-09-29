@@ -40,6 +40,8 @@ export interface SaveData {
   mutatorClears: Record<string, number>;
   /** R99 每日挑战连胜：最后挑战日期键 + 连续天数（跨天断裂重置 1）。 */
   dailyStreak: { last: string; count: number };
+  /** R174 每日挑战周历：当日挑战成绩（date → 当日最佳分，新在前，cap 28 天；老存档缺字段默认 []）。 */
+  dailyHistory: Array<{ date: string; score: number }>;
   /** R112 Boss Rush 每日最佳（按日轮换，与全时 rushBest 并行）。 */
   dailyRushBest: { date: string; score: number };
   /** R102 本地战绩历史：最近 10 局（新的在前）。 */
@@ -100,6 +102,7 @@ export function normalizeSave(parsed: Partial<SaveData> | null): SaveData {
     ...parsed,
     mutatorClears: { ...(parsed.mutatorClears ?? {}) },
     dailyStreak: { last: "", count: 0, ...(parsed.dailyStreak ?? {}) },
+    dailyHistory: (parsed.dailyHistory ?? []).slice(0, 28),
     dailyRushBest: { date: "", score: 0, ...(parsed.dailyRushBest ?? {}) },
     runHistory: Array.isArray(parsed.runHistory) ? parsed.runHistory.slice(0, 10) : [],
     stats: { ...d.stats, ...(parsed.stats ?? {}) },
@@ -125,6 +128,7 @@ export function defaultSave(): SaveData {
     rushBest: 0,
     mutatorClears: {},
     dailyStreak: { last: "", count: 0 },
+    dailyHistory: [],
     dailyRushBest: { date: "", score: 0 },
     runHistory: [],
     stats: defaultStats(),
