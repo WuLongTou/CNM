@@ -413,6 +413,7 @@ async function boot(): Promise<void> {
         : shop.visible ? shop.el
         : equipment.visible ? equipment.el
         : crafting.visible ? crafting.el
+        : help.visible ? help.el
         : null;
       padNav.sync(container);
       const menu = input.menuRead();
@@ -420,6 +421,7 @@ async function boot(): Promise<void> {
         if (shop.visible) shop.close();
         else if (equipment.visible) equipment.toggle(false);
         else if (crafting.visible) crafting.toggle(false);
+        else if (help.visible) help.toggle(false);
         else if (pauseMenu.visible) pauseMenu.toggle(false);
       } else if (menu.reroll && shop.visible) {
         shop.reroll(); // R79 手柄 Y 刷新报价

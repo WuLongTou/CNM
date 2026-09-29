@@ -15,7 +15,8 @@ import { shouldUseTouch } from "./touch";
 import { dailyTheme } from "../sim/daily";
 
 export class HelpPanel {
-  private el: HTMLElement;
+  /** R149 手柄 pad nav 容器（面板根）。 */
+  readonly el: HTMLElement;
   private page = 0;
   private bodyEl!: HTMLElement;
   visible = false;
