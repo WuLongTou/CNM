@@ -109,6 +109,7 @@ async function boot(): Promise<void> {
   const shop = new ShopPanel(sim);
   const padNav = new PadMenuNav();
   const help = new HelpPanel(sim);
+  hud.bindHelp(help); // R167 深链：欢迎页成就 tag → 帮助成就页
   const pauseMenu = new PauseMenu(sim, audio, settings, () => {
     saveVisualSettings(localStorage, settings);
     view.shakeEnabled = settings.shake;

@@ -126,6 +126,13 @@ export class Hud {
   /** R100 结算屏截图（main 层注入 Pixi extract；下载 PNG）。 */
   onShareShot: (() => void) | null = null;
 
+  /** R167 深链目标（main 在 help 创建后注入——hud 先建，help 后建）。 */
+  private helpRef: { showPage(name: string): void } | null = null;
+
+  bindHelp(help: { showPage(name: string): void }): void {
+    this.helpRef = help;
+  }
+
   constructor(private sim: GameSim, private onStart: () => void, private onRestart: () => void) {
     this.root = document.createElement("div");
     this.root.id = "ui-root";
@@ -415,8 +422,9 @@ export class Hud {
       ach_total?: number; ach_unlocked?: number; ach_last?: string | null;
     };
     // R140 成就完成度 + 最近解锁名（留存面：完成度进度可见）
+    // R167 深链：成就 tag 可点（span.ach-link）→ 打开帮助成就页
     const achTag = d.ach_total
-      ? ` · 成就 ${d.ach_unlocked}/${d.ach_total}${d.ach_last ? ` · 最新 ${ACHIEVEMENTS.find((a) => a.id === d.ach_last)?.name ?? d.ach_last}` : ""}`
+      ? ` · <span class="ach-link" data-ach-link>成就 ${d.ach_unlocked}/${d.ach_total}</span>${d.ach_last ? ` · 最新 ${ACHIEVEMENTS.find((a) => a.id === d.ach_last)?.name ?? d.ach_last}` : ""}`
       : "";
     if (d.games > 0) {
       // R141 成就 mini 进度条：与 R87 图鉴样式同源（血红填充）
@@ -429,6 +437,15 @@ export class Hud {
       el.textContent = "初入山林 · 祝武运昌隆";
     }
     if (life) life.textContent = d.games > 0 && d.stats ? lifetimeLine(d.stats) : "";
+    // R167 深链：点成就 tag → 打开帮助成就页（委托绑一次）
+    if (!el.dataset.achLinkBound) {
+      el.dataset.achLinkBound = "1";
+      el.addEventListener("click", (ev) => {
+        const tag = (ev.target as HTMLElement).closest("[data-ach-link]");
+        if (!tag) return;
+        this.helpRef?.showPage("成就"); // R167 按名切页（防索引漂移）
+      });
+    }
   }
 
   private buildVictory(): void {

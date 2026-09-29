@@ -51,6 +51,13 @@ export class HelpPanel {
     this.el.classList.add("hidden");
   }
 
+  /** R167 深链：打开面板并切到指定页（按名查找防索引漂移；未知名回操作页）。 */
+  showPage(name: string): void {
+    const idx = this.pages.indexOf(name);
+    this.page = idx >= 0 ? idx : 0;
+    this.toggle(true);
+  }
+
   toggle(force?: boolean): void {
     this.visible = force ?? !this.visible;
     this.el.classList.toggle("hidden", !this.visible);
