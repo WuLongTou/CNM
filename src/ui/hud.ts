@@ -591,12 +591,16 @@ export class Hud {
     );
     const mainSeg = main ? ` · ${main}` : "";
     // R162 下一目标：最接近完成的未达成成就（金字，留存钩子）
+    // R166 未破纪录差距提示（就差一点的重开钩子；新纪录时不显）
+    const gapSeg = !s.newRecord && s.recordGap > 0
+      ? ` · 距最高分差 ${s.recordGap}`
+      : "";
     const goal = s.exec({ action: "meta" }).data as { next_goal?: { id: string; pct: number } | null };
     const goalAch = goal.next_goal ? ACHIEVEMENTS.find((a) => a.id === goal.next_goal!.id) : null;
     const goalSeg = goalAch
       ? ` · <span class="ach-honor">下一目标：${goalAch.name}（${goal.next_goal!.pct}%）</span>`
       : "";
-    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${fastest}${buffs}${mainSeg}${goalSeg}`;
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${fastest}${buffs}${mainSeg}${gapSeg}${goalSeg}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */

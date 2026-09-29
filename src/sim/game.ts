@@ -372,6 +372,8 @@ export class GameSim {
   damageTakenRun = 0;
   /** R159 本局是否破最高分（结算屏「新纪录」徽章）。 */
   newRecord = false;
+  /** R166 未破纪录时距历史最高分的差值（结算屏差距提示）。 */
+  recordGap = 0;
   survivalTime = 0;
   /** 模态面板暂停（装备/帮助等打开时由 UI 层置位；tick 冻结）。 */
   paused = false;
@@ -2113,6 +2115,8 @@ export class GameSim {
     const coins = Math.floor((this.score / 50 + this.kills) * coinsMult * greed * this.difficulty.coinMult);
     // R159 新纪录标志（结算屏徽章；含首局即纪录）
     this.newRecord = this.score > prev.highScore || prev.games === 0;
+    // R166 未破纪录时的差距（下次「就差一点」的重开钩子）
+    this.recordGap = this.newRecord ? 0 : Math.max(0, prev.highScore - this.score);
     this.save.save({
       highScore: Math.max(prev.highScore, this.score),
       totalKills: prev.totalKills + this.kills,
