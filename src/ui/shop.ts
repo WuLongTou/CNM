@@ -27,7 +27,7 @@ export class ShopPanel {
     this.el.innerHTML = `
       <div class="panel panel-wide">
         <h2>香火龛</h2>
-        <p class="sub">以香火钱换机缘（1 / 2 / 3 购买 · R 刷新 · Esc 离开；每笔购买后全龛涨价）</p>
+        <p class="sub">以香火钱换机缘（1 / 2 / 3 购买 · R 刷新 · Esc 离开；每笔购买后全龛涨价 · 威势阶越高稀有度越高）</p>
         <p class="sub" id="shop-gold"></p>
         <div id="shop-cards" class="upgrade-cards"></div>
         <div id="shop-actions"></div>
