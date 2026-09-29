@@ -928,11 +928,12 @@ export class GameView {
   }
 
   /** 近战挥砍弧：沿实际攻击方向一道手绘弧快速淡出（冲刺斩更大更红）。 */
-  private slashes: Array<{ gfx: Graphics; x: number; y: number; dir: number; dash: boolean; life: number }> = [];
+  private slashes: Array<{ gfx: Graphics; x: number; y: number; dir: number; dash: boolean; life: number; range: number }> = [];
 
-  spawnSlash(x: number, y: number, dir: number, dash: boolean): void {
+  spawnSlash(x: number, y: number, dir: number, dash: boolean, range: number): void {
     if (this.slashes.length > 6) return;
-    const sl = { gfx: new Graphics(), x, y, dir, dash, life: 0.18 };
+    // R181 挥砍弧随实际射程缩放（R176 范围 70→92 后视觉/判定对齐）
+    const sl = { gfx: new Graphics(), x, y, dir, dash, life: 0.18, range };
     this.slashes.push(sl);
     this.fxLayer.addChild(sl.gfx);
   }
@@ -946,7 +947,7 @@ export class GameView {
       const g = sl.gfx;
       g.clear();
       g.alpha = (1 - t) * 0.85;
-      const r = (sl.dash ? 48 : 36) + t * 6;
+      const r = sl.range * (0.62 + t * 0.1) * (sl.dash ? 1.35 : 1);
       // 朝向前方 -75°..+55° 的手绘弧（中段最亮，两端收细）
       const N = 12;
       const a0 = sl.dir - 1.31, a1 = sl.dir + 0.96;

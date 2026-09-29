@@ -4,6 +4,7 @@
 import { Application } from "pixi.js";
 import { GameSim, UPGRADE_STAT_NAMES, type ExecResult, type SimEvent } from "../sim/game";
 import { HITSTOP } from "../sim/hitstop";
+import { CFG } from "../sim/config";
 import { weatherEffectTip } from "../sim/weather";
 import { localStorageStorage } from "../sim/save";
 import { loadVisualSettings, saveVisualSettings } from "./settings";
@@ -340,7 +341,7 @@ async function boot(): Promise<void> {
     sim.onAttack.push((type, ang) => {
       audio.play(type === "Ranged" ? "ranged_attack" : type === "Magic" ? "magic_attack" : "melee_attack");
       view.playAttack(type);
-      if (type === "Melee") view.spawnSlash(sim.player.x, sim.player.y, ang, sim.player.dashTimer > 0);
+      if (type === "Melee") view.spawnSlash(sim.player.x, sim.player.y, ang, sim.player.dashTimer > 0, CFG.Player.BaseAttackRange * sim.stats.rangeMult * (sim.player.dashTimer > 0 ? CFG.Combat.DashStrikeRangeMult : 1));
     });
     // R178 击杀 juice：连杀音高爬升（2s 无击杀复位，Hades 式爽感）+ 位置粒子
     let killStreak = 0;
