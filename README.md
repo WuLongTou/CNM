@@ -326,6 +326,9 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R183 闲置音效接线：footstep 脚步声（Combat 移动 0.3s 节奏，
+      音高微随机）+ game_over 死亡时刻音效（hud GameOver 边沿回调）
+      ——两个在库资产首次发声
 - [x] R182 升级时刻 juice：升级号角（WebAudio 合成 E5→A5 双音）+
       combo_3/5 连杀里程碑音效接线（资产在库从未播放——审计发现）
 - [x] R181 挥砍弧随射程：spawnSlash 接收实际射程（92×rangeMult×冲刺

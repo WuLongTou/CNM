@@ -128,6 +128,8 @@ export class Hud {
 
   /** R167 深链目标（main 在 help 创建后注入——hud 先建，help 后建）。 */
   private helpRef: { showPage(name: string): void } | null = null;
+  /** R183 GameOver 边沿回调（死亡音效——装配层注入 audio）。 */
+  onGameOver: (() => void) | null = null;
 
   bindHelp(help: { showPage(name: string): void }): void {
     this.helpRef = help;
@@ -724,7 +726,10 @@ export class Hud {
     if (s.state === "Victory" && this.victoryStats.textContent === "") this.refreshVictory();
     if (s.state !== "Victory") this.victoryStats.textContent = "";
     // GameOver 面板延迟 0.7s 弹出：先看玩家阵亡消散，再进结算
-    if (s.state === "GameOver" && this.gameOverAt === 0) this.gameOverAt = performance.now();
+    if (s.state === "GameOver" && this.gameOverAt === 0) {
+      this.gameOverAt = performance.now();
+      this.onGameOver?.(); // R183 死亡时刻音效
+    };
     if (s.state !== "GameOver") this.gameOverAt = 0;
     const overReady = s.state === "GameOver" && performance.now() - this.gameOverAt > 700;
     const wasOver = this.gameover.classList.contains("hidden");

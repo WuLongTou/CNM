@@ -111,6 +111,7 @@ async function boot(): Promise<void> {
   const padNav = new PadMenuNav();
   const help = new HelpPanel(sim);
   hud.bindHelp(help); // R167 深链：欢迎页成就 tag → 帮助成就页
+  hud.onGameOver = () => audio.play("game_over"); // R183 死亡时刻音效（资产在库未接线）
   const pauseMenu = new PauseMenu(sim, audio, settings, () => {
     saveVisualSettings(localStorage, settings);
     view.shakeEnabled = settings.shake;
@@ -414,6 +415,9 @@ async function boot(): Promise<void> {
   // 凝固期间渲染 dt 同步减速——飘字/动画/相机与逻辑一起凝滞（打击感的"世界暂停"感）
   let acc = 0;
   let last = performance.now();
+  // R183 脚步声：Combat 态移动时 0.3s 节奏（音高微随机去重复感）
+  let stepAcc = 0;
+  const STEP_INTERVAL = 0.3;
   app.ticker.add(() => {
     const now = performance.now();
     const frameMs = Math.min((now - last) / 1000, 0.25) * 1000;
@@ -424,6 +428,16 @@ async function boot(): Promise<void> {
       const scale = settings.hitstop ? sim.hitStop.scale(FIXED_DT * 1000) : 1;
       input.sample();
       sim.tick(FIXED_DT * scale);
+      // R183 脚步声：Combat + 移动输入（冲刺/停顿/模态不响）
+      if (sim.state === "Combat" && !sim.paused && (sim.input.moveX !== 0 || sim.input.moveY !== 0)) {
+        stepAcc += FIXED_DT;
+        if (stepAcc >= STEP_INTERVAL) {
+          stepAcc = 0;
+          audio.play("footstep", { pitch: 0.9 + Math.random() * 0.2, vol: 0.22 });
+        }
+      } else {
+        stepAcc = STEP_INTERVAL; // 停走即响第一步（起步反馈）
+      }
       acc -= FIXED_DT;
     }
     const dtSec = (app.ticker.deltaMS / 1000) *
