@@ -15,6 +15,7 @@ const ENEMY_SHEET: Record<number, string> = {
 };
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES, ASPECTS, ASCEND_AT } from "../sim/weapons";
+import { masteryTier } from "../sim/mastery";;
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS, achievementProgress, HONOR_ACHIEVEMENT_NAMES } from "../sim/achievements";
 import { AFFIXES, AFFIX_IDS } from "../sim/affixes";
 import { BOSSES, BOSS_BARRAGE_INFO } from "../sim/bosses";
@@ -222,7 +223,7 @@ export class HelpPanel {
           const fuse = fusionable.has(d.name) ? " · 可祭炼" : "";
           const ulti = ult.has(id) ? `<span class="w-ult">终极</span>` : "";
           const wk = wkills[id] ?? 0;
-          const wkTag = owned.has(id) && wk > 0 ? `<span class="w-kill">${wk} 杀</span>` : "";
+          const wkTag = owned.has(id) && wk > 0 ? `<span class="w-kill">${masteryTier(wk).title} · ${wk} 杀</span>` : "";
           const tags = this.weaponTags(d);
           // R109 形态入鉴：形态名 + 描述 + 解锁条件（进阶）
           const a = ASPECTS[id];

@@ -3,6 +3,7 @@
 
 import type { GameSim } from "../sim/game";
 import { stageTag, aspectUnlocked, ASPECTS } from "../sim/weapons";
+import { masteryTier } from "../sim/mastery";
 
 export class EquipmentPanel {
   /** R122 手柄 pad nav 容器（面板根）。 */
@@ -73,7 +74,10 @@ export class EquipmentPanel {
         ? `<em>伤害 ${Math.round(w.dmgDealt)}（${Math.round((w.dmgDealt / s.dmgDealtTotal) * 100)}%）</em>`
         : "";
       // R195 武器精通：生涯击杀（有记录才显示）
-      const killLine = wk(w.defId) > 0 ? ` · 击杀 ${wk(w.defId)}` : "";
+      // R198 精通称号：纯外观档位（宗师 1000 杀）
+      const kills = wk(w.defId) ?? 0;
+      const mt = masteryTier(kills);
+      const killLine = kills > 0 ? ` · <span class="w-kill">${mt.title} · 击杀 ${kills}</span>` : "";
       // R105 形态切换：进阶解锁且有形态表的武器显示按钮（事件委托 bind 一次）
       const aspectBtn = aspectUnlocked(w) && ASPECTS[w.defId]
         ? `<button type="button" class="eq-aspect" data-idx="${i}">形态：${w.aspect === 1 ? ASPECTS[w.defId].name : "本形"}</button>`
