@@ -62,6 +62,8 @@ export interface RunRecord {
   seed: number;
   date: string;
   cleared: boolean;
+  /** R154 本局解锁的成就名快照。 */
+  achievements: string[];
 }
 
 /** 生涯统计（R64）：Hades 式主菜单生涯陈列的持久底座。 */

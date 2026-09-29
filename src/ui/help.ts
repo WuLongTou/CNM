@@ -212,7 +212,7 @@ export class HelpPanel {
   /** R102 本地战绩：最近 10 局（分数/击杀/用时/角色难度/模式/种子），新的在前。 */
   private renderRunHistory(): void {
     const d = this.sim.status() as unknown as {
-      run_history?: Array<{ score: number; kills: number; survivalTime: number; round: number; roleName: string; difficultyName: string; mode: string; seed: number; date: string; cleared: boolean }>;
+      run_history?: Array<{ score: number; kills: number; survivalTime: number; round: number; roleName: string; difficultyName: string; mode: string; seed: number; date: string; cleared: boolean; achievements?: string[] }>;
     };
     const list = d.run_history ?? [];
     if (list.length === 0) {
@@ -221,7 +221,7 @@ export class HelpPanel {
     }
     const rows = list.map((r) =>
       `<tr><td>${r.score}</td><td>${r.kills}</td><td>${r.survivalTime}s</td>` +
-      `<td>${r.roleName}/${r.difficultyName}${r.mode ? ` · ${r.mode}` : ""}${r.cleared ? " · 通关" : ""}</td>` +
+      `<td>${r.roleName}/${r.difficultyName}${r.mode ? ` · ${r.mode}` : ""}${r.cleared ? " · 通关" : ""}${r.achievements?.length ? ` · 🏆${r.achievements.length}` : ""}</td>` +
       `<td>${r.seed}</td><td>${r.date}</td></tr>`).join("");
     this.bodyEl.innerHTML =
       `<p class="sub">最近 ${list.length} 局（本机）</p>` +

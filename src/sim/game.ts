@@ -2138,6 +2138,7 @@ export class GameSim {
           seed: this.seed,
           date: dailyKey(),
           cleared: cleared !== null,
+          achievements: this.runAchievements.map((a) => a.name), // R154 本局成就名快照
         },
         ...(prev.runHistory ?? []),
       ].slice(0, 10),
