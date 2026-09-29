@@ -9,6 +9,8 @@ export interface TouchActions {
   openCrafting(): void;
   toggleHelp(): void;
   togglePause(): void;
+  /** R157 触屏静音（M 键触屏对等）。 */
+  toggleMute(): void;
 }
 
 /** 是否按触屏设备处理（允许 URL 参数强制覆盖，供调试与 E2E）。 */
@@ -48,6 +50,7 @@ export class TouchControls {
       <div id="touch-ui">
         <button id="tbtn-equip" type="button">装</button>
         <button id="tbtn-craft" type="button">合</button>
+        <button id="tbtn-mute" type="button">音</button>
         <button id="tbtn-help" type="button">册</button>
         <button id="tbtn-pause" type="button">停</button>
       </div>`;
@@ -132,6 +135,7 @@ export class TouchControls {
     // UI 按钮排：与键盘热键（C/I/H/Esc）共用装配层动作
     hold("#tbtn-equip", actions.openEquipment);
     hold("#tbtn-craft", actions.openCrafting);
+    hold("#tbtn-mute", actions.toggleMute);
     hold("#tbtn-help", actions.toggleHelp);
     hold("#tbtn-pause", actions.togglePause);
   }

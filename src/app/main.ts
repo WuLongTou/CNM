@@ -238,6 +238,10 @@ async function boot(): Promise<void> {
       crafting.toggle(false);
       equipment.toggle();
     },
+    toggleMute(): void {
+      const muted = audio.toggleMute();
+      notify.push(muted ? "已静音（M 恢复）" : "声音已恢复");
+    },
     openCrafting(): void {
       if (sim.state !== "Combat") return;
       equipment.toggle(false);
