@@ -171,6 +171,8 @@ export interface Mine {
   arm: number;
   /** R83 归因：来源武器实例（伤害统计）。 */
   srcWeapon?: WeaponInstance;
+  /** 布雷武器 defId（渲染层选贴图用；空缺回退默认雷）。 */
+  defId?: string;
 }
 
 export interface Chest {
@@ -1727,6 +1729,7 @@ export class GameSim {
         psn: fxW.psn,
         arm: 0.4,
         srcWeapon: w,
+        defId: w.defId,
       });
     }
     if (hpCost > 0) p.hp = Math.max(1, p.hp - hpCost);

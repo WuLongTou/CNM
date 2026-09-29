@@ -347,7 +347,7 @@ async function boot(): Promise<void> {
       view.shake(boss ? 12 : elite ? 8 : 4);
       rumble.play("kill"); // 节流在 RumbleManager 内（割草不常转）
     });
-    sim.onPlayerHurt.push(() => { audio.play("player_hurt"); rumble.play("hurt"); });
+    sim.onPlayerHurt.push(() => { audio.play("player_hurt"); rumble.play("hurt"); view.playHurt(); }); // R176 合流：震动+受击动画
     sim.onDashStrike.push((x, y) => { view.shake(3); view.spawnBurst(x, y, 0x6b6154); });
     sim.onPerfectDodge.push((x, y) => view.spawnRipple(x, y));
     sim.onEvent(handleEvent);

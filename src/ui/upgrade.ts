@@ -6,7 +6,7 @@
 // （符合 UI 快捷键硬约束）。
 
 import type { GameSim, UpgradeOffer } from "../sim/game";
-import { bonusOf, UPGRADE_STEP } from "../sim/weapons";
+import { bonusOf, UPGRADE_STEP, weaponIconUrl } from "../sim/weapons";
 import { CFG } from "../sim/config";
 
 export class UpgradePanel {
@@ -88,8 +88,14 @@ export class UpgradePanel {
   // R7 卡片改为 div 包裹（button 不可嵌套）：整卡点击=选择，右下小按钮=放逐
   private cardHtml(o: UpgradeOffer, i: number): string {
     const bq = this.sim.banishesLeft;
+    // R36 合流：武器图标（AI 资产，缺失 onerror 兜底）
+    const defId = this.sim.player.weapons[o.weaponIdx]?.defId;
+    const icon = defId
+      ? `<img class="uc-icon" src="${weaponIconUrl(defId)}" alt="" draggable="false" onerror="this.remove()">`
+      : "";
     return `<div class="upgrade-card" data-idx="${i}" role="button" tabindex="0">
       <span class="uc-key">${i + 1}</span>
+      ${icon}
       <b>${o.weaponName}</b>
       <span class="uc-stat">${o.statName} + <i class="uc-preview">${this.previewText(o)}</i></span>
       <button type="button" class="uc-banish" data-banish="${i}"${bq <= 0 ? " disabled" : ""}

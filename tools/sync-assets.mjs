@@ -204,6 +204,8 @@ async function main() {
   report.pickups = await copyDir(path.join("sprites", "pickups"), "sprites/pickups");
   report.buildings = await copyDir(path.join("sprites", "buildings"), "sprites/buildings");
   report.ui = await copyDir(path.join("sprites", "ui"), "sprites/ui");
+  report.iconsWeapons = await copyDir(path.join("sprites", "icons", "weapons"), "sprites/icons/weapons");
+  report.iconsProps = await copyDir(path.join("sprites", "icons", "props"), "sprites/icons/props");
   report.weapons = await stripDir(path.join("sprites", "weapons"), "sprites/weapons");
   report.effects = await stripDir(path.join("sprites", "effects"), "sprites/effects");
 
@@ -222,6 +224,13 @@ async function main() {
     for (const [anim, frames] of [["walk", walk], ["attack", attack], ["idle", idle]]) {
       // gen-sketch 产物面朝右，与 view 层 facing 语义一致，不再水平翻转
       atlases.push(await writeAtlas(frames, `${who}_${anim}`, atlasDir));
+    }
+    // 扩展动作（AI 生成资产，可能缺某职业/某动作）：dash 4×1 / hurt 2×1 / death 6×1
+    for (const [anim, cols] of [["dash", 4], ["hurt", 2], ["death", 6]]) {
+      const file = path.join(playerDir, `${who}_${anim}.png`);
+      if (!fs.existsSync(file)) continue;
+      const frames = await gridFrames(file, cols, 1, { strip: false });
+      if (frames.length > 0) atlases.push(await writeAtlas(frames, `${who}_${anim}`, atlasDir));
     }
   }
 

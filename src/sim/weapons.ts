@@ -115,6 +115,16 @@ export const FUSION_RECIPES: Array<{ a: string; b: string; result: string }> = [
   { a: "弓箭", b: "魅火法杖", result: "dujian" },
 ];
 
+/** 武器名 → defId（融合报价等只有名称的场合，UI 图标寻址用）。 */
+export const WEAPON_ID_BY_NAME: Record<string, string> = Object.fromEntries(
+  Object.entries(WEAPON_DATA).map(([id, d]) => [d.name, id]),
+);
+
+/** 武器图标地址（AI 生成资产按 defId 命名；缺失由前端 onerror 兜底）。 */
+export function weaponIconUrl(defId: string): string {
+  return `assets/sprites/icons/weapons/${defId}.png`;
+}
+
 export interface WeaponInstance {
   defId: string;
   name: string;

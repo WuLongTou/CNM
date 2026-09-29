@@ -24,6 +24,8 @@ const TAU = Math.PI * 2;
 const CAMERA_SMOOTHING = 6.5; // 对齐 GameConfig.CameraSmoothing
 const WALK_ANIM_STEP = 0.06;  // 对齐 GameConfig.WalkAnimSpeed
 const ATTACK_ANIM_TIME = 0.3; // 攻击动画总时长（onAttack 触发播一轮）
+const HURT_ANIM_TIME = 0.3;   // 受击动画总时长（playHurt 置位）
+const DEATH_ANIM_TIME = 0.6;  // 死亡动画总时长（阵亡边沿置位，播完再隐藏）
 
 interface EnemyView {
   container: Container;
@@ -33,6 +35,12 @@ interface EnemyView {
   animName: string;
   frame: number;
   animTimer: number;
+  /** 攻击帧动画（AI 资产，缺省 null 时维持程序动作）。 */
+  attackFrames: Texture[] | null;
+  /** 妖王形态帧（AI 资产，缺省 null 时用 walk 放大）。 */
+  bossFrames: Texture[] | null;
+  /** 当前播放的帧列表标记（walk/attack/boss），切换时帧序重置。 */
+  animKey: string;
   /** 朝向插值（-1..1）。 */
   faceCur: number;
   /** 浮动/弹跳相位（个体错开，破除集体同步）。 */
@@ -50,6 +58,10 @@ interface PlayerSkin {
   walk: Texture[];
   attack: Texture[];
   idle: Texture[];
+  /** 扩展动作（AI 资产，缺省 null 回退既有动画）。 */
+  dash: Texture[] | null;
+  hurt: Texture[] | null;
+  death: Texture[] | null;
 }
 
 /** 浮空妖物：呼吸浮动 + 轻微摇摆（游魂/魅影/隐煞/浮灯/蚀群）。 */
@@ -67,10 +79,31 @@ export class GameView {
   private curSkin = "warrior";
   /** 攻击动画剩余时长（playAttack 置位，递减归零回落 walk/idle）。 */
   private attackTimer = 0;
+  /** 受击动画剩余时长（playHurt 置位；播完回落）。 */
+  private hurtTimer = 0;
+  /** 死亡动画剩余时长（阵亡边沿置位，播完再隐藏）。 */
+  private deathTimer = 0;
   /** 当前攻击动画是否近战（近战带前顶步，远程站桩）。 */
   private attackIsMelee = true;
   private enemyViews = new Map<number, EnemyView>();
   private enemyTextures = new Map<string, Texture[]>();
+  /** 妖物攻击帧（键不含 _walk 后缀）与妖王形态帧（缺资产为 null）。 */
+  private enemyAttackTextures = new Map<string, Texture[] | null>();
+  private enemyBossTextures = new Map<string, Texture[] | null>();
+  /** 场景物件贴图（AI 资产，缺省回退矢量线稿）。 */
+  private propTextures = new Map<string, Texture>();
+  /** 物件精灵层（贴地，实体之下）与按对象键控的精灵缓存。 */
+  private propLayer = new Container();
+  private obstacleSprites = new Map<object, Sprite>();
+  private altarSprites = new Map<object, Sprite>();
+  private chestSprites = new Map<object, Sprite>();
+  private pickupSprites = new Map<object, Sprite>();
+  private mineSprites = new Map<object, Sprite>();
+  /** 地面整图与分幕地面（act2-4 可选资产，缺省沿用幕 1）。 */
+  private groundSprite!: Sprite;
+  private groundAct1Tex!: Texture;
+  private actGroundTextures: Texture[] = [];
+  private curAct = -1;
   private camX = 0;
   private camY = 0;
   /** 相机移动前瞻（朝输入方向平滑偏移，行走更带感）。 */
@@ -96,13 +129,30 @@ export class GameView {
     const ground = new Sprite(groundTex);
     ground.width = 3840; ground.height = 2160;
     this.worldLayer.addChild(ground);
+    this.groundSprite = ground;
+    this.groundAct1Tex = groundTex;
+    // 分幕地面（act2-4 可选资产，404/缺失沿用幕 1，不阻塞启动）
+    for (const f of ["ground_act2", "ground_act3", "ground_act4"]) {
+      this.actGroundTextures.push(await this.loadTextureOptional(`assets/sprites/backgrounds/${f}.jpg`) ?? groundTex);
+    }
+    // 物件精灵层贴地（地面之上、实体之下）
+    this.worldLayer.addChildAt(this.propLayer, 1);
+    // 场景物件贴图（可选；全部缺失时维持矢量线稿渲染）
+    for (const name of ["tree", "rock", "bush", "stone_block", "altar", "altar_used", "chest",
+      "talisman", "mine_tiejili", "mine_jishu", "mine_huolei"]) {
+      const tex = await this.loadTextureOptional(`assets/sprites/icons/props/${name}.png`);
+      if (tex) this.propTextures.set(name, tex);
+    }
 
-    // 玩家三套外观（walk 8 帧 / attack 6 帧 / idle 4 帧呼吸），按手持武器类型切换
+    // 玩家三套外观（walk 8 帧 / attack 6 帧 / idle 4 帧呼吸）+ 可选扩展动作，按手持武器类型切换
     for (const who of ["warrior", "ranger", "mage"]) {
       this.playerSkins[who] = {
         walk: await this.loadFrames(`assets/sprites/player/${who}_walk.json`),
         attack: await this.loadFrames(`assets/sprites/player/${who}_attack.json`),
         idle: await this.loadFrames(`assets/sprites/player/${who}_idle.json`),
+        dash: await this.loadFramesOptional(`assets/sprites/player/${who}_dash.json`),
+        hurt: await this.loadFramesOptional(`assets/sprites/player/${who}_hurt.json`),
+        death: await this.loadFramesOptional(`assets/sprites/player/${who}_death.json`),
       };
     }
     this.playerSprite = new Sprite(this.playerSkins.warrior.idle[0]);
@@ -112,6 +162,12 @@ export class GameView {
     // 预加载全部妖物 atlas
     for (const name of new Set(Object.values(ENEMY_ATLAS))) {
       this.enemyTextures.set(name, await this.loadFrames(`assets/sprites/enemies/${name}.json`));
+    }
+    // 妖物攻击帧与妖王形态帧（可选 AI 资产，缺省回退 walk + 程序动作）
+    for (const name of new Set(Object.values(ENEMY_ATLAS))) {
+      const base = name.replace(/_walk$/, "");
+      this.enemyAttackTextures.set(base, await this.loadFramesOptional(`assets/sprites/enemies/${base}_attack.json`));
+      this.enemyBossTextures.set(base, await this.loadFramesOptional(`assets/sprites/enemies/${base}_boss.json`));
     }
   }
 
@@ -125,6 +181,16 @@ export class GameView {
       return na - nb;
     });
     return entries.map(([, t]) => t);
+  }
+
+  /** 可选 atlas：AI 资产可能缺某动作，缺省返回 null（回退既有动画）。 */
+  private async loadFramesOptional(atlasUrl: string): Promise<Texture[] | null> {
+    try { return await this.loadFrames(atlasUrl); } catch { return null; }
+  }
+
+  /** 可选整图：缺省返回 null。 */
+  private async loadTextureOptional(url: string): Promise<Texture | null> {
+    try { return await Assets.load<Texture>(url); } catch { return null; }
   }
 
   /** 词缀徽标（R17）：头顶 10px 级小符号，一眼可辨七词缀（boss 均为 none，不画）。 */
@@ -167,7 +233,11 @@ export class GameView {
 
   private makeEnemyView(z: Enemy): EnemyView {
     const animName = ENEMY_ATLAS[z.type] ?? "enemy_basic_walk";
-    const frames = this.enemyTextures.get(animName) ?? this.enemyTextures.get("enemy_basic_walk")!;
+    const base = animName.replace(/_walk$/, "");
+    const attackFrames = this.enemyAttackTextures.get(base) ?? null;
+    const bossFrames = this.enemyBossTextures.get(base) ?? null;
+    const frames = (z.boss && bossFrames) ? bossFrames
+      : this.enemyTextures.get(animName) ?? this.enemyTextures.get("enemy_basic_walk")!;
     const container = new Container();
     const body = new Sprite(frames[0]);
     body.anchor.set(0.5);
@@ -200,6 +270,7 @@ export class GameView {
     // 相位随机化：每只妖物帧起点/计时/浮动相位错开，避免"集体广场舞"
     return {
       container, body, hpFill: fill, hpBar, animName,
+      attackFrames, bossFrames, animKey: "walk",
       frame: Math.floor(Math.random() * frames.length),
       animTimer: Math.random() * 0.1,
       faceCur: z.facing, bobPhase: Math.random() * Math.PI * 2,
@@ -227,6 +298,13 @@ export class GameView {
     const sy = this.shakePower > 0.1 ? (Math.random() * 2 - 1) * this.shakePower : 0;
     this.worldLayer.x = -this.camX + sx;
     this.worldLayer.y = -this.camY + sy;
+    // 分幕换地皮：幕推进时切换地面整图（缺省资产沿用幕 1）
+    if (sim.act !== this.curAct) {
+      this.curAct = sim.act;
+      this.groundSprite.texture = this.curAct > 0
+        ? this.actGroundTextures[this.curAct - 1]
+        : this.groundAct1Tex;
+    }
     this.updateDamageTexts(dt);
     this.updateDebris(dt);
     this.updateBursts(dt);
@@ -236,18 +314,32 @@ export class GameView {
     this.updateSparks(dt);
     this.updateSlashes(dt);
 
-    // 玩家：移动走 walk 帧、静止 idle 帧；死亡隐藏+墨迹消散；无敌帧闪烁
+    // 玩家：移动走 walk 帧、静止 idle 帧；死亡播 death 帧后隐藏+墨迹消散；无敌帧闪烁
     const p = sim.player;
-    this.playerSprite.visible = !p.dead;
+    if (!p.dead) this.deathTimer = 0;
     if (!p.dead && p.invincible <= 0 && this.prevPlayerDead) {
       // 重生/新局：复位消散标记
       this.prevPlayerDead = false;
     }
     if (p.dead && !this.prevPlayerDead && sim.state === "GameOver") {
-      // 阵亡瞬间：大号墨迹消散（双份错位，与妖物消散同语）
+      // 阵亡瞬间：死亡动画起播 + 大号墨迹消散（双份错位，与妖物消散同语）
+      this.deathTimer = DEATH_ANIM_TIME;
       this.spawnDeathScribble(p.x, p.y, 2.4);
       this.spawnDeathScribble(p.x + 10, p.y - 6, 1.6);
       this.prevPlayerDead = true;
+    }
+    if (p.dead && this.deathTimer > 0 && this.playerSkins[this.curSkin].death) {
+      // 死亡动画：播完 death 帧序列再隐藏
+      this.deathTimer -= dt;
+      const dSkin = this.playerSkins[this.curSkin];
+      this.playerSprite.visible = true;
+      this.playerSprite.alpha = 1;
+      this.playerSprite.position.set(p.x, p.y);
+      const dfr = Math.min(dSkin.death!.length - 1,
+        Math.floor((1 - this.deathTimer / DEATH_ANIM_TIME) * dSkin.death!.length));
+      this.playerSprite.texture = dSkin.death![dfr];
+    } else {
+      this.playerSprite.visible = !p.dead;
     }
     if (!p.dead) {
       // 皮肤跟随武器类型：近战=除妖师 / 远程=弓手 / 法术=法师
@@ -273,6 +365,21 @@ export class GameView {
         const lunge = this.attackIsMelee ? Math.sin(prog * Math.PI) * 7 : 0;
         this.playerSprite.x = p.x + p.facing * lunge;
         this.playerSprite.y = p.y;
+        this.animTimer = 0;
+        this.frameIndex = 0;
+      } else if (this.hurtTimer > 0 && skin.hurt) {
+        // 受击动画：后仰踉跄两帧，优先于走跑（打击反馈）
+        this.hurtTimer -= dt;
+        const ht = Math.min(skin.hurt.length - 1,
+          Math.floor((1 - Math.max(0, this.hurtTimer) / HURT_ANIM_TIME) * skin.hurt.length));
+        this.playerSprite.texture = skin.hurt[ht];
+        this.animTimer = 0;
+        this.frameIndex = 0;
+      } else if (p.dashTimer > 0 && skin.dash) {
+        // 冲刺动画：按冲刺剩余时间取帧（前倾疾冲）
+        const dfr = Math.min(skin.dash.length - 1,
+          Math.floor((1 - p.dashTimer / CFG.Player.DashDuration) * skin.dash.length));
+        this.playerSprite.texture = skin.dash[dfr];
         this.animTimer = 0;
         this.frameIndex = 0;
       } else if (p.moving) {
@@ -381,12 +488,26 @@ export class GameView {
       v.hpFill.width = 30 * ratio;
       // 妖王走顶部大血条，头顶小条隐藏
       v.hpBar.visible = !z.boss && z.hp < z.maxHp;
-      if (this.enemyTextures.get(v.animName)!.length > 1) {
+      // 帧列表选择：出手窗口播 attack 帧，妖王常驻 boss 形态（出手反馈走程序脉冲），其余 walk；
+      // 列表切换时帧序重置（相位随机化仅限 walk）
+      const attacking = (z.attackWind > 0 || z.strikeT > 0) && v.attackFrames !== null
+        && !(z.boss && v.bossFrames);
+      const key = attacking ? "attack" : (z.boss && v.bossFrames ? "boss" : "walk");
+      const list = attacking ? v.attackFrames!
+        : key === "boss" ? v.bossFrames!
+        : this.enemyTextures.get(v.animName)!;
+      if (key !== v.animKey) {
+        v.animKey = key;
+        v.frame = key === "walk" ? Math.floor(Math.random() * list.length) : 0;
+        v.animTimer = 0;
+        v.body.texture = list[v.frame];
+      }
+      if (list.length > 1) {
         v.animTimer += dt;
         if (v.animTimer >= 0.1) {
           v.animTimer -= 0.1;
-          v.frame = (v.frame + 1) % this.enemyTextures.get(v.animName)!.length;
-          v.body.texture = this.enemyTextures.get(v.animName)![v.frame];
+          v.frame = (v.frame + 1) % list.length;
+          v.body.texture = list[v.frame];
         }
       }
     }
@@ -620,14 +741,36 @@ export class GameView {
     g.alpha = 1;
   }
 
+  /** 地雷：按布雷武器选贴图（缺省回退铁蒺藜再回退矢量），布防期整体泛白。 */
   private renderMines(sim: GameSim): void {
     const g = this.mineGfx;
-    if (this.mineGfx.parent !== this.fxLayer) this.fxLayer.addChild(g);
+    if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
     g.clear();
+    const texDefault = this.propTextures.get("mine_tiejili");
+    const alive = new Set<object>();
     for (const m of sim.mines) {
+      alive.add(m);
+      const tex = (m.defId === "diyu_huolei" ? this.propTextures.get("mine_huolei")
+        : m.defId === "jishulei" ? this.propTextures.get("mine_jishu") : null)
+        ?? texDefault;
+      if (tex) {
+        let spr = this.mineSprites.get(m);
+        if (!spr) {
+          spr = new Sprite(tex);
+          spr.anchor.set(0.5, 0.7);
+          this.mineSprites.set(m, spr);
+          this.propLayer.addChild(spr);
+        }
+        spr.visible = true;
+        spr.position.set(m.x, m.y);
+        spr.width = 30; spr.height = 30;
+        spr.tint = m.arm > 0 ? 0xd8d0c0 : 0xffffff;
+        continue;
+      }
       g.circle(m.x, m.y, 7).fill(m.arm > 0 ? INK_SOFT : BLOOD).alpha = 0.9;
       g.circle(m.x, m.y, 10).stroke({ width: 1.5, color: INK, alpha: 0.6 });
     }
+    this.pruneSprites(this.mineSprites, alive);
   }
 
   /** 敌方弹道：毒弹=墨绿点 / 箭矢=血红细条（与玩家炭黑弹道区分）。 */
@@ -889,25 +1032,54 @@ export class GameView {
   }
 
   /** 宝箱：简笔木箱——炭描边方框 + 箱盖线 + 血红锁扣点。 */
+  /** 对象键控精灵缓存清理：退场物件销毁对应精灵。 */
+  private pruneSprites<T extends object>(map: Map<T, Sprite>, alive: Set<T>): void {
+    for (const [obj, spr] of map) {
+      if (!alive.has(obj)) {
+        spr.destroy();
+        map.delete(obj);
+      }
+    }
+  }
+
+  /** 宝箱：优先简笔木箱贴图，缺失回退矢量（炭描边方框 + 箱盖线 + 血红锁扣点）。 */
   private renderChests(sim: GameSim): void {
     const g = this.chestGfx;
     if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
     g.clear();
+    const tex = this.propTextures.get("chest");
+    const alive = new Set<object>();
     for (const c of sim.chests) {
       if (c.opened) continue;
+      // R8 精英箱：同纸金底 + 血红描边/锁 + 大一圈（高价值一望可辨）
       if (c.elite) {
-        // R8 精英箱：同纸金底 + 血红描边/锁 + 大一圈（高价值一望可辨）
         g.rect(c.x - 15, c.y - 12, 30, 24).fill({ color: 0xe8d5a8, alpha: 0.95 })
           .stroke({ width: 3, color: BLOOD });
         g.moveTo(c.x - 15, c.y - 4).lineTo(c.x + 15, c.y - 4).stroke({ width: 2, color: BLOOD, alpha: 0.85 });
         g.circle(c.x, c.y - 2, 3).fill(BLOOD);
+      } else if (tex) {
+        // R36 贴图宝箱（AI 资产）：普通箱走精灵，缺失回退简笔
+        let spr = this.chestSprites.get(c);
+        if (!spr) {
+          spr = new Sprite(tex);
+          spr.anchor.set(0.5, 0.8);
+          this.chestSprites.set(c, spr);
+          this.propLayer.addChild(spr);
+        }
+        spr.visible = true;
+        spr.position.set(c.x, c.y);
+        spr.width = 44; spr.height = 44;
+        alive.add(c);
         continue;
+      } else {
+        g.rect(c.x - 13, c.y - 10, 26, 20).fill({ color: 0xe8d5a8, alpha: 0.95 })
+          .stroke({ width: 2.5, color: INK });
+        g.moveTo(c.x - 13, c.y - 3).lineTo(c.x + 13, c.y - 3).stroke({ width: 1.8, color: INK, alpha: 0.7 });
+        g.circle(c.x, c.y - 2, 2.4).fill(BLOOD);
       }
-      g.rect(c.x - 13, c.y - 10, 26, 20).fill({ color: 0xe8d5a8, alpha: 0.95 })
-        .stroke({ width: 2.5, color: INK });
-      g.moveTo(c.x - 13, c.y - 3).lineTo(c.x + 13, c.y - 3).stroke({ width: 1.8, color: INK, alpha: 0.7 });
-      g.circle(c.x, c.y - 2, 2.4).fill(BLOOD);
+      alive.add(c);
     }
+    this.pruneSprites(this.chestSprites, alive);
   }
 
   /** 香火龛（R65）：简笔龛台——纸金小龛 + 顶檐 + 血红香火点（区别于宝箱方箱）。 */
@@ -926,13 +1098,30 @@ export class GameView {
   }
 
   /** 升级符箓：竖长符纸 + 血红符文 + 光圈，整体轻微上下浮动。 */
+  /** 升级符箓：优先符纸贴图 + 上下浮动，缺失回退矢量。 */
   private pickupGfx = new Graphics();
   private renderPickups(sim: GameSim): void {
     const g = this.pickupGfx;
     if (g.parent !== this.fxLayer) this.fxLayer.addChild(g);
     g.clear();
+    const tex = this.propTextures.get("talisman");
     const bob = Math.sin(performance.now() / 220) * 3;
+    const alive = new Set<object>();
     for (const u of sim.pickups) {
+      alive.add(u);
+      if (tex) {
+        let spr = this.pickupSprites.get(u);
+        if (!spr) {
+          spr = new Sprite(tex);
+          spr.anchor.set(0.5, 0.6);
+          this.pickupSprites.set(u, spr);
+          this.propLayer.addChild(spr);
+        }
+        spr.visible = true;
+        spr.position.set(u.x, u.y + bob);
+        spr.width = 30; spr.height = 30;
+        continue;
+      }
       g.circle(u.x, u.y + 4, 15).stroke({ width: 1.5, color: INK, alpha: 0.3 });
       g.rect(u.x - 6, u.y - 9 + bob, 12, 18)
         .fill({ color: 0xfbf6ea, alpha: 0.95 })
@@ -940,6 +1129,7 @@ export class GameView {
       g.circle(u.x, u.y - 3 + bob, 2.5).fill(BLOOD);
       g.rect(u.x - 3, u.y + 1 + bob, 6, 1.5).fill(BLOOD);
     }
+    this.pruneSprites(this.pickupSprites, alive);
   }
 
   /** 天气表现：屏幕空间色调覆盖（雨=冷蓝+雨线 / 雾=灰蒙 / 血月=暗红呼吸脉冲）。 */
@@ -1022,6 +1212,11 @@ export class GameView {
     this.attackIsMelee = type === undefined || type === "Melee";
   }
 
+  /** 播放一轮玩家受击动画（onPlayerHurt 事件触发）。 */
+  playHurt(): void {
+    this.hurtTimer = HURT_ANIM_TIME;
+  }
+
   /** 伤害数字：世界上浮淡出（暴击更大；白纸上炭红字 + 纸白描边可读）。
    *  R1：出生带缩放 pop（暴击弹得更高），打击的视觉锚点。 */
   spawnDamageNumber(x: number, y: number, dmg: number, crit: boolean): void {
@@ -1074,7 +1269,7 @@ export class GameView {
   damageNumbersEnabled = true;
   private damageTexts: Array<{ t: Text; life: number; age: number; popFrom: number }> = [];
 
-  /** 障碍与祭坛：速写本线稿风（淡彩填充 + 炭描边），每帧低开销重绘。 */
+  /** 障碍与祭坛：优先场景物件贴图（AI 资产），缺失回退速写本线稿；每帧低开销同步。 */
   renderTerrain(sim: GameSim): void {
     if (this.terrainGfx.parent !== this.worldLayer) this.worldLayer.addChild(this.terrainGfx);
     if (this.altarGfx.parent !== this.worldLayer) this.worldLayer.addChild(this.altarGfx);
@@ -1084,6 +1279,21 @@ export class GameView {
     for (const o of sim.terrain.obstacles) {
       if (o.dead) continue;
       g.circle(o.x, o.y + o.r * 0.55, o.r * 0.8).fill({ color: 0x6b6154, alpha: 0.14 }); // 落影
+      const tex = this.propTextures.get(o.kind);
+      if (tex) {
+        let spr = this.obstacleSprites.get(o);
+        if (!spr) {
+          spr = new Sprite(tex);
+          spr.anchor.set(0.5, 0.82);
+          this.obstacleSprites.set(o, spr);
+          this.propLayer.addChild(spr);
+        }
+        spr.visible = true;
+        spr.position.set(o.x, o.y + o.r * 0.4);
+        const s = (o.r * 2.6) / tex.width;
+        spr.scale.set(s);
+        continue;
+      }
       if (o.kind === "tree") {
         g.moveTo(o.x, o.y + o.r * 0.5).lineTo(o.x, o.y - o.r * 0.1)
           .stroke({ width: 3, color: INK });
@@ -1110,10 +1320,25 @@ export class GameView {
         }
       }
     }
-    // 祭坛：血红符阵（双圈 + 中心符点），用后褪色
+    // 祭坛：优先贴图（血红符阵，用后褪色），缺失回退矢量符阵
     const a = this.altarGfx;
     a.clear();
     for (const alt of sim.terrain.altars) {
+      const tex = this.propTextures.get(alt.used ? "altar_used" : "altar");
+      if (tex) {
+        let spr = this.altarSprites.get(alt);
+        if (!spr) {
+          spr = new Sprite(tex);
+          spr.anchor.set(0.5, 0.78);
+          this.altarSprites.set(alt, spr);
+          this.propLayer.addChild(spr);
+        }
+        spr.texture = tex;
+        spr.position.set(alt.x, alt.y);
+        spr.width = 68; spr.height = 68;
+        spr.alpha = alt.used ? 0.55 : 1;
+        continue;
+      }
       const alpha = alt.used ? 0.25 : 0.85;
       a.circle(alt.x, alt.y, 22).fill({ color: 0xe8c8c0, alpha: alpha * 0.5 })
         .stroke({ width: 2.5, color: BLOOD, alpha });

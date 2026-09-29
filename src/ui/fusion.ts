@@ -2,6 +2,7 @@
 // 打开时 sim 已由 sim 侧置 paused，游戏输入 100% 失效。
 
 import type { GameSim } from "../sim/game";
+import { WEAPON_ID_BY_NAME, weaponIconUrl } from "../sim/weapons";
 
 export class FusionPanel {
   private el: HTMLElement;
@@ -30,7 +31,14 @@ export class FusionPanel {
     const offer = this.sim.fusionOffer;
     if (!offer) return;
     this.visible = true;
-    this.infoEl.textContent = `以「${offer.a}」与「${offer.b}」祭炼，可得「${offer.resultName}」`;
+    // 图标随武器名寻址（未知名/缺图时 onerror 移除，不占位）
+    const icon = (name: string): string => {
+      const id = WEAPON_ID_BY_NAME[name];
+      if (!id) return "";
+      return `<img class="fusion-icon" src="${weaponIconUrl(id)}" alt="" draggable="false" onerror="this.remove()">`;
+    };
+    this.infoEl.innerHTML =
+      `以「${icon(offer.a)}${offer.a}」与「${icon(offer.b)}${offer.b}」祭炼，可得「${icon(offer.resultName)}${offer.resultName}」`;
     this.el.classList.remove("hidden");
   }
 

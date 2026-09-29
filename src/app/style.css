@@ -159,6 +159,8 @@ canvas { position: absolute; z-index: 0; }
 .eq-item b { color: #6a1a12; }
 .eq-item i { color: #8a8175; font-style: normal; font-size: 12px; }
 .eq-item em { margin-left: auto; color: #a89a80; font-size: 12px; }
+/* 武器图标（AI 资产）：行囊条目内左侧小图 */
+.eq-icon { width: 36px; height: 36px; align-self: center; flex: none; }
 
 /* ── 通知条：纸签 ── */
 #notify-root { position: absolute; top: 116px; /* 让位妖王血条（62-76） */ left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; align-items: center; pointer-events: none; }
@@ -177,6 +179,7 @@ canvas { position: absolute; z-index: 0; }
 /* ── 融合面板 ── */
 .fusion-btns { display: flex; gap: 12px; justify-content: center; }
 .fusion-btns button { font-size: 15px; padding: 8px 24px; }
+.fusion-icon { width: 28px; height: 28px; vertical-align: -7px; margin: 0 2px; }
 #btn-reject { background: #8a8175; }
 .meta-row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; max-width: 520px; margin: 0 auto 10px; }
 .meta-row button { font-size: 13px; padding: 6px 14px; background: #a8741a; }
@@ -197,6 +200,7 @@ canvas { position: absolute; z-index: 0; }
 }
 .upgrade-card b { color: #6a1a12; letter-spacing: 0.08em; }
 .upgrade-card .uc-stat { color: #8e2a20; font-weight: 700; }
+.upgrade-card .uc-icon { width: 48px; height: 48px; }
 /* R7 卡内放逐小按钮（卡片本体已是 div，避免 button 嵌套） */
 .uc-banish {
   display: inline-flex; align-items: center; gap: 5px; margin-top: 6px;

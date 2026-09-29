@@ -72,6 +72,7 @@ export class EquipmentPanel {
         ? `<button type="button" class="eq-aspect" data-idx="${i}">形态：${w.aspect === 1 ? ASPECTS[w.defId].name : "本形"}</button>`
         : "";
       return `<div class="eq-item ${active ? "active" : ""}">
+        <img class="eq-icon" src="assets/sprites/icons/weapons/${w.defId}.png" alt="" draggable="false" onerror="this.remove()">
         <b>${w.name}</b>${stageLabel}<i>${w.type}${active ? " · 当前" : ""}</i>
         <em>升 ${w.ups} 次</em>${aspectBtn}${share}</div>`;
     }).join("") || `<div class="eq-item"><i>空手（徒手近战）</i></div>`;
