@@ -12,7 +12,7 @@ const spawnAndKill = (sim: GameSim) => {
 };
 
 describe("R187 符箓保底", () => {
-  it("40 杀内必触发：计数 ≥40 后普通妖死 → pickups 非空且落玩家脚边", () => {
+  it("25 杀内必触发：计数 ≥25 后普通妖死 → pickups 非空且落玩家脚边", () => {
     const sim = new GameSim(1870, memoryStorage());
     sim.exec({ action: "start" });
     let pityDrop = false;

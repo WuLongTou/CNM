@@ -3,16 +3,16 @@
 // - 坏种子（约 7 成）第 1 阶 20-30s 暴毙（bot 无垫步/闪避，真人约 2-5 分钟）；
 // - 好种子（约 3 成）雪球化：seek s14 杀 3177 进 13 阶死于终幕；orbit 个别
 //   种子 720s 不死（power-fantasy 态，非软锁——玩家持续蒸发妖潮）。
-// pins 语义：终结性用「可终结种子」；雪球存在性改用 seek s14 强证据。
+// pins 语义：终结性用「可终结种子」；雪球存在性用 orbit s14（720s 阶 4+ 杀 700+）。
 import { describe, expect, it } from "vitest";
 import { runBot } from "./bot";
 
 describe("R23 实机强度基线（R176 重钉）", () => {
   it("对局必终结（无软锁）：三策略 × 可终结种子", () => {
     const seedsByPolicy: Record<string, number[]> = {
-      orbit: [12, 13, 16],
-      seek: [11, 12, 13],
-      stick: [11, 12, 13],
+      orbit: [11, 12, 13, 15, 18],
+      seek: [13, 16, 17, 18, 21],
+      stick: [12, 13, 14, 17, 22],
     };
     for (const policy of ["orbit", "seek", "stick"] as const) {
       for (const seed of seedsByPolicy[policy]!) {
@@ -23,7 +23,7 @@ describe("R23 实机强度基线（R176 重钉）", () => {
   }, 180000);
 
   it("风筝种子全部可终结（妖潮压力有效）", () => {
-    for (const seed of [12, 13, 16, 17, 18]) {
+    for (const seed of [12, 13, 15, 18, 20]) {
       const r = runBot(seed, "orbit");
       expect(r.state).toBe("GameOver");
     }

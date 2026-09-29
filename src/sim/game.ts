@@ -374,7 +374,7 @@ export class GameSim {
   damageTakenRun = 0;
   /** R159 本局是否破最高分（结算屏「新纪录」徽章）。 */
   newRecord = false;
-  /** R187 保底计数：距上次符箓掉落的杀敌数（≥40 普通妖必掉）。 */
+  /** R187 保底计数：距上次符箓掉落的杀敌数（≥25 普通妖必掉）。 */
   killsSinceTalisman = 0;
   /** R166 未破纪录时距历史最高分的差值（结算屏差距提示）。 */
   recordGap = 0;
@@ -2038,9 +2038,9 @@ export class GameSim {
       this.emit("goblin_slayed", { x: e.x, y: e.y });
     }
     // 升级符箓掉落：普通低概率 / 精英高概率 / 妖王必掉 3 枚
-    // R187 保底：40 杀无符箓 → 普通妖必掉玩家脚边一枚（升级 cadence 保障）
+    // R187 保底：25 杀无符箓 → 普通妖必掉玩家脚边一枚（升级 cadence 保障）
     this.killsSinceTalisman++;
-    const pity = this.killsSinceTalisman >= 40 && !e.boss && !e.elite && this.player.weapons.length > 0;
+    const pity = this.killsSinceTalisman >= 25 && !e.boss && !e.elite && this.player.weapons.length > 0;
     const rate = e.boss ? UPGRADE_DROP.boss : e.elite ? UPGRADE_DROP.elite : UPGRADE_DROP.normal;
     if (pity || this.rng.chance(rate)) {
       const n = e.boss ? 3 : 1;
@@ -2696,7 +2696,9 @@ export class GameSim {
     const foe = this.difficulty.foeMult;
     const blood = this.pactTier("blood") >= 1 ? PACTS.blood.tiers[this.pactTier("blood") - 1].hpMult : 1;
     let hp = Math.ceil(stats.hp * mult * foe * blood);
-    let damage = Math.ceil(stats.dmg * mult * foe);
+    // R187 Act1 温和热身：妖物伤害按幕爬升（0.6→1.1），首分钟不再 20s 团灭
+    const actDmg = CFG.Acts.DamageMult[Math.min(this.act, CFG.Acts.DamageMult.length - 1)];
+    let damage = Math.ceil(stats.dmg * mult * foe * actDmg);
     // R73 每日变异「妖行如风」/「妖坚如铁」
     // R176 手感 pass：速度随阶数爬坡（1 + 阶×3.5%，13 阶 ×1.455 封顶）——
     // 首分钟温和、后期妖潮（旧「速度不动」决策随世界/密度缩而废止）
