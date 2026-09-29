@@ -429,6 +429,10 @@ async function boot(): Promise<void> {
         equipment.toggle(); // R122 手柄 X 开合装备面板
       } else if (menu.reroll && !shop.visible) {
         crafting.toggle(); // R122 手柄 Y（非商店时）开合合成
+      } else if (help.visible && menu.rb) {
+        help.onKey({ code: "ArrowRight" } as KeyboardEvent); // R150 RB 下一页
+      } else if (help.visible && menu.lb) {
+        help.onKey({ code: "ArrowLeft" } as KeyboardEvent); // R150 LB 上一页
       } else if (container) {
         padNav.handle(menu);
       }

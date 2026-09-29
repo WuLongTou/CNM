@@ -46,7 +46,7 @@ export function stickWithDeadzone(x: number, y: number): { x: number; y: number 
 
 const NO_PAD: GamepadRead = { connected: false, moveX: 0, moveY: 0, attack: false, dash: false, start: false };
 
-const NO_MENU: MenuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false, equip: false };
+const NO_MENU: MenuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false, equip: false, lb: false, rb: false };
 
 /** 菜单导航边沿读数（R76：dpad/A/B 每次按下触发一次；R79 加 Y 刷新）。 */
 export interface MenuEdges {
@@ -60,6 +60,10 @@ export interface MenuEdges {
   reroll: boolean;
   /** R122 X 键：开合装备面板（main 层消费）。 */
   equip: boolean;
+  /** R150 LB 键：帮助页上一页（main 层消费）。 */
+  lb: boolean;
+  /** R150 RB 键：帮助页下一页（main 层消费）。 */
+  rb: boolean;
 }
 
 export class GamepadInput {
@@ -82,12 +86,12 @@ export class GamepadInput {
     } catch {
       // 怪异环境（getGamepads 抛错）按未连接处理，绝不影响键盘/触屏输入
       this.prevDash = this.prevStart = false;
-      this.menuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false, equip: false };
+      this.menuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false, equip: false, lb: false, rb: false };
       return NO_PAD;
     }
     if (!pad) {
       this.prevDash = this.prevStart = false;
-      this.menuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false, equip: false };
+      this.menuEdges = { up: false, down: false, left: false, right: false, confirm: false, back: false, reroll: false, equip: false, lb: false, rb: false };
       return NO_PAD;
     }
     const stick = stickWithDeadzone(pad.axes[0] ?? 0, pad.axes[1] ?? 0);
@@ -110,6 +114,8 @@ export class GamepadInput {
       back: pressed(pad, GP_BTN.B),
       reroll: pressed(pad, GP_BTN.Y),
       equip: pressed(pad, GP_BTN.X),
+      lb: pressed(pad, GP_BTN.LB),
+      rb: pressed(pad, GP_BTN.RB),
     };
     this.menuEdges = {
       up: menuNow.up && !this.prevMenu.up,
@@ -120,6 +126,8 @@ export class GamepadInput {
       back: menuNow.back && !this.prevMenu.back,
       reroll: menuNow.reroll && !this.prevMenu.reroll,
       equip: menuNow.equip && !this.prevMenu.equip,
+      lb: menuNow.lb && !this.prevMenu.lb,
+      rb: menuNow.rb && !this.prevMenu.rb,
     };
     this.prevMenu = menuNow;
     const read: GamepadRead = {
