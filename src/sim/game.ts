@@ -2732,8 +2732,7 @@ export class GameSim {
         hp = Math.ceil(hp * escal);
         damage = Math.ceil(damage * escal);
       }
-      this.emit("boss_spawn", {});
-      this.hitStop.trigger(HITSTOP.BossSpawnMs); // R185 妖王现世凝固（戏剧性停顿）
+      this.emit("boss_spawn", { name: ENEMY_NAMES[opts.type as EnemyType] ?? "妖王" });
       this.hitStop.trigger(HITSTOP.BossSpawnMs); // R185 妖王现世凝固（戏剧性停顿）
     }
 
