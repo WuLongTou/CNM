@@ -342,8 +342,15 @@ async function boot(): Promise<void> {
       view.playAttack(type);
       if (type === "Melee") view.spawnSlash(sim.player.x, sim.player.y, ang, sim.player.dashTimer > 0);
     });
-    sim.onKill.push((_type, elite, boss) => {
-      audio.play("enemy_die");
+    // R178 击杀 juice：连杀音高爬升（2s 无击杀复位，Hades 式爽感）+ 位置粒子
+    let killStreak = 0;
+    let lastKillAt = 0;
+    sim.onKill.push((_type, elite, boss, x, y) => {
+      const now = performance.now();
+      killStreak = now - lastKillAt < 2000 ? Math.min(killStreak + 1, 16) : 1;
+      lastKillAt = now;
+      audio.play("enemy_die", { pitch: 1 + Math.min(killStreak, 12) * 0.045, vol: 0.9 });
+      view.spawnBurst(x, y, boss ? 0x8e2a20 : elite ? 0xa8842c : 0x6b6154);
       view.shake(boss ? 12 : elite ? 8 : 4);
       rumble.play("kill"); // 节流在 RumbleManager 内（割草不常转）
     });

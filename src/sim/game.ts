@@ -473,7 +473,8 @@ export class GameSim {
   /** 攻击钩子（音频/表现层订阅；主动武器类型 + 本次攻击方向 rad）。 */
   onAttack: Array<(type: AttackType, ang: number) => void> = [];
   /** 击杀钩子。 */
-  onKill: Array<(type: EnemyType, elite: boolean, boss: boolean) => void> = [];
+  /** R178 击杀回调扩 x/y（击杀位置粒子/音效定位用）。 */
+  onKill: Array<(type: EnemyType, elite: boolean, boss: boolean, x: number, y: number) => void> = [];
   /** 玩家受击钩子。 */
   onPlayerHurt: Array<(hp: number) => void> = [];
   /** 冲刺斩钩子（表现层订阅；触发位置）。 */
@@ -2005,7 +2006,7 @@ export class GameSim {
     this.coins += gold;
     this.runGoldEarned += gold;
     this.goldEarnedKills += gold; // R158 分源
-    for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
+    for (const cb of this.onKill) cb(e.type, e.elite, e.boss, e.x, e.y);
     // explosive 词缀：死亡自爆（逼玩家杀完就走位，勿贴脸输出）
     if (e.affix === "explosive") {
       const p = this.player;
