@@ -2947,6 +2947,9 @@ export class GameSim {
           if (count >= 7) this.achievements.grant("daily_streak_7");
         }
       }
+      // R153 当日变异开局公示：局内通知（欢迎页公示的局内补充）
+      const mut = this.mutator();
+      if (mut) this.emit("mutator_start", { name: mut.name, desc: mut.desc });
       // R124 隐士特权：起手雷杖自带引雷形态（跳过进阶门槛——荣誉即特权）
       if (this.role.id === "hermit") {
         const sw = this.player.weapons[0];

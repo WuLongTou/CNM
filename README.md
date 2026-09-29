@@ -326,6 +326,8 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R153 当日变异开局公示：start 时 emit mutator_start → 通知条
+      「今日变异：X（描述）」（财神日附 金币×2）；3 条事件断言测试
 - [x] R150 手柄 LB/RB 切帮助页（R150 里程碑）：MenuEdges +lb/rb 边沿、
       help 面板开时路由 help.onKey ArrowLeft/Right——比焦点循环更快的
       页签切换；实机 RB 操作→战绩 ✓（纯路由轮）
