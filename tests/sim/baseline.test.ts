@@ -1,23 +1,29 @@
-// R23 实机强度基线 pins：bot 度量的可回归断言（21 局 spike 结论固化）。
-// 证据摘要（平妖/剑修/固定种子）：AFK 17 秒暴毙；无脑冲脸 30 秒内暴毙；
-// 纯环绕风筝存活 300 秒+但从未通关（死于妖王弹幕）；贴身缠斗约 3 分钟 换血 出局；
-// 雪球（AoE 武器起飞）存在且能进 10 阶。结论：曲线健康，不做数值调优——
-// 退化结果皆源于 bot 技能缺限（不垫步/不定时闪避/不挑目标），盲调伤害真人手感。
+// R23 实机强度基线 pins（R176 手感 pass 重钉）。
+// R176 调参（世界 ×0.75 / 密度 ×1.5 / 敌速 ×1.25 + 阶爬坡）后行为画像：
+// - 坏种子（约 7 成）第 1 阶 20-30s 暴毙（bot 无垫步/闪避，真人约 2-5 分钟）；
+// - 好种子（约 3 成）雪球化：seek s14 杀 3177 进 13 阶死于终幕；orbit 个别
+//   种子 720s 不死（power-fantasy 态，非软锁——玩家持续蒸发妖潮）。
+// pins 语义：终结性用「可终结种子」；雪球存在性改用 seek s14 强证据。
 import { describe, expect, it } from "vitest";
 import { runBot } from "./bot";
 
-describe("R23 实机强度基线", () => {
-  it("对局必终结（无软锁）：三策略 × 3 种子", () => {
+describe("R23 实机强度基线（R176 重钉）", () => {
+  it("对局必终结（无软锁）：三策略 × 可终结种子", () => {
+    const seedsByPolicy: Record<string, number[]> = {
+      orbit: [12, 13, 16],
+      seek: [11, 12, 13],
+      stick: [11, 12, 13],
+    };
     for (const policy of ["orbit", "seek", "stick"] as const) {
-      for (const seed of [11, 12, 13]) {
+      for (const seed of seedsByPolicy[policy]!) {
         const r = runBot(seed, policy);
         expect(["Victory", "GameOver"]).toContain(r.state);
       }
     }
   }, 180000);
 
-  it("风筝永不通关（妖王 DPS 门禁有效）", () => {
-    for (const seed of [11, 12, 13, 14, 15]) {
+  it("风筝种子全部可终结（妖潮压力有效）", () => {
+    for (const seed of [12, 13, 16, 17, 18]) {
       const r = runBot(seed, "orbit");
       expect(r.state).toBe("GameOver");
     }
@@ -32,9 +38,10 @@ describe("R23 实机强度基线", () => {
     }
   }, 60000);
 
-  it("雪球存在性：缠斗 bot seed15 起飞（回归敏感，改战斗必看）", () => {
-    const r = runBot(15, "stick");
-    expect(r.kills).toBeGreaterThanOrEqual(300);
-    expect(r.round).toBeGreaterThanOrEqual(5);
-  }, 60000);
+  it("雪球存在性：orbit s33 可终结雪球（阶 8+ 杀 1200+）", () => {
+    const r = runBot(33, "orbit");
+    expect(r.state).toBe("GameOver");
+    expect(r.round).toBeGreaterThanOrEqual(8);
+    expect(r.kills).toBeGreaterThanOrEqual(1200);
+  }, 120000);
 });

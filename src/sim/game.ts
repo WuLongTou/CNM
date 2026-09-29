@@ -2685,7 +2685,10 @@ export class GameSim {
     let hp = Math.ceil(stats.hp * mult * foe * blood);
     let damage = Math.ceil(stats.dmg * mult * foe);
     // R73 每日变异「妖行如风」/「妖坚如铁」
-    let speed = stats.speed * (this.mutator()?.id === "swift" ? 1.15 : 1);
+    // R176 手感 pass：速度随阶数爬坡（1 + 阶×3.5%，13 阶 ×1.455 封顶）——
+    // 首分钟温和、后期妖潮（旧「速度不动」决策随世界/密度缩而废止）
+    const speedRamp = 1 + Math.min(this.round, 13) * 0.035;
+    let speed = stats.speed * speedRamp * (this.mutator()?.id === "swift" ? 1.15 : 1);
     if (this.mutator()?.id === "tough") hp = Math.ceil(hp * 1.3);
     let elite = opts.elite ?? false;
     let boss = opts.boss ?? false;

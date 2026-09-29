@@ -2,7 +2,9 @@
 // 后续里程碑（武器表/天气/数学系统）在此文件继续扩充。
 
 export const CFG = {
-  World: { Width: 3840, Height: 2160 },
+  // R176 手感 pass 1：世界缩 75%（视口密度 ×1.8——此前 8.3M px² 摊 29 只，
+  // 视口 810K px² 只见 3-8 只，「妖潮」无潮感）
+  World: { Width: 2880, Height: 1620 },
 
   Player: {
     MaxHealth: 120,
@@ -15,9 +17,9 @@ export const CFG = {
     DashCooldown: 0.8,
     InvincibleDuration: 0.5,
     CritMultiplier: 2.5,
-    BaseAttackCooldown: 0.45,
-    BaseAttackRange: 70.0,
-    MeleeTargetCount: 1,
+    BaseAttackCooldown: 0.40,
+    BaseAttackRange: 92.0,
+    MeleeTargetCount: 2,
   },
 
   Combo: {
@@ -91,15 +93,15 @@ export const CFG = {
   },
 
   Spawning: {
-    MinDistFromPlayer: 420.0,
+    MinDistFromPlayer: 380.0,
   },
 
   // R2 分幕结构：每幕 ActTime 秒，密度/刷怪速率/精英潮分段爬升；终幕妖王击杀通关
   Acts: {
     ActTime: 150,                          // 每幕时长 s
-    MaxEnemies: [24, 40, 55, 70],          // 各幕场上妖物上限（密度的爽感来源）
-    MinEnemies: [8, 14, 18, 22],           // 各幕底噪下限
-    SpawnCooldown: [1.2, 1.0, 0.7, 0.55],  // 各幕底噪刷怪间隔 s
+    MaxEnemies: [24, 48, 66, 84],          // 各幕场上妖物上限（密度的爽感来源）
+    MinEnemies: [8, 20, 30, 40],           // 各幕底噪下限
+    SpawnCooldown: [1.15, 0.7, 0.5, 0.4],  // 各幕底噪刷怪间隔 s
     EliteWaveCount: [0, 2, 3, 5],          // 各幕每轮(45s)追加精英潮数量
     FinalBossRound: 13,                    // 终幕妖王出现轮（≈585s）
   },
@@ -155,22 +157,23 @@ export const ENEMY_NAMES: Record<number, string> = {
   7: "唤灵", 8: "弩妖", 9: "浮灯", 10: "铁傀", 11: "甲妖", 12: "蛟", 13: "蚀群",
 };
 
-/** 14 种妖物三维表（HP/伤害/速度），对齐 Enemy.TypeStats。 */
+/** 14 种妖物三维表（HP/伤害/速度）。R176 手感 pass：速度 ×1.25——
+ *  叠加阶数爬坡（1 + 阶×3.5%，13 阶 ×1.455）：首分钟温和、后期妖潮。 */
 export const ENEMY_STATS: Record<number, { hp: number; dmg: number; speed: number }> = {
-  0: { hp: 25, dmg: 8, speed: 45.0 },
-  1: { hp: 15, dmg: 6, speed: 90.0 },
-  2: { hp: 100, dmg: 18, speed: 22.0 },
-  3: { hp: 20, dmg: 12, speed: 55.0 },
-  4: { hp: 30, dmg: 10, speed: 55.0 },
-  5: { hp: 35, dmg: 8, speed: 35.0 },
-  6: { hp: 45, dmg: 5, speed: 30.0 },
-  7: { hp: 40, dmg: 5, speed: 28.0 },
-  8: { hp: 20, dmg: 10, speed: 30.0 },
-  9: { hp: 40, dmg: 12, speed: 55.0 },
-  10: { hp: 80, dmg: 20, speed: 35.0 },
-  11: { hp: 55, dmg: 15, speed: 40.0 },
-  12: { hp: 60, dmg: 18, speed: 65.0 },
-  13: { hp: 12, dmg: 5, speed: 85.0 },
+  0: { hp: 25, dmg: 8, speed: 56.0 },
+  1: { hp: 15, dmg: 6, speed: 113.0 },
+  2: { hp: 100, dmg: 18, speed: 28.0 },
+  3: { hp: 20, dmg: 12, speed: 69.0 },
+  4: { hp: 30, dmg: 10, speed: 69.0 },
+  5: { hp: 35, dmg: 8, speed: 44.0 },
+  6: { hp: 45, dmg: 5, speed: 38.0 },
+  7: { hp: 40, dmg: 5, speed: 35.0 },
+  8: { hp: 20, dmg: 10, speed: 38.0 },
+  9: { hp: 40, dmg: 12, speed: 69.0 },
+  10: { hp: 80, dmg: 20, speed: 44.0 },
+  11: { hp: 55, dmg: 15, speed: 50.0 },
+  12: { hp: 60, dmg: 18, speed: 81.0 },
+  13: { hp: 12, dmg: 5, speed: 106.0 },
 };
 
 /** 击杀分数表，对齐 GameManager.TypeScore。 */

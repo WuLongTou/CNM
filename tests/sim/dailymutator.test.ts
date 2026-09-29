@@ -88,8 +88,12 @@ describe("R73 每日变异", () => {
       sim.exec({ action: "spawn", args: { type: "basic", near: "player", count: 60 } });
       return sim.enemies.filter((e) => e.elite).length;
     };
-    const baseElites = countElites(999);
-    const dailyElites = countElites(999, "elite");
-    expect(dailyElites).toBeGreaterThan(baseElites + 5);
+    // R176 高密度下调参扰动 rng 对齐——多种子聚合均值比对（统计稳健）
+    let baseSum = 0, dailySum = 0;
+    for (let s = 990; s < 1000; s++) {
+      baseSum += countElites(s);
+      dailySum += countElites(s, "elite");
+    }
+    expect(dailySum).toBeGreaterThan(baseSum * 1.5); // 精锐日均值 ≥ 普通 1.5×
   });
 });

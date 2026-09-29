@@ -183,11 +183,14 @@ describe("R66 香火祝福与复盘", () => {
     openShopAt(sim);
     const bIdx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
     expect(bIdx).toBeGreaterThanOrEqual(0);
+    // R176：槽可能抽中稀有档（×2 效果）——buy 前捕获（一龛一购后龛散置空）
+    const rare = sim.shopOffer?.[bIdx]?.buffRare;
+    const mult = rare ? CFG.Shop.BuffRareMult : 1;
     expect(sim.buyShop(bIdx).handled).toBe(true);
-    expect(sim.shopBuff).toBeCloseTo(CFG.Shop.BuffDmgBonus);
+    expect(sim.shopBuff).toBeCloseTo(CFG.Shop.BuffDmgBonus * mult);
     const d2 = swingDamageOnce(sim);
-    // 伤害事件为取整整数：祝福后 = round(基准 × 1.15)
-    expect(d2).toBe(Math.round(d1 * (1 + CFG.Shop.BuffDmgBonus)));
+    // 伤害事件为取整整数：祝福后 = round(基准 × (1 + 加成))
+    expect(d2).toBe(Math.round(d1 * (1 + CFG.Shop.BuffDmgBonus * mult)));
   });
 
   it("R72 三系祝福：各限购一次，系别购后不再出现，全购后祝福槽消失", () => {
