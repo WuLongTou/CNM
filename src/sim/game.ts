@@ -2827,6 +2827,17 @@ export class GameSim {
           ach_total: ACHIEVEMENTS.length, // R140 成就完成度（欢迎页常显）
           ach_unlocked: this.achievements.unlocked.size,
           ach_last: [...this.achievements.unlocked].slice(-1)[0] ?? null, // 最近解锁 id
+          next_goal: (() => {
+            let best: { id: string; pct: number } | null = null;
+            for (const a of ACHIEVEMENTS) {
+              if (!a.goal || this.achievements.unlocked.has(a.id)) continue;
+              const st = this.buildAchievementState()[a.goal.stat];
+              if (typeof st !== "number") continue;
+              const pct = Math.min(100, (st / a.goal.target) * 100);
+              if (!best || pct > best.pct) best = { id: a.id, pct: Math.round(pct) };
+            }
+            return best;
+          })(), // R162 下一目标
           daily_streak: (() => {
             const sd = this.save.load();
             return sd?.dailyStreak?.last === dailyKey() ? sd.dailyStreak.count : 0;

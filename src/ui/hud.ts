@@ -590,7 +590,13 @@ export class Hud {
       s.dmgDealtTotal,
     );
     const mainSeg = main ? ` · ${main}` : "";
-    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${fastest}${buffs}${mainSeg}`;
+    // R162 下一目标：最接近完成的未达成成就（金字，留存钩子）
+    const goal = s.exec({ action: "meta" }).data as { next_goal?: { id: string; pct: number } | null };
+    const goalAch = goal.next_goal ? ACHIEVEMENTS.find((a) => a.id === goal.next_goal!.id) : null;
+    const goalSeg = goalAch
+      ? ` · <span class="ach-honor">下一目标：${goalAch.name}（${goal.next_goal!.pct}%）</span>`
+      : "";
+    return `${head}精英讨伐 ${s.eliteKills} · 最高连击 ${s.maxCombo} · 武器 ${s.player.weapons.length} 件${weather}${events}${gold}${fastest}${buffs}${mainSeg}${goalSeg}`;
   }
 
   /** 复制本局战绩（R22）：文案含种子可复现；结果经 onShareCopy 反馈通知条。 */
