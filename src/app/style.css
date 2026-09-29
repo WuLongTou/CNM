@@ -210,6 +210,9 @@ canvas { position: absolute; z-index: 0; }
 .upgrade-card .uc-stat { color: #8e2a20; font-weight: 700; }
 .upgrade-card .uc-icon { width: 48px; height: 48px; }
 
+/* ── R195 妖物图鉴缩略图：walk sheet 胶片条（高度钳 26px，宽度自适应）── */
+.codex-thumb { height: 26px; width: auto; vertical-align: middle; opacity: 0.95; }
+
 /* ── R179 连杀屏显：中央上方 punch 计数（血红简笔风）── */
 #kill-streak {
   position: absolute; top: 96px; left: 50%; transform: translateX(-50%);

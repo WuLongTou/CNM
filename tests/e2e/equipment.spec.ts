@@ -2,8 +2,6 @@
 
 import { test, expect } from "@playwright/test";
 
-const Exec = (cmd: unknown) => (cmd: unknown) => cmd;
-
 async function openEquip(page: import("@playwright/test").Page) {
   await page.goto("/");
   await page.waitForFunction(() => window.__CNM__?.ready === true);

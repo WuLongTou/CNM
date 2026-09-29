@@ -4,6 +4,15 @@
 import type { GameSim } from "../sim/game";
 import type { WeaponDef } from "../sim/weapons";
 import { ENEMY_NAMES, ENEMY_STATS } from "../sim/config";
+
+/** R195 图鉴缩略图：妖物 walk sheet 条带（与 view.ts ENEMY_ATLAS 同源命名）。 */
+const ENEMY_SHEET: Record<number, string> = {
+  0: "enemy_basic_walk", 1: "enemy_fast_walk", 2: "enemy_tank_walk",
+  3: "enemy_exploder_walk", 4: "enemy_invisible_walk", 5: "enemy_spitter_walk",
+  6: "enemy_healer_walk", 7: "enemy_summoner_walk", 8: "enemy_archer_walk",
+  9: "enemy_ship_walk", 10: "enemy_mech_walk", 11: "enemy_knight_walk",
+  12: "enemy_dragon_walk", 13: "enemy_swarm_walk",
+};
 import { CODEX_GOLD_THRESHOLD } from "../sim/game";
 import { WEAPON_DATA, FUSION_RECIPES, ASPECTS, ASCEND_AT } from "../sim/weapons";
 import { ACHIEVEMENTS, ACHIEVEMENT_GROUPS, achievementProgress, HONOR_ACHIEVEMENT_NAMES } from "../sim/achievements";
@@ -138,7 +147,11 @@ export class HelpPanel {
         const total = codex.total[id] ?? 0;
         const gold = total >= CODEX_GOLD_THRESHOLD;
         const m = FOE_MECHS[id];
-        return `<tr${gold ? ` class="codex-gold"` : ""}><td>${ENEMY_NAMES[id]}${gold ? `<i class="w-star">★</i>` : ""}</td>` +
+        const sheet = ENEMY_SHEET[id];
+        const thumb = sheet
+          ? `<br><img class="codex-thumb" loading="lazy" src="assets/sprites/enemies/${sheet}.png" alt="" draggable="false" onerror="this.remove()">`
+          : "";
+        return `<tr${gold ? ` class="codex-gold"` : ""}><td>${ENEMY_NAMES[id]}${thumb}${gold ? `<i class="w-star">★</i>` : ""}</td>` +
           `<td>生命 ${s.hp} · 伤害 ${s.dmg} · 速度 ${s.speed}<br>` +
           `<span class="w-tags">${m.mech}</span><br><span class="w-fuse">应对：${m.counter}</span></td>` +
           `<td>本局 ${run} · 累计 ${total}</td></tr>`;
