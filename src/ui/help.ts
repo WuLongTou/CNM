@@ -21,7 +21,7 @@ export class HelpPanel {
   private bodyEl!: HTMLElement;
   visible = false;
 
-  private pages = ["操作", "战绩", "妖物图鉴", "词缀图鉴", "妖王图鉴", "武器图鉴", "成就", "机制"];
+  private pages = ["操作", "战绩", "统计", "妖物图鉴", "词缀图鉴", "妖王图鉴", "武器图鉴", "成就", "机制"];
 
   constructor(private sim: GameSim) {
     this.el = document.createElement("div");
@@ -72,6 +72,7 @@ export class HelpPanel {
     switch (this.pages[this.page]) {
       case "操作": this.renderControls(); break;
     case "战绩": this.renderRunHistory(); break;
+    case "统计": this.renderLifetimeStats(); break;
       case "妖物图鉴": this.renderEnemyCodex(); break;
       case "词缀图鉴": this.renderAffixCodex(); break;
       case "妖王图鉴": this.renderBossCodex(); break;
@@ -226,6 +227,33 @@ export class HelpPanel {
     this.bodyEl.innerHTML =
       `<p class="sub">最近 ${list.length} 局（本机）</p>` +
       `<table class="help-table"><tr><th>分数</th><th>击杀</th><th>用时</th><th>职业/难度</th><th>种子</th><th>日期</th></tr>${rows}</table>`;
+  }
+
+  /** R160 生涯统计全览：LifetimeStats + 成就完成度（一页通）。 */
+  private renderLifetimeStats(): void {
+    const d = this.sim.exec({ action: "meta" }).data as {
+      highScore: number; totalKills: number; games: number; clears: number;
+      stats?: { timeAlive: number; coinsEarned: number; maxKills: number; maxCombo: number; totalElites: number; totalBosses: number; gamesByRole: Record<string, number> };
+      ach_total?: number; ach_unlocked?: number;
+    };
+    const st = d.stats ?? { timeAlive: 0, coinsEarned: 0, maxKills: 0, maxCombo: 0, totalElites: 0, totalBosses: 0, gamesByRole: {} };
+    const h = Math.floor(st.timeAlive / 3600);
+    const m = Math.floor((st.timeAlive % 3600) / 60);
+    const fav = Object.entries(st.gamesByRole ?? {}).sort((a, b) => b[1] - a[1])[0];
+    const favName = fav ? fav[0] : "—";
+    const pct = d.ach_total ? Math.round((d.ach_unlocked ?? 0) / d.ach_total * 100) : 0;
+    this.bodyEl.innerHTML =
+      `<table class="help-table">
+        <tr><td>总游戏时长</td><td>${h > 0 ? `${h} 时 ${m} 分` : `${m} 分`}</td></tr>
+        <tr><td>累计局数</td><td>${d.games} 局（通关 ${d.clears}/9）</td></tr>
+        <tr><td>最高分</td><td>${d.highScore}</td></tr>
+        <tr><td>单局最高击杀</td><td>${st.maxKills}</td></tr>
+        <tr><td>生涯最高连击</td><td>${st.maxCombo}</td></tr>
+        <tr><td>累计精英 / 妖王</td><td>${st.totalElites} / ${st.totalBosses}</td></tr>
+        <tr><td>累计获得香火</td><td>${st.coinsEarned}</td></tr>
+        <tr><td>最爱职业</td><td>${favName}</td></tr>
+        <tr><td>成就完成度</td><td>${d.ach_unlocked ?? 0}/${d.ach_total ?? 0}（${pct}%）<span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span></td></tr>
+      </table>`;
   }
 
   private renderAchievements(): void {
