@@ -2973,6 +2973,16 @@ export class GameSim {
         return { round: this.round, queued: true };
       }
       case "quit": return { quitting: true };
+      case "abandon": {
+        // R168 放弃本局：回欢迎选人页（不入战绩——放弃局不走 finalizeRun；
+        // 局内已解锁的进度型成就保留，符合「战绩=完成对局」语义）
+        if (this.state !== "Combat") return { abandoned: false };
+        this.state = "WeaponSelection";
+        this.paused = false;
+        this.shopOffer = null;
+        this.upgradeOffers = null;
+        return { abandoned: true };
+      }
       default: throw new Error("未知动作: " + action);
     }
   }

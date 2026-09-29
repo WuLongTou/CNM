@@ -15,6 +15,10 @@ export class PauseMenu {
   visible = false;
   /** 装配层接线：走正常 restart()（保留血誓/种子/战绩），替代旧整页刷新（R36）。 */
   onRestart: (() => void) | null = null;
+  /** R168 放弃本局接线（回欢迎页；不入战绩）。 */
+  onAbandon: (() => void) | null = null;
+  /** R168 两段确认武装态。 */
+  private abandonArmed = false;
 
   constructor(
     private sim: GameSim,
@@ -48,6 +52,7 @@ export class PauseMenu {
         </div>
         <button id="btn-resume" type="button">继续（Esc）</button>
         <button id="btn-pause-restart" type="button">重新开始</button>
+        <button id="btn-pause-abandon" type="button">放弃本局</button>
       </div>`;
     document.getElementById("ui-root")!.appendChild(this.el);
     // R67 音乐/音效双滑杆：各自独立持久化（audio 层 setMusicVolume/setSfxVolume）
@@ -90,6 +95,19 @@ export class PauseMenu {
       // R36：整页 reload 会丢血誓/自定义种子并绕过 resimulate 链，改走装配层 restart()
       this.onRestart?.();
     });
+    // R168 放弃本局：两段确认（防误触丢局）；确认后走装配层放弃（回欢迎页）
+    this.el.querySelector("#btn-pause-abandon")!.addEventListener("click", () => {
+      const btn = this.el.querySelector<HTMLButtonElement>("#btn-pause-abandon")!;
+      if (!this.abandonArmed) {
+        this.abandonArmed = true;
+        btn.textContent = "确认放弃？（再点一次）";
+        return;
+      }
+      this.abandonArmed = false;
+      btn.textContent = "放弃本局";
+      this.toggle(false);
+      this.onAbandon?.();
+    });
     this.el.addEventListener("click", (e) => { if (e.target === this.el) this.toggle(false); });
   }
 
@@ -130,6 +148,9 @@ export class PauseMenu {
   resimulate(sim: GameSim): void {
     this.sim = sim;
     this.visible = false;
+    this.abandonArmed = false;
+    const ab = this.el.querySelector<HTMLButtonElement>("#btn-pause-abandon");
+    if (ab) ab.textContent = "放弃本局";
     this.el.classList.add("hidden");
   }
 }

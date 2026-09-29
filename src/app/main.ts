@@ -117,6 +117,11 @@ async function boot(): Promise<void> {
   });
   // R36：暂停菜单重开走正常 restart()（保留血誓/自定义种子）
   pauseMenu.onRestart = () => restart();
+  // R168 放弃本局：sim 回欢迎选人页（不入战绩），HUD 按 state 自动显欢迎层
+  pauseMenu.onAbandon = () => {
+    sim.exec({ action: "abandon" });
+    if (sim.state === "Combat") restart(); // 兜底：状态机异常时至少换新局
+  };
   const minimap = new MiniMap(() => sim);
   const notify = new Notify();
   const coach = new Coach(sim);
