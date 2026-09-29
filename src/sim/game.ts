@@ -368,6 +368,8 @@ export class GameSim {
   dailyStreakCount = 0;
   /** R110 本局承受的妖物来源伤害（无伤通关成就口径）。 */
   damageTakenRun = 0;
+  /** R159 本局是否破最高分（结算屏「新纪录」徽章）。 */
+  newRecord = false;
   survivalTime = 0;
   /** 模态面板暂停（装备/帮助等打开时由 UI 层置位；tick 冻结）。 */
   paused = false;
@@ -2095,6 +2097,8 @@ export class GameSim {
     const prev = this.save.load() ?? defaultSave();
     const greed = 1 + (prev.metaGreed ?? 0) * META_SHOP.greed.step;
     const coins = Math.floor((this.score / 50 + this.kills) * coinsMult * greed * this.difficulty.coinMult);
+    // R159 新纪录标志（结算屏徽章；含首局即纪录）
+    this.newRecord = this.score > prev.highScore || prev.games === 0;
     this.save.save({
       highScore: Math.max(prev.highScore, this.score),
       totalKills: prev.totalKills + this.kills,

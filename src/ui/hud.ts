@@ -463,8 +463,10 @@ export class Hud {
   private refreshVictory(): void {
     const s = this.sim;
     const coins = Math.floor((s.score / 50 + s.kills) * 1.5);
-    this.victoryStats.textContent =
-      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度` +
+    // R159 新纪录徽章（金字）
+    const recordBadge = s.newRecord ? `<span class="ach-honor"> · 新纪录！</span>` : "";
+    this.victoryStats.innerHTML =
+      `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度${recordBadge}` +
       (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
       (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
     this.victoryDebrief.textContent = this.debriefText(s);
