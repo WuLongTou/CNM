@@ -347,7 +347,7 @@ async function boot(): Promise<void> {
     let lastKillAt = 0;
     sim.onKill.push((_type, elite, boss, x, y) => {
       const now = performance.now();
-      killStreak = now - lastKillAt < 2000 ? Math.min(killStreak + 1, 16) : 1;
+      killStreak = now - lastKillAt < 2000 ? killStreak + 1 : 1; // R180 不封顶（里程碑 10/25/50 需要真实计数）
       lastKillAt = now;
       audio.play("enemy_die", { pitch: 1 + Math.min(killStreak, 12) * 0.045, vol: 0.9 });
       view.spawnBurst(x, y, boss ? 0x8e2a20 : elite ? 0xa8842c : 0x6b6154);
@@ -362,6 +362,11 @@ async function boot(): Promise<void> {
           void el.offsetWidth; // 重排触发动画
           el.classList.add("punch");
         }
+      }
+      // R180 连杀里程碑：10/25/50 掉落回春丹（激进出刀的续航回报）
+      if (killStreak === 10 || killStreak === 25 || killStreak === 50) {
+        sim.pickups.push({ id: Date.now(), x, y });
+        notify.push(`连杀 ${killStreak} · 回春丹掉落！`);
       }
     });
     sim.onPlayerHurt.push(() => { audio.play("player_hurt"); rumble.play("hurt"); view.playHurt(); }); // R176 合流：震动+受击动画
