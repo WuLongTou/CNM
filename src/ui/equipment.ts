@@ -50,6 +50,8 @@ export class EquipmentPanel {
 
   refresh(): void {
     const s = this.sim;
+    // R195 武器精通：生涯击杀表（本局击杀在 runWeaponKills，finalize 时并入）
+    const wk = (s.status() as unknown as { weapon_kills?: Record<string, number> }).weapon_kills ?? {};
     const st = s.stats;
     this.statsEl.innerHTML = `
       <span>伤害 ×${st.dmgMult.toFixed(2)}</span>
@@ -67,6 +69,8 @@ export class EquipmentPanel {
       const share = s.dmgDealtTotal > 0
         ? `<em>伤害 ${Math.round(w.dmgDealt)}（${Math.round((w.dmgDealt / s.dmgDealtTotal) * 100)}%）</em>`
         : "";
+      // R195 武器精通：生涯击杀（有记录才显示）
+      const killLine = (wk[w.defId] ?? 0) > 0 ? ` · 击杀 ${wk[w.defId]}` : "";
       // R105 形态切换：进阶解锁且有形态表的武器显示按钮（事件委托 bind 一次）
       const aspectBtn = aspectUnlocked(w) && ASPECTS[w.defId]
         ? `<button type="button" class="eq-aspect" data-idx="${i}">形态：${w.aspect === 1 ? ASPECTS[w.defId].name : "本形"}</button>`
@@ -74,7 +78,7 @@ export class EquipmentPanel {
       return `<div class="eq-item ${active ? "active" : ""}">
         <img class="eq-icon" src="assets/sprites/icons/weapons/${w.defId}.png" alt="" draggable="false" onerror="this.remove()">
         <b>${w.name}</b>${stageLabel}<i>${w.type}${active ? " · 当前" : ""}</i>
-        <em>升 ${w.ups} 次</em>${aspectBtn}${share}</div>`;
+        <em>升 ${w.ups} 次</em>${killLine}${aspectBtn}${share}</div>`;
     }).join("") || `<div class="eq-item"><i>空手（徒手近战）</i></div>`;
   }
 }

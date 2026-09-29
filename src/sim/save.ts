@@ -24,6 +24,8 @@ export interface SaveData {
   maxDifficulty: number;
   /** 图鉴讨伐数（R15；妖物类型 id → 跨局累计击杀，老存档缺字段默认 {}）。 */
   codex: Record<number, number>;
+  /** R195 武器精通（每把武器生涯击杀数，defId → 累计；老存档缺字段默认 {}）。 */
+  weaponKills: Record<string, number>;
   /** 制霸记录（R21；职业 id → 通关过的难度 id 列表，老存档缺字段默认 {}）。 */
   clears: Record<string, number[]>;
   /** 今日最佳（R26；仅当日种子开局计分，老存档缺字段默认空）。 */
@@ -101,6 +103,7 @@ export function normalizeSave(parsed: Partial<SaveData> | null): SaveData {
     ...d,
     ...parsed,
     mutatorClears: { ...(parsed.mutatorClears ?? {}) },
+    weaponKills: { ...(parsed.weaponKills ?? {}) },
     dailyStreak: { last: "", count: 0, ...(parsed.dailyStreak ?? {}) },
     dailyHistory: (parsed.dailyHistory ?? []).slice(0, 28),
     dailyRushBest: { date: "", score: 0, ...(parsed.dailyRushBest ?? {}) },
@@ -120,6 +123,7 @@ export function defaultSave(): SaveData {
     metaHp: 0, metaDmg: 0, metaSpd: 0, metaMag: 0, metaGreed: 0, metaRegen: 0,
     maxDifficulty: -1,
     codex: {},
+    weaponKills: {},
     clears: {},
     dailyBest: { date: "", score: 0 },
     armory: [],

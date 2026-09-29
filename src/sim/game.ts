@@ -372,6 +372,8 @@ export class GameSim {
   dailyStreakCount = 0;
   /** R110 本局承受的妖物来源伤害（无伤通关成就口径）。 */
   damageTakenRun = 0;
+  /** R195 本局各武器击杀数（defId → 本局击杀；finalize 并入生涯 weaponKills）。 */
+  runWeaponKills: Record<string, number> = {};
   /** R159 本局是否破最高分（结算屏「新纪录」徽章）。 */
   newRecord = false;
   /** R187 保底计数：距上次符箓掉落的杀敌数（≥20 普通妖必掉）。 */
@@ -1963,7 +1965,14 @@ export class GameSim {
     e.hp -= damage;
     // R83 战斗统计：减免后实际伤害（护盾吸收不计）；毒 DoT 等无武器来源只计总计
     this.dmgDealtTotal += damage;
-    if (w) w.dmgDealt += damage;
+    if (w) {
+      w.dmgDealt += damage;
+      // R195 武器精通：击杀归因（毒 DoT 等无武器来源不计入任何武器）
+      if (e.hp <= 0) {
+        const k = w.defId;
+        this.runWeaponKills[k] = (this.runWeaponKills[k] ?? 0) + 1;
+      }
+    }
     e.hitFlash = 0.16;
     if (e.hp <= 0) this.onEnemyKilled(e);
   }
@@ -2168,6 +2177,14 @@ export class GameSim {
       })(),
       // R74 每日变异通关收集：finalize 全量覆写存档，透传既有计数
       mutatorClears: prev.mutatorClears ?? {},
+      // R195 武器精通：本局各武器击杀并入生涯（defId → 累计）
+      weaponKills: (() => {
+        const merged = { ...(prev.weaponKills ?? {}) };
+        for (const [defId, n] of Object.entries(this.runWeaponKills)) {
+          merged[defId] = (merged[defId] ?? 0) + n;
+        }
+        return merged;
+      })(),
       // R99 每日挑战连胜：透传既有连胜（onVictory 侧按日更新）
       dailyStreak: prev.dailyStreak ?? { last: "", count: 0 },
       // R102 本地战绩历史：终局统一推入（胜/负都记，最近 10 局，新的在前）
@@ -3095,6 +3112,8 @@ export class GameSim {
       })(), // R112 连战每日最佳（当日有效）
       enemies_alive: this.enemies.length,
       welcome_visible: this.state === "WeaponSelection",
+      weapon_kills_run: { ...this.runWeaponKills }, // R195 武器精通（本局）
+      weapon_kills: { ...(this.save.load()?.weaponKills ?? {}) }, // R195 武器精通（生涯）
       player_hp: this.player.hp,
       player_max_hp: this.player.maxHp,
       player_pos: { x: this.player.x, y: this.player.y },
