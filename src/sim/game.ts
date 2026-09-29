@@ -736,6 +736,24 @@ export class GameSim {
     return this.rng.weighted(entries);
   }
 
+  /** R146 商店稀有度权重：随威势阶向高稀有偏移（风险回报对称——越阶奖励补香火，
+   *  商店也给出更好的货）。返回 rarity 2/3/4 三档权重。 */
+  static shopRarityWeights(round: number): [number, number, number] {
+    const t = Math.min(Math.max(round - 1, 0), 13); // 1 阶=基线，2-13 阶线性偏移
+    const w2 = Math.max(0.5, 6 - 0.25 * t);
+    const w3 = 3 + 0.15 * t;
+    const w4 = Math.min(2.3, 1 + 0.10 * t);
+    return [w2, w3, w4];
+  }
+
+  /** R146 商店武器摇奖：按威势阶缩放稀有度权重（精英宝箱保持静态口径）。 */
+  private rollShopWeaponDef(): string {
+    const ids = Object.keys(WEAPON_DATA).filter((id) => WEAPON_DATA[id].rarity >= 2);
+    const w = GameSim.shopRarityWeights(this.round);
+    const entries = ids.map((id) => [id, w[WEAPON_DATA[id].rarity - 2]] as const);
+    return this.rng.weighted(entries);
+  }
+
   /** 职业是否已解锁（R6）：无条件职业恒开放，否则看成就达成。 */
   isRoleUnlocked(id: string): boolean {
     const r = getRole(id);
@@ -1087,7 +1105,7 @@ export class GameSim {
     // R69 庙会窗口：基价半价与通胀倍乘叠乘（价格在开龛时定格）
     const discount = this.marketTimer > 0 ? CFG.Events.MarketDiscount : 1;
     const price = (base: number) => Math.floor(base * this.shopPriceMult * discount);
-    const defId = this.rollEliteWeaponDef();
+    const defId = this.rollShopWeaponDef(); // R146 随威势阶偏移稀有度
     const ws = this.player.weapons;
     const w = ws.length > 0 ? ws[this.rng.int(0, ws.length - 1)] : null;
     const stats = w ? validStats(w.type) : [];
