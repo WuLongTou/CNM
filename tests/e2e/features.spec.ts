@@ -68,6 +68,7 @@ test("合成与永久升级协议", async ({ page }) => {
 });
 
 test("R2 终局：goto_round 13 → 终幕妖王 → 击杀 → Victory 面板 → 无尽", async ({ page }) => {
+  test.setTimeout(120000); // goto_round 走 45s 游戏时间计时器——全量并发下需宽预算
   await page.goto("/");
   await page.waitForFunction(() => window.__CNM__?.ready === true);
   const exec: Exec = (cmd) => page.evaluate((c) => window.__CNM__.exec(c), cmd);
@@ -77,7 +78,7 @@ test("R2 终局：goto_round 13 → 终幕妖王 → 击杀 → Victory 面板 �
   const king = await page.waitForFunction(() => {
     const sim = window.__CNM__.sim;
     return sim.round === 13 ? sim.enemies.find((z) => z.final) ?? false : false;
-  });
+  }, null, { timeout: 90000 });
   expect(king).toBeTruthy();
   // 白盒压血 + 外部输入通道攻击（页面主循环每帧 sample() 覆盖 sim.input，
   // 只有 exec input 的外部输入持续有效；方向攻击：移动方向=攻击方向）
@@ -85,13 +86,16 @@ test("R2 终局：goto_round 13 → 终幕妖王 → 击杀 → Victory 面板 �
     const sim = window.__CNM__.sim;
     const k = sim.enemies.find((z) => z.final)!;
     k.hp = 1;
-    sim.exec({ action: "teleport", args: { x: k.x - 40, y: k.y } });
+    // R176 后妖王会主动位移——长硬直冻结 + 钉在玩家面前保证挥砍命中
+    (k as unknown as { stagger: number }).stagger = 999;
+    k.x = sim.player.x + 46;
+    k.y = sim.player.y;
     sim.player.invincible = 1e9;
     return true;
   });
   expect(killed).toBe(true);
   await exec({ action: "input", args: { move_x: 1, attack: true } });
-  await page.waitForFunction(() => window.__CNM__.sim.state === "Victory");
+  await page.waitForFunction(() => window.__CNM__.sim.state === "Victory", null, { timeout: 90000 });
   await exec({ action: "input", args: { move_x: 0, attack: false } });
   // Victory 面板可见，continue 进入无尽
   await expect(page.locator("#btn-endless")).toBeVisible();
