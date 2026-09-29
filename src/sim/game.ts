@@ -217,6 +217,8 @@ export interface ShopSlot {
   buffKind?: "dmg" | "asp" | "spd";
   /** R89 稀有档：稀有祝福效果 ×2、价格 ×2.5（约 40% 出率）。 */
   buffRare?: boolean;
+  /** R163 槽位锁定：锁定槽重抽时保留原报价。 */
+  locked?: boolean;
 }
 
 /** 香火龛（R65）：场上可交互实体，贴近开报价。 */
@@ -1174,9 +1176,21 @@ export class GameSim {
     }
     this.coins -= cost;
     this.runGoldSpent += cost; // R119 香火账本：重抽花费与购买同轨
-    this.shopOffer = this.makeShopSlots();
+    // R163 槽位锁定：locked 槽保留原报价，仅重 roll 未锁定槽
+    const locked = this.shopOffer.filter((s) => s.locked);
+    const fresh = this.makeShopSlots().filter((s) => !s.locked);
+    this.shopOffer = [...locked, ...fresh].slice(0, Math.max(this.shopOffer.length, locked.length + fresh.length));
     this.emit("shop_offer", { slots: this.shopOffer, coins: this.coins, rerolled: true });
     return { handled: true, coins: this.coins, slots: this.shopOffer };
+  }
+
+  /** R163 切换槽位锁定：锁定槽重抽时保留原报价。返回是否生效。 */
+  toggleShopLock(index: number): boolean {
+    if (!this.shopOffer) return false;
+    const slot = this.shopOffer[index];
+    if (!slot) return false;
+    slot.locked = !slot.locked;
+    return true;
   }
 
   /** 购买槽位：扣金币 → 发放效果 → 龛散（一龛一购）→ 全场基价通胀；余额不足拒并播报。 */

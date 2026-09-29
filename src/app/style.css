@@ -285,6 +285,12 @@ canvas { position: absolute; z-index: 0; }
 .role-card-secret { border-color: #a8842c !important; }
 .role-card-secret.selected { box-shadow: 0 0 0 3px rgba(168, 132, 44, 0.35); }
 
+/* R163 槽位锁按钮（🔒 锁定=金字 / 🔓 灰） */
+.uc-lock { position: absolute; top: 4px; right: 6px; border: none; background: none; cursor: pointer; font-size: 14px; opacity: 0.55; }
+.uc-lock:hover { opacity: 1; }
+.shop-card:has(.uc-lock[data-lock] ~ * ) { }
+.shop-card .uc-lock[title*="🔒"] , .uc-lock[textContent="🔒"] { opacity: 1; color: #a8842c; }
+
 /* R120 无伤挑战徽章：金字小徽章挂血条尾（破功 hidden 即隐） */
 #flawless-badge { color: #a8842c; font-weight: 700; font-size: 12px; }
 

@@ -61,6 +61,13 @@ export class ShopPanel {
       .join("");
     this.cardsEl.querySelectorAll(".upgrade-card[data-idx]").forEach((c) =>
       c.addEventListener("click", () => this.buy(Number((c as HTMLElement).dataset.idx))));
+    // R163 锁按钮事件委托（阻止冒泡避免触发整卡购买）
+    this.cardsEl.querySelectorAll(".uc-lock[data-lock]").forEach((b) =>
+      b.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.sim.toggleShopLock(Number((b as HTMLElement).dataset.lock));
+        this.render();
+      }));
     this.actionsEl.innerHTML = `<button type="button" class="upgrade-action" data-act="reroll"${this.sim.coins < rerollCost ? " disabled" : ""}>刷新报价 · ${rerollCost} 文<i>R</i></button>`;
     this.actionsEl.querySelectorAll("button[data-act]").forEach((b) => {
       b.addEventListener("click", () => { if ((b as HTMLElement).dataset.act === "reroll") this.reroll(); });
@@ -88,8 +95,10 @@ export class ShopPanel {
       const after = cur + base * rareMult;
       preview = `<span class="uc-preview">（当前 ${Math.round(cur * 100)}% → 购后 ${Math.round(after * 100)}%）</span>`;
     }
+    // R163 槽位锁定按钮（🔒/🔓）
+    const lockBtn = `<button type="button" class="uc-lock" data-lock="${i}">${s.locked ? "🔒" : "🔓"}</button>`;
     return `<div class="upgrade-card shop-card${rareCls}" data-idx="${i}" role="button" tabindex="0"${afford ? "" : ' style="opacity:0.55"'}>
-      <span class="uc-key">${i + 1}</span>
+      <span class="uc-key">${i + 1}</span>${lockBtn}
       <b>${s.label}</b>
       <span class="uc-stat">${KIND_TAG[s.kind]} · ${s.price} 文${afford ? "" : "（香火不足）"}</span>
       ${preview}
