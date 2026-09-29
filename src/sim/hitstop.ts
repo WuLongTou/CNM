@@ -27,7 +27,7 @@ export class HitStop {
   /** 本帧时间缩放（1 = 正常）。 */
   scale(dtMs: number): number {
     if (this.remainingMs <= 0) return 1;
-    this.remainingMs -= dtMs;
+    this.remainingMs = Math.max(0, this.remainingMs - dtMs);
     return HITSTOP.FrozenScale;
   }
 }

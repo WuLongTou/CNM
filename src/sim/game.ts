@@ -2280,6 +2280,8 @@ export class GameSim {
           this.spawnEnemy({ type: 13, near: { x: e.x + this.rng.range(-60, 60), y: e.y + this.rng.range(-60, 60) } });
         }
         this.emit("boss_phase", { phase: e.bossPhase + 1 });
+        this.hitStop.trigger(HITSTOP.BossPhaseMs); // R185 狂暴瞬间凝固
+        this.hitStop.trigger(HITSTOP.BossPhaseMs); // R185 狂暴瞬间凝固
       }
 
       // 妖王环形弹幕：周期向四周放径向弹，压制走位（完美闪避的考题）。
@@ -2722,6 +2724,8 @@ export class GameSim {
         damage = Math.ceil(damage * escal);
       }
       this.emit("boss_spawn", {});
+      this.hitStop.trigger(HITSTOP.BossSpawnMs); // R185 妖王现世凝固（戏剧性停顿）
+      this.hitStop.trigger(HITSTOP.BossSpawnMs); // R185 妖王现世凝固（戏剧性停顿）
     }
 
     const e: Enemy = {
