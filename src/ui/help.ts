@@ -268,6 +268,10 @@ export class HelpPanel {
     const m = Math.floor((st.timeAlive % 3600) / 60);
     const fav = Object.entries(st.gamesByRole ?? {}).sort((a, b) => b[1] - a[1])[0];
     const favName = fav ? fav[0] : "—";
+    // R199 最爱武器：生涯击杀最多的武器（R195 weaponKills 数据消费端）
+    const wkMeta = this.sim.exec({ action: "status" }).data as { weapon_kills?: Record<string, number> };
+    const favW = Object.entries(wkMeta.weapon_kills ?? {}).sort((a, b) => b[1] - a[1])[0];
+    const favWName = favW ? (WEAPON_DATA[favW[0]]?.name ?? favW[0]) : "—";
     const pct = d.ach_total ? Math.round((d.ach_unlocked ?? 0) / d.ach_total * 100) : 0;
     this.bodyEl.innerHTML =
       `<table class="help-table">
@@ -292,6 +296,7 @@ export class HelpPanel {
         })()}</td></tr>
         <tr><td>妖物图鉴</td><td>点亮 ${d.codex_seen ?? 0}/14 · 镀金 ${d.codex_gold ?? 0}/14</td></tr>
         <tr><td>最爱职业</td><td>${favName}</td></tr>
+        <tr><td>最爱武器</td><td>${favWName}${favW ? `（击杀 ${favW[1]}）` : ""}</td></tr>
         <tr><td>成就完成度</td><td>${d.ach_unlocked ?? 0}/${d.ach_total ?? 0}（${pct}%）<span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span></td></tr>
       </table>`;
   }
