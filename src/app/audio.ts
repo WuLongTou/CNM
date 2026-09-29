@@ -91,6 +91,28 @@ export class AudioManager {
     src.start();
   }
 
+  /** R182 升级号角：WebAudio 合成双音上行（E5→A5，零资产依赖）——
+   *  升级时刻的仪式感（assets 无专属 jingle，合成即所得）。 */
+  playLevelUp(): void {
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    const note = (freq: number, at: number, dur: number) => {
+      const osc = this.ctx!.createOscillator();
+      const g = this.ctx!.createGain();
+      osc.type = "triangle";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, now + at);
+      g.gain.exponentialRampToValueAtTime(0.22, now + at + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + at + dur);
+      osc.connect(g);
+      g.connect(this.sfxGain!);
+      osc.start(now + at);
+      osc.stop(now + at + dur + 0.02);
+    };
+    note(659.3, 0, 0.14); // E5
+    note(880.0, 0.11, 0.2); // A5
+  }
+
   playBgm(): void {
     if (!this.ctx || !this.bgmGain) return;
     const buf = this.buffers.get("bg_music");

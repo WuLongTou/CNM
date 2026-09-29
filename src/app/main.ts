@@ -146,6 +146,7 @@ async function boot(): Promise<void> {
     else if (e.event === "heal_picked") { audio.play("charm", { vol: 0.4 }); }
     else if (e.event === "difficulty_unlocked") { notify.push(`新难度解锁：${d.name}（下局可选）`); notify.banner("新难度解锁", d.name); audio.play("combo_5"); }
     else if (e.event === "upgrade_offer") {
+      audio.playLevelUp(); // R182 升级号角
       upgrade.show();
       const b = e.data as { banished?: boolean; name?: string; statName?: string };
       if (b.banished) { notify.push(`放逐：${b.name}·${b.statName}（本局不再出现）`); audio.play("charm"); }
@@ -351,6 +352,9 @@ async function boot(): Promise<void> {
       killStreak = now - lastKillAt < 2000 ? killStreak + 1 : 1; // R180 不封顶（里程碑 10/25/50 需要真实计数）
       lastKillAt = now;
       audio.play("enemy_die", { pitch: 1 + Math.min(killStreak, 12) * 0.045, vol: 0.9 });
+      // R182 连杀里程碑音效（资产已在，此前从未接线）
+      if (killStreak === 3) audio.play("combo_3");
+      if (killStreak === 5) audio.play("combo_5");
       view.spawnBurst(x, y, boss ? 0x8e2a20 : elite ? 0xa8842c : 0x6b6154);
       view.shake(boss ? 12 : elite ? 8 : 4);
       rumble.play("kill"); // 节流在 RumbleManager 内（割草不常转）
