@@ -418,9 +418,16 @@ export class Hud {
     const achTag = d.ach_total
       ? ` · 成就 ${d.ach_unlocked}/${d.ach_total}${d.ach_last ? ` · 最新 ${ACHIEVEMENTS.find((a) => a.id === d.ach_last)?.name ?? d.ach_last}` : ""}`
       : "";
-    el.textContent = d.games > 0
-      ? `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局 · 制霸 ${d.clears}/9${achTag}`
-      : "初入山林 · 祝武运昌隆";
+    if (d.games > 0) {
+      // R141 成就 mini 进度条：与 R87 图鉴样式同源（血红填充）
+      const pct = d.ach_total ? Math.round((d.ach_unlocked! / d.ach_total) * 100) : 0;
+      const bar = d.ach_total
+        ? ` <span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span>`
+        : "";
+      el.innerHTML = `最高分 ${d.highScore} · 总击杀 ${d.totalKills} · 已历 ${d.games} 局 · 制霸 ${d.clears}/9${achTag}${bar}`;
+    } else {
+      el.textContent = "初入山林 · 祝武运昌隆";
+    }
     if (life) life.textContent = d.games > 0 && d.stats ? lifetimeLine(d.stats) : "";
   }
 
