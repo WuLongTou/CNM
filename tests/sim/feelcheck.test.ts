@@ -8,10 +8,10 @@ describe("R176 手感 pass 数值守护", () => {
     expect(CFG.World).toEqual({ Width: 2880, Height: 1620 });
   });
 
-  it("密度：Act1 min 8 / max 24；冷却 1.15s；Act4 max 84", () => {
-    expect(CFG.Acts.MinEnemies).toEqual([8, 20, 30, 40]);
-    expect(CFG.Acts.MaxEnemies).toEqual([24, 48, 66, 84]);
-    expect(CFG.Acts.SpawnCooldown).toEqual([1.15, 0.7, 0.5, 0.4]);
+  it("密度：Act1 min 6 / max 20；冷却 1.3s；Act4 max 84", () => {
+    expect(CFG.Acts.MinEnemies).toEqual([6, 20, 30, 40]);
+    expect(CFG.Acts.MaxEnemies).toEqual([20, 48, 66, 84]);
+    expect(CFG.Acts.SpawnCooldown).toEqual([1.3, 0.7, 0.5, 0.4]);
   });
 
   it("敌速基线：×1.25 全表上调（魅影 0.51× 玩家速过半）", () => {

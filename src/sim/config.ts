@@ -99,9 +99,9 @@ export const CFG = {
   // R2 分幕结构：每幕 ActTime 秒，密度/刷怪速率/精英潮分段爬升；终幕妖王击杀通关
   Acts: {
     ActTime: 150,                          // 每幕时长 s
-    MaxEnemies: [24, 48, 66, 84],          // 各幕场上妖物上限（密度的爽感来源）
-    MinEnemies: [8, 20, 30, 40],           // 各幕底噪下限
-    SpawnCooldown: [1.15, 0.7, 0.5, 0.4],  // 各幕底噪刷怪间隔 s
+    MaxEnemies: [20, 48, 66, 84],          // 各幕场上妖物上限（密度的爽感来源）
+    MinEnemies: [6, 20, 30, 40],           // 各幕底噪下限
+    SpawnCooldown: [1.3, 0.7, 0.5, 0.4],   // 各幕底噪刷怪间隔 s
     DamageMult: [0.6, 0.85, 1.0, 1.1],     // R187 Act1 温和热身：妖物伤害按幕爬升
     EliteWaveCount: [0, 2, 3, 5],          // 各幕每轮(45s)追加精英潮数量
     FinalBossRound: 13,                    // 终幕妖王出现轮（≈585s）

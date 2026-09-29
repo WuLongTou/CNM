@@ -374,7 +374,7 @@ export class GameSim {
   damageTakenRun = 0;
   /** R159 本局是否破最高分（结算屏「新纪录」徽章）。 */
   newRecord = false;
-  /** R187 保底计数：距上次符箓掉落的杀敌数（≥25 普通妖必掉）。 */
+  /** R187 保底计数：距上次符箓掉落的杀敌数（≥20 普通妖必掉）。 */
   killsSinceTalisman = 0;
   /** R166 未破纪录时距历史最高分的差值（结算屏差距提示）。 */
   recordGap = 0;
@@ -2038,9 +2038,9 @@ export class GameSim {
       this.emit("goblin_slayed", { x: e.x, y: e.y });
     }
     // 升级符箓掉落：普通低概率 / 精英高概率 / 妖王必掉 3 枚
-    // R187 保底：25 杀无符箓 → 普通妖必掉玩家脚边一枚（升级 cadence 保障）
+    // R187 保底：20 杀无符箓 → 普通妖必掉玩家脚边一枚（升级 cadence 保障）
     this.killsSinceTalisman++;
-    const pity = this.killsSinceTalisman >= 25 && !e.boss && !e.elite && this.player.weapons.length > 0;
+    const pity = this.killsSinceTalisman >= 20 && !e.boss && !e.elite && this.player.weapons.length > 0;
     const rate = e.boss ? UPGRADE_DROP.boss : e.elite ? UPGRADE_DROP.elite : UPGRADE_DROP.normal;
     if (pity || this.rng.chance(rate)) {
       const n = e.boss ? 3 : 1;

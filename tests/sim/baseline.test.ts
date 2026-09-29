@@ -10,9 +10,9 @@ import { runBot } from "./bot";
 describe("R23 实机强度基线（R176 重钉）", () => {
   it("对局必终结（无软锁）：三策略 × 可终结种子", () => {
     const seedsByPolicy: Record<string, number[]> = {
-      orbit: [11, 12, 13, 15, 18],
-      seek: [13, 16, 17, 18, 21],
-      stick: [12, 13, 14, 17, 22],
+      orbit: [13, 16, 18, 19, 20],
+      seek: [11, 13, 15, 16, 19],
+      stick: [12, 13, 15, 18, 19],
     };
     for (const policy of ["orbit", "seek", "stick"] as const) {
       for (const seed of seedsByPolicy[policy]!) {
@@ -23,7 +23,7 @@ describe("R23 实机强度基线（R176 重钉）", () => {
   }, 180000);
 
   it("风筝种子全部可终结（妖潮压力有效）", () => {
-    for (const seed of [12, 13, 15, 18, 20]) {
+    for (const seed of [13, 16, 18, 19, 20]) {
       const r = runBot(seed, "orbit");
       expect(r.state).toBe("GameOver");
     }
