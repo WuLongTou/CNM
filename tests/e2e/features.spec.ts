@@ -85,11 +85,10 @@ test("R2 终局：goto_round 13 → 终幕妖王 → 击杀 → Victory 面板 �
   const killed = await page.evaluate(() => {
     const sim = window.__CNM__.sim;
     const k = sim.enemies.find((z) => z.final)!;
-    k.hp = 1;
-    // R176 后妖王会主动位移——长硬直冻结 + 钉在玩家面前保证挥砍命中
-    (k as unknown as { stagger: number }).stagger = 999;
-    k.x = sim.player.x + 46;
-    k.y = sim.player.y;
+    // R200 确定性直杀：妖王免疫硬直（R58）会位移躲挥砍，直调击杀路径
+    // 只验证「击杀→Victory→无尽」流程而非战斗本身
+    k.hp = 0;
+    (sim as unknown as { onEnemyKilled(e: unknown): void }).onEnemyKilled(k);
     sim.player.invincible = 1e9;
     return true;
   });
