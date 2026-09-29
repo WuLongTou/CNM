@@ -235,6 +235,7 @@ export class HelpPanel {
       highScore: number; totalKills: number; games: number; clears: number;
       stats?: { timeAlive: number; coinsEarned: number; maxKills: number; maxCombo: number; totalElites: number; totalBosses: number; gamesByRole: Record<string, number> };
       ach_total?: number; ach_unlocked?: number;
+      daily_streak?: number; codex_seen?: number; codex_gold?: number;
     };
     const st = d.stats ?? { timeAlive: 0, coinsEarned: 0, maxKills: 0, maxCombo: 0, totalElites: 0, totalBosses: 0, gamesByRole: {} };
     const h = Math.floor(st.timeAlive / 3600);
@@ -251,6 +252,8 @@ export class HelpPanel {
         <tr><td>生涯最高连击</td><td>${st.maxCombo}</td></tr>
         <tr><td>累计精英 / 妖王</td><td>${st.totalElites} / ${st.totalBosses}</td></tr>
         <tr><td>累计获得香火</td><td>${st.coinsEarned}</td></tr>
+        <tr><td>每日挑战连胜</td><td>🔥 ${d.daily_streak ?? 0} 天</td></tr>
+        <tr><td>妖物图鉴</td><td>点亮 ${d.codex_seen ?? 0}/14 · 镀金 ${d.codex_gold ?? 0}/14</td></tr>
         <tr><td>最爱职业</td><td>${favName}</td></tr>
         <tr><td>成就完成度</td><td>${d.ach_unlocked ?? 0}/${d.ach_total ?? 0}（${pct}%）<span class="ach-bar" aria-hidden="true"><i style="width:${pct}%"></i></span></td></tr>
       </table>`;

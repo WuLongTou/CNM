@@ -2827,6 +2827,12 @@ export class GameSim {
           ach_total: ACHIEVEMENTS.length, // R140 成就完成度（欢迎页常显）
           ach_unlocked: this.achievements.unlocked.size,
           ach_last: [...this.achievements.unlocked].slice(-1)[0] ?? null, // 最近解锁 id
+          daily_streak: (() => {
+            const sd = this.save.load();
+            return sd?.dailyStreak?.last === dailyKey() ? sd.dailyStreak.count : 0;
+          })(), // R161 连胜
+          codex_seen: Object.values(d.codex ?? {}).filter((n) => (n as number) > 0).length, // R161 图鉴点亮
+          codex_gold: Object.values(d.codex ?? {}).filter((n) => (n as number) >= 100).length, // R161 图鉴镀金
           dailyBest: d.dailyBest ?? { date: "", score: 0 },
           // R64 生涯统计（欢迎页陈列；测试与 UI 共用同一口径）
           stats: d.stats ?? defaultStats(),
