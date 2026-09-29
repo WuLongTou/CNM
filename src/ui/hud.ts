@@ -162,6 +162,10 @@ export class Hud {
         <span id="weapon"></span>
       </div>`;
     this.root.appendChild(hud);
+    // R179 连杀屏显（中央上方，punch 动画由 main 层驱动；空文本即不可见）
+    const streak = document.createElement("div");
+    streak.id = "kill-streak";
+    this.root.appendChild(streak);
     this.hpFill = hud.querySelector("#hp-fill")!;
     this.hpText = hud.querySelector("#hp-text")!;
     this.roundText = hud.querySelector("#round")!;

@@ -353,6 +353,16 @@ async function boot(): Promise<void> {
       view.spawnBurst(x, y, boss ? 0x8e2a20 : elite ? 0xa8842c : 0x6b6154);
       view.shake(boss ? 12 : elite ? 8 : 4);
       rumble.play("kill"); // 节流在 RumbleManager 内（割草不常转）
+      // R179 连杀屏显：≥5 连杀时中央上方 punch 计数（重排 DOM 触发动画）
+      if (killStreak >= 5) {
+        const el = document.getElementById("kill-streak");
+        if (el) {
+          el.textContent = `连杀 ${killStreak}！`;
+          el.classList.remove("punch");
+          void el.offsetWidth; // 重排触发动画
+          el.classList.add("punch");
+        }
+      }
     });
     sim.onPlayerHurt.push(() => { audio.play("player_hurt"); rumble.play("hurt"); view.playHurt(); }); // R176 合流：震动+受击动画
     sim.onDashStrike.push((x, y) => { view.shake(3); view.spawnBurst(x, y, 0x6b6154); });
