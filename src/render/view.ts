@@ -1233,6 +1233,20 @@ export class GameView {
     this.damageTexts.push({ t, life: 0.8, age: 0, popFrom: crit ? 1.9 : 1.45 });
   }
 
+  /** R184 治疗数字：绿色 +40 上浮（与伤害数字同池渲染，负向红正向绿对称）。 */
+  spawnHealNumber(x: number, y: number, heal: number): void {
+    if (!this.damageNumbersEnabled) return;
+    if (this.damageTexts.length > 24) return;
+    const t = new Text({ text: `+${heal}`, style: {
+      fontFamily: "system-ui", fontSize: 19, fontWeight: "700",
+      fill: 0x6ab04c, stroke: { color: 0xf5eede, width: 3 },
+    } });
+    t.anchor.set(0.5);
+    t.position.set(x + (Math.random() * 14 - 7), y - 44);
+    this.worldLayer.addChild(t);
+    this.damageTexts.push({ t, life: 0.9, age: 0, popFrom: 1.5 });
+  }
+
   private updateDamageTexts(dt: number): void {
     const alive: Array<{ t: Text; life: number; age: number; popFrom: number }> = [];
     for (const d of this.damageTexts) {
