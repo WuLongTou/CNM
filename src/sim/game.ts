@@ -2185,6 +2185,7 @@ export class GameSim {
         }
         return merged;
       })(),
+
       // R99 每日挑战连胜：透传既有连胜（onVictory 侧按日更新）
       dailyStreak: prev.dailyStreak ?? { last: "", count: 0 },
       // R102 本地战绩历史：终局统一推入（胜/负都记，最近 10 局，新的在前）
@@ -2245,6 +2246,8 @@ export class GameSim {
       fused: [...new Set([...(prev.fused ?? []), ...this.runFused])],
       achievements: [...this.achievements.unlocked],
     });
+    // R195 无尽模式防双计：并入生涯后清空本局武器击杀
+    this.runWeaponKills = {};
     return coins;
   }
 

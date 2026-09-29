@@ -213,6 +213,9 @@ canvas { position: absolute; z-index: 0; }
 /* ── R195 妖物图鉴缩略图：walk sheet 胶片条（高度钳 26px，宽度自适应）── */
 .codex-thumb { height: 26px; width: auto; vertical-align: middle; opacity: 0.95; }
 
+/* ── R196 武器图鉴生涯击杀标签（血红小字，与 w-ult 同排）── */
+.w-kill { color: #c0392b; font-size: 10px; font-weight: 700; margin-left: 4px; }
+
 /* ── R179 连杀屏显：中央上方 punch 计数（血红简笔风）── */
 #kill-streak {
   position: absolute; top: 96px; left: 50%; transform: translateX(-50%);

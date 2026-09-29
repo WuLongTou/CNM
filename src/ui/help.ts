@@ -206,6 +206,8 @@ export class HelpPanel {
     const TYPE_NAMES: Record<WeaponDef["type"], string> = { Melee: "近战", Ranged: "远程", Magic: "魔法", Mine: "地雷" };
     const order: Array<WeaponDef["type"]> = ["Melee", "Ranged", "Magic", "Mine"];
     const owned = new Set((this.sim.exec({ action: "armory" }).data as { owned: string[] }).owned);
+    // R196 生涯击杀（R195 数据消费端）：每把已持有武器显示累计击杀
+    const wkills = (this.sim.exec({ action: "status" }).data as { weapon_kills?: Record<string, number> }).weapon_kills ?? {};
     const ult = new Set((this.sim.exec({ action: "ultimates" }).data as { reached: string[] }).reached);
     const fusionable = new Set(FUSION_RECIPES.flatMap((r) => [r.a, r.b]));
     const rows = order.flatMap((type) =>
@@ -219,11 +221,13 @@ export class HelpPanel {
           const stars = "★".repeat(d.rarity);
           const fuse = fusionable.has(d.name) ? " · 可祭炼" : "";
           const ulti = ult.has(id) ? `<span class="w-ult">终极</span>` : "";
+          const wk = wkills[id] ?? 0;
+          const wkTag = owned.has(id) && wk > 0 ? `<span class="w-kill">${wk} 杀</span>` : "";
           const tags = this.weaponTags(d);
           // R109 形态入鉴：形态名 + 描述 + 解锁条件（进阶）
           const a = ASPECTS[id];
           const aspText = a ? `<br><span class="w-fuse">形态贰·${a.name}（升 ${ASCEND_AT} 次解锁）：${a.desc}</span>` : "";
-          return `<tr><td>${d.name}${ulti}<i class="w-star">${stars}</i></td>` +
+          return `<tr><td>${d.name}${ulti}${wkTag}<i class="w-star">${stars}</i></td>` +
             `<td>[${TYPE_NAMES[d.type]}] ${d.desc}${tags ? `<br><span class="w-tags">${tags}</span>` : ""}${fuse ? `<span class="w-fuse">${fuse}</span>` : ""}${aspText}</td></tr>`;
         }));
     this.bodyEl.innerHTML = `<table class="help-table">${rows.join("")}</table>`;

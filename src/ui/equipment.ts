@@ -50,8 +50,11 @@ export class EquipmentPanel {
 
   refresh(): void {
     const s = this.sim;
-    // R195 武器精通：生涯击杀表（本局击杀在 runWeaponKills，finalize 时并入）
-    const wk = (s.status() as unknown as { weapon_kills?: Record<string, number> }).weapon_kills ?? {};
+    // R195 武器精通：生涯 + 本局进行中合并显示（finalize 后 run 清零无双计）
+    const wks = s.status() as unknown as { weapon_kills?: Record<string, number>; weapon_kills_run?: Record<string, number> };
+    const wkLife = wks.weapon_kills ?? {};
+    const wkRun = wks.weapon_kills_run ?? {};
+    const wk = (id: string) => (wkLife[id] ?? 0) + (wkRun[id] ?? 0);
     const st = s.stats;
     this.statsEl.innerHTML = `
       <span>伤害 ×${st.dmgMult.toFixed(2)}</span>
@@ -70,7 +73,7 @@ export class EquipmentPanel {
         ? `<em>伤害 ${Math.round(w.dmgDealt)}（${Math.round((w.dmgDealt / s.dmgDealtTotal) * 100)}%）</em>`
         : "";
       // R195 武器精通：生涯击杀（有记录才显示）
-      const killLine = (wk[w.defId] ?? 0) > 0 ? ` · 击杀 ${wk[w.defId]}` : "";
+      const killLine = wk(w.defId) > 0 ? ` · 击杀 ${wk(w.defId)}` : "";
       // R105 形态切换：进阶解锁且有形态表的武器显示按钮（事件委托 bind 一次）
       const aspectBtn = aspectUnlocked(w) && ASPECTS[w.defId]
         ? `<button type="button" class="eq-aspect" data-idx="${i}">形态：${w.aspect === 1 ? ASPECTS[w.defId].name : "本形"}</button>`
