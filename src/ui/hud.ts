@@ -566,8 +566,9 @@ export class Hud {
       ? ` · 异变${tally.map(([k, n]) => `${EN[k] ?? k}×${n}`).join(" / ")}`
       : "";
     // R66 香火钱复盘：本局局内经济收支（有收支才陈列，零花销不占行宽）
+    // R158 分源明细：击杀 / 越阶（财神日 ×2 含于各源）
     const gold = s.runGoldSpent > 0 || s.runGoldEarned > 0
-      ? ` · 香火钱 +${s.runGoldEarned}/-${s.runGoldSpent}`
+      ? ` · 香火钱 +${s.runGoldEarned}/-${s.runGoldSpent}（击杀 ${s.goldEarnedKills} · 越阶 ${s.goldEarnedTier}）`
       : "";
     // R90 祝福陈列：本局所购香火祝福（金字强调；R89 稀有含档位标注）
     const buffs = s.runBuffList.length > 0

@@ -428,6 +428,9 @@ export class GameSim {
   shopPurchases = 0;
   /** R66 复盘口径：单局香火钱收入/支出。 */
   runGoldEarned = 0;
+  /** R158 分源：击杀 / 越阶（财神日 ×2 含于各源）。 */
+  goldEarnedKills = 0;
+  goldEarnedTier = 0;
   runGoldSpent = 0;
   /** 本局精英讨伐数（R9 战绩复盘；妖王单计 bossKills）。 */
   eliteKills = 0;
@@ -1466,6 +1469,7 @@ export class GameSim {
     const bonus = 8 * this.round * (this.mutator()?.id === "gold" ? 2 : 1);
     this.coins += bonus;
     this.runGoldEarned += bonus;
+    this.goldEarnedTier += bonus; // R158 分源
     this.emit("threat_tier", { tier: this.round, bonus });
     // R44 Boss Rush：终幕提前至第 6 阶（连妖王节奏紧凑）
     const finalRound = this.bossRush ? 6 : CFG.Acts.FinalBossRound;
@@ -1979,6 +1983,7 @@ export class GameSim {
       * (this.mutator()?.id === "gold" ? 2 : 1); // R73 每日变异「财神附身」
     this.coins += gold;
     this.runGoldEarned += gold;
+    this.goldEarnedKills += gold; // R158 分源
     for (const cb of this.onKill) cb(e.type, e.elite, e.boss);
     // explosive 词缀：死亡自爆（逼玩家杀完就走位，勿贴脸输出）
     if (e.affix === "explosive") {
@@ -3006,6 +3011,8 @@ export class GameSim {
       })(), // R99 连胜天数（当日有效）
       run_history: this.save.load()?.runHistory ?? [], // R102 本地战绩
       damage_taken_run: this.damageTakenRun, // R110 无伤口径
+      gold_from_kills: this.goldEarnedKills, // R158 分源
+      gold_from_tier: this.goldEarnedTier, // R158 分源
       daily_rush_best: (() => {
         const d = this.save.load();
         return d?.dailyRushBest?.date === dailyKey() ? d.dailyRushBest.score : 0;
