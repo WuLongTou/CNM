@@ -33,11 +33,16 @@ describe("R163 槽位锁定", () => {
     expect(sim.shopOffer![1].locked).toBe(false);
   });
 
-  it("购买槽位后龛散：锁定随龛散消失（无跨龛残留）", () => {
+  it("R202 连购：被购锁定槽移除、余槽无锁定残留；购罄散龛（无跨龛残留）", () => {
     const sim = openShop();
     sim.toggleShopLock(0);
     sim.coins = 9999;
     sim.buyShop(0);
-    expect(sim.shopOffer).toBeNull(); // 龛散
+    expect(sim.shopOffer).not.toBeNull(); // R202 余货保持
+    expect(sim.shopOffer!.some((s) => s.locked)).toBe(false); // 被购锁定槽已移除
+    while (sim.shopOffer) sim.buyShop(0);
+    expect(sim.shopOffer).toBeNull(); // 购罄散龛
+    expect(sim.shrines).toHaveLength(0);
+    expect(sim.paused).toBe(false);
   });
 });

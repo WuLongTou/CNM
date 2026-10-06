@@ -1,6 +1,6 @@
-// 香火龛面板（R65）：贴近香火龛触发，金币三选一（武器 / 符箓 / 调息）。
-// 点击或数字键 1/2/3 购买（一龛一购，购后龛散、全场基价通胀），Esc 关闭
-// （不消费龛，走开再回可重开）。打开时 sim 已置 paused，游戏输入 100% 失效；
+// 香火龛面板（R65）：贴近香火龛触发，金币选购（武器 / 符箓 / 调息 / 祝福）。
+// 点击或数字键 1/2/3 购买（R202 一龛多购：购后余货涨价可续购，购罄龛散、全场基价通胀），
+// Esc 关闭（不消费龛，走开再回可重开）。打开时 sim 已置 paused，游戏输入 100% 失效；
 // 数字键与 Esc 均为既有 UI 键，不占用游戏键位（符合模态硬约束）。
 
 import type { GameSim, ShopSlot } from "../sim/game";
@@ -27,7 +27,7 @@ export class ShopPanel {
     this.el.innerHTML = `
       <div class="panel panel-wide">
         <h2>香火龛</h2>
-        <p class="sub">以香火钱换机缘（1 / 2 / 3 购买 · R 刷新 · Esc 离开；每笔购买后全龛涨价 · 威势阶越高稀有度越高）</p>
+        <p class="sub">以香火钱换机缘（1 / 2 / 3 购买 · 可连购，每笔后本龛余货与全场涨价 · R 刷新 · Esc 离开）</p>
         <p class="sub" id="shop-gold"></p>
         <div id="shop-cards" class="upgrade-cards"></div>
         <div id="shop-actions"></div>
@@ -105,12 +105,15 @@ export class ShopPanel {
     </div>`;
   }
 
-  /** 购买：buyShop 内部扣费/发放/龛散/通胀并 emit shop_bought（通知/音效走装配层路由）。 */
+  /** 购买：buyShop 内部扣费/发放/通胀并 emit shop_bought（通知/音效走装配层路由）。 */
   private buy(index: number): void {
     const r = this.sim.exec({ action: "shop_buy", args: { index } });
     const data = r.data as { handled?: boolean } | undefined;
-    if (r.ok && data?.handled) this.hide();
-    else this.render(); // 拒绝（香火不足）：留在报价页，价格与余额实时重渲染
+    if (r.ok && data?.handled) {
+      // R202 一龛多购：龛有余货原地重渲染续购（main 层 shop_offer 事件亦会刷新）；购罄才隐藏
+      if (this.sim.shopOffer) this.render();
+      else this.hide();
+    } else this.render(); // 拒绝（香火不足）：留在报价页，价格与余额实时重渲染
   }
 
   /** Esc/关闭：closeShop 保留龛体，走开再回可重开（closeAllModals 亦用）。 */

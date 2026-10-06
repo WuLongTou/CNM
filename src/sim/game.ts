@@ -1202,7 +1202,7 @@ export class GameSim {
     return true;
   }
 
-  /** 购买槽位：扣金币 → 发放效果 → 龛散（一龛一购）→ 全场基价通胀；余额不足拒并播报。 */
+  /** 购买槽位：扣金币 → 发放效果 → 余货涨价续购（R202 一龛多购，购罄才散龛）→ 全场基价通胀；余额不足拒并播报。 */
   buyShop(index: number): Record<string, unknown> {
     if (!this.shopOffer) return { handled: false, note: "无进行中的报价" };
     const slot = this.shopOffer[index];
@@ -1214,6 +1214,7 @@ export class GameSim {
     this.coins -= slot.price;
     this.runGoldSpent += slot.price;
     this.shopPurchases++;
+    const beforeWs = [...this.player.weapons]; // R202 连购对位快照（giveWeapon 可能挤出满编旧武器）
     let name = slot.label;
     if (slot.kind === "weapon") {
       name = this.giveWeapon(slot.weaponDefId).name;
@@ -1234,11 +1235,27 @@ export class GameSim {
       name = `调息回复 ${healed} 生命`;
     }
     this.shopPriceMult *= CFG.Shop.EscalateMult;
-    this.shopOffer = null;
-    this.paused = false;
-    this.shrines = []; // 一龛一购：龛随购买消散
-    this.shopLatch = true;
+    // R202 香火龛连购：购后摊位保留，余货逐笔复利上浮（ceil 防反复取整漏涨）；
+    // 武器槽购入可能挤出满编旧武器——符箓槽按武器实例重新对位，原武器被挤出则该符箓随武器作废。
+    const kept: ShopSlot[] = [];
+    for (const s of this.shopOffer) {
+      if (s === slot) continue;
+      if (s.kind === "upgrade") {
+        const ni = this.player.weapons.indexOf(beforeWs[s.weaponIdx!] as WeaponInstance);
+        if (ni < 0) continue; // 原武器被挤出：符箓作废
+        s.weaponIdx = ni;
+      }
+      s.price = Math.ceil(s.price * CFG.Shop.EscalateMult);
+      kept.push(s);
+    }
+    this.shopOffer = kept.length > 0 ? kept : null;
+    if (kept.length === 0) {
+      this.shrines = []; // 购罄：龛随最后一笔消散，回归补龛节奏
+      this.shopLatch = true;
+    }
+    this.paused = this.shopOffer !== null; // 还有余货：报价保持继续选购（模态不撤）
     this.emit("shop_bought", { kind: slot.kind, name, price: slot.price, coins: this.coins });
+    if (this.shopOffer) this.emit("shop_offer", { slots: this.shopOffer, coins: this.coins });
     return { handled: true, name, coins: this.coins };
   }
 

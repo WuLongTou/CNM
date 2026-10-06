@@ -20,7 +20,7 @@ const buyKind = (sim: GameSim, kind: "dmg" | "asp" | "spd") => {
   slot.buffKind = kind;
   sim.coins = 9999;
   sim.exec({ action: "shop_buy", args: { index: sim.shopOffer!.indexOf(slot) } });
-  // R65 购买后散龛：重置触发闩再贴近，重开报价（三连购测试用）
+  sim.closeShop(); // R202 连购语义：主动收摊，重置触发闩再贴近重开报价（三连购测试用）
   const st = sim as unknown as { shrines: { id: number; x: number; y: number }[]; shopLatch: boolean };
   st.shrines = [{ id: st.shrines[0]?.id ?? 1, x: sim.player.x, y: sim.player.y }];
   st.shopLatch = false;

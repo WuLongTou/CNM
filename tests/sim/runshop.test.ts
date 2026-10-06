@@ -74,7 +74,7 @@ describe("R65 香火龛调度与触发", () => {
 });
 
 describe("R65 购买", () => {
-  it("武器槽：扣费发放、龛散、暂停解除", () => {
+  it("武器槽：扣费发放、余货保持（R202 连购）", () => {
     const sim = new GameSim(653, memoryStorage());
     sim.exec({ action: "start" });
     sim.coins = 500;
@@ -84,12 +84,33 @@ describe("R65 购买", () => {
     const r = sim.buyShop(idx);
     expect(r.handled).toBe(true);
     expect(sim.coins).toBe(500 - slot.price);
-    expect(sim.shopOffer).toBeNull();
-    expect(sim.shrines).toHaveLength(0);
+    expect(sim.shopOffer).not.toBeNull(); // R202 余货保持可续购
+    expect(sim.shrines).toHaveLength(1); // 龛体保留
+    expect(sim.paused).toBe(true); // 仍在选购模态
+  });
+
+  it("R202 连购与购罄：余货逐槽涨价、买空后龛散模态解除", () => {
+    const sim = new GameSim(6531, memoryStorage());
+    sim.exec({ action: "start" });
+    sim.coins = 9999;
+    openShopAt(sim);
+    let bought = 0;
+    while (sim.shopOffer) {
+      const before = sim.shopOffer.map((s) => s.price);
+      expect(sim.buyShop(0).handled).toBe(true);
+      bought++;
+      if (sim.shopOffer) {
+        expect(sim.shopOffer.length).toBe(before.length - 1);
+        sim.shopOffer.forEach((s, i) =>
+          expect(s.price).toBe(Math.ceil(before[i + 1]! * CFG.Shop.EscalateMult)));
+      }
+    }
+    expect(bought).toBeGreaterThanOrEqual(3);
+    expect(sim.shrines).toHaveLength(0); // 购罄散龛
     expect(sim.paused).toBe(false);
   });
 
-  it("符箓槽：应用升级生效；调息槽：回复不超上限", () => {
+  it("符箓槽：应用升级生效；调息槽：回复不超上限（同龛连购）", () => {
     const sim = new GameSim(654, memoryStorage());
     sim.exec({ action: "start" });
     sim.coins = 500;
@@ -98,10 +119,9 @@ describe("R65 购买", () => {
     const upIdx = sim.shopOffer!.findIndex((s) => s.kind === "upgrade");
     if (upIdx >= 0) {
       expect(sim.buyShop(upIdx).handled).toBe(true);
-      // 升级真实生效走 applyUpgrade 既有通路（R4 语义复用），此处断言流程闭环
-      expect(sim.paused).toBe(false);
+      // 升级真实生效走 applyUpgrade 既有通路（R4 语义复用）；R202 连购：报价保持
+      expect(sim.paused).toBe(true);
     }
-    openShopAt(sim);
     const hpBefore = sim.player.hp;
     const healSlot = sim.shopOffer!.findIndex((s) => s.kind === "heal");
     expect(sim.buyShop(healSlot).handled).toBe(true);
@@ -119,19 +139,36 @@ describe("R65 购买", () => {
     expect(sim.shopOffer).not.toBeNull(); // 报价保持可改买便宜槽
   });
 
-  it("通胀：每次购买后全场基价按 EscalateMult 取整上浮", () => {
+  it("R202 同龛连购涨价：余货按 EscalateMult 上浮、全场倍乘同步", () => {
     const sim = new GameSim(656, memoryStorage());
     sim.exec({ action: "start" });
     sim.coins = 9999;
     openShopAt(sim);
-    sim.buyShop(sim.shopOffer!.findIndex((s) => s.kind === "heal"));
+    const before = sim.shopOffer!.map((s) => s.price); // 快照：buyShop 会原地改价
+    const hIdx = sim.shopOffer!.findIndex((s) => s.kind === "heal");
+    sim.buyShop(hIdx);
+    const keptPrices = before.filter((_, i) => i !== hIdx)
+      .map((p) => Math.ceil(p * CFG.Shop.EscalateMult));
+    expect(sim.shopOffer!.map((s) => s.price)).toEqual(keptPrices);
+    expect((sim as unknown as { shopPriceMult: number }).shopPriceMult)
+      .toBeCloseTo(CFG.Shop.EscalateMult, 10);
+  });
+
+  it("通胀联动：购罄后下一龛基价按累计倍乘取整上浮", () => {
+    const sim = new GameSim(6561, memoryStorage());
+    sim.exec({ action: "start" });
+    sim.coins = 9999;
     openShopAt(sim);
+    while (sim.shopOffer) sim.buyShop(0); // 购罄散龛
+    openShopAt(sim);
+    const mult = (sim as unknown as { shopPriceMult: number }).shopPriceMult;
+    expect(mult).toBeGreaterThan(1);
     for (const s of sim.shopOffer!) {
       const base = s.kind === "weapon" ? CFG.Shop.PriceWeapon
         : s.kind === "upgrade" ? CFG.Shop.PriceUpgrade
         : s.kind === "buff" ? CFG.Shop.PriceBuff
         : CFG.Shop.PriceHeal;
-      expect(s.price).toBe(Math.floor(base * CFG.Shop.EscalateMult));
+      expect(s.price).toBe(Math.floor(base * mult));
     }
   });
 
@@ -187,6 +224,7 @@ describe("R66 香火祝福与复盘", () => {
     const rare = sim.shopOffer?.[bIdx]?.buffRare;
     const mult = rare ? CFG.Shop.BuffRareMult : 1;
     expect(sim.buyShop(bIdx).handled).toBe(true);
+    sim.closeShop(); // R202 连购语义：收摊解除暂停再挥刀对照
     expect(sim.shopBuff).toBeCloseTo(CFG.Shop.BuffDmgBonus * mult);
     const d2 = swingDamageOnce(sim);
     // 伤害事件为取整整数：祝福后 = round(基准 × (1 + 加成))
@@ -205,6 +243,7 @@ describe("R66 香火祝福与复盘", () => {
       const kind = sim.shopOffer![idx]!.buffKind!;
       expect(boughtKinds).not.toContain(kind); // 已购系别不再出现
       expect(sim.buyShop(idx).handled).toBe(true);
+      sim.closeShop(); // R202 连购语义：收摊换下一龛报价
       boughtKinds.push(kind);
     }
     openShopAt(sim);
@@ -219,6 +258,7 @@ describe("R66 香火祝福与复盘", () => {
       openShopAt(sim);
       const heal = sim.shopOffer!.findIndex((s) => s.kind === "heal");
       expect(sim.buyShop(heal).handled).toBe(true);
+      sim.closeShop(); // R202 连购语义：收摊换下一龛报价
     }
     sim.tick(1 / 60); // 成就判定随 tick 跑
     expect(sim.achievements.unlocked.has("incense_5")).toBe(true);
@@ -295,6 +335,7 @@ describe("R72 祝福三系化", () => {
     const idx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
     expect(sim.shopOffer![idx]!.buffKind).toBe("asp");
     expect(sim.buyShop(idx).handled).toBe(true);
+    sim.closeShop(); // R202 连购语义：收摊解除暂停再计时挥刀
     swings = 0;
     sim.input = { moveX: 0, moveY: 0, attack: true, dash: false, cycleTarget: false };
     for (let i = 0; i < 240; i++) { sim.enemies.length = 0; sim.tick(1 / 60); }
@@ -316,6 +357,7 @@ describe("R72 祝福三系化", () => {
     const idx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
     expect(sim.shopOffer![idx]!.buffKind).toBe("spd");
     expect(sim.buyShop(idx).handled).toBe(true);
+    sim.closeShop(); // R202 连购语义：收摊解除暂停再计时位移
     sim.input = { moveX: 1, moveY: 0, attack: false, dash: false, cycleTarget: false };
     const x1 = sim.player.x;
     for (let i = 0; i < 60; i++) { sim.enemies.length = 0; sim.tick(1 / 60); }
