@@ -20,7 +20,7 @@ describe("R47 妖王猎手", () => {
     sim.tick();
     expect(sim.achievements.unlocked.has("boss_hunter")).toBe(true);
     expect(sim.bossRushKills).toBe(5);
-    expect(ACHIEVEMENTS.length).toBe(42);
+    expect(ACHIEVEMENTS.length).toBe(44); // R205 战功中段 +2
   });
 
   it("普通模式讨伐妖王不计入", () => {

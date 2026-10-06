@@ -29,7 +29,7 @@ const buyKind = (sim: GameSim, kind: "dmg" | "asp" | "spd") => {
 
 describe("R132 三花聚顶", () => {
   it("成就表 42 项：三花聚顶 check 型", () => {
-    expect(ACHIEVEMENTS).toHaveLength(42);
+    expect(ACHIEVEMENTS).toHaveLength(44); // R205 战功中段 +2
     const a = ACHIEVEMENTS.find((x) => x.id === "three_buffs")!;
     expect(a.check).toBeTruthy();
   });

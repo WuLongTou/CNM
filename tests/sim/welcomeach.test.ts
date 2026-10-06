@@ -9,7 +9,7 @@ describe("R140 欢迎页成就完成度", () => {
     const sim = new GameSim(1400, memoryStorage());
     sim.exec({ action: "start" });
     const d0 = sim.exec({ action: "meta" }).data as unknown as { ach_total: number; ach_unlocked: number; ach_last: string | null };
-    expect(d0.ach_total).toBe(42);
+    expect(d0.ach_total).toBe(44);
     expect(d0.ach_unlocked).toBe(0);
     expect(d0.ach_last).toBeNull();
     sim.achievements.grant("first_blood");

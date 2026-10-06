@@ -77,6 +77,9 @@ export const ACHIEVEMENTS: AchievementDef[] = [
   { id: "first_blood", name: "初试锋芒", desc: "击杀第一只妖物", group: "战功", goal: { stat: "kills", target: 1 } },
   { id: "slayer_50", name: "除妖行者", desc: "累计击杀 50", group: "战功", goal: { stat: "totalKills", target: 50 } },
   { id: "slayer_200", name: "妖物克星", desc: "累计击杀 200", group: "战功", goal: { stat: "totalKills", target: 200 } },
+  // R205 战功线中段阶梯：200 → 5000 之间原为全表最大相对落差，补 500/1500 两档
+  { id: "slayer_500", name: "妖群宿敌", desc: "累计击杀 500", group: "战功", goal: { stat: "totalKills", target: 500 } },
+  { id: "slayer_1500", name: "妖潮宿将", desc: "累计击杀 1500", group: "战功", goal: { stat: "totalKills", target: 1500 } },
   { id: "survive_60", name: "站稳脚跟", desc: "单局存活 60 秒", group: "战功", goal: { stat: "survivalTime", target: 60 } },
   { id: "survive_180", name: "久经沙场", desc: "单局存活 180 秒", group: "战功", goal: { stat: "survivalTime", target: 180 } },
   { id: "survive_300", name: "守山之人", desc: "单局存活 300 秒", group: "战功", goal: { stat: "survivalTime", target: 300 } },

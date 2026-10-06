@@ -31,6 +31,6 @@ describe("R29 战斗信息补完", () => {
     }
     sim.tick();
     expect(sim.achievements.unlocked.has("slayer_1000")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
+    expect(ACHIEVEMENTS.length).toBe(44); // R47 妖王猎手（R205 战功中段 +2）
   });
 });

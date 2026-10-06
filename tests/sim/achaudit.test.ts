@@ -24,9 +24,9 @@ describe("R156 成就可达性审计", () => {
     }
   });
 
-  it("goal 型 24 项：tick 判定自动覆盖（无需 grep）", () => {
+  it("goal 型 26 项：tick 判定自动覆盖（无需 grep）", () => {
     const goalTypes = ACHIEVEMENTS.filter((a) => a.goal);
-    expect(goalTypes.length).toBe(24);
+    expect(goalTypes.length).toBe(26); // R205 战功中段 +2
     for (const a of goalTypes) expect(a.check).toBeUndefined(); // goal/check 互斥
   });
 
@@ -35,7 +35,7 @@ describe("R156 成就可达性审计", () => {
     for (const a of checkTypes) expect(a.check?.({} as never)).toBeDefined();
   });
 
-  it("全覆盖：42 项 = 直授 15 + goal 24 + check 3", () => {
-    expect(15 + 24 + 3).toBe(ACHIEVEMENTS.length);
+  it("全覆盖：44 项 = 直授 15 + goal 26 + check 3", () => {
+    expect(15 + 26 + 3).toBe(ACHIEVEMENTS.length);
   });
 });

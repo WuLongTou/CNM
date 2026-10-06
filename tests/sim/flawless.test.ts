@@ -34,7 +34,7 @@ describe("R110 无伤通关「铁壁」", () => {
   });
 
   it("成就表 42 项：铁壁 check 型（终局直授）", () => {
-    expect(ACHIEVEMENTS).toHaveLength(42);
+    expect(ACHIEVEMENTS).toHaveLength(44) // R205 战功中段 +2;
     const a = ACHIEVEMENTS.find((x) => x.id === "flawless")!;
     expect(a.check).toBeTruthy();
     expect(a.goal).toBeUndefined();

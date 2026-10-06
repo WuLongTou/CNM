@@ -11,7 +11,7 @@ const victory = (sim: GameSim) =>
 
 describe("R135 成就谱系第三轮", () => {
   it("表 42 项：两条 goal 型 + 一条 check 型", () => {
-    expect(ACHIEVEMENTS).toHaveLength(42);
+    expect(ACHIEVEMENTS).toHaveLength(44); // R205 战功中段 +2
     const sk = ACHIEVEMENTS.find((x) => x.id === "slayer_5000")!;
     expect(sk.goal).toEqual({ stat: "totalKills", target: 5000 });
     const rv = ACHIEVEMENTS.find((x) => x.id === "rush_veteran")!;

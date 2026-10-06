@@ -15,7 +15,7 @@ const victory = (sim: GameSim) =>
 
 describe("R134 秘密职业专属成就", () => {
   it("表 42 项：hermit_win/wusheng_win check 型且入荣誉集", () => {
-    expect(ACHIEVEMENTS).toHaveLength(42);
+    expect(ACHIEVEMENTS).toHaveLength(44) // R205 战功中段 +2;
     for (const id of ["hermit_win", "wusheng_win"]) {
       const a = ACHIEVEMENTS.find((x) => x.id === id)!;
       expect(a.check).toBeTruthy();

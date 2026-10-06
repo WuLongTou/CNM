@@ -39,7 +39,7 @@ describe("R32 融合图鉴", () => {
     (sim as unknown as { runFused: Set<string> }).runFused.add(ALL_RESULTS[ALL_RESULTS.length - 1]);
     sim.tick();
     expect(sim.achievements.unlocked.has("fusion_master")).toBe(true);
-    expect(ACHIEVEMENTS.length).toBe(42); // R47 妖王猎手
+    expect(ACHIEVEMENTS.length).toBe(44); // R47 妖王猎手（R205 战功中段 +2）
   });
 
   it("死亡结算也入库；老存档缺字段兼容", () => {

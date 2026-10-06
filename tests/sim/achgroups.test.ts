@@ -11,11 +11,11 @@ describe("R51 成就分组", () => {
   it("四条线皆有成员且总数为 42", () => {
     const counts = ACHIEVEMENT_GROUPS.map((g) => ACHIEVEMENTS.filter((a) => a.group === g).length);
     for (const n of counts) expect(n).toBeGreaterThan(0);
-    expect(counts.reduce((a, b) => a + b, 0)).toBe(42);
+    expect(counts.reduce((a, b) => a + b, 0)).toBe(44); // R205 战功中段 +2
   });
 
   it("组内 id 唯一，组名非空", () => {
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(42);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(44); // R205 战功中段 +2
     for (const g of ACHIEVEMENT_GROUPS) expect(g.length).toBeGreaterThan(0);
   });
 });
