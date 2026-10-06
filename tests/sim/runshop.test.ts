@@ -220,7 +220,7 @@ describe("R66 香火祝福与复盘", () => {
     openShopAt(sim);
     const bIdx = sim.shopOffer!.findIndex((s) => s.kind === "buff");
     expect(bIdx).toBeGreaterThanOrEqual(0);
-    // R176：槽可能抽中稀有档（×2 效果）——buy 前捕获（一龛一购后龛散置空）
+    // R176：槽可能抽中稀有档（×2 效果）——buy 前捕获（R202 起买后该槽移除、报价保持）
     const rare = sim.shopOffer?.[bIdx]?.buffRare;
     const mult = rare ? CFG.Shop.BuffRareMult : 1;
     expect(sim.buyShop(bIdx).handled).toBe(true);
