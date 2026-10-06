@@ -11,6 +11,7 @@ import { loadVisualSettings, saveVisualSettings } from "./settings";
 import { RumbleManager, type RumbleActuator } from "./rumble";
 import { GameView } from "../render/view";
 import { InputManager } from "./input";
+import { streakMilestone } from "./streak";
 import { AudioManager } from "./audio";
 import { Hud } from "../ui/hud";
 import { EquipmentPanel } from "../ui/equipment";
@@ -369,10 +370,12 @@ async function boot(): Promise<void> {
           el.classList.add("punch");
         }
       }
-      // R180 连杀里程碑：10/25/50 掉落回春丹（激进出刀的续航回报）
-      if (killStreak === 10 || killStreak === 25 || killStreak === 50) {
+      // R180/R201 连杀里程碑：10/25/50 + 每满 100 掉落符箓（激进出刀的成长回报；
+      // R201 文案如实化——掉落物自 R180 起实为符箓，通知误写回春丹）
+      const ms = streakMilestone(killStreak);
+      if (ms !== null) {
         sim.pickups.push({ id: Date.now(), x, y });
-        notify.push(`连杀 ${killStreak} · 回春丹掉落！`);
+        notify.push(`连杀 ${ms} · 符箓掉落！`);
       }
     });
     sim.onPlayerHurt.push(() => { audio.play("player_hurt"); rumble.play("hurt"); view.playHurt(); }); // R176 合流：震动+受击动画
