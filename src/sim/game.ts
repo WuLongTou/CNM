@@ -80,6 +80,8 @@ export interface Enemy {
   barrageCd: number;
   /** 妖王：已放出的弹幕轮次（起始角按黄金角轮转 → 连续轮呈螺旋漂移）。 */
   barrageVolley: number;
+  /** 妖王：本轮弹幕是否已发预警（R203 可读性；每轮重置，不参与平衡）。 */
+  barrageWarned?: boolean;
   /** 近战攻击前摇剩余秒（>0 = 蓄力定身，可读预警）。 */
   attackWind: number;
   /** 出手动作剩余秒（扑击/后坐/脉冲，表现层驱动）。 */
@@ -349,8 +351,8 @@ const BLINK = { cd: 4, range: 150, grace: 2.5 };
 const DRAGON = { cd: 5, windup: 0.5, dash: 0.45, speedMult: 6, dmgMult: 1.5 };
 /** 宝妖（R14）：血量 / 逃逸速度 / 逃逸时限秒 / 击杀符箓数。速度超玩家基础移速（追得上要切角+冲刺）。 */
 const GOBLIN = { hp: 30, fleeSpeed: 250, escapeSec: 15, pickupCount: 2 };
-/** 妖王环形弹幕：周期向四周放径向弹，阶段越高弹越密（M15）。 */
-export const BOSS_BARRAGE = { cd: 4.5, first: 3, dmgMult: 0.7, speed: 280, count: [9, 11, 13] };
+/** 妖王环形弹幕：周期向四周放径向弹，阶段越高弹越密（M15）；R203 起发射前 windup 秒发预警事件。 */
+export const BOSS_BARRAGE = { cd: 4.5, first: 3, windup: 0.45, dmgMult: 0.7, speed: 280, count: [9, 11, 13] };
 /** 妖王种族轮换（M19；R57 起从 BOSSES 表派生，机制文案与顺序同源）——
  *  游魂王 → 石魅王 → 铁傀王 → 甲妖王 → 蛟王。 */
 export const BOSS_ROSTER: EnemyType[] = BOSSES.map((b) => b.type);
@@ -2332,8 +2334,15 @@ export class GameSim {
       // 起始角按黄金角逐轮旋转（连续轮呈螺旋漂移）；狂暴 3 阶追加一圈慢速内环。
       if (e.boss && !e.stealth) {
         e.barrageCd -= dt;
+        // R203 弹幕预警：发射前 windup 秒发一次 boss_barrage_windup（纯事件+
+        // 标志位，弹幕节奏不变——给玩家 0.45s 走位/垫步预读，考题先亮题面）
+        if (!e.barrageWarned && e.barrageCd > 0 && e.barrageCd <= BOSS_BARRAGE.windup) {
+          e.barrageWarned = true;
+          this.emit("boss_barrage_windup", { x: e.x, y: e.y, t: BOSS_BARRAGE.windup });
+        }
         if (e.barrageCd <= 0) {
           e.barrageCd = BOSS_BARRAGE.cd;
+          e.barrageWarned = false; // R203 每轮重置
           e.strikeT = 0.14; // 弹幕蓄能脉冲
           const n = BOSS_BARRAGE.count[e.bossPhase];
           const off = e.barrageVolley * 2.39996; // 黄金角 ≈ 137.5°
@@ -2802,6 +2811,7 @@ export class GameSim {
       chargeVx: 0, chargeVy: 0, chargeHit: false,
       barrageCd: boss ? BOSS_BARRAGE.first : 0,
       barrageVolley: 0,
+      barrageWarned: false,
       attackWind: 0,
       strikeT: 0,
       vx: 0, vy: 0,

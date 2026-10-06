@@ -181,6 +181,7 @@ async function boot(): Promise<void> {
       audio.play(k === "cache" ? "charm" : "lightning");
     }
     else if (e.event === "victory") { notify.banner("妖潮平定", "除妖师大胜"); view.shake(12); audio.play("combo_5"); audio.stopBgm(); }
+    else if (e.event === "boss_barrage_windup") { view.spawnBarrageWarning(Number(d.x), Number(d.y), Number(d.t ?? 0.45)); audio.play("magic_attack", { pitch: 1.6, vol: 0.25 }); }
     else if (e.event === "boss_barrage") { audio.play("magic_attack", { pitch: 0.85, vol: 0.8 }); }
     else if (e.event === "enemy_explode") { view.spawnBurst(Number(d.x), Number(d.y), 0xff7a3d); view.shake(8); audio.play("explosion"); }
     else if (e.event === "goblin_slayed") { view.spawnBurst(Number(d.x), Number(d.y), 0xffd94d); view.shake(6); notify.push("讨伐宝妖，大丰收！"); audio.play("combo_5"); }

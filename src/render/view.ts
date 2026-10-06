@@ -310,6 +310,7 @@ export class GameView {
     this.updateBursts(dt);
     this.updateScribbles(dt);
     this.updateRipples(dt);
+    this.updateBarrageWarnings(dt);
     this.updateDust(dt);
     this.updateSparks(dt);
     this.updateSlashes(dt);
@@ -679,6 +680,34 @@ export class GameView {
       alive.push(rp);
     }
     this.ripples = alive;
+  }
+
+  /** 妖王弹幕预警（R203）：血红收缩环——弹幕发射前 windup 秒提示走位窗口。
+   *  纯表现层，时序由 sim 事件驱动（boss_barrage_windup），零平衡参与。 */
+  private barrageWarnings: Array<{ gfx: Graphics; x: number; y: number; life: number; total: number }> = [];
+
+  spawnBarrageWarning(x: number, y: number, t: number): void {
+    if (this.barrageWarnings.length > 3) return;
+    const bw = { gfx: new Graphics(), x, y, life: t, total: t };
+    this.barrageWarnings.push(bw);
+    this.fxLayer.addChild(bw.gfx);
+  }
+
+  private updateBarrageWarnings(dt: number): void {
+    const alive: typeof this.barrageWarnings = [];
+    for (const bw of this.barrageWarnings) {
+      bw.life -= dt;
+      if (bw.life <= 0) { bw.gfx.destroy(); continue; }
+      const p = 1 - bw.life / bw.total; // 0→1 收缩进度
+      const g = bw.gfx;
+      g.clear();
+      g.alpha = 0.35 + p * 0.55;
+      // 血红收缩环：外环 110→30 向妖王收拢（能量聚拢意象），内环同步跟进
+      this.sketchCircle(g, bw.x, bw.y, 110 - p * 80, { color: 0xd93a2b, width: 3.5, alpha: 0.85 });
+      this.sketchCircle(g, bw.x, bw.y, 86 - p * 62, { color: 0xd93a2b, width: 2.2, alpha: 0.55 });
+      alive.push(bw);
+    }
+    this.barrageWarnings = alive;
   }
 
   /** 高阶妖状态提示：甲妖举盾蓝灰圈 / 蛟蓄力红光闪烁 / 前摇"！"预警；
