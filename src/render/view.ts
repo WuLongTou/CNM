@@ -730,6 +730,12 @@ export class GameView {
           .stroke({ width: 3.2, color: BLOOD, alpha: pulse });
         g.circle(z.x, ly + 5, 1.9).fill({ color: BLOOD, alpha: pulse });
       }
+      if (z.aimWarned) {
+        // R204 远程读题：头顶血红蓄力环渐大（开火即消，区别于近战"！"）
+        const p = 1 - Math.min(1, z.attackCd / CFG.Enemy.AttackWindup);
+        g.circle(z.x, z.y - 46, 3.5 + p * 5.5)
+          .stroke({ width: 2.4, color: BLOOD, alpha: 0.5 + p * 0.45 });
+      }
       if (z.type === EnemyType.Knight && z.blockT > 0) {
         g.circle(z.x, z.y, 26).stroke({ width: 3, color: 0x4a6a8a, alpha: 0.85 });
         g.circle(z.x, z.y, 30).stroke({ width: 1.5, color: 0x3a5a7a, alpha: 0.4 });

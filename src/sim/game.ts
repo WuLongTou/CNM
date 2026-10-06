@@ -80,6 +80,8 @@ export interface Enemy {
   barrageCd: number;
   /** 妖王：已放出的弹幕轮次（起始角按黄金角轮转 → 连续轮呈螺旋漂移）。 */
   barrageVolley: number;
+  /** 远程妖：本轮射击已进预警窗口（R204 读题状态；开火即清，不参与平衡）。 */
+  aimWarned?: boolean;
   /** 妖王：本轮弹幕是否已发预警（R203 可读性；每轮重置，不参与平衡）。 */
   barrageWarned?: boolean;
   /** 近战攻击前摇剩余秒（>0 = 蓄力定身，可读预警）。 */
@@ -2473,8 +2475,17 @@ export class GameSim {
       }
       e.facing = dx >= 0 ? 1 : -1;
 
+      // R204 远程读题（预警不延时）：射程内且冷却进入预警窗口时置 aimWarned
+      // （渲染层画蓄力标），开火即清——出手时机分毫不变（零平衡），只把题面
+      // 提前 0.35s 亮给玩家。延迟出手方案实测会翻「妖潮磨血有效」基线钉（雪球
+      // 回路放大任何磨血减免），故只做信息层。
+      if (ranged && dist <= ranged.range && !e.aimWarned && e.attackCd > 0
+        && e.attackCd <= CFG.Enemy.AttackWindup) {
+        e.aimWarned = true;
+      }
       if (ranged && dist <= ranged.range && e.attackCd <= 0) {
         e.attackCd = ranged.cd;
+        e.aimWarned = false; // R204 开火即清（每轮恰一次预警）
         e.strikeT = 0.12; // 开火后坐
         this.fireEnemyShot(e, ranged.dmgMult, ranged.psn ?? false);
         continue;
