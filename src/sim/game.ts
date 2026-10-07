@@ -248,7 +248,8 @@ export interface ExecResult {
 
 export interface SpawnOpts {
   count?: number;
-  type?: "random" | "basic" | number;
+  /** R207：接受数字 id / 英文别名 / 中文名（ENEMY_NAMES）；未知类型显式报错不再静默退化。 */
+  type?: "random" | "basic" | number | string;
   near?: "player" | "random" | { x: number; y: number };
   elite?: boolean;
   boss?: boolean;
@@ -2714,7 +2715,18 @@ export class GameSim {
 
   private resolveType(t: SpawnOpts["type"]): EnemyType {
     if (t === "basic") return 0;
-    if (typeof t === "number") return t as EnemyType;
+    if (typeof t === "number") {
+      // R207：越界数值显式报错（此前会静默产出缺三维表的坏实体）
+      if (!ENEMY_NAMES[t as number]) throw new Error("未知妖物类型: " + t);
+      return t as EnemyType;
+    }
+    if (typeof t === "string") {
+      // R207：支持中文名（ENEMY_NAMES 反查，如 "瘴妖"→5）；未知类型显式报错——
+      // 此前任何字符串都静默退化成权重随机（"瘴妖"实际生成游魂），调试协议误判源头
+      const byName = Object.entries(ENEMY_NAMES).find(([, name]) => name === t);
+      if (byName) return Number(byName[0]) as EnemyType;
+      if (t !== "random") throw new Error("未知妖物类型: " + t);
+    }
     const entry = SPAWN_TABLE.find((e) => this.round <= e.maxRound) ?? SPAWN_TABLE[SPAWN_TABLE.length - 1];
     const weights = Object.entries(entry.weights).map(([k, w]) => [Number(k), w] as const);
     return this.rng.weighted(weights) as EnemyType;
