@@ -153,6 +153,7 @@ export class Hud {
   private buildHud(): void {
     const hud = document.createElement("div");
     hud.id = "hud";
+    this.hudEl = hud;
     hud.innerHTML = `
       <div class="hp-wrap"><div class="hp-bar"><div class="hp-fill" id="hp-fill"></div></div>
         <span id="hp-text"></span>
@@ -194,6 +195,8 @@ export class Hud {
   private gameoverDebrief!: HTMLElement;
   private gameoverAchievements!: HTMLElement;
   private dangerEl!: HTMLElement;
+  /** R206 顶部状态条根：欢迎页隐藏（HUD 片段从面板四周漏出属视觉噪声）。 */
+  private hudEl!: HTMLElement;
   /** GameOver 面板延迟弹出计时（进 GameOver 起算；让死亡消散先播完）。 */
   private gameOverAt = 0;
 
@@ -492,7 +495,8 @@ export class Hud {
       `分数 ${s.score} · 击杀 ${s.kills} · 用时 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度${recordBadge}` +
       (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
       (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
-    this.victoryDebrief.textContent = this.debriefText(s);
+    // R206 荣誉金字经 innerHTML 渲染（debriefText 含 span 标签；内容全部来自内部数据表，无用户输入——R111 同先例）
+    this.victoryDebrief.innerHTML = this.debriefText(s);
     this.victoryCoins.textContent = `结算金币 ×1.5 → +${coins}`;
     // R53 本局成就陈列（R48 补授后结算已含终局同 tick 的成就）
     this.victoryAchievements.innerHTML = runAchievementLine(s.runAchievements.map((a) => a.name)); // R111 荣誉金字（内容为内部成就名，无用户输入）
@@ -674,6 +678,8 @@ export class Hud {
   /** 每帧同步 sim → DOM。 */
   update(): void {
     const s = this.sim;
+    // R206 选人页隐藏状态条（开局即现，避免 HUD 片段绕着欢迎面板漏边）
+    this.hudEl.classList.toggle("hidden", s.state === "WeaponSelection");
     const ratio = Math.max(0, s.player.hp / s.player.maxHp);
     this.hpFill.style.width = `${ratio * 100}%`;
     // R16 濒危红边：血量越低红边越重（只读 sim，不拦截输入）
@@ -742,7 +748,8 @@ export class Hud {
         `分数 ${s.score} · 击杀 ${s.kills} · 存活 ${s.survivalTime.toFixed(0)}s · 威胁阶 ${s.round} · ${s.difficulty.name}难度 · 金币 +${coins} · 死于${s.deathCause ?? "妖潮"}` +
         (s.bossRush ? " · Boss 连战" : s.seed === dailySeed() ? " · 每日妖潮" : "") +
         (s.pactScoreMult() > 1 ? ` · 血誓×${s.pactScoreMult().toFixed(2)}` : "");
-      this.gameoverDebrief.textContent = this.debriefText(s);
+      // R206 同 victory 侧：innerHTML 渲染荣誉金字（内部数据，无用户输入）
+      this.gameoverDebrief.innerHTML = this.debriefText(s);
       this.gameoverAchievements.innerHTML = runAchievementLine(s.runAchievements.map((a) => a.name)); // R111 荣誉金字
       this.refreshMeta();
     }

@@ -83,6 +83,7 @@ async function boot(): Promise<void> {
   // R22：欢迎页填了自定义种子则用该种子开局（可复现速通），否则沿用当前实例
   // R44：Boss 连战开关 → 以 boss_rush 模式重建 sim（血誓/种子照常）
   const hud = new Hud(sim, () => {
+    closeAllModals(); // R206 重开局清残留模态（欢迎页 H 手账等跨局驻留会蒙住新对局）
     const seed = hud.pendingSeed();
     if (hud.pendingBossRush) {
       hud.pendingBossRush = false;
@@ -396,6 +397,7 @@ async function boot(): Promise<void> {
         input.applyExternal(cmd.args ?? {});
         return { id: cmd.id ?? -1, ok: true, data: { applied: true } };
       }
+      if (cmd.action === "start") closeAllModals(); // R206 协议开局同按钮路径清残留模态
       return sim.exec(cmd);
     },
     getEvents() { return eventBuffer.splice(0); },
