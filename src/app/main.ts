@@ -158,6 +158,12 @@ async function boot(): Promise<void> {
     else if (e.event === "upgrade_skipped") { notify.push(`跳过升级 · 调息回复 ${d.heal} 生命`); audio.play("charm"); }
     else if (e.event === "role_unlocked") { notify.push(`新职业解锁：${d.name}（下局可选）`); notify.banner("新职业解锁", d.name); audio.play("combo_5"); }
     else if (e.event === "fusion_offer") fusion.show();
+    else if (e.event === "fusion_done") {
+      // R209 祭炼功成：此前成功融合零反馈（面板一关无声无息），与升级同级的
+      // 高光时刻——补纸签 + 炉火轰鸣（复用既有资产，不新增依赖）。
+      notify.banner("祭炼功成", `${d.result} 现世`);
+      audio.play("explosion", { pitch: 0.7, vol: 0.7 });
+    }
     else if (e.event === "weather_changed") {
       const WNAMES: Record<string, string> = { Rain: "阴雨", Fog: "浓雾", BloodMoon: "血月升起" };
       // R54：天气播报带实际影响（数值表派生，玩家知道意味着什么）

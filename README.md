@@ -326,6 +326,13 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R209 祭炼功成反馈 + 融合面板 e2e：①成功融合此前零反馈（面板一关无声无息），
+      补「祭炼功成 · X 现世」纸签 + 炉火轰鸣（复用既有爆炸音效，不新增依赖）；
+      ②面板的真实 DOM/键盘接线此前无覆盖（仅协议级 offer/choose），补 5 条 e2e——
+      报价文案含两件祭品与结果且模态暂停、接受按钮逐件消耗、Enter 接受+纸签、
+      Delete 拒绝武器原样保留、模态期间游戏键失效且 Esc 走 fusion.onKey 拒绝；
+      ③沉淀进程坑：playwright webServer 的 reuseExistingServer 会复用 main 树
+      残留 dev server，导致 worktree 新代码不被服务（本轮实测被误导一次）
 - [x] R208 存档导出/导入 e2e：欢迎页备份按钮的真实 UI 接线——导出下载（文件名
       zhanyaolu-save-YYYY-MM-DD.json、内容与当前进度一致、提示「存档已下载」）、
       有效导入（真实 filechooser 覆写进度、提示「存档已导入」）、非法文件拒绝
