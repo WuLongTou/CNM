@@ -326,6 +326,13 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - [x] R77 血玉匕：第 24 件武器（近战 T3/R3，影刃系）——极速短刃命中吸血
       （每击 +10，不超上限；甲妖举盾不可吸血）；WeaponDef 新增 steal 字段，
       吸血挂 applyHit 单点（溅射不计、多目标按命中数）；3 条测试
+- [x] R208 存档导出/导入 e2e：欢迎页备份按钮的真实 UI 接线——导出下载（文件名
+      zhanyaolu-save-YYYY-MM-DD.json、内容与当前进度一致、提示「存档已下载」）、
+      有效导入（真实 filechooser 覆写进度、提示「存档已导入」）、非法文件拒绝
+      （提示「导入失败：文件不是有效存档」且原进度不被破坏）；sim 层往返原有
+      saveswap 覆盖，本轮补的是 DOM 接线（id/事件/hint 漂移会静默失效）；
+      spec 以三斜线引入 @types/node 取得 Buffer（tsconfig types 仅 vite/client）；
+      3 条测试
 - [x] R207 spawn 协议类型解析健壮化：支持全部 14 个中文名（"瘴妖"→5，此前任何
       未识别字符串静默退化成权重随机游魂——R204 实机验证被它误导）；未知名称/
       越界数值显式报错（ok:false），random/basic 别名保持；spawnproto 5 条测试
