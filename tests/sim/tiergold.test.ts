@@ -3,7 +3,11 @@
 import { describe, expect, it } from "vitest";
 import { GameSim } from "../../src/sim/game";
 import { memoryStorage } from "../../src/sim/save";
-import { dailySeed } from "../../src/sim/daily";
+import { dailyMutator, dailySeed } from "../../src/sim/daily";
+
+// R206 修复：原测试假定「今日非财神日」，在真实财神日（2026-10-07 实测）必然翻车——
+// 改为按当日变异口径自适应断言（gold ×2 / 其余 ×1），任意日期都守卫同一表达式。
+const goldMult = () => (dailyMutator()?.id === "gold" ? 2 : 1);
 
 const advance = (seed: number) => {
   const sim = new GameSim(seed, memoryStorage());
@@ -15,9 +19,9 @@ const advance = (seed: number) => {
 };
 
 describe("R138 越阶奖励 ×财神口径", () => {
-  it("今日（非财神日）越阶奖励维持 +8×阶数（回归守卫）", () => {
+  it("越阶奖励 = +8×阶数 ×当日财神口径（日期无关回归守卫）", () => {
     const gain = advance(dailySeed());
-    expect(gain).toBe(8 * 2); // 1→2 阶 +16
+    expect(gain).toBe(8 * 2 * goldMult()); // 1→2 阶基础 +16
   });
 
   it("财神日口径与击杀金币同一表达式（代码同构守卫）", () => {
