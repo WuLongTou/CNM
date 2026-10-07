@@ -824,11 +824,70 @@ async function genProps() {
   console.log(`[gen] ${path.relative(PROJECT_ROOT, man)}  (内容盒清单)`);
 }
 
+// ════════════════════ 第 4 幕地面：血阵广场（速写化重绘）════════════════════
+// 原 AI 图饱和度过高且纹理被 3840×2160 拉解放大数倍，抢实体辨识度；
+// 改为同管线低对比速写：纸灰石砖 + 淡血红符阵，做背景不做主角。
+async function genGroundAct4() {
+  const W = 1280, H = 720;
+  const rnd = rng32(20261008);
+  const pen = makePen(8800);
+  // 石砖：错缝矩形网（铅笔描边，个别砖淡纸灰填充）
+  const tile = 44;
+  for (let gy = 0; gy < H / tile + 1; gy++) {
+    const off = (gy % 2) * tile * 0.5;
+    for (let gx = -1; gx < W / tile + 1; gx++) {
+      const x = gx * tile + off + (rnd() - 0.5) * 4, y = gy * tile + (rnd() - 0.5) * 4;
+      const w = tile - 4 - rnd() * 6, h = tile - 4 - rnd() * 6;
+      if (rnd() < 0.28) {
+        pen.blob([[x + 4, y + 4], [x + w - 4, y + 4], [x + w - 4, y + h - 4], [x + 4, y + h - 4]],
+          { fill: rnd() < 0.5 ? "#e9e1cf" : "#e2dbc9", stroke: PENCIL, w: 1.4, alpha: 0.5, jitter: 0.35 });
+      } else {
+        pen.line([[x, y], [x + w, y], [x + w, y + h], [x, y + h], [x, y]],
+          { color: PENCIL, width: 1.4, alpha: 0.38, jitter: 0.5 });
+      }
+    }
+  }
+  // 中央淡血红符阵（双环 + 符文刻度 + 五角），透明度压到背景层
+  const cx = W / 2, cy = H / 2;
+  pen.ellipse(cx, cy, 250, 235, { fill: "none", stroke: BLOOD, w: 5, alpha: 0.16, n: 22 });
+  pen.ellipse(cx, cy, 205, 192, { fill: "none", stroke: BLOOD, w: 3, alpha: 0.13, n: 22 });
+  for (let i = 0; i < 5; i++) {
+    const a0 = deg(-90 + i * 72), a1 = deg(-90 + ((i + 2) % 5) * 72);
+    pen.line([[cx + Math.cos(a0) * 205, cy + Math.sin(a0) * 192],
+              [cx + Math.cos(a1) * 205, cy + Math.sin(a1) * 192]],
+      { color: BLOOD, w: 3.4, alpha: 0.12 });
+  }
+  for (let i = 0; i < 12; i++) {
+    const a = deg(i * 30);
+    pen.line([[cx + Math.cos(a) * 236, cy + Math.sin(a) * 222],
+              [cx + Math.cos(a) * 250, cy + Math.sin(a) * 235]],
+      { color: BLOOD, w: 2.4, alpha: 0.15 });
+  }
+  // 血渍（极淡，错落）
+  for (let i = 0; i < 7; i++) {
+    const x = rnd() * W, y = rnd() * H, r = 8 + rnd() * 22;
+    pen.ellipse(x, y, r, r * (0.5 + rnd() * 0.4), { fill: BLOOD, stroke: "none", w: 0, alpha: 0.05 + rnd() * 0.06, n: 10 });
+  }
+  let noise = "";
+  for (let i = 0; i < 600; i++) {
+    noise += `<rect x="${(rnd() * W).toFixed(0)}" y="${(rnd() * H).toFixed(0)}" width="${rnd() > 0.5 ? 2 : 1}" height="1" fill="#6b6154" opacity="0.018"/>`;
+  }
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">
+    <rect width="${W}" height="${H}" fill="#efe7d4"/>
+    ${noise}
+    ${pen.body.join("")}
+  </svg>`;
+  const file = path.join(SRC, "sprites", "backgrounds", "ground_act4.jpg");
+  await sharp(Buffer.from(svg)).jpeg({ quality: 88 }).toFile(file);
+  console.log(`[gen] ${path.relative(PROJECT_ROOT, file)}  (第4幕血阵广场 ${W}×${H})`);
+}
+
 async function main() {
   console.log("[gen] 简笔画资产生成开始…");
   await genTitle();
   await genGround();
   await genProps();
+  await genGroundAct4();
   await genPlayers();
   await genEnemies();
   console.log("[gen] 全部完成。请执行 npm run assets:sync 生成 public/assets。");
