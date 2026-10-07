@@ -12,7 +12,7 @@ import {
   FUSION_RECIPES, aspectDef, aspectUnlocked, ASPECTS,
   type AttackType, type UpgradeStat, type WeaponInstance,
 } from "./weapons";
-import { Inventory, type Material } from "./inventory";
+import { Inventory, MATERIAL_NAMES, type Material } from "./inventory";
 import { RECIPES } from "./recipes";
 import { WeatherSystem, type WeatherType } from "./weather";
 import { ACHIEVEMENTS, AchievementSystem } from "./achievements";
@@ -1403,7 +1403,7 @@ export class GameSim {
     const r = RECIPES.find((x) => x.id === recipeId);
     if (!r) throw new Error("未知配方: " + recipeId);
     for (const [m, n] of Object.entries(r.cost) as Array<[Material, number]>) {
-      if (this.inventory.counts[m] < n) return { crafted: false, reason: `材料不足：${m}` };
+      if (this.inventory.counts[m] < n) return { crafted: false, reason: `材料不足：${MATERIAL_NAMES[m]}` };
     }
     for (const [m, n] of Object.entries(r.cost) as Array<[Material, number]>) {
       this.inventory.take(m, n);
@@ -3134,6 +3134,9 @@ export class GameSim {
     const w = this.player.weapons[idx];
     if (!w || !aspectUnlocked(w) || !ASPECTS[w.defId]) return false;
     w.aspect = w.aspect === 1 ? 0 : 1;
+    // R210 形态折算要立刻生效：recalc 的聚合值被装备面板与挥砍弧半径消费，
+    // 此前切换后不重算，面板数值/弧长要等下一次别的 recalc 才更新。
+    this.stats = this.recalc();
     this.emit("aspect_switched", { name: aspectDef(w).name });
     return true;
   }

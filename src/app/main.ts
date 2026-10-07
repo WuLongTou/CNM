@@ -458,8 +458,10 @@ async function boot(): Promise<void> {
     hud.update();
     minimap.setCamera(view.getCamera().x, view.getCamera().y, view.getCamera().w, view.getCamera().h);
     minimap.update();
-    if (equipment.visible) equipment.refresh();
-    if (crafting.visible) crafting.refresh();
+    // R210 移除「可见即每帧 refresh」：面板是模态（打开即暂停、输入门控），打开期间
+    // 状态不会变——每帧重建 innerHTML 既白烧 60fps 的 DOM/监听，又让真实点击在
+    // mousedown/mouseup 之间元素被换掉而落空（合成/形态按钮「点了没反应」的根因）。
+    // 刷新时机：打开时（toggle）+ 自身操作后（合成/形态切换）+ 各面板 update()。
     fusion.update();
     upgrade.update();
     shop.update();

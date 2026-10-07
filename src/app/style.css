@@ -66,6 +66,11 @@ canvas { position: absolute; z-index: 0; }
   border: 1.5px solid #b8ab90; border-radius: 8px 11px 8px 12px; user-select: none; }
 .panel .sub { margin: 0 0 22px; color: #6b6154; font-size: 14px; }
 .panel .hint { margin: 18px 0 0; color: #8a8175; font-size: 12px; }
+
+/* ── R210 合成面板：缺料标红 + 不足禁用（此前点了没反应）── */
+#craft-list .eq-item em .lack { color: #c0392b; font-weight: 700; }
+#craft-list .eq-item button:disabled { opacity: 0.5; cursor: not-allowed; }
+#craft-msg:not(:empty) { color: #8a5a2b; font-weight: 700; }
 /* R19 收敛：只作用面板直接子按钮。旧全局写法以更高特异度覆盖嵌套卡片按钮的
    padding（10px 42px 吃掉卡片内容至 16px 宽，CJK 逐字断行），桌面靠宽度遮羞、窄屏全碎。 */
 .panel > button {
