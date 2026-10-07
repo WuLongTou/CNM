@@ -92,6 +92,8 @@ export class GameView {
   private enemyBossTextures = new Map<string, Texture[] | null>();
   /** 场景物件贴图（AI 资产，缺省回退矢量线稿）。 */
   private propTextures = new Map<string, Texture>();
+  /** 内容盒清单（gen-sketch 生成）：按内容实际尺寸定标，画布留白不参与缩放。 */
+  private propMeta: Record<string, { w: number; h: number; gy: number }> = {};
   /** 物件精灵层（贴地，实体之下）与按对象键控的精灵缓存。 */
   private propLayer = new Container();
   private obstacleSprites = new Map<object, Sprite>();
@@ -185,6 +187,10 @@ export class GameView {
       const tex = await propP.get(name)!;
       if (tex) this.propTextures.set(name, tex);
     }
+    // 内容盒清单(可选;缺失时回退整画布缩放)
+    try {
+      this.propMeta = await (await fetch("assets/sprites/icons/props/props.json")).json();
+    } catch { /* 旧资产无清单,维持旧行为 */ }
 
     // 玩家三套外观(walk 8 帧 / attack 6 帧 / idle 4 帧呼吸)+ 可选扩展动作,按手持武器类型切换
     for (const who of ROLES) {
@@ -836,13 +842,17 @@ export class GameView {
         let spr = this.mineSprites.get(m);
         if (!spr) {
           spr = new Sprite(tex);
-          spr.anchor.set(0.5, 0.7);
+          const mm = this.propMeta[m.defId === "diyu_huolei" ? "mine_huolei"
+            : m.defId === "jishulei" ? "mine_jishu" : "mine_tiejili"] ?? this.propMeta.mine_tiejili;
+          spr.anchor.set(0.5, mm ? mm.gy / mm.h : 0.7);
           this.mineSprites.set(m, spr);
           this.propLayer.addChild(spr);
         }
         spr.visible = true;
         spr.position.set(m.x, m.y);
-        spr.width = 30; spr.height = 30;
+        const mw = this.propMeta.mine_tiejili?.w;
+        if (mw) { spr.width = (24 * tex.width) / mw; spr.height = (24 * tex.height) / mw; }
+        else { spr.width = 30; spr.height = 30; }
         spr.tint = m.arm > 0 ? 0xd8d0c0 : 0xffffff;
         continue;
       }
@@ -1142,13 +1152,16 @@ export class GameView {
         let spr = this.chestSprites.get(c);
         if (!spr) {
           spr = new Sprite(tex);
-          spr.anchor.set(0.5, 0.8);
+          const cm = this.propMeta.chest;
+          spr.anchor.set(0.5, cm ? cm.gy / cm.h : 0.8);
           this.chestSprites.set(c, spr);
           this.propLayer.addChild(spr);
         }
         spr.visible = true;
         spr.position.set(c.x, c.y);
-        spr.width = 44; spr.height = 44;
+        const cw = this.propMeta.chest?.w;
+        if (cw) { spr.width = (44 * tex.width) / cw; spr.height = (44 * tex.height) / this.propMeta.chest.h; }
+        else { spr.width = 44; spr.height = 44; }
         alive.add(c);
         continue;
       } else {
@@ -1398,6 +1411,15 @@ export class GameView {
         }
         spr.visible = true;
         spr.position.set(o.x, o.y + o.r * 0.4);
+        // 内容盒定标：内容高 = o.r×2×体积系数（树高于角色/灌丛略低/石块贴地）
+        const m = this.propMeta[o.kind];
+        if (m) {
+          const k = o.kind === "tree" ? 2.3 : o.kind === "bush" ? 1.5 : 1.15;
+          spr.anchor.set(0.5, m.gy / m.h);
+          spr.scale.set((o.r * 2 * k) / m.h);
+          spr.position.set(o.x, o.y + o.r * 0.5);
+          continue;
+        }
         const s = (o.r * 2.6) / tex.width;
         spr.scale.set(s);
         continue;
@@ -1443,7 +1465,9 @@ export class GameView {
         }
         spr.texture = tex;
         spr.position.set(alt.x, alt.y);
-        spr.width = 68; spr.height = 68;
+        const am = this.propMeta[alt.used ? "altar_used" : "altar"];
+        if (am) { spr.width = (48 * tex.width) / am.w; spr.height = (48 * tex.height) / am.w; }
+        else { spr.width = 68; spr.height = 68; }
         spr.alpha = alt.used ? 0.55 : 1;
         continue;
       }

@@ -794,12 +794,34 @@ function drawProp(name) {
   return pen.body;
 }
 
+// 内容包围盒（渲染层按内容实际尺寸定标，画布留白不参与缩放）：
+// [x, y, w, h] 为 drawing 坐标系下的内容范围；gy = 接地线到内容顶部的偏移。
+const PROP_CONTENT = {
+  tree: { x: 96, y: 46, w: 96, h: 138 },
+  rock: { x: 104, y: 108, w: 82, h: 76 },
+  bush: { x: 90, y: 123, w: 108, h: 61 },
+  stone_block: { x: 100, y: 122, w: 88, h: 62 },
+  altar: { x: 96, y: 106, w: 96, h: 78 },
+  altar_used: { x: 96, y: 106, w: 96, h: 78 },
+  chest: { x: 100, y: 112, w: 88, h: 72 },
+  talisman: { x: 126, y: 92, w: 36, h: 92 },
+  mine_tiejili: { x: 112, y: 127, w: 64, h: 57 },
+  mine_jishu: { x: 112, y: 127, w: 64, h: 57 },
+  mine_huolei: { x: 112, y: 127, w: 64, h: 57 },
+};
+
 async function genProps() {
   const names = ["tree", "rock", "bush", "stone_block", "altar", "altar_used", "chest",
     "talisman", "mine_tiejili", "mine_jishu", "mine_huolei"];
+  const meta = {};
   for (const n of names) {
     await propPng(drawProp(n), path.join(SRC, "sprites", "icons", "props", `${n}.png`));
+    const c = PROP_CONTENT[n];
+    meta[n] = { w: c.w, h: c.h, gy: PROP_CANVAS.GROUND - c.y };
   }
+  const man = path.join(SRC, "sprites", "icons", "props", "props.json");
+  fs.writeFileSync(man, JSON.stringify(meta, null, 1));
+  console.log(`[gen] ${path.relative(PROJECT_ROOT, man)}  (内容盒清单)`);
 }
 
 async function main() {
