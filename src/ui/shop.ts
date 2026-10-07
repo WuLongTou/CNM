@@ -96,7 +96,7 @@ export class ShopPanel {
       preview = `<span class="uc-preview">（当前 ${Math.round(cur * 100)}% → 购后 ${Math.round(after * 100)}%）</span>`;
     }
     // R163 槽位锁定按钮（🔒/🔓）
-    const lockBtn = `<button type="button" class="uc-lock" data-lock="${i}">${s.locked ? "🔒" : "🔓"}</button>`;
+    const lockBtn = `<button type="button" class="uc-lock${s.locked ? " locked" : ""}" data-lock="${i}" aria-label="${s.locked ? "解锁" : "锁定"}第 ${i + 1} 项">${s.locked ? "🔒" : "🔓"}</button>`;
     return `<div class="upgrade-card shop-card${rareCls}" data-idx="${i}" role="button" tabindex="0"${afford ? "" : ' style="opacity:0.55"'}>
       <span class="uc-key">${i + 1}</span>${lockBtn}
       <b>${s.label}</b>
