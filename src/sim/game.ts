@@ -1778,7 +1778,8 @@ export class GameSim {
         for (const [m, n] of Object.entries(drops) as Array<[Material, number]>) {
           this.inventory.add(m, n);
         }
-        this.emit("harvested", { kind: o.kind });
+        // R211 采集反馈：带上节点坐标与掉落明细，UI 才能在节点处飘字报数
+        this.emit("harvested", { kind: o.kind, x: o.x, y: o.y, drops });
       }
     }
   }

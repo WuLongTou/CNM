@@ -1326,6 +1326,20 @@ export class GameView {
     this.damageTexts.push({ t, life: 0.9, age: 0, popFrom: 1.5 });
   }
 
+  /** R211 采集飘字：赭石色「木材 +2」在原节点上浮（与伤害/治疗同池，受飘字开关约束）。 */
+  spawnHarvestText(x: number, y: number, label: string): void {
+    if (!this.damageNumbersEnabled) return;
+    if (this.damageTexts.length > 24) return;
+    const t = new Text({ text: label, style: {
+      fontFamily: "system-ui", fontSize: 16, fontWeight: "700",
+      fill: 0x8a6a2b, stroke: { color: 0xf5eede, width: 3 },
+    } });
+    t.anchor.set(0.5);
+    t.position.set(x, y - 34);
+    this.worldLayer.addChild(t);
+    this.damageTexts.push({ t, life: 0.85, age: 0, popFrom: 1.35 });
+  }
+
   private updateDamageTexts(dt: number): void {
     const alive: Array<{ t: Text; life: number; age: number; popFrom: number }> = [];
     for (const d of this.damageTexts) {

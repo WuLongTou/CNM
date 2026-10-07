@@ -5,6 +5,7 @@ import { Application } from "pixi.js";
 import { GameSim, UPGRADE_STAT_NAMES, type ExecResult, type SimEvent } from "../sim/game";
 import { HITSTOP } from "../sim/hitstop";
 import { CFG } from "../sim/config";
+import { MATERIAL_NAMES, type Material } from "../sim/inventory";
 import { weatherEffectTip } from "../sim/weather";
 import { localStorageStorage } from "../sim/save";
 import { loadVisualSettings, saveVisualSettings } from "./settings";
@@ -146,6 +147,16 @@ async function boot(): Promise<void> {
     else if (e.event === "weapon_ascended") { notify.push(`武器进阶：${d.name}`); audio.play("upgrade"); }
     else if (e.event === "weapon_ultimate") { notify.push(`武器终极：${d.name}`); audio.play("combo_5"); }
     else if (e.event === "crafted") { notify.push(`合成：${d.name}`); audio.play("upgrade"); }
+    else if (e.event === "harvested") {
+      // R211 采集反馈：此前 emit 无人消费——砍倒树/石只是物件消失，材料静默入账
+      const hv = e.data as { x?: number; y?: number; drops?: Record<string, number> };
+      const label = Object.entries(hv.drops ?? {})
+        .map(([m, n]) => `${MATERIAL_NAMES[m as Material]} +${n}`).join(" · ");
+      if (label && typeof hv.x === "number" && typeof hv.y === "number") {
+        view.spawnHarvestText(hv.x, hv.y, label);
+      }
+      audio.play("charm", { pitch: 1.05, vol: 0.45 });
+    }
     else if (e.event === "heal_picked") { audio.play("charm", { vol: 0.4 }); view.spawnHealNumber(sim.player.x, sim.player.y - 30, Number(d.heal)); }
     else if (e.event === "difficulty_unlocked") { notify.push(`新难度解锁：${d.name}（下局可选）`); notify.banner("新难度解锁", d.name); audio.play("combo_5"); }
     else if (e.event === "upgrade_offer") {
