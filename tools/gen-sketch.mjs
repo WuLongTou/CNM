@@ -650,6 +650,24 @@ async function genGround() {
   }
   // 一条横穿画面的铅笔小径（有意的构图线）
   pen.line([[180, 980], [640, 900], [1180, 960], [1720, 880], [2260, 950]], { color: PENCIL, width: 3, alpha: 0.22, jitter: 0.8 });
+  // 墓园语义（第 1 幕地表可辨识）：5 座铅笔墓碑 + 2 根符纸木桩，克制的背景层
+  for (let i = 0; i < 5; i++) {
+    const gx = 220 + rnd() * (W - 440), gy = 160 + rnd() * (H - 320);
+    const s = 0.8 + rnd() * 0.5;
+    // 圆头墓碑（淡纸灰填充 + 铅笔描边）
+    pen.blob([[gx - 14 * s, gy], [gx - 14 * s, gy - 30 * s], [gx, gy - 40 * s], [gx + 14 * s, gy - 30 * s], [gx + 14 * s, gy]],
+      { fill: "#e2dbc9", stroke: PENCIL, w: 2.4, alpha: 0.8, jitter: 0.5 });
+    pen.line([[gx - 6 * s, gy - 26 * s], [gx + 6 * s, gy - 26 * s]], { color: PENCIL, w: 1.6, alpha: 0.5 });
+    pen.line([[gx - 6 * s, gy - 18 * s], [gx + 6 * s, gy - 18 * s]], { color: PENCIL, w: 1.4, alpha: 0.4 });
+  }
+  for (let i = 0; i < 2; i++) {
+    const gx = 220 + rnd() * (W - 440), gy = 160 + rnd() * (H - 320);
+    // 木桩 + 飘符（血红点睛，呼应除妖主题）
+    pen.line([[gx, gy], [gx, gy - 46]], { color: "#9a8468", w: 3.4, alpha: 0.75 });
+    pen.blob([[gx - 8, gy - 46], [gx + 8, gy - 46], [gx + 6, gy - 18], [gx - 6, gy - 18]],
+      { fill: "#f1e6d0", stroke: PENCIL, w: 2, alpha: 0.85, jitter: 0.35 });
+    pen.line([[gx, gy - 40], [gx, gy - 24]], { color: BLOOD, w: 1.8, alpha: 0.6 });
+  }
   let noise = "";
   for (let i = 0; i < 1100; i++) {
     const x = (rnd() * W).toFixed(0), y = (rnd() * H).toFixed(0);
