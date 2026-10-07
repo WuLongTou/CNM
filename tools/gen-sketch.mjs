@@ -670,10 +670,125 @@ async function genGround() {
   console.log(`[gen] ${path.relative(PROJECT_ROOT, file)}  (速写纸地面 ${W}×${H})`);
 }
 
+// ════════════════════ 场景物件：速写纸风（与角色同语言）════════════════════
+// 画布 288×224 透明底，接地线 y≈184（渲染锚点 0.5/0.82）。
+// 配色沿用哑光纸感：叶=淡橄榄、石=纸灰、木=暖纸棕，血红只做点睛。
+
+const PROP_CANVAS = { W: 288, H: 224, GROUND: 184 };
+const LEAF = "#b6bf97";       // 淡橄榄（冠/灌）
+const STONE = "#d3ccbd";      // 纸灰（石）
+const WOOD = "#b3906a";       // 暖纸棕（木）
+
+async function propPng(body, file) {
+  const { W, H } = PROP_CANVAS;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${body.join("\n")}</svg>`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  await sharp(Buffer.from(svg)).png().toFile(file);
+  console.log(`[gen] ${path.relative(PROJECT_ROOT, file)}  (场景物件 ${W}×${H})`);
+}
+
+function drawProp(name) {
+  const { GROUND } = PROP_CANVAS;
+  const pen = makePen({ tree: 4100, rock: 4200, bush: 4300, stone_block: 4400,
+    altar: 4500, altar_used: 4600, chest: 4700, talisman: 4800,
+    mine_tiejili: 4900, mine_jishu: 5000, mine_huolei: 5100 }[name]);
+  const body = [];
+  // 通用落影（与渲染层矢量影一致口径）
+  const shadowW = name === "tree" ? 34 : name === "chest" || name.startsWith("mine") ? 20 : 26;
+  pen.ellipse(144, GROUND, shadowW, 5, { fill: SHADOW, stroke: "none", w: 0, alpha: 0.16 });
+
+  if (name === "tree") {
+    // 干（微锥梯形）
+    pen.blob([[136, GROUND - 2], [138, 122], [150, 122], [152, GROUND - 2]], { fill: WOOD, w: 3 });
+    pen.line([[141, 150], [147, 148]], { color: INK, w: 1.6, alpha: 0.5 });
+    // 冠：三球叠 + 左上高光 + 血红果点
+    pen.ellipse(118, 98, 22, 18, { fill: LEAF, w: 2.6 });
+    pen.ellipse(170, 98, 22, 18, { fill: LEAF, w: 2.6 });
+    pen.ellipse(144, 84, 42, 36, { fill: LEAF, w: 3.2 });
+    pen.shine(138, 76, 30, 24, { alpha: 0.45 });
+    pen.dot(128, 92, 2.2, { color: BLOOD });
+    pen.dot(162, 100, 2.2, { color: BLOOD });
+  } else if (name === "rock") {
+    // 顽石：不规则纸灰色块 + 裂纹 + 高光
+    pen.blob([[104, GROUND - 2], [112, 128], [140, 110], [174, 122], [186, GROUND - 2]],
+      { fill: STONE, w: 3.2, jitter: 0.5 });
+    pen.line([[132, 142], [146, 132], [152, 138]], { w: 1.8, alpha: 0.55 });
+    pen.shine(136, 150, 30, 18, { a0: -160, a1: -100, alpha: 0.4 });
+  } else if (name === "bush") {
+    // 灌丛三球 + 血红果
+    pen.ellipse(114, GROUND - 20, 24, 22, { fill: LEAF, w: 2.6 });
+    pen.ellipse(174, GROUND - 20, 24, 22, { fill: LEAF, w: 2.6 });
+    pen.ellipse(144, GROUND - 34, 30, 27, { fill: LEAF, w: 3 });
+    pen.shine(136, GROUND - 42, 20, 14, { alpha: 0.4 });
+    pen.dot(134, GROUND - 30, 2.2, { color: BLOOD });
+    pen.dot(158, GROUND - 24, 2.2, { color: BLOOD });
+  } else if (name === "stone_block") {
+    // 石砖：主块 + 砖缝 + 高光
+    pen.blob([[100, GROUND - 2], [100, 122], [188, 122], [188, GROUND - 2]], { fill: STONE, w: 3.2, jitter: 0.4 });
+    pen.line([[100, 152], [188, 152]], { w: 1.8, alpha: 0.55 });
+    pen.line([[144, 152], [144, GROUND - 2]], { w: 1.5, alpha: 0.45 });
+    pen.line([[122, 122], [122, 136]], { w: 1.5, alpha: 0.4 });
+    pen.line([[166, 136], [166, 152]], { w: 1.5, alpha: 0.4 });
+    pen.shine(132, 140, 26, 12, { alpha: 0.4 });
+  } else if (name === "altar" || name === "altar_used") {
+    // 融合祭坛：双层石台 + 血红符阵（用后符文褪为铅笔灰）
+    const rune = name === "altar" ? BLOOD : PENCIL;
+    const rw = name === "altar" ? 2.6 : 1.8;
+    const rAlpha = name === "altar" ? 1 : 0.6;
+    pen.blob([[96, GROUND - 2], [96, 160], [192, 160], [192, GROUND - 2]], { fill: STONE, w: 3, jitter: 0.35 });
+    pen.blob([[110, 160], [110, 130], [178, 130], [178, 160]], { fill: "#ddd5c5", w: 3, jitter: 0.35 });
+    pen.ellipse(144, 118, 34, 12, { fill: "#e8e0d0", w: 2.6 });
+    // 符阵：圆环 + 中心符文 + 刻度
+    pen.ellipse(144, 116, 22, 8, { fill: "none", stroke: rune, w: rw, alpha: rAlpha, n: 12 });
+    pen.line([[144, 110], [144, 122]], { color: rune, w: rw, alpha: rAlpha });
+    pen.line([[138, 113], [138, 119]], { color: rune, w: rw * 0.7, alpha: rAlpha });
+    pen.line([[150, 113], [150, 119]], { color: rune, w: rw * 0.7, alpha: rAlpha });
+    pen.dot(144, 116, 2, { color: rune });
+  } else if (name === "chest") {
+    // 宝箱：暖纸棕箱体 + 弧盖 + 血红锁
+    pen.blob([[100, GROUND - 2], [100, 140], [188, 140], [188, GROUND - 2]], { fill: WOOD, w: 3.2, jitter: 0.35 });
+    pen.blob([[100, 140], [104, 112], [184, 112], [188, 140]], { fill: "#c49b72", w: 3.2, jitter: 0.35 });
+    pen.line([[100, 140], [188, 140]], { w: 2.4 });
+    pen.line([[112, 122], [112, 138]], { w: 1.6, alpha: 0.5 });
+    pen.line([[176, 122], [176, 138]], { w: 1.6, alpha: 0.5 });
+    pen.blob([[136, 138], [136, 158], [152, 158], [152, 138]], { fill: BLOOD, w: 2.4, jitter: 0.2 });
+    pen.dot(144, 148, 2, { color: "#f5eede" });
+  } else if (name === "talisman") {
+    // 符箓：飘符纸（血红符文竖条）
+    pen.blob([[130, GROUND - 2], [128, 92], [160, 92], [158, GROUND - 2]], { fill: "#f1e6d0", w: 2.8, jitter: 0.3 });
+    pen.line([[144, 104], [144, 168]], { color: BLOOD, w: 2.2, alpha: 0.85 });
+    pen.arc(144, 120, 10, -50, 50, { color: BLOOD, w: 1.8, alpha: 0.75 });
+    pen.line([[138, 100], [150, 100]], { color: BLOOD, w: 1.8, alpha: 0.75 });
+  } else {
+    // 地雷三兄弟：圆雷体 + 顶针 + 状态灯（铁吉力=钢灰 / 吉术=暖金纹 / 火雷=血红）
+    const skin = name === "mine_huolei" ? "#c46a5a" : name === "mine_jishu" ? "#c8b183" : "#a8a199";
+    const lamp = name === "mine_jishu" ? GOLD : BLOOD;
+    pen.ellipse(144, GROUND - 22, 26, 22, { fill: skin, w: 3 });
+    pen.line([[144, GROUND - 44], [144, GROUND - 52]], { w: 3.4 });
+    pen.dot(144, GROUND - 54, 2.6, { color: lamp });
+    for (const a of [-135, -90, -45, 0, 45, 135, 180]) {
+      const rad = deg(a), r1 = 26, r2 = 32;
+      pen.line([[144 + Math.cos(rad) * r1, GROUND - 22 + Math.sin(rad) * r1 * 0.85],
+                [144 + Math.cos(rad) * r2, GROUND - 22 + Math.sin(rad) * r2 * 0.85]], { w: 2.4, alpha: 0.85 });
+    }
+    pen.shine(136, GROUND - 30, 12, 8, { alpha: 0.45 });
+  }
+  return pen.body;
+}
+
+async function genProps() {
+  const names = ["tree", "rock", "bush", "stone_block", "altar", "altar_used", "chest",
+    "talisman", "mine_tiejili", "mine_jishu", "mine_huolei"];
+  for (const n of names) {
+    await propPng(drawProp(n), path.join(SRC, "sprites", "icons", "props", `${n}.png`));
+  }
+}
+
 async function main() {
   console.log("[gen] 简笔画资产生成开始…");
   await genTitle();
   await genGround();
+  await genProps();
   await genPlayers();
   await genEnemies();
   console.log("[gen] 全部完成。请执行 npm run assets:sync 生成 public/assets。");
