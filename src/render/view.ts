@@ -124,35 +124,78 @@ export class GameView {
     this.app = app;
     app.stage.addChild(this.worldLayer);
 
-    // 地面：速写纸整图（自带涂鸦/血渍/晕影），原色拉伸铺满，不再叠加血色调制
-    const groundTex = await Assets.load<Texture>("assets/sprites/backgrounds/ground_cemetery.jpg");
+    // ── 资产并发加载:全部请求立即发起,随后按依赖顺序 await 组装 ──
+    // PixiJS Assets 同 URL 并发调用内部缓存去重,并发安全。总耗时 ≈ 最慢单请求,
+    // 而非逐个串行相加(实测经 CF 串行 40+ 请求要 30s+,并发后 ~2s)。
+    const PROP_NAMES = ["tree", "rock", "bush", "stone_block", "altar", "altar_used", "chest",
+      "talisman", "mine_tiejili", "mine_jishu", "mine_huolei"] as const;
+    const ROLES = ["warrior", "ranger", "mage"] as const;
+    const ACT_GROUNDS = ["ground_act2", "ground_act3", "ground_act4"] as const;
+    const enemyNames = [...new Set(Object.values(ENEMY_ATLAS))];
+
+    const groundP = Assets.load<Texture>("assets/sprites/backgrounds/ground_cemetery.jpg");
+    const actGroundP = new Map(ACT_GROUNDS.map((f) =>
+      [f, this.loadTextureOptional(`assets/sprites/backgrounds/${f}.jpg`)] as const));
+    const propP = new Map(PROP_NAMES.map((n) =>
+      [n, this.loadTextureOptional(`assets/sprites/icons/props/${n}.png`)] as const));
+    const playerP = new Map(ROLES.map((who) => {
+      const walk = this.loadFrames(`assets/sprites/player/${who}_walk.json`);
+      const attack = this.loadFrames(`assets/sprites/player/${who}_attack.json`);
+      const idle = this.loadFrames(`assets/sprites/player/${who}_idle.json`);
+      const dash = this.loadFramesOptional(`assets/sprites/player/${who}_dash.json`);
+      const hurt = this.loadFramesOptional(`assets/sprites/player/${who}_hurt.json`);
+      const death = this.loadFramesOptional(`assets/sprites/player/${who}_death.json`);
+      return [who, { walk, attack, idle, dash, hurt, death }] as const;
+    }));
+    const enemyWalkP = new Map(enemyNames.map((n) =>
+      [n, this.loadFrames(`assets/sprites/enemies/${n}.json`)] as const));
+    const enemyOptP = new Map(enemyNames.map((n) => {
+      const base = n.replace(/_walk$/, "");
+      return [base, {
+        attack: this.loadFramesOptional(`assets/sprites/enemies/${base}_attack.json`),
+        boss: this.loadFramesOptional(`assets/sprites/enemies/${base}_boss.json`),
+      }] as const;
+    }));
+
+    // 等齐全部请求(必选失败自然 throw → boot 显示启动失败;可选失败已在各 helper 内消化)
+    await Promise.all([
+      groundP,
+      ...actGroundP.values(), ...propP.values(),
+      ...ROLES.flatMap((who) => Object.values(playerP.get(who)!)),
+      ...enemyWalkP.values(),
+      ...[...enemyOptP.values()].flatMap((m) => Object.values(m)),
+    ]);
+
+    // ── 组装(依赖顺序与原实现一致) ──
+    // 地面:速写纸整图(自带涂鸦/血渍/晕影),原色拉伸铺满,不再叠加血色调制
+    const groundTex = await groundP;
     const ground = new Sprite(groundTex);
     ground.width = 3840; ground.height = 2160;
     this.worldLayer.addChild(ground);
     this.groundSprite = ground;
     this.groundAct1Tex = groundTex;
-    // 分幕地面（act2-4 可选资产，404/缺失沿用幕 1，不阻塞启动）
-    for (const f of ["ground_act2", "ground_act3", "ground_act4"]) {
-      this.actGroundTextures.push(await this.loadTextureOptional(`assets/sprites/backgrounds/${f}.jpg`) ?? groundTex);
+    // 分幕地面(act2-4 可选资产,404/缺失沿用幕 1,不阻塞启动)
+    for (const f of ACT_GROUNDS) {
+      this.actGroundTextures.push((await actGroundP.get(f)!) ?? groundTex);
     }
-    // 物件精灵层贴地（地面之上、实体之下）
+    // 物件精灵层贴地(地面之上、实体之下)
     this.worldLayer.addChildAt(this.propLayer, 1);
-    // 场景物件贴图（可选；全部缺失时维持矢量线稿渲染）
-    for (const name of ["tree", "rock", "bush", "stone_block", "altar", "altar_used", "chest",
-      "talisman", "mine_tiejili", "mine_jishu", "mine_huolei"]) {
-      const tex = await this.loadTextureOptional(`assets/sprites/icons/props/${name}.png`);
+    // 场景物件贴图(可选;全部缺失时维持矢量线稿渲染)
+    for (const name of PROP_NAMES) {
+      const tex = await propP.get(name)!;
       if (tex) this.propTextures.set(name, tex);
     }
 
-    // 玩家三套外观（walk 8 帧 / attack 6 帧 / idle 4 帧呼吸）+ 可选扩展动作，按手持武器类型切换
-    for (const who of ["warrior", "ranger", "mage"]) {
+    // 玩家三套外观(walk 8 帧 / attack 6 帧 / idle 4 帧呼吸)+ 可选扩展动作,按手持武器类型切换
+    for (const who of ROLES) {
+      const pr = playerP.get(who)!;
       this.playerSkins[who] = {
-        walk: await this.loadFrames(`assets/sprites/player/${who}_walk.json`),
-        attack: await this.loadFrames(`assets/sprites/player/${who}_attack.json`),
-        idle: await this.loadFrames(`assets/sprites/player/${who}_idle.json`),
-        dash: await this.loadFramesOptional(`assets/sprites/player/${who}_dash.json`),
-        hurt: await this.loadFramesOptional(`assets/sprites/player/${who}_hurt.json`),
-        death: await this.loadFramesOptional(`assets/sprites/player/${who}_death.json`),
+        walk: await pr.walk,
+        attack: await pr.attack,
+        idle: await pr.idle,
+        dash: await pr.dash,
+        hurt: await pr.hurt,
+        death: await pr.death,
       };
     }
     this.playerSprite = new Sprite(this.playerSkins.warrior.idle[0]);
@@ -160,14 +203,15 @@ export class GameView {
     this.worldLayer.addChild(this.playerSprite);
 
     // 预加载全部妖物 atlas
-    for (const name of new Set(Object.values(ENEMY_ATLAS))) {
-      this.enemyTextures.set(name, await this.loadFrames(`assets/sprites/enemies/${name}.json`));
+    for (const name of enemyNames) {
+      this.enemyTextures.set(name, await enemyWalkP.get(name)!);
     }
-    // 妖物攻击帧与妖王形态帧（可选 AI 资产，缺省回退 walk + 程序动作）
-    for (const name of new Set(Object.values(ENEMY_ATLAS))) {
+    // 妖物攻击帧与妖王形态帧(可选 AI 资产,缺省回退 walk + 程序动作)
+    for (const name of enemyNames) {
       const base = name.replace(/_walk$/, "");
-      this.enemyAttackTextures.set(base, await this.loadFramesOptional(`assets/sprites/enemies/${base}_attack.json`));
-      this.enemyBossTextures.set(base, await this.loadFramesOptional(`assets/sprites/enemies/${base}_boss.json`));
+      const opt = enemyOptP.get(base)!;
+      this.enemyAttackTextures.set(base, await opt.attack);
+      this.enemyBossTextures.set(base, await opt.boss);
     }
   }
 
