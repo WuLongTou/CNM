@@ -43,3 +43,35 @@ test("R206 结算复盘不泄漏 span 标签且含下一目标", async ({ page }
   expect(text).not.toContain("<span");
   expect(text).toContain("下一目标");
 });
+
+test("R214 帮助页与现行系统对齐：远程预警环 / 香火龛锁定槽", async ({ page }) => {
+  await page.goto("/");
+  await page.waitForFunction(() => window.__CNM__?.ready === true);
+  await page.keyboard.press("h");
+  await page.waitForFunction(
+    () => [...document.querySelectorAll(".overlay:not(.hidden)")].some((o) => o.textContent?.includes("手账")),
+  );
+  const tabByName = async (name: string) =>
+    page.evaluate((n) => {
+      const tabs = [...document.querySelectorAll(".help-tabs button")];
+      (tabs.find((b) => b.textContent === n) as HTMLElement).click();
+      return true;
+    }, name);
+
+  // 机制页：远程妖蓄力收缩环（R204 读题环应写入玩家文档）
+  // 注意：欢迎页本身也是 .overlay——必须定位含「手账」的那一层
+  const helpTable = () =>
+    page.evaluate(() => {
+      const help = [...document.querySelectorAll(".overlay:not(.hidden)")].find((o) => o.textContent?.includes("手账"));
+      return help?.querySelector(".help-table")?.textContent ?? "";
+    });
+
+  await tabByName("机制");
+  await page.waitForTimeout(150);
+  expect(await helpTable()).toContain("收缩环");
+
+  // 操作页：香火龛锁定槽说明（R163/R212 修复并强化的功能应有玩家说明）
+  await tabByName("操作");
+  await page.waitForTimeout(150);
+  expect(await helpTable()).toContain("锁定槽位");
+});
