@@ -113,6 +113,30 @@ export class AudioManager {
     note(880.0, 0.11, 0.2); // A5
   }
 
+  /** R216b 濒危心跳：WebAudio 合成 lub-dub 双低频鼓点（零资产依赖）——
+   *  与 #danger-fx 红晕的 1.1s 呼吸脉冲同频，听觉层补全濒危警示。
+   *  音量压至 0.35：提示紧张而不喧宾夺主。 */
+  playHeartbeat(): void {
+    if (!this.ctx || !this.sfxGain) return;
+    const now = this.ctx.currentTime;
+    const thump = (at: number, vol: number) => {
+      const osc = this.ctx!.createOscillator();
+      const g = this.ctx!.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(72, now + at);
+      osc.frequency.exponentialRampToValueAtTime(46, now + at + 0.09);
+      g.gain.setValueAtTime(0.0001, now + at);
+      g.gain.exponentialRampToValueAtTime(vol, now + at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + at + 0.1);
+      osc.connect(g);
+      g.connect(this.sfxGain!);
+      osc.start(now + at);
+      osc.stop(now + at + 0.12);
+    };
+    thump(0, 0.35);      // lub
+    thump(0.16, 0.28);   // dub（略轻）
+  }
+
   playBgm(): void {
     if (!this.ctx || !this.bgmGain) return;
     const buf = this.buffers.get("bg_music");

@@ -441,6 +441,10 @@ async function boot(): Promise<void> {
   // R183 脚步声：Combat 态移动时 0.3s 节奏（音高微随机去重复感）
   let stepAcc = 0;
   const STEP_INTERVAL = 0.3;
+  // R216b 濒危心跳：血量 <25% 时与 #danger-fx 红晕同频（1.1s）的合成鼓点
+  const HEARTBEAT_THRESHOLD = 0.25;
+  const HEARTBEAT_INTERVAL = 1.1;
+  let hbAcc = 0;
   app.ticker.add(() => {
     const now = performance.now();
     const frameMs = Math.min((now - last) / 1000, 0.25) * 1000;
@@ -460,6 +464,17 @@ async function boot(): Promise<void> {
         }
       } else {
         stepAcc = STEP_INTERVAL; // 停走即响第一步（起步反馈）
+      }
+      // R216b 濒危心跳：Combat 态低血量时与红晕脉冲同频
+      if (sim.state === "Combat" && !sim.paused &&
+          sim.player.hp / sim.player.maxHp < HEARTBEAT_THRESHOLD) {
+        hbAcc += FIXED_DT;
+        if (hbAcc >= HEARTBEAT_INTERVAL) {
+          hbAcc = 0;
+          audio.playHeartbeat();
+        }
+      } else {
+        hbAcc = 0;
       }
       acc -= FIXED_DT;
     }
