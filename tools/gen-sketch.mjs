@@ -285,170 +285,116 @@ function shadow(pen, x = 48, rx = 12) {
 }
 
 const ENEMIES = {
-  // 0 游魂：胖幽灵（波浪裙摆 + 白肚 + 垂手小蹼）
+    // 0 游魂：胶囊幽灵（圆顶 + 波浪裙摆 + 奶肚 + 红晕）
   enemy_basic_walk(pen, t) {
     const bob = Math.sin(t * TAU) * 2.5;
-    shadow(pen, 48, 10);
+    shadow(pen, 48, 12);
     const top = [];
-    for (let i = 0; i <= 6; i++) {
-      const a = Math.PI + (i / 6) * Math.PI;
-      top.push([48 + Math.cos(a) * 19, 44 + bob - Math.sin(a) * 19]);
+    for (let i = 0; i <= 8; i++) {
+      const a = Math.PI + (i / 8) * Math.PI;
+      top.push([48 + Math.cos(a) * 22, 46 + bob + Math.sin(a) * 24]);
     }
     pen.blob([
       ...top,
-      [67, 70 + bob], [61, 78 + bob], [55, 72 + bob], [48, 80 + bob],
-      [41, 72 + bob], [35, 78 + bob], [29, 70 + bob],
-    ], { fill: "#a9bade", jitter: 0.3 });
-    pen.ellipse(48, 58 + bob, 9.5, 11, { fill: "#e6d8b8", stroke: "none", w: 0 });
-    pen.shine(48, 32 + bob, 12, 12);
-    pen.eye(41.5, 44 + bob, 2.4);
-    pen.eye(54.5, 44 + bob, 2.4);
-    pen.arc(48, 52 + bob, 3.5, 20, 160, { w: 1.8 });
-    pen.blob([[26, 52 + bob], [20, 58 + bob], [26, 62 + bob], [30, 56 + bob]], { fill: "#a9bade", w: 2.4 });
-    pen.blob([[70, 52 + bob], [76, 58 + bob], [70, 62 + bob], [66, 56 + bob]], { fill: "#a9bade", w: 2.4 });
+      [66, 72 + bob], [59, 67 + bob], [53, 75 + bob], [48, 69 + bob],
+      [43, 75 + bob], [37, 67 + bob], [30, 72 + bob],
+    ], { fill: "#9db3e0", jitter: 0.18 });
+    pen.ellipse(48, 62 + bob, 12, 13, { fill: "#eee2c4", stroke: "none", w: 0 });
+    pen.shine(39, 33 + bob, 9, 8);
+    pen.eye(40, 46 + bob, 3.1);
+    pen.eye(56, 46 + bob, 3.1);
+    pen.arc(48, 54 + bob, 4, 15, 165, { w: 2 });
   },
-  // 1 魅影：飘移长影（斜长身 + 速度残线 + 血瞳）
+
+    // 1 魅影：流星魅影（大水滴身 + 双飘带尾 + 血瞳）
   enemy_fast_walk(pen, t) {
     const sway = Math.sin(t * TAU) * 4;
-    shadow(pen, 48, 9);
+    shadow(pen, 48, 10);
     pen.blob([
-      [48 + sway * 0.3, 10], [62, 26], [64, 44], [52 + sway * 0.5, 58],
-      [56 + sway, 80], [50, 68], [40, 54], [36, 30], [40, 16],
-    ], { fill: "#b0a0e0", jitter: 0.3 });
-    pen.shine(48 + sway * 0.3, 22, 8, 10);
-    pen.eye(45 + sway * 0.3, 22, 2.2, { color: BLOOD });
-    pen.eye(54 + sway * 0.3, 26, 2.2, { color: BLOOD });
-    for (let i = 0; i < 3; i++) {
-      const al = 0.5 - i * 0.13;
-      pen.line([[62 + i * 2, 34 + i * 14], [74 + i * 2, 38 + i * 14]], { color: PENCIL, w: 2.4, alpha: al });
-    }
+      [48 + sway * 0.3, 12], [64, 30], [66, 52], [56, 66 + sway * 0.4], [62, 82],
+      [50, 72], [44, 60], [36, 40], [38, 20],
+    ], { fill: "#a08cd0", jitter: 0.2 });
+    pen.shine(44 + sway * 0.3, 24, 8, 10);
+    pen.eye(43 + sway * 0.3, 30, 2.6, { color: BLOOD });
+    pen.eye(55 + sway * 0.3, 33, 2.6, { color: BLOOD });
+    pen.line([[70, 44], [80, 50]], { color: PENCIL, w: 2.6, alpha: 0.5 });
+    pen.line([[68, 62], [80, 70]], { color: PENCIL, w: 2.6, alpha: 0.35 });
   },
-  // 2 石魅：岩石巨婴（石块身 + 裂纹 + 粗臂短腿）
+
+    // 2 石魅：苔顶巨岩（圆岩身 + 苔藓头 + 砸地粗臂）
   enemy_tank_walk(pen, t) {
     const step = Math.sin(t * TAU);
-    shadow(pen, 48, 15);
-    pen.blob([[27, 44], [34, 24], [52, 18], [67, 30], [70, 50], [60, 66], [38, 66], [26, 56]], { fill: "#a5977a", jitter: 0.45 });
-    pen.shine(48, 30, 13, 9);
-    pen.line([[36, 34], [44, 30], [50, 36]], { w: 2, alpha: 0.55 });
-    pen.line([[56, 56], [62, 52]], { w: 2, alpha: 0.5 });
-    pen.line([[36, 40], [43, 44]], { w: 3 });
-    pen.line([[60, 40], [53, 44]], { w: 3 });
-    pen.eye(41, 48, 2.2);
-    pen.eye(55, 48, 2.2);
-    pen.line([[43, 56], [53, 56]], { w: 2.2 });
-    pen.line([[40, 66], [38 + step * 3, 84]], { w: 6 });
-    pen.line([[56, 66], [58 - step * 3, 84]], { w: 6 });
-    pen.line([[22, 46], [12, 54 + step * 4]], { w: 5.5 });
-    pen.line([[74, 46], [84, 54 - step * 4]], { w: 5.5 });
+    shadow(pen, 48, 16);
+    pen.blob([[26, 52], [30, 28], [48, 18], [66, 28], [70, 52], [62, 68], [34, 68]], { fill: "#a89980", jitter: 0.3 });
+    pen.blob([[36, 26], [44, 18], [56, 20], [60, 28], [50, 32], [38, 32]], { fill: "#9db07e", w: 2.2, jitter: 0.3 });
+    pen.shine(40, 36, 10, 8);
+    pen.line([[34, 44], [42, 40]], { w: 2, alpha: 0.5 });
+    pen.line([[56, 58], [63, 54]], { w: 2, alpha: 0.45 });
+    pen.eye(41, 50, 2.6);
+    pen.eye(55, 50, 2.6);
+    pen.line([[42, 58], [54, 58]], { w: 2.4 });
+    pen.line([[26, 50], [14, 62 + step * 4]], { w: 7 });
+    pen.line([[70, 50], [82, 62 - step * 4]], { w: 7 });
+    pen.ellipse(12, 66 + step * 4, 5, 4, { fill: "#a89980", w: 2.4 });
+    pen.ellipse(84, 66 - step * 4, 5, 4, { fill: "#a89980", w: 2.4 });
+    pen.line([[40, 68], [38 + step * 3, 86]], { w: 6 });
+    pen.line([[56, 68], [58 - step * 3, 86]], { w: 6 });
   },
-  // 3 爆魈：圆鼓炸弹（引线火花 + 高光 + 蠢萌咧嘴）
+
+    // 3 爆魈：圆鼓炸弹（引线火花 + 高光 + 蠢萌咧嘴）
   enemy_exploder_walk(pen, t) {
-    const pulse = 1 + Math.sin(t * TAU) * 0.08;
-    const r = 18 * pulse, cy = 56;
-    shadow(pen, 48, 14 * pulse);
-    pen.ellipse(48, cy, r, r, { fill: "#dcab6c" });
-    pen.shine(48, cy - 6, r * 0.75, r * 0.75);
-    pen.line([[48, cy - r + 1], [53, cy - r - 8]], { w: 3 });
+    const pulse = 1 + Math.sin(t * TAU) * 0.07;
+    const r = 20 * pulse, cy = 54;
+    shadow(pen, 48, 15 * pulse);
+    pen.ellipse(48, cy, r, r, { fill: "#d89a5e" });
+    pen.shine(42, cy - 8, r * 0.7, r * 0.7);
+    pen.line([[48, cy - r + 2], [54, cy - r - 9]], { w: 3 });
     const sa = t * TAU;
-    for (let i = 0; i < 3; i++) {
-      const a = sa + (i / 3) * TAU;
-      pen.line([[55, cy - r - 10], [55 + Math.cos(a) * 4, cy - r - 10 + Math.sin(a) * 4]], { color: GOLD, w: 2.2 });
-    }
-    pen.eye(42, cy - 3, 2.4);
-    pen.eye(54, cy - 3, 2.4);
-    pen.arc(48, cy + 4, 6.5, 15, 165, { w: 2.2 });
-    pen.line([[40, cy + r - 3], [37, cy + r + 8]], { w: 4.5 });
-    pen.line([[56, cy + r - 3], [59, cy + r + 8]], { w: 4.5 });
+    pen.dot(54 + Math.cos(sa) * 3, cy - r - 11 + Math.sin(sa) * 3, 2.2, { color: GOLD });
+    pen.eye(41, cy - 2, 2.6);
+    pen.eye(55, cy - 2, 2.6);
+    pen.arc(48, cy + 5, 7, 15, 165, { w: 2.4 });
+    pen.line([[41, cy + r - 2], [38, cy + r + 9]], { w: 5 });
+    pen.line([[55, cy + r - 2], [58, cy + r + 9]], { w: 5 });
   },
-  // 4 隐煞：虚线幽灵（只有轮廓与血红双瞳）
-  enemy_invisible_walk(pen, t) {
-    const bob = Math.sin(t * TAU + 1) * 2.5;
-    const top = [];
-    for (let i = 0; i <= 6; i++) {
-      const a = Math.PI + (i / 6) * Math.PI;
-      top.push([48 + Math.cos(a) * 18, 44 + bob - Math.sin(a) * 18]);
-    }
-    pen.blob([
-      ...top,
-      [66, 70 + bob], [55, 76 + bob], [48, 80 + bob], [41, 76 + bob], [30, 70 + bob],
-    ], { fill: "none", dash: "8 7", w: 2.6, jitter: 0.3 });
-    pen.dot(42, 44 + bob, 2.2, { color: BLOOD });
-    pen.dot(54, 44 + bob, 2.2, { color: BLOOD });
-  },
-  // 5 瘴妖：毒滴怪（斜眼獠牙 + 下毒滴）
+
+    // 5 瘴妖：毒滴小怪（水滴身 + 疱点 + 垂滴毒珠）
   enemy_spitter_walk(pen, t) {
     const bob = Math.sin(t * TAU) * 1.5;
     shadow(pen, 48, 12);
     pen.blob([
-      [48, 24], [60, 42], [64, 56 + bob], [58, 68 + bob], [48, 72 + bob],
-      [38, 68 + bob], [32, 56 + bob], [36, 42],
-    ], { fill: "#9dbb72" });
-    pen.shine(48, 38, 7, 9);
-    pen.line([[42, 46 + bob], [48, 49 + bob]], { w: 2.4 });
-    pen.line([[54, 46 + bob], [48, 49 + bob]], { w: 2.4 });
-    pen.eye(43, 51 + bob, 2);
-    pen.eye(53, 51 + bob, 2);
-    pen.arc(48, 58 + bob, 4.5, 200, 340, { w: 2 });
-    pen.line([[45, 61 + bob], [44, 65 + bob]], { w: 1.8, color: "#ffffff", alpha: 0.9 });
-    const dy = (t * 16) % 16;
-    pen.blob([[57, 70 + dy], [60, 74 + dy], [57, 78 + dy], [54, 74 + dy]], { fill: "#82a054", w: 1.8 });
-    pen.line([[40, 72 + bob], [38, 84]], { w: 4 });
-    pen.line([[54, 72 + bob], [56, 84]], { w: 4 });
+      [48, 20], [62, 40], [66, 58 + bob], [56, 70 + bob], [48, 74 + bob],
+      [40, 70 + bob], [30, 58 + bob], [34, 40],
+    ], { fill: "#8fae66", jitter: 0.2 });
+    pen.shine(41, 38, 7, 10);
+    pen.eye(42, 48 + bob, 2.4);
+    pen.eye(54, 48 + bob, 2.4);
+    pen.arc(48, 56 + bob, 5, 20, 160, { w: 2.2 });
+    pen.dot(40, 40 + bob, 1.8, { color: "#5f7d3c" });
+    pen.dot(58, 52 + bob, 1.8, { color: "#5f7d3c" });
+    const dy = (t * 16) % 14;
+    pen.blob([[58, 70 + dy], [61, 74 + dy], [58, 78 + dy], [55, 74 + dy]], { fill: "#6f9048", w: 1.8 });
+    pen.line([[42, 74 + bob], [40, 86]], { w: 4.5 });
+    pen.line([[54, 74 + bob], [56, 86]], { w: 4.5 });
   },
-  // 6 愈妖：暖胖天使（眯眼笑 + 光环 + 金星环绕 + 红晕）
-  enemy_healer_walk(pen, t) {
-    const bob = Math.sin(t * TAU) * 2;
-    shadow(pen, 48, 13);
-    pen.ellipse(48, 58 + bob, 17, 20, { fill: "#e3bd80" });
-    pen.shine(48, 48 + bob, 10, 13);
-    pen.ellipse(48, 42 + bob, 7, 3.5, { fill: "none", stroke: GOLD, w: 2.4 });
-    pen.arc(42, 52 + bob, 3.6, 195, 345, { w: 2.2 });
-    pen.arc(54, 52 + bob, 3.6, 195, 345, { w: 2.2 });
-    pen.arc(48, 60 + bob, 3, 25, 155, { w: 1.8 });
-    pen.dot(37, 60 + bob, 2.2, { color: "#e8a090" });
-    pen.dot(59, 60 + bob, 2.2, { color: "#e8a090" });
-    for (let i = 0; i < 3; i++) {
-      const a = t * TAU + (i / 3) * TAU;
-      const gx = 48 + Math.cos(a) * 27, gy = 56 + bob + Math.sin(a) * 24;
-      pen.line([[gx - 3.5, gy], [gx + 3.5, gy]], { color: GOLD, w: 2.6, alpha: 0.9 });
-      pen.line([[gx, gy - 3.5], [gx, gy + 3.5]], { color: GOLD, w: 2.6, alpha: 0.9 });
-    }
-    pen.line([[42, 77 + bob], [41, 86]], { w: 4 });
-    pen.line([[54, 77 + bob], [55, 86]], { w: 4 });
-  },
-  // 7 唤灵：尖帽巫（宽袍 + 血瞳 + 咒符手杖）
-  enemy_summoner_walk(pen, t) {
-    const sway = Math.sin(t * TAU) * 2;
-    shadow(pen, 48, 13);
-    pen.blob([[38, 40], [30, 62], [28 + sway, 82], [40 + sway, 78], [48, 82], [56 + sway, 78], [68 + sway, 82], [66, 62], [58, 40]], { fill: "#ad8fd8" });
-    pen.blob([[33, 30], [48, 6], [63, 30]], { fill: "#9f82cc" });
-    pen.line([[30, 31], [66, 31]], { w: 2.8 });
-    pen.shine(44, 60, 9, 12);
-    pen.eye(43, 38, 2.2, { color: BLOOD });
-    pen.eye(53, 38, 2.2, { color: BLOOD });
-    pen.line([[60, 46], [68, 24]], { w: 3 });
-    pen.ellipse(69, 19, 5.5, 5.5, { fill: "#c8b0ec", w: 2.4 });
-    pen.dot(69, 19, 1.8, { color: BLOOD });
-    pen.line([[56, 48], [62, 44]], { w: 3.4 });
-  },
-  // 8 弩妖：矮壮弩手（尖耳 + 獠牙 + 十字弩）
+
+    // 8 弩妖：兜帽弩手（一体斗篷剪影 + 暗影脸血瞳 + 十字弩）
   enemy_archer_walk(pen, t) {
     const bob = Math.sin(t * TAU) * 1.5;
     shadow(pen, 48, 12);
-    pen.blob([[38, 44], [32, 58 + bob], [36, 72 + bob], [60, 72 + bob], [64, 58 + bob], [58, 44]], { fill: "#c6a878" });
-    pen.blob([[37, 37], [29, 31], [38, 33]], { fill: "#c6a878", w: 2.2 });
-    pen.blob([[59, 37], [67, 31], [58, 33]], { fill: "#c6a878", w: 2.2 });
-    pen.shine(46, 50 + bob, 8, 9);
-    pen.eye(42, 52 + bob, 2.1);
-    pen.eye(52, 52 + bob, 2.1);
-    pen.line([[40, 60 + bob], [44, 63 + bob], [48, 61 + bob], [52, 63 + bob], [56, 60 + bob]], { w: 1.8 });
-    pen.line([[58, 56 + bob], [76, 50 + bob]], { w: 3.4 });
-    pen.arc(76, 50 + bob, 9, 110, 250, { w: 2.6, n: 8 });
-    pen.line([[58, 56 + bob], [74, 51 + bob]], { w: 1.4, alpha: 0.7 });
-    pen.line([[36, 72 + bob], [34, 85]], { w: 4.5 });
-    pen.line([[56, 72 + bob], [58, 85]], { w: 4.5 });
+    pen.blob([[48, 18], [62, 30], [66, 52 + bob], [60, 72 + bob], [36, 72 + bob], [30, 52 + bob], [34, 30]], { fill: "#b09060", jitter: 0.2 });
+    pen.ellipse(48, 34 + bob, 9, 7.5, { fill: "#5c4f3e", stroke: "none", w: 0 });
+    pen.eye(44, 34 + bob, 2.2, { color: BLOOD });
+    pen.eye(52, 34 + bob, 2.2, { color: BLOOD });
+    pen.shine(40, 26, 7, 8);
+    pen.line([[58, 52 + bob], [80, 46 + bob]], { w: 3.4 });
+    pen.line([[70, 38 + bob], [70, 54 + bob]], { w: 2.6 });
+    pen.arc(79, 46 + bob, 8, 110, 250, { w: 2.4, n: 8 });
+    pen.line([[42, 72 + bob], [40, 86]], { w: 4.5 });
+    pen.line([[54, 72 + bob], [56, 86]], { w: 4.5 });
   },
-  // 9 浮灯：灯笼精（提梁 + 血焰灯芯 + 穗）
+
+    // 9 浮灯：灯笼精（提梁 + 血焰灯芯 + 穗）
   enemy_ship_walk(pen, t) {
     const bob = Math.sin(t * TAU) * 3.5;
     shadow(pen, 48, 10);
@@ -555,7 +501,11 @@ async function genEnemies() {
     const frames = Array.from({ length: 6 }, (_, i) => {
       const p = makePen(5000 + i * 53 + name.length * 97);
       draw(p, i / 6);
-      return p.body;
+      // v3 可读性强化：贴图在游戏内缩放后细节糊、碎线变噪点——
+      // ① 主体绕底部中心放大 1.15，吃满 cell；② 描边统一加粗 ×1.3（上限 6）
+      const scaled = p.body.map((s) =>
+        s.replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${Math.min(6, (parseFloat(w) * 1.12).toFixed(2))}"`));
+      return [`<g transform="translate(-7.2,-13.5) scale(1.15)">${scaled.join("")}</g>`];
     });
     await sheetHStack(frames, 128, 96, path.join(dir, `${name}.png`));
   }
@@ -632,8 +582,8 @@ async function genGround() {
   const W = 2560, H = 1440;
   const rnd = rng32(20260919);
   const pen = makePen(777);
-  // 簇拥构图：8 个簇心各落 2-4 笔（草丛/小石），替代均匀散点——克制而不空
-  const clusters = 8;
+  // 簇拥构图：12 个簇心各落 2-4 笔（草丛/小石），替代均匀散点——克制而不空
+  const clusters = 12;
   for (let ci = 0; ci < clusters; ci++) {
     const cx = 140 + rnd() * (W - 280), cy = 140 + rnd() * (H - 280);
     const marks = 2 + Math.floor(rnd() * 3);
@@ -647,6 +597,11 @@ async function genGround() {
         pen.ellipse(x, y, r, r * 0.8, { fill: "none", stroke: PENCIL, width: 2, alpha: 0.38, n: 8 });
       }
     }
+  }
+  // 淡彩渍（纸面层次：几块低对比暖斑，避免大片死白）
+  for (let i = 0; i < 6; i++) {
+    const sx = rnd() * W, sy = rnd() * H, sr = 60 + rnd() * 120;
+    pen.ellipse(sx, sy, sr, sr * (0.4 + rnd() * 0.35), { fill: "#e6dcc4", stroke: "none", w: 0, alpha: 0.35, n: 12 });
   }
   // 一条横穿画面的铅笔小径（有意的构图线）
   pen.line([[180, 980], [640, 900], [1180, 960], [1720, 880], [2260, 950]], { color: PENCIL, width: 3, alpha: 0.22, jitter: 0.8 });
