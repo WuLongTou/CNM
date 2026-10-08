@@ -234,13 +234,14 @@ async function main() {
     }
   }
 
-  // 敌人：瘦长全身像强制拉伸切帧（源文件名已中性化 enemy_*）
+  // 敌人：保比例网格切帧（gen-sketch 产物为 6×1 无间隙横排；stretchFrames 的强制
+  // 瘦宽是 C# 遗产，会破坏宽高比——R226 移除）
   const enemyDir = path.join(DST, "sprites", "enemies");
   fs.mkdirSync(enemyDir, { recursive: true });
   const enemySrc = path.join(SRC, "sprites", "enemies", "sheets");
   for (const f of fs.readdirSync(enemySrc)) {
     if (!f.endsWith(".png")) continue;
-    const frames = await stretchFrames(path.join(enemySrc, f), 0.45, { strip: false });
+    const frames = await gridFrames(path.join(enemySrc, f), 6, 1, { strip: false });
     atlases.push(await writeAtlas(frames, f.replace(/\.png$/, ""), enemyDir));
   }
   report.atlases = atlases;

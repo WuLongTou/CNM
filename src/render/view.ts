@@ -480,9 +480,10 @@ export class GameView {
       let v = this.enemyViews.get(z.id);
       if (!v) { v = this.makeEnemyView(z); this.enemyViews.set(z.id, v); }
       v.container.x = z.x; v.container.y = z.y;
-      // 转身插值（与玩家同语）
+      // 转身插值（与玩家同语）。faceCur 只用来决定镜像方向，幅值不得当 scale.x：
+      // 追击中方向高频翻转，中间值会把宽度压扁（实测宽高比失真的根因）
       v.faceCur += (z.facing - v.faceCur) * Math.min(1, dt * 12);
-      v.body.scale.x = Math.abs(v.faceCur) < 0.1 ? (v.faceCur < 0 ? -0.1 : 0.1) : v.faceCur;
+      v.body.scale.x = v.faceCur < 0 ? -1 : 1;
       v.body.tint = z.hitFlash > 0 ? 0xff4632 : 0xffffff;
       v.hitUx = z.lastHitUx; v.hitUy = z.lastHitUy;
       // 受击抽搐：红闪期身体小幅抖动（container 定位不动，血条稳定）
@@ -505,7 +506,7 @@ export class GameView {
           v.body.y = 0;
           v.body.rotation = 0;
           const sc = 1 + punch * 0.14;
-          v.body.scale.set(v.faceCur * sc, sc);
+          v.body.scale.set(v.faceCur < 0 ? -sc : sc, sc);
         } else {
           v.body.y = Math.sin(punch * Math.PI) * -4;
           v.body.rotation = v.faceCur * 0.3 * punch;

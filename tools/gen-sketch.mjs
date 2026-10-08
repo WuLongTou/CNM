@@ -507,7 +507,7 @@ async function genEnemies() {
         s.replace(/stroke-width="([\d.]+)"/g, (_, w) => `stroke-width="${Math.min(6, (parseFloat(w) * 1.12).toFixed(2))}"`));
       return [`<g transform="translate(-7.2,-13.5) scale(1.15)">${scaled.join("")}</g>`];
     });
-    await sheetHStack(frames, 128, 96, path.join(dir, `${name}.png`));
+    await sheetHStack(frames, 128, 96, path.join(dir, `${name}.png`), 0); // gap=0：对齐 sync 的 6×1 网格切帧
   }
 }
 
