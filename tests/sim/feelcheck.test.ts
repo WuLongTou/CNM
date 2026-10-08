@@ -11,7 +11,7 @@ describe("R176 手感 pass 数值守护", () => {
   it("密度：Act1 min 6 / max 20；冷却 1.3s；Act4 max 84", () => {
     expect(CFG.Acts.MinEnemies).toEqual([6, 20, 30, 40]);
     expect(CFG.Acts.MaxEnemies).toEqual([20, 48, 66, 84]);
-    expect(CFG.Acts.SpawnCooldown).toEqual([1.3, 0.7, 0.5, 0.4]);
+    expect(CFG.Acts.SpawnCooldown).toEqual([1.0, 0.7, 0.5, 0.4]); // R227 Act1 1.3→1.0
   });
 
   it("敌速基线：×1.25 全表上调（魅影 0.51× 玩家速过半）", () => {
@@ -28,7 +28,8 @@ describe("R176 手感 pass 数值守护", () => {
     expect(CFG.Difficulty.RampInterval).toBe(45);
   });
 
-  it("出生距离仍离屏（> 视口半宽 640）", () => {
-    expect(CFG.Spawning.MinDistFromPlayer).toBeGreaterThanOrEqual(380);
+  it("出生距离仍离屏（椭圆环：x≥视口半宽640、y≥视口半高316）", () => {
+    expect(CFG.Spawning.MinDistFromPlayerX).toBeGreaterThanOrEqual(680);
+    expect(CFG.Spawning.MinDistFromPlayerY).toBeGreaterThanOrEqual(380);
   });
 });

@@ -285,9 +285,10 @@ describe("R69 庙会开市", () => {
     s.eventTimer = 0.01;
     sim.tick(1 / 60);
   }
-  const baseOf = (kind: string) => kind === "weapon" ? CFG.Shop.PriceWeapon
-    : kind === "upgrade" ? CFG.Shop.PriceUpgrade
-    : kind === "buff" ? Math.floor(CFG.Shop.PriceBuff * CFG.Shop.BuffRarePriceMult) // R89：祝福槽可能出稀有档（120×2.5=300）
+  // 祝福槽基价按自身稀有档（R89：普通 120 / 稀有 300），rng 流位移后出普通档属正常
+  const baseOf = (sl: { kind: string; buffRare?: boolean }) => sl.kind === "weapon" ? CFG.Shop.PriceWeapon
+    : sl.kind === "upgrade" ? CFG.Shop.PriceUpgrade
+    : sl.kind === "buff" ? (sl.buffRare ? Math.floor(CFG.Shop.PriceBuff * CFG.Shop.BuffRarePriceMult) : CFG.Shop.PriceBuff)
     : CFG.Shop.PriceHeal;
 
   it("轮转第 5 事件为庙会：tally 计数，窗口内开龛半价", () => {
@@ -299,7 +300,7 @@ describe("R69 庙会开市", () => {
     openShopAt(sim);
     for (const s of sim.shopOffer!) {
       // R89：祝福槽基价按自身稀有档（普通 120 / 稀有 300）
-      const base = s.kind === "buff" ? (s.buffRare ? CFG.Shop.PriceBuff * CFG.Shop.BuffRarePriceMult : CFG.Shop.PriceBuff) : baseOf(s.kind);
+      const base = baseOf(s);
       expect(s.price).toBe(Math.floor(base * CFG.Events.MarketDiscount));
     }
   });
@@ -315,7 +316,7 @@ describe("R69 庙会开市", () => {
     sim.tick(1 / 60);
     openShopAt(sim);
     for (const sl of sim.shopOffer!) {
-      expect(sl.price).toBe(baseOf(sl.kind));
+      expect(sl.price).toBe(baseOf(sl));
     }
   });
 });

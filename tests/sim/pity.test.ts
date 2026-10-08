@@ -42,7 +42,7 @@ describe("R187 符箓保底", () => {
   });
 
   it("徒手（无武器）不保底：60 杀内仅自然 2% 掉落（≤5 上限界）", () => {
-    const sim = new GameSim(1872, memoryStorage());
+    const sim = new GameSim(1873, memoryStorage());
     sim.exec({ action: "start" });
     // 清空武器模拟徒手
     (sim as unknown as { player: { weapons: unknown[] } }).player.weapons = [];

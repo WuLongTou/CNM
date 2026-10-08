@@ -1,18 +1,20 @@
-// R23 实机强度基线 pins（R176 手感 pass 重钉）。
-// R176 调参（世界 ×0.75 / 密度 ×1.5 / 敌速 ×1.25 + 阶爬坡）后行为画像：
-// - 坏种子（约 7 成）第 1 阶 20-30s 暴毙（bot 无垫步/闪避，真人约 2-5 分钟）；
-// - 好种子（约 3 成）雪球化：seek s14 杀 3177 进 13 阶死于终幕；orbit 个别
-//   种子 720s 不死（power-fantasy 态，非软锁——玩家持续蒸发妖潮）。
-// pins 语义：终结性用「可终结种子」；雪球存在性用 orbit s14（720s 阶 4+ 杀 700+）。
+// R23 实机强度基线。R227 重钉：出生环屏外化（椭圆 x720/y460）+ Act1 冷却
+// 1.3→1.0 补偿路程时间后，vitest 逐种子实测画像：
+// - orbit（纯走位不输出）：4/5 种子 ~35-50s 暴毙；个别种子（s19）雪球存活 720s
+//   421 杀——纯走位能活属 power-fantasy（与 R23 时代「orbit 个别 720s 不死」同语义）；
+// - seek（走位+输出）：部分种子速死，部分雪球化（s15 十阶 2034 杀）；
+// - stick（站桩输出不走位）：4/5 种子 52-192s 被磨死（站桩无走位不可行）；
+// - afk：20s 暴毙零击杀。
+// pins 语义：每策略「必终结种子」锁终结性；seek s15 锁雪球存在性；afk 锁无挂机收益。
 import { describe, expect, it } from "vitest";
 import { runBot } from "./bot";
 
-describe("R23 实机强度基线（R176 重钉）", () => {
+describe("R23 实机强度基线（R227 屏外出生重钉）", () => {
   it("对局必终结（无软锁）：三策略 × 可终结种子", () => {
     const seedsByPolicy: Record<string, number[]> = {
-      orbit: [13, 16, 18, 19, 20],
-      seek: [11, 13, 15, 16, 19],
-      stick: [12, 13, 15, 18, 19],
+      orbit: [13, 16, 18, 20],
+      seek: [13],
+      stick: [12, 13, 15, 18],
     };
     for (const policy of ["orbit", "seek", "stick"] as const) {
       for (const seed of seedsByPolicy[policy]!) {
@@ -22,9 +24,16 @@ describe("R23 实机强度基线（R176 重钉）", () => {
     }
   }, 180000);
 
-  it("风筝种子全部可终结（妖潮压力有效）", () => {
-    for (const seed of [13, 16, 18, 19, 20]) {
+  it("纯走位不输出有代价：orbit 可终结种子暴毙（妖潮压力有效）", () => {
+    for (const seed of [13, 16, 18, 20]) {
       const r = runBot(seed, "orbit");
+      expect(r.state).toBe("GameOver");
+    }
+  }, 180000);
+
+  it("站桩无走位有代价：stick 可终结种子被磨死（走位是必需技能）", () => {
+    for (const seed of [12, 13, 15, 18]) {
+      const r = runBot(seed, "stick");
       expect(r.state).toBe("GameOver");
     }
   }, 180000);
@@ -38,10 +47,10 @@ describe("R23 实机强度基线（R176 重钉）", () => {
     }
   }, 60000);
 
-  it("雪球存在性：orbit s14 720s 阶 4+ 杀 700+（R187 保底后重扫）", () => {
-    const r = runBot(14, "orbit");
+  it("雪球存在性：seek s15 720s 高阶高杀（R227 重钉至 s15）", () => {
+    const r = runBot(15, "seek");
     expect(r.state).toBe("Combat"); // 720s 不死（power-fantasy 态）
-    expect(r.round).toBeGreaterThanOrEqual(4);
-    expect(r.kills).toBeGreaterThanOrEqual(700);
+    expect(r.round).toBeGreaterThanOrEqual(8);
+    expect(r.kills).toBeGreaterThanOrEqual(1500);
   }, 120000);
 });

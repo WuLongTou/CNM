@@ -77,7 +77,7 @@ export const CFG = {
     AttackWindup: 0.35,       // 近战攻击前摇（定身蓄力，可读预警）
     WindupHitRangeMult: 1.15, // 前摇结束时的命中范围倍率（微宽于起手范围）
     StaggerTime: 0.16,        // 受击硬直 s（精英×0.4，妖王免疫；打断蓄力/冲撞）
-    SeparationRange: 26.0,
+    SeparationRange: 46.0, // 贴合精灵视觉宽度（~50px），防叠罗汉（R227）
     SeparationForce: 150.0,
     EliteChanceBase: 0.02,
     EliteChancePerRound: 0.01,
@@ -93,7 +93,8 @@ export const CFG = {
   },
 
   Spawning: {
-    MinDistFromPlayer: 380.0,
+    MinDistFromPlayerX: 720.0, // 屏外出生椭圆环：x≥半宽640、y≥半高316+余量，妖物不再当着玩家闪现（R227）
+    MinDistFromPlayerY: 460.0,
   },
 
   // R2 分幕结构：每幕 ActTime 秒，密度/刷怪速率/精英潮分段爬升；终幕妖王击杀通关
@@ -101,7 +102,7 @@ export const CFG = {
     ActTime: 150,                          // 每幕时长 s
     MaxEnemies: [20, 48, 66, 84],          // 各幕场上妖物上限（密度的爽感来源）
     MinEnemies: [6, 20, 30, 40],           // 各幕底噪下限
-    SpawnCooldown: [1.3, 0.7, 0.5, 0.4],   // 各幕底噪刷怪间隔 s
+    SpawnCooldown: [1.0, 0.7, 0.5, 0.4],   // 各幕底噪刷怪间隔 s（R227：Act1 1.3→1.0 补偿屏外出生的路程时间）
     DamageMult: [0.6, 0.85, 1.0, 1.1],     // R187 Act1 温和热身：妖物伤害按幕爬升
     EliteWaveCount: [0, 2, 3, 5],          // 各幕每轮(45s)追加精英潮数量
     FinalBossRound: 13,                    // 终幕妖王出现轮（≈585s）

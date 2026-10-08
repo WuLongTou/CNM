@@ -2699,7 +2699,7 @@ export class GameSim {
     }
   }
 
-  /** 刷怪：距玩家 ≥420px 环形随机（对齐 EnemySpawnMinDistFromPlayer）。 */
+  /** 刷怪：屏外椭圆环随机（x≥720/y≥460，见 Spawning 配置）。 */
   spawnEnemy(opts: SpawnOpts = {}): number {
     const count = Math.min(Math.max(opts.count ?? 1, 1), 50);
     let spawned = 0;
@@ -2746,10 +2746,10 @@ export class GameSim {
     const p = this.player;
     for (let attempt = 0; attempt < 16; attempt++) {
       const ang = this.rng.range(0, Math.PI * 2);
-      const r = this.rng.range(CFG.Spawning.MinDistFromPlayer, CFG.Spawning.MinDistFromPlayer + 180);
-      const x = Math.min(this.world.w - 22, Math.max(22, p.x + Math.cos(ang) * r));
-      const y = Math.min(this.world.h - 22, Math.max(22, p.y + Math.sin(ang) * r));
-      if (Math.hypot(x - p.x, y - p.y) >= CFG.Spawning.MinDistFromPlayer * 0.9) return { x, y };
+      const jx = this.rng.range(1, 1.25), jy = this.rng.range(1, 1.25);
+      const x = Math.min(this.world.w - 22, Math.max(22, p.x + Math.cos(ang) * CFG.Spawning.MinDistFromPlayerX * jx));
+      const y = Math.min(this.world.h - 22, Math.max(22, p.y + Math.sin(ang) * CFG.Spawning.MinDistFromPlayerY * jy));
+      return { x, y };
     }
     return { x: 22, y: 22 };
   }
