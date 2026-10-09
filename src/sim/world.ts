@@ -30,8 +30,13 @@ export class World {
     // 约束：全部避开中心出生安全区（MapSpawnSafeRadius 320）与祭坛周边。
     const cx = worldSize.w / 2, cy = worldSize.h / 2;
     const safeR = 320;
-    this.altars.push({ id: nextId(), x: worldSize.w * 0.2, y: worldSize.h * 0.2, used: false });
-    this.altars.push({ id: nextId(), x: worldSize.w * 0.8, y: worldSize.h * 0.8, used: false });
+    // 祭坛 2 座：四象限中心随机抽一对角（R228 地理日程——「去哪座祭坛」每局不同）
+    const quads: Array<[number, number]> = [[0.28, 0.28], [0.72, 0.28], [0.28, 0.72], [0.72, 0.72]];
+    const pick = Math.floor(rng.range(0, 4));
+    const [ax1, ay1] = quads[pick];
+    const [ax2, ay2] = quads[(pick + 2) % 4];
+    this.altars.push({ id: nextId(), x: worldSize.w * ax1, y: worldSize.h * ay1, used: false });
+    this.altars.push({ id: nextId(), x: worldSize.w * ax2, y: worldSize.h * ay2, used: false });
     const nearAltar = (x: number, y: number) =>
       this.altars.some((a) => (a.x - x) ** 2 + (a.y - y) ** 2 < 140 ** 2);
     type ClusterKind = "grove" | "rockfield" | "ruins";

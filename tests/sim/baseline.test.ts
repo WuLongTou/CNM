@@ -8,12 +8,12 @@
 import { describe, expect, it } from "vitest";
 import { runBot } from "./bot";
 
-describe("R23 实机强度基线（R228 簇拥地形重钉）", () => {
+describe("R23 实机强度基线（R229 祭坛象限重钉）", () => {
   it("对局必终结（无软锁）：三策略 × 可终结种子", () => {
     const seedsByPolicy: Record<string, number[]> = {
-      orbit: [16, 20],
-      seek: [13, 15],
-      stick: [13, 15],
+      orbit: [13, 20],
+      seek: [11, 13, 15],
+      stick: [12, 15],
     };
     for (const policy of ["orbit", "seek", "stick"] as const) {
       for (const seed of seedsByPolicy[policy]!) {
@@ -24,14 +24,14 @@ describe("R23 实机强度基线（R228 簇拥地形重钉）", () => {
   }, 180000);
 
   it("纯走位不输出有代价：orbit 可终结种子暴毙（妖潮压力有效）", () => {
-    for (const seed of [16, 20]) {
+    for (const seed of [13, 20]) {
       const r = runBot(seed, "orbit");
       expect(r.state).toBe("GameOver");
     }
   }, 180000);
 
   it("站桩无走位有代价：stick 可终结种子被磨死（走位是必需技能）", () => {
-    for (const seed of [13, 15]) {
+    for (const seed of [12, 15]) {
       const r = runBot(seed, "stick");
       expect(r.state).toBe("GameOver");
     }
@@ -46,10 +46,10 @@ describe("R23 实机强度基线（R228 簇拥地形重钉）", () => {
     }
   }, 60000);
 
-  it("雪球存在性：orbit s13 720s 高阶高杀（R228 重钉）", () => {
-    const r = runBot(13, "orbit");
+  it("雪球存在性：orbit s18 720s 高阶高杀（R229 重钉）", () => {
+    const r = runBot(18, "orbit");
     expect(r.state).toBe("Combat"); // 720s 不死（power-fantasy 态）
-    expect(r.round).toBeGreaterThanOrEqual(3);
-    expect(r.kills).toBeGreaterThanOrEqual(300);
+    expect(r.round).toBeGreaterThanOrEqual(6);
+    expect(r.kills).toBeGreaterThanOrEqual(600);
   }, 120000);
 });

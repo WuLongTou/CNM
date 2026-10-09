@@ -1551,8 +1551,19 @@ export class GameSim {
   private spawnFinalBoss(): void {
     const type = BOSS_ROSTER[this.bossSpawnCount % BOSS_ROSTER.length];
     this.bossSpawnCount++;
-    const pos = this.resolveSpawnPos("player");
-    const e = this.createEnemy(type, pos.x, pos.y, { boss: true });
+    // R229 终幕血阵竞技场：地图中心立环形石阵（对齐 act4 地皮中央符阵），
+    // 妖王诞生于符环中心——决战绑定地点。留 4 个宽缺口供走位进出。
+    const cx = this.world.w / 2, cy = this.world.h / 2;
+    const R = 240, N = 12;
+    for (let i = 0; i < N; i++) {
+      if (i % 3 === 0) continue; // 4 个缺口
+      const a = (i / N) * Math.PI * 2;
+      this.terrain.obstacles.push({
+        id: this.nextId++, x: cx + Math.cos(a) * R, y: cy + Math.sin(a) * R * 0.92,
+        r: 34, kind: "stone_block", hp: 0, dead: false,
+      });
+    }
+    const e = this.createEnemy(type, cx, cy, { boss: true });
     e.final = true;
     e.hp = Math.ceil(e.hp * 1.6);
     e.maxHp = e.hp;
