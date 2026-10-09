@@ -57,7 +57,8 @@ describe("R25 血誓契约", () => {
     const base = run([]);
     const horde = run(["horde"]);
     expect(horde).toBeGreaterThan(base);
-    expect(horde).toBeLessThan(base * 1.8);
+    // R228 簇拥地形：掩体会让妖物堆积存活，供给加成可放大到 ~2×，上限放宽并仍锁「非线性爆炸」
+    expect(horde).toBeLessThanOrEqual(base * 2.2);
   });
 
   it("三誓叠加连乘；set_pacts 校验", () => {

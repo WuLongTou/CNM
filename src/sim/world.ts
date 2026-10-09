@@ -25,28 +25,52 @@ export class World {
   altars: Altar[] = [];
 
   constructor(rng: WorldSpawnRng, worldSize: { w: number; h: number }, nextId: () => number) {
-    // 障碍：12 个（3 石块 + 4 树 + 3 灌木 + 2 岩石），避开中心出生安全区（对齐 MapSpawnSafeRadius）
+    // R228 簇拥地形：8 个簇心（林带/岩石阵/遗迹石阵），每簇 4-7 个障碍——
+    // 形成掩体与巷道，让风筝绕柱、采集路线有地形语义，替代均匀撒点。
+    // 约束：全部避开中心出生安全区（MapSpawnSafeRadius 320）与祭坛周边。
     const cx = worldSize.w / 2, cy = worldSize.h / 2;
     const safeR = 320;
-    let tries = 0;
-    const kinds: Array<{ kind: Obstacle["kind"]; hp: number; r: number; n: number }> = [
-      { kind: "tree", hp: 3, r: 20, n: 5 },
-      { kind: "rock", hp: 5, r: 18, n: 4 },
-      { kind: "bush", hp: 1, r: 14, n: 3 },
-      { kind: "stone_block", hp: 0, r: 34, n: 3 },
-    ];
-    for (const k of kinds) {
-      for (let i = 0; i < k.n && tries < 500; i++) {
-        tries++;
-        const x = rng.range(60, worldSize.w - 60);
-        const y = rng.range(60, worldSize.h - 60);
-        if ((x - cx) ** 2 + (y - cy) ** 2 < safeR ** 2) { i--; continue; }
-        this.obstacles.push({ id: nextId(), x, y, r: k.r, kind: k.kind, hp: k.hp, dead: false });
-      }
-    }
-    // 祭坛 2 座：对角布置
     this.altars.push({ id: nextId(), x: worldSize.w * 0.2, y: worldSize.h * 0.2, used: false });
     this.altars.push({ id: nextId(), x: worldSize.w * 0.8, y: worldSize.h * 0.8, used: false });
+    const nearAltar = (x: number, y: number) =>
+      this.altars.some((a) => (a.x - x) ** 2 + (a.y - y) ** 2 < 140 ** 2);
+    type ClusterKind = "grove" | "rockfield" | "ruins";
+    const kindsOf = (c: ClusterKind): Array<{ kind: Obstacle["kind"]; hp: number; r: number }> =>
+      c === "grove"
+        ? [{ kind: "tree", hp: 3, r: 20, }, { kind: "tree", hp: 3, r: 22 }, { kind: "tree", hp: 3, r: 19 },
+           { kind: "bush", hp: 1, r: 14 }, { kind: "bush", hp: 1, r: 13 }]
+        : c === "rockfield"
+        ? [{ kind: "rock", hp: 5, r: 18 }, { kind: "rock", hp: 5, r: 17 }, { kind: "rock", hp: 5, r: 20 },
+           { kind: "stone_block", hp: 0, r: 34 }]
+        : [{ kind: "stone_block", hp: 0, r: 34 }, { kind: "stone_block", hp: 0, r: 30 },
+           { kind: "rock", hp: 5, r: 16 }];
+    const clusterKinds: ClusterKind[] = ["grove", "rockfield", "ruins", "grove", "rockfield", "grove", "ruins", "rockfield"];
+    const centers: Array<{ x: number; y: number }> = [];
+    for (let ci = 0; ci < clusterKinds.length; ci++) {
+      // 簇心：远离中心安全区、远离已定簇心（≥300）与祭坛（≥140）
+      let x = 0, y = 0, ok = false;
+      for (let t = 0; t < 80 && !ok; t++) {
+        x = rng.range(180, worldSize.w - 180);
+        y = rng.range(180, worldSize.h - 180);
+        ok = (x - cx) ** 2 + (y - cy) ** 2 >= (safeR + 60) ** 2
+          && centers.every((c) => (c.x - x) ** 2 + (c.y - y) ** 2 >= 300 ** 2)
+          && !nearAltar(x, y);
+      }
+      centers.push({ x, y });
+      const parts = kindsOf(clusterKinds[ci]);
+      parts.forEach((p, pi) => {
+        // 簇内散布：半径 90 内环绕簇心（带最小间距，防全叠一起）
+        for (let t = 0; t < 24; t++) {
+          const a = rng.range(0, Math.PI * 2), d = 26 + (pi / parts.length) * 80 + rng.range(0, 26);
+          const x2 = x + Math.cos(a + pi * 1.7) * d, y2 = y + Math.sin(a + pi * 1.7) * d * 0.8;
+          if (x2 < 40 || y2 < 40 || x2 > worldSize.w - 40 || y2 > worldSize.h - 40) continue;
+          if ((x2 - cx) ** 2 + (y2 - cy) ** 2 < safeR ** 2) continue;
+          if ((x2 - x) ** 2 + (y2 - y) ** 2 < 20 ** 2 && pi > 0) continue;
+          this.obstacles.push({ id: nextId(), x: x2, y: y2, r: p.r, kind: p.kind, hp: p.hp, dead: false });
+          break;
+        }
+      });
+    }
   }
 
   /** 圆形实体碰撞推离（简单圆-圆分离）。 */

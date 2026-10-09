@@ -164,9 +164,10 @@ describe("R65 购买", () => {
     const mult = (sim as unknown as { shopPriceMult: number }).shopPriceMult;
     expect(mult).toBeGreaterThan(1);
     for (const s of sim.shopOffer!) {
+      // R89：祝福槽基价按自身稀有档（rng 流位移后可能出普通档 120）
       const base = s.kind === "weapon" ? CFG.Shop.PriceWeapon
         : s.kind === "upgrade" ? CFG.Shop.PriceUpgrade
-        : s.kind === "buff" ? CFG.Shop.PriceBuff
+        : s.kind === "buff" ? (s.buffRare ? CFG.Shop.PriceBuff * CFG.Shop.BuffRarePriceMult : CFG.Shop.PriceBuff)
         : CFG.Shop.PriceHeal;
       expect(s.price).toBe(Math.floor(base * mult));
     }
