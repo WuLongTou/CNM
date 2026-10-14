@@ -30,11 +30,7 @@ jobs:
           node-version: ${{ matrix.node }}
           cache: npm
 
-      # CI 固定走官方源：仓库 .npmrc 固定了 npmmirror（本地开发走镜像更快），
-      # runner 直连官方源更稳；npm 环境变量优先级高于 .npmrc，仅对本步生效
       - name: npm ci
-        env:
-          npm_config_registry: https://registry.npmjs.org
         run: npm ci
 
       - name: asset sync (public/assets 为生成产物，先同步再测试；build 的 prebuild 会再同步一次)
