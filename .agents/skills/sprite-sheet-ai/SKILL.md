@@ -1,13 +1,13 @@
 ---
 name: sprite-sheet-ai
-description: 用 Gemini 等生图 AI 生成多帧 sprite sheet / 图标网格的游戏资产最佳实践：prompt 四段式模板、AI 出图排版规格、后处理管线与 QC 清单（含本项目资产规格与后处理脚本）。触发：需要让生图 AI 产出多动作帧动画、角色三视图、图标网格等「一张图含多个元素」的游戏贴图时加载。
+description: 用 Gemini 等生图 AI 生成多帧 sprite sheet / 图标网格的游戏资产最佳实践：prompt 四段式模板、AI 出图排版规格、后处理管线与 QC 清单（含本项目资产规格与后处理流程）。触发：需要让生图 AI 产出多动作帧动画、角色三视图、图标网格等「一张图含多个元素」的游戏贴图时加载。
 ---
 
 # AI 生成 Sprite Sheet 最佳实践
 
 适用：Gemini / Nano Banana 等对话式生图 AI。核心矛盾是 **AI 没有像素级排版能力，
 但管线需要精确切帧**——所以一切实践围绕「prompt 里给足锚点 + 后处理兜底容错」。
-第一、四、五节是通用做法；第二、三节绑定本项目（斩妖录）的资产规格与后处理脚本。
+第一、四、五节是通用做法；第二、三节绑定本项目（斩妖录）的资产规格与后处理流程。
 
 ## 一、Prompt 四段式模板（可直接复制）
 
@@ -49,7 +49,9 @@ description: 用 Gemini 等生图 AI 生成多帧 sprite sheet / 图标网格的
 AI 出图不需要精确像素——**结构对了即可**（横排一行 / 规则网格），
 尺寸由后处理归一化。白底 JPG 也可以（后处理泛洪去底），透明 PNG 更好。
 
-## 三、后处理管线（`.workwork/gemini-gen/`）
+## 三、后处理管线（一次性脚本，不在仓库内）
+
+后处理脚本是当时的一次性工具（曾放在 `.workwork/gemini-gen/`；`.workwork/` 已 gitignore、不入库，当前主树中已无该目录），仅保留接口与算法供参考；当前常规资产由 `tools/gen-sketch.mjs` 生成后 `npm run assets:sync` 切帧。脚本接口：
 
 ```
 gen_one.py   驱动浏览器生成（新会话→填prompt→发送→轮询→下载按钮→接文件）
@@ -58,7 +60,7 @@ post.mjs     后处理：<raw> <kind> <id> [jsonArgs]
              kind = enemy|boss|player3|grid|ground
 ```
 
-post.mjs 关键算法（复用 tools/lib/imageops.mjs）：
+post.mjs 关键算法（复用仓库内 `tools/lib/imageops.mjs`）：
 1. **边缘泛洪去底**：只清除与图边连通的近白像素，内部纸白填充安全
    （勿用全局白像素剥离，会蚀穿浅色填充）；
 2. **裸线移除**：高密度行带中「上下±10px 均为空白」的像素才清除——
