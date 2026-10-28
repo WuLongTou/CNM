@@ -10,6 +10,7 @@ description: 斩妖录 Web 版自动化测试协议（window.__CNM__ 指令与�
 spawn/give/upgrade/weapons/craft/offer_fusion/buy_meta/meta/inventory/teleport/
 goto_round（测试跳阶）/continue（无尽）/quit；
 `getEvents()` 拉取事件推送；`sim` 直接暴露 GameSim 实例。
+（上述清单未穷举；完整动作/查询清单见 `GameSim.dispatch` / `window.__CNM__` 实现。）
 
 ## 冒烟 hygiene
 
