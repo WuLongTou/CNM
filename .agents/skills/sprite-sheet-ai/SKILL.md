@@ -51,7 +51,7 @@ AI 出图不需要精确像素——**结构对了即可**（横排一行 / 规�
 
 ## 三、后处理管线（一次性脚本，不在仓库内）
 
-后处理脚本是当时的一次性工具（曾放在 `.workwork/gemini-gen/`；`.workwork/` 已 gitignore、不入库，当前主树中已无该目录），仅保留接口与算法供参考；当前常规资产由 `tools/gen-sketch.mjs` 生成后 `npm run assets:sync` 切帧。脚本接口：
+后处理脚本是一次性工具，仅保留接口与算法供参考；当前常规资产由 `tools/gen-sketch.mjs` 生成后 `npm run assets:sync` 切帧。脚本接口：
 
 ```
 gen_one.py   驱动浏览器生成（新会话→填prompt→发送→轮询→下载按钮→接文件）
