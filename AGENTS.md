@@ -1,6 +1,6 @@
 # 斩妖录 (CNM) — Web 版
 
-简笔画速写本风除妖生存 roguelike。TypeScript + PixiJS v8 实现（仅本 web 版；旧引擎实现可从 git 历史早期提交恢复）。
+简笔画速写本风除妖生存 roguelike。TypeScript + PixiJS v8 实现（仅本 web 版）。
 
 通用约束（Git 规范、Commit 格式、验证流程、工具链偏好等）以全局 `~/AGENTS.md` 为准，
 本文件只做项目特有补充，不得放宽或违背全局约束。
@@ -15,7 +15,7 @@
 
 ## 硬约束
 - Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
-- 包管理器：npm（`package-lock.json` 为唯一权威锁文件；不得引入 pnpm——`pnpm-lock.yaml` 与 `pnpm-workspace.yaml` 仅存于 git 历史，当前不存在。本机若因误执行 `pnpm install` 再现 `pnpm-lock.yaml`，属残留，直接删除，勿提交）。
+- 包管理器：npm（`package-lock.json` 为唯一权威锁文件；禁止引入 pnpm，仓库内不得出现 `pnpm-lock.yaml` / `pnpm-workspace.yaml`——误执行 `pnpm install` 生成属残留，直接删除勿提交；判据：`ls pnpm-lock.yaml pnpm-workspace.yaml` 报不存在）。
 - 模态/选择/UI 页面快捷键必须独占输入（硬约束）：
   - 装备/合成/帮助/暂停/融合/GameOver/Victory 等任何模态页面打开时，游戏操作快捷键
     （WASD/方向键移动、空格攻击、Shift 冲刺）必须 100% 失效。
@@ -23,8 +23,8 @@
   - 绝不复用已绑定的游戏按键做 UI 快捷键（游戏键绑定：WASD/方向键、Space、Shift；
     UI 键：H、C、I、Esc、反引号、Tab（帮助切页）、Enter、Delete）。
     新增 UI 快捷键只用未绑定键或纯鼠标。
-- 主题约束：项目为《斩妖录》妖物设定；代码、文案、资产名不得引入旧主题相关命名
-  （旧怪名称等）；敌人资产源文件统一中性命名（enemy_*）。
+- 主题约束：项目为《斩妖录》妖物设定；代码、文案、资产名只使用该设定的命名，不得混入其它/历史主题命名；
+  敌人资产源文件统一中性命名（enemy_*）。
 - 美术风格约束：全局简笔画速写本风格——米白
   纸面、填充色块 + 炭棕描边（马克笔手绘感）、血红点缀。调色与布局约定见
   README「美术」章节；玩家/妖物源图为透明 PNG，sync-assets 对其跳过剥底。

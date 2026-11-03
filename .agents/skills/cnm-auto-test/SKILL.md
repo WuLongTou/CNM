@@ -27,9 +27,7 @@ goto_round（测试跳阶）/continue（无尽）/quit；
 以下为已确认的进程行为：
 
 - `playwright.config` 的 webServer 是 `reuseExistingServer: true`：只要 5173 有响应就**复用**，
-  不会校验它属于哪棵树。若上一次全量 e2e 起的 dev server 仍挂在 main 树，随后在 worktree
-  里跑 spec 会**对着 main 的代码**断言——表现为「新加的 fusion_done 纸签查不到」，
-  而其他用例全绿（因为它们断言的特性 main 里已有），极易误判成自己代码写错。
-  排查与规矩：跑 worktree 的 e2e 前先 `lsof -tiTCP:5173 -sTCP:LISTEN` 确认为空（或确属本树），
-  用完 `kill` 掉；全量 e2e 结束后也顺手清理该 server。
-- 证据链：`lsof -p <pid> | grep cwd` 直接看 server 的工作目录，一眼分辨归属。
+  不会校验它属于哪棵树。**规则：跑 worktree 的 e2e 前先 `lsof -tiTCP:5173 -sTCP:LISTEN` 确认为空（或确属本树），
+  用完 `kill` 掉；全量 e2e 结束后同样清理该 server。** 否则 spec 会对着另一棵树的代码断言
+  （典型症状：新增用例查不到、既有用例全绿）。
+- 判据：`lsof -p <pid> | grep cwd` 直接看 server 的工作目录，一眼分辨归属。
