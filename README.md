@@ -735,8 +735,11 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 
 ## 构建 / 测试 / 部署
 
-- 安装与测试：`npm ci` → `npm test`（vitest，sim 层逻辑回归）→ `npm run build`
-  （prebuild 自动执行 `assets:sync` + tsc 全量类型检查 + vite 产物）。
+- 日常验证以 **CI 为权威门禁**（`.github/workflows/ci.yml`，push/PR 到 main 触发）：
+  `npm ci` → `npm run assets:sync` → `npm test`（vitest，sim 层逻辑回归）→ `npm run build`
+  （prebuild 自动执行 `assets:sync` + tsc 全量类型检查 + vite 产物）→ preview 冒烟；
+  node 22/24 双档矩阵。本地提交前只跑秒级检查（`npx tsc --noEmit`，见 `AGENTS.md`），
+  需要调试时再按上面的流程手动执行。
   `public/assets/` 为生成产物不入库，`npm run build` 会自动同步；
   手动同步：`npm run assets:sync`。
 - e2e：`npx playwright install`（首次需安装浏览器）→ `npm run e2e`
@@ -746,7 +749,8 @@ npm run preview       # 本地预览 dist 产物 @ 127.0.0.1:4173
 - 部署：`dist/` 为纯静态产物，由 nginx 直接托管，无服务端。默认以**根路径**
   部署（如 `https://<域名>/`）；子路径部署时构建前设置 `VITE_BASE`
   （如 `VITE_BASE=/zhanyao/ npm run build`，值需带首尾斜杠），不设则保持根路径。
-  可用 `scripts/deploy.sh` 一键完成「门禁 → 构建 → 版本戳 → 推送」：
+  可用 `scripts/deploy.sh` 一键完成「门禁 → 构建 → 版本戳 → 推送」（属发布动作：
+  发布前以 main 上 CI 全绿为准，脚本内的单测/构建用于生成并校验本次产物）：
   - `./scripts/deploy.sh` — 先跑 `npm test` 门禁，再 `npm run build`，并在
     `dist/` 写版本戳 `.deploy-version`（git describe 一行 + UTC 构建时间一行）；
   - `./scripts/deploy.sh --smoke` — 构建后起 `npm run preview` 并 curl 断言 200；
