@@ -41,10 +41,14 @@ description: 用 Gemini 等生图 AI 生成多帧 sprite sheet / 图标网格的
 
 | 资产 | 源图布局 |
 |---|---|
-| 玩家动作（walk/attack/dash/hurt/death） | 96×96 cell 横排紧贴（帧数 = 格数），透明 PNG |
+| 玩家动作（walk/attack/dash/hurt/death；扩展动作 dash 4×1 / hurt 2×1 / death 6×1） | 96×96 cell 横排紧贴（帧数 = 格数），透明 PNG |
 | 妖物动作/妖王形态 | 128×96 cell 横排，格间 ≥28px 透明间隔，瘦长全身像（切帧后强制拉成 43×96，画胖了会被压扁） |
 | 图标/物件 | 网格图，后处理按格切 + trim + 256×256 透明 PNG |
 | 地面整图 | 16:9，JPG，无透明要求 |
+
+入库路径：图标/物件入 `assets-src/sprites/icons/{weapons,props}/`，文件名 = 武器 defId / 物件名；
+妖物/妖王源文件名保持中性 `enemy_*`；与程序化资产（gen-sketch）同等风格要求。
+渲染层对缺失资产一律回退（矢量线稿或既有动画），资产可分批到位。
 
 AI 出图不需要精确像素——**结构对了即可**（横排一行 / 规则网格），
 尺寸由后处理归一化。白底 JPG 也可以（后处理泛洪去底），透明 PNG 更好。
