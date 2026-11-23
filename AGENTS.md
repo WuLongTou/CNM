@@ -14,7 +14,7 @@
 
 
 ## 硬约束
-- Git 额外约束：在全局 Git 规范之上，本项目额外禁止 `git cherry-pick`（保持线性历史）。
+- Git 额外约束：允许在独立工作分支/发布分支上用 `git cherry-pick` 移植修复（产生新提交、不改写历史）；禁止 cherry-pick 后直接 push 主干，或在主干上整理历史。
 - 包管理器：npm（`package-lock.json` 为唯一权威锁文件；禁止引入 pnpm，仓库内不得出现 `pnpm-lock.yaml` / `pnpm-workspace.yaml`——误执行 `pnpm install` 生成属残留，直接删除勿提交；判据：`ls pnpm-lock.yaml pnpm-workspace.yaml` 报不存在）。
 - 模态/选择/UI 页面快捷键必须独占输入（硬约束）：
   - 装备/合成/帮助/暂停/融合/GameOver/Victory 等任何模态页面打开时，游戏操作快捷键
