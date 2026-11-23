@@ -47,7 +47,7 @@
 全绿 → `gh pr merge --rebase --delete-branch` → 本地 `git pull --ff-only` 并清理 worktree。
 
 - 本地（提交前，秒级）：`npx tsc --noEmit`（类型检查，实测约 0.8s）
-- CI 覆盖（`.github/workflows/ci.yml`，job `Unit Tests & Build (node <22|24>)`，node 22/24 双档矩阵）：`npm ci` → `npm run assets:sync` → `npm test`（vitest）→ `npm run build`（tsc + vite）→ preview 冒烟（起 `vite preview` 断言 HTTP 200 + HTML）→ 上传 `dist/` 产物（仅 node 24 档）；push main 与 PR 均触发
+- CI 覆盖（`.github/workflows/ci.yml`，job `Unit Tests & Build (node <版本>)`；node 版本矩阵以 workflow 的 `node-version` 为准，现取：`grep -nE 'node-version' .github/workflows/ci.yml`）：`npm ci` → `npm run assets:sync` → `npm test`（vitest）→ `npm run build`（tsc + vite）→ preview 冒烟（起 `vite preview` 断言 HTTP 200 + HTML）→ 上传 `dist/` 产物（仅 node 24 档）；push main 与 PR 均触发
 - CI 覆盖不到、必须本地/真机验证的：`npm run e2e`（Playwright，断言对帧率计时敏感，共享 runner 噪声会放大偶发失败，故不进 CI，改核心玩法/渲染后本地手跑）
 - 发版/发布门禁不变：无项目专属本地门禁
 
